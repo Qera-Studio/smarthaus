@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
+// Must precede every component import. CSS Module styles are emitted in import
+// order, and the first file to name a cascade layer fixes that layer's
+// position — so if a component loads first, @layer components is registered
+// before @layer reset and the reset wins. globals.scss declares the order.
 import "../styles/globals.scss";
+import { Nav } from "../components/Nav";
 
 const manrope = Manrope({
   variable: "--font-sans",
@@ -41,6 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
+        <Nav />
         <main id="main-content">{children}</main>
       </body>
     </html>

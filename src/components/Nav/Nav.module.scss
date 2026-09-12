@@ -1,0 +1,105 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  .nav {
+    // L2 component tokens — the override surface for this component.
+    --nav-padding: #{$space-6};
+    --nav-gap: #{$space-6};
+    --nav-link-size: #{$font-size-sm};
+    --nav-link-weight: #{$font-weight-medium};
+
+    // Three equal end columns keep the link list centred against the nav's full
+    // width, not the gap between logo and CTA — so it stays put as either grows.
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--nav-gap);
+    padding: var(--nav-padding);
+    color: var(--color-text-primary);
+
+    // Below lg the centre column is empty (links are hidden), so drop it
+    // entirely — otherwise its gap pushes logo and CTA toward each other.
+    @media (max-width: #{$bp-lg - 1px}) {
+      grid-template-columns: auto auto;
+      justify-content: space-between;
+    }
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    // Shrink to the artwork so the focus ring hugs the logo, not the column.
+    justify-self: start;
+    // The lockup is ~7.3:1, so at 32px it is 233px wide. Let it scale down
+    // rather than crowd the CTA on narrow screens; the SVG keeps its ratio.
+    min-inline-size: 0;
+    color: var(--color-text-primary);
+
+    @include focus-ring;
+
+    svg {
+      max-inline-size: 100%;
+      block-size: auto;
+    }
+  }
+
+  .links {
+    // Below lg the links move to the mobile bottom bar (not built until the
+    // hero lands — see AGENTS.md nav behaviour table). The centre column
+    // collapses to nothing so the row is just logo | CTA.
+    @media (max-width: #{$bp-lg - 1px}) {
+      display: none;
+    }
+  }
+
+  .list {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-gap);
+    // The reset only strips markers from ul[role="list"], and an explicit
+    // role on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip
+    // them here instead.
+    list-style: none;
+  }
+
+  .link {
+    font-size: var(--nav-link-size);
+    font-weight: var(--nav-link-weight);
+    line-height: $line-height-normal;
+    color: var(--color-text-primary);
+    text-decoration: none;
+    transition-property: opacity;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    @include focus-ring;
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .cta {
+    // Shrink to the label so the button is not stretched across its column.
+    justify-self: end;
+    padding: $space-2;
+    font-size: var(--nav-link-size);
+    font-weight: var(--nav-link-weight);
+    line-height: $line-height-normal;
+    // brown-900 ground with brown-100 text — 15.6:1, well clear of AA.
+    background-color: var(--color-bg-inverse);
+    color: var(--color-text-inverse);
+    border-radius: $radius-sm;
+    text-decoration: none;
+    transition-property: opacity;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    @include focus-ring;
+
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+}

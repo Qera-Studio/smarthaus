@@ -1,3 +1,6 @@
+// The layer-order declaration must be emitted before any CSS Module, so it
+// lives in its own file that layout.tsx imports first. See _layers.scss.
+@use "layers";
 @use "variables" as *;
 @use "mixins" as *;
 @use "reset";
@@ -6,48 +9,58 @@
 // Global base styles — Smarthaus
 // ============================================================================
 
-body {
-  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
-  font-size: var(--font-size-base);
-  line-height: $line-height-normal;
-  color: var(--color-text-primary);
-  background-color: var(--color-bg-canvas);
+@layer base {
+  body {
+    font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+    font-size: var(--font-size-base);
+    line-height: $line-height-normal;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-canvas);
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-bg-canvas);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  a {
+    @include focus-ring;
+
+    // Longhands, not the `transition` shorthand: var() substitution happens
+    // before the shorthand is parsed, so one missing token would silently
+    // invalidate the whole declaration.
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
 }
 
-::selection {
-  background-color: var(--color-accent);
-  color: var(--color-bg-canvas);
-}
+@layer utilities {
+  .visually-hidden {
+    @include visually-hidden;
+  }
 
-:focus-visible {
-  outline: 2px solid var(--color-border-focus);
-  outline-offset: 2px;
-}
+  .skip-link {
+    @include visually-hidden;
 
-a {
-  @include focus-ring;
-  transition: color var(--duration-fast) var(--ease-out);
-}
-
-.visually-hidden {
-  @include visually-hidden;
-}
-
-.skip-link {
-  @include visually-hidden;
-
-  &:focus {
-    position: fixed;
-    inset-block-start: var(--space-4);
-    inset-inline-start: var(--space-4);
-    z-index: var(--z-toast);
-    inline-size: auto;
-    block-size: auto;
-    clip: auto;
-    padding: var(--space-4) var(--space-8);
-    background: var(--color-bg-inverse);
-    color: var(--color-text-inverse);
-    border-radius: var(--radius-md);
-    font-weight: $font-weight-semibold;
+    &:focus {
+      position: fixed;
+      inset-block-start: var(--space-4);
+      inset-inline-start: var(--space-4);
+      z-index: var(--z-toast);
+      inline-size: auto;
+      block-size: auto;
+      clip: auto;
+      padding: var(--space-4) var(--space-8);
+      background-color: var(--color-bg-inverse);
+      color: var(--color-text-inverse);
+      border-radius: var(--radius-md);
+      font-weight: $font-weight-semibold;
+    }
   }
 }
