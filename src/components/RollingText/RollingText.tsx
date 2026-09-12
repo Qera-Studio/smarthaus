@@ -34,11 +34,15 @@ export function RollingText({ children, stagger = 0.02, className }: RollingText
             // Characters have no stable identity; index is the correct key.
             key={i}
             className={styles.char}
-            style={{ "--char-delay": `${i * stagger}s` } as React.CSSProperties}
           >
-            {/* Non-breaking space keeps the column width for real spaces. */}
-            <span className={styles.charIn}>{char === " " ? " " : char}</span>
-            <span className={styles.charOut}>{char === " " ? " " : char}</span>
+            <span
+              className={styles.charColumn}
+              style={{ "--char-delay": `${i * stagger}s` } as React.CSSProperties}
+            >
+              {/* Non-breaking space keeps the cell width for real spaces. */}
+              <span className={styles.charIn}>{char === " " ? "\u00A0" : char}</span>
+              <span className={styles.charOut}>{char === " " ? "\u00A0" : char}</span>
+            </span>
           </span>
         ))}
       </span>
