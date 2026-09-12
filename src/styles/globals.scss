@@ -1,9 +1,16 @@
-// The layer-order declaration must be emitted before any CSS Module, so it
-// lives in its own file that layout.tsx imports first. See _layers.scss.
-@use "layers";
 @use "variables" as *;
 @use "mixins" as *;
 @use "reset";
+
+// Cascade layer order. Later layers win; unlayered CSS beats every layer, so
+// keep styles in one.
+//
+// This must be emitted before any CSS Module, because a layer's precedence is
+// fixed by where its name FIRST appears. Next emits CSS Module styles in import
+// order, so a component imported ahead of this file would register
+// @layer components before @layer reset and silently invert the order — which
+// is why layout.tsx imports globals.scss before any component.
+@layer reset, base, components, blocks, utilities;
 
 // ============================================================================
 // Global base styles — Smarthaus
