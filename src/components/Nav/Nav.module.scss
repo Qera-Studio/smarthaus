@@ -1,0 +1,199 @@
+@use "../../styles/variables" as *;
+
+// Sentinel — zero-height element at top of page for IntersectionObserver
+.sentinel {
+  position: absolute;
+  inset-block-start: 0;
+  block-size: 1px;
+  inline-size: 100%;
+  pointer-events: none;
+}
+
+// --- Desktop: top bar → floating capsule ---
+.nav {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: var(--z-sticky);
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
+    padding var(--duration-normal) var(--ease-out),
+    border-radius var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+
+  // Mobile: bottom bar
+  @media (max-width: #{$bp-md - 1px}) {
+    inset-block-start: auto;
+    inset-block-end: 0;
+    padding-block-end: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--content-gutter);
+  padding-block: var(--space-4);
+  transition: padding var(--duration-normal) var(--ease-out);
+}
+
+// --- Scrolled state: floating capsule ---
+.scrolled {
+  background-color: var(--color-bg-canvas);
+  box-shadow: var(--shadow-md);
+
+  @media (min-width: $bp-md) {
+    inset-inline: var(--space-6);
+    inset-block-start: var(--space-3);
+    border-radius: var(--radius-full);
+  }
+
+  @media (max-width: #{$bp-md - 1px}) {
+    inset-inline: var(--space-3);
+    inset-block-end: var(--space-3);
+    border-radius: var(--radius-full);
+    padding-block-end: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .inner {
+    padding-block: var(--space-2);
+  }
+}
+
+// --- Logo ---
+.logo {
+  font-size: var(--font-size-lg);
+  font-weight: $font-weight-bold;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  line-height: 1;
+}
+
+// --- Desktop links ---
+.links {
+  display: none;
+  gap: var(--space-8);
+  margin-inline: auto;
+  list-style: none;
+
+  @media (min-width: $bp-md) {
+    display: flex;
+  }
+}
+
+.link {
+  font-size: var(--font-size-sm);
+  font-weight: $font-weight-medium;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+}
+
+// --- CTA button ---
+.cta {
+  display: none;
+  padding: var(--space-2) var(--space-6);
+  font-size: var(--font-size-sm);
+  font-weight: $font-weight-semibold;
+  color: var(--color-text-inverse);
+  background-color: var(--color-hover);
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  transition: background-color var(--duration-fast) var(--ease-out);
+
+  &:hover {
+    background-color: var(--color-active);
+  }
+
+  @media (min-width: $bp-md) {
+    display: inline-flex;
+  }
+}
+
+// --- Hamburger (mobile only) ---
+.burger {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-inline-start: auto;
+  padding: var(--space-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  @media (min-width: $bp-md) {
+    display: none;
+  }
+}
+
+.burgerLine {
+  display: block;
+  inline-size: 20px;
+  block-size: 2px;
+  background-color: var(--color-text-primary);
+  border-radius: var(--radius-full);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+// --- Mobile menu overlay ---
+.mobile {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg-canvas);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    visibility var(--duration-normal) var(--ease-out);
+
+  @media (min-width: $bp-md) {
+    display: none;
+  }
+}
+
+.mobileOpen {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobileLink {
+  display: block;
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--type-h3);
+  font-weight: $font-weight-semibold;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  text-align: center;
+
+  &:hover {
+    color: var(--color-accent-text);
+  }
+}
+
+.mobileCta {
+  display: block;
+  margin-block-start: var(--space-8);
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--font-size-lg);
+  font-weight: $font-weight-semibold;
+  color: var(--color-text-inverse);
+  background-color: var(--color-hover);
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  text-align: center;
+
+  &:hover {
+    background-color: var(--color-active);
+  }
+}

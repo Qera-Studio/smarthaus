@@ -1,26 +1,26 @@
-@use 'variables' as *;
-@use 'mixins' as *;
-@use 'reset';
+@use "variables" as *;
+@use "mixins" as *;
+@use "reset";
 
 // ============================================================================
 // Global base styles — Smarthaus
 // ============================================================================
 
 body {
-  font-family: var(--font-geist-sans, system-ui, -apple-system, sans-serif);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
   font-size: var(--font-size-base);
   line-height: $line-height-normal;
-  color: var(--ink);
-  background-color: var(--bone);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-canvas);
 }
 
 ::selection {
-  background-color: var(--bronze);
-  color: var(--bone);
+  background-color: var(--color-accent);
+  color: var(--color-bg-canvas);
 }
 
 :focus-visible {
-  outline: 2px solid var(--bronze);
+  outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
 }
 
@@ -41,9 +41,9 @@ a {
     block-size: auto;
     clip: auto;
     padding: var(--space-4) var(--space-8);
-    background: var(--ink);
-    color: var(--bone);
+    background: var(--color-bg-inverse);
+    color: var(--color-text-inverse);
     border-radius: var(--radius-md);
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
   }
 }

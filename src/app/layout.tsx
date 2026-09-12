@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Manrope } from "next/font/google";
+import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
 import "../styles/globals.scss";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const manrope = Manrope({
+  variable: "--font-sans",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -23,16 +21,23 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  openGraph: {
+    type: "website",
+    locale: "en_AE",
+    siteName: "Smarthaus",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" dir="ltr" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" dir="ltr" className={manrope.variable}>
       <body>
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
+        <Nav />
         <main id="main-content">{children}</main>
+        <Footer />
       </body>
     </html>
   );
