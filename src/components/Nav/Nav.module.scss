@@ -69,15 +69,9 @@
     line-height: $line-height-normal;
     color: var(--color-text-primary);
     text-decoration: none;
-    transition-property: opacity;
-    transition-duration: var(--duration-fast);
-    transition-timing-function: var(--ease-out);
 
+    // Hover feedback is the character roll (see RollingText), not a fade.
     @include focus-ring;
-
-    &:hover {
-      opacity: 0.7;
-    }
   }
 
   .cta {

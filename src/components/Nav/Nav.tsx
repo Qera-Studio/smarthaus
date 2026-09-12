@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "../Logo";
+import { RollingText } from "../RollingText";
 import styles from "./Nav.module.scss";
 
 // These routes do not exist yet — they 404 until each page lands. Kept here so
@@ -15,7 +16,7 @@ export function Nav() {
   return (
     <header className={styles.nav}>
       <Link href="/" className={styles.logo} aria-label="Smarthaus — home">
-        <Logo size={32} />
+        <Logo size={19.2} />
       </Link>
 
       <nav className={styles.links} aria-label="Primary">
@@ -23,7 +24,7 @@ export function Nav() {
           {LINKS.map(({ href, label }) => (
             <li key={href}>
               <Link href={href} className={styles.link}>
-                {label}
+                <RollingText>{label}</RollingText>
               </Link>
             </li>
           ))}
@@ -31,7 +32,7 @@ export function Nav() {
       </nav>
 
       <Link href="/contact" className={styles.cta}>
-        Book a free site visit
+        <RollingText>Book a free site visit</RollingText>
       </Link>
     </header>
   );

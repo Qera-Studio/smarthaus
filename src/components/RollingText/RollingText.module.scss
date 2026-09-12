@@ -1,0 +1,90 @@
+@use "../../styles/variables" as *;
+
+@layer components {
+  .roll {
+    // L2 component tokens — override per usage site.
+    --roll-duration: #{$duration-normal};
+    --roll-ease: #{$ease-out};
+
+    position: relative;
+    display: inline-block;
+    // Clips each character's outgoing copy at the text box edge.
+    overflow: hidden;
+    // Keeps descenders (g, y, p) from being clipped by the overflow above.
+    padding-block-end: 0.12em;
+    margin-block-end: -0.12em;
+    vertical-align: bottom;
+  }
+
+  // The real, announced text. It sets the element's width and stays in the
+  // accessibility tree — `visibility: hidden` would remove it and leave the
+  // link with no accessible name, since the animated copy is aria-hidden.
+  // Transparent ink keeps it present but unseen.
+  .label {
+    color: transparent;
+  }
+
+  .animation {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    display: flex;
+    // .label is transparent to stay in the a11y tree, so the visible copy must
+    // take the colour from the link itself.
+    color: currentColor;
+  }
+
+  .char {
+    position: relative;
+    display: inline-block;
+    // Per-character stagger, set inline by the component.
+    transition-delay: var(--char-delay, 0s);
+  }
+
+  .charIn,
+  .charOut {
+    display: inline-block;
+    transition-property: transform;
+    transition-duration: var(--roll-duration);
+    transition-timing-function: var(--roll-ease);
+    transition-delay: var(--char-delay, 0s);
+  }
+
+  // The incoming copy is stacked directly above the outgoing one and slides
+  // down into place on hover.
+  .charOut {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0;
+    transform: translateY(-100%);
+  }
+
+  // Hover and focus both trigger it, so keyboard users get the same feedback.
+  // :focus-visible on an ancestor link is matched via :focus-within.
+  .roll:hover,
+  .roll:focus-within {
+    .charIn {
+      transform: translateY(100%);
+    }
+
+    .charOut {
+      transform: translateY(0);
+    }
+  }
+
+  // _reset.scss zeroes transition-duration globally under reduced motion, which
+  // would leave the outgoing copy stuck offscreen mid-swap. Pin both copies to
+  // their resting position so the text is simply static.
+  @media (prefers-reduced-motion: reduce) {
+    .roll:hover,
+    .roll:focus-within {
+      .charIn {
+        transform: none;
+      }
+
+      .charOut {
+        transform: translateY(-100%);
+      }
+    }
+  }
+}
