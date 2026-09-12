@@ -1,0 +1,3 @@
+[submodule "qera-system"]
+	path = qera-system
+	url = git@github.com:Qera-Studio/qera-system.git
