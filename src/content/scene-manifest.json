@@ -1,0 +1,90 @@
+{
+  "landing": {
+    "still": {
+      "desktop": "landing/front.avif",
+      "mobile": "landing/front.mobile.avif"
+    },
+    "parallax": { "x": 25, "y": 15 }
+  },
+  "approach": {
+    "clip": null,
+    "poster": {
+      "desktop": "approach/poster.avif",
+      "mobile": "approach/poster.mobile.avif"
+    }
+  },
+  "explorer": {
+    "base": {
+      "desktop": "explorer/base.avif",
+      "mobile": "explorer/base.mobile.avif"
+    },
+    "services": [
+      {
+        "id": "garage",
+        "label": "Garage",
+        "deviceId": "garage-door",
+        "cameraMove": null,
+        "demo": null,
+        "poster": {
+          "desktop": "explorer/garage/poster.avif",
+          "mobile": "explorer/garage/poster.mobile.avif"
+        }
+      },
+      {
+        "id": "ac",
+        "label": "Climate",
+        "deviceId": "climate-control",
+        "cameraMove": null,
+        "demo": null,
+        "poster": {
+          "desktop": "explorer/ac/poster.avif",
+          "mobile": "explorer/ac/poster.mobile.avif"
+        }
+      },
+      {
+        "id": "lighting",
+        "label": "Lighting",
+        "deviceId": "lighting-scenes",
+        "cameraMove": null,
+        "demo": null,
+        "poster": {
+          "desktop": "explorer/lighting/poster.avif",
+          "mobile": "explorer/lighting/poster.mobile.avif"
+        }
+      },
+      {
+        "id": "security",
+        "label": "Security",
+        "deviceId": "security-system",
+        "cameraMove": null,
+        "demo": null,
+        "poster": {
+          "desktop": "explorer/security/poster.avif",
+          "mobile": "explorer/security/poster.mobile.avif"
+        }
+      },
+      {
+        "id": "entertainment",
+        "label": "Entertainment",
+        "deviceId": "media-system",
+        "cameraMove": null,
+        "demo": null,
+        "poster": {
+          "desktop": "explorer/entertainment/poster.avif",
+          "mobile": "explorer/entertainment/poster.mobile.avif"
+        }
+      },
+      {
+        "id": "energy",
+        "label": "Energy",
+        "deviceId": "energy-monitor",
+        "cameraMove": null,
+        "demo": null,
+        "poster": {
+          "desktop": "explorer/energy/poster.avif",
+          "mobile": "explorer/energy/poster.mobile.avif"
+        }
+      }
+    ]
+  }
+}
