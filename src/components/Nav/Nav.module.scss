@@ -77,12 +77,13 @@
   .cta {
     // Shrink to the label so the button is not stretched across its column.
     justify-self: end;
-    padding: $space-2;
+    padding-block: $space-2;
+    padding-inline: $space-3;
     font-size: var(--nav-link-size);
     font-weight: var(--nav-link-weight);
     line-height: $line-height-normal;
-    // brown-900 ground with brown-100 text — 15.6:1, well clear of AA.
-    background-color: var(--color-bg-inverse);
+    // brown-950 ground with brown-100 text — 17.9:1, well clear of AA.
+    background-color: var(--color-bg-inverse-strong);
     color: var(--color-text-inverse);
     border-radius: $radius-sm;
     text-decoration: none;

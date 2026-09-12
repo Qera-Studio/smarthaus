@@ -14,7 +14,9 @@ type LogoProps = {
 export function Logo({ size = 32, className }: LogoProps) {
   return (
     <svg
-      viewBox="0 0 1076 148"
+      /* True ink bounds: the wordmark sits below the mark's baseline, so a
+         viewBox flush to 0..148 shaved its bottom edge. */
+      viewBox="0 -3 1076.5 155"
       height={size}
       fill="none"
       aria-hidden="true"

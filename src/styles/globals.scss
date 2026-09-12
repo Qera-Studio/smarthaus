@@ -17,12 +17,34 @@
 // ============================================================================
 
 @layer base {
+  // The ground lives on html, not body: body is capped at --content-max, and a
+  // background there would stop at the cap and leave bare edges on wide screens.
+  html {
+    background-color: var(--color-bg-canvas);
+
+    // 4px brown-900 dot, drawn in a 16px canvas so the circle is not clipped at
+    // the image edge, with the hotspot at its centre. `auto` is the fallback if
+    // the SVG cursor is unsupported.
+    //
+    // The colour is inlined rather than tokenised: cursor data URIs are parsed
+    // by the image loader, which cannot resolve var() or SCSS interpolation.
+    cursor:
+      url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2" fill="%2314110E"/></svg>')
+        8 8,
+      auto;
+  }
+
   body {
     font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
     font-size: var(--font-size-base);
     line-height: $line-height-normal;
     color: var(--color-text-primary);
-    background-color: var(--color-bg-canvas);
+
+    // Site-wide viewport cap: content stops growing at --content-max and
+    // centres beyond it. Applied to body so every page and the nav inherit one
+    // shared edge, rather than each block re-declaring its own container.
+    max-inline-size: var(--content-max);
+    margin-inline: auto;
   }
 
   ::selection {
@@ -33,6 +55,14 @@
   :focus-visible {
     outline: 2px solid var(--color-border-focus);
     outline-offset: 2px;
+  }
+
+  // Links and buttons default to `pointer`, which would override the dot from
+  // html. Inherit instead so the cursor stays consistent everywhere.
+  a,
+  button,
+  [role="button"] {
+    cursor: inherit;
   }
 
   a {

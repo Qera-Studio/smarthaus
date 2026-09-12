@@ -32,7 +32,7 @@ export function Nav() {
       </nav>
 
       <Link href="/contact" className={styles.cta}>
-        <RollingText>Book a free site visit</RollingText>
+        Book a free site visit
       </Link>
     </header>
   );

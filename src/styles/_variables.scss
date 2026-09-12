@@ -38,6 +38,9 @@ $brown-50: #f8f5f0;
   --color-bg-surface: #{$brown-50};
   --color-bg-muted: #{$brown-200};
   --color-bg-inverse: #{$brown-900};
+  // The darkest ground — used where an inverse surface needs to read as solid
+  // rather than as a raised panel (primary CTA).
+  --color-bg-inverse-strong: #{$brown-950};
 
   // Text (all pass AA 4.5:1 on their intended background)
   --color-text-primary: #{$brown-900}; // 15.6:1 on canvas, 17.3:1 on surface
@@ -233,7 +236,9 @@ $bp-2xl: 1536px;
 
 :root {
   --measure-prose: 65ch;
-  --content-max: 1280px;
+  // Site-wide viewport cap. Content stops growing here and centres in the
+  // canvas on wider screens.
+  --content-max: 1440px;
   --content-gutter: #{$space-6};
 
   @media (min-width: 768px) {
