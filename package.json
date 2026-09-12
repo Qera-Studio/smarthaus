@@ -1,0 +1,53 @@
+{
+  "name": "smarthaus",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --passWithNoTests",
+    "test:e2e": "playwright test",
+    "test:lhci": "lhci autorun",
+    "analyze": "ANALYZE=true next build",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mjs}": ["eslint --fix", "prettier --write"],
+    "*.{json,md,scss,css}": ["prettier --write"],
+    "*.{ts,tsx}": ["bash -c 'tsc --noEmit'"]
+  },
+  "dependencies": {
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@lhci/cli": "^0.15.1",
+    "@next/bundle-analyzer": "^16.3.4",
+    "@playwright/test": "^1.63.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "husky": "^9.1.7",
+    "jest": "^30.5.1",
+    "jest-environment-jsdom": "^30.5.1",
+    "lint-staged": "^17.5.1",
+    "prettier": "^3.9.6",
+    "sass": "^1.104.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  },
+  "packageManager": "pnpm@12.4.1"
+}
