@@ -1,0 +1,86 @@
+@use "../../styles/variables" as *;
+
+@layer components {
+  .roll {
+    // L2 component tokens — override per usage site.
+    --roll-duration: #{$duration-normal};
+    --roll-ease: #{$ease-out};
+    // Extra line height reserved for descenders. Applied as line-height rather
+    // than padding: the clip window must equal the travel distance exactly, so
+    // any padding would leave a gap for a departing "g" to show through. A
+    // taller line box grows both together and keeps them equal.
+    --roll-line-height: 1.5;
+
+    position: relative;
+    display: inline-block;
+    // The line box is the clip window and the travel distance at once, so a
+    // departing copy ends up exactly fully hidden. --roll-line-height gives
+    // glyphs room to draw inside it instead of padding around it.
+    line-height: var(--roll-line-height);
+    vertical-align: bottom;
+  }
+
+  // The real, announced text. It sets the element's width and stays in the
+  // accessibility tree — `visibility: hidden` would remove it and leave the
+  // link with no accessible name, since the animated copy is aria-hidden.
+  // Transparent ink keeps it present but unseen.
+  .label {
+    color: transparent;
+  }
+
+  .animation {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    display: flex;
+    // .label is transparent to stay in the a11y tree, so the visible copy must
+    // take the colour from the link itself.
+    color: currentColor;
+  }
+
+  // Each character clips itself to one row.
+  .char {
+    display: block;
+    overflow: hidden;
+    block-size: 1lh;
+  }
+
+  .charColumn {
+    display: flex;
+    flex-direction: column;
+    transition-property: transform;
+    transition-duration: var(--roll-duration);
+    transition-timing-function: var(--roll-ease);
+    // Per-character stagger, set inline by the component.
+    transition-delay: var(--char-delay, 0s);
+  }
+
+  .charIn,
+  .charOut {
+    // Two rows stacked: visible copy on top, replacement below. Hovering
+    // slides the column up by exactly one row.
+    display: block;
+    block-size: 1lh;
+  }
+
+  // Hover and focus both trigger it, so keyboard users get the same feedback.
+  // :focus-visible on an ancestor link is matched via :focus-within.
+  .roll:hover,
+  .roll:focus-within {
+    .charColumn {
+      transform: translateY(-1lh);
+    }
+  }
+
+  // _reset.scss zeroes transition-duration globally under reduced motion, so
+  // the column would jump rather than roll. Hold it at the top row instead:
+  // the text simply stays put.
+  @media (prefers-reduced-motion: reduce) {
+    .roll:hover,
+    .roll:focus-within {
+      .charColumn {
+        transform: none;
+      }
+    }
+  }
+}
