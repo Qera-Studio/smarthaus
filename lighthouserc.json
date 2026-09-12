@@ -1,7 +1,9 @@
 {
   "ci": {
     "collect": {
-      "url": ["http://localhost:3000/"],
+      "url": ["http://localhost:3210/"],
+      "startServerCommand": "pnpm start --port 3210",
+      "startServerReadyPattern": "Ready in",
       "numberOfRuns": 3,
       "settings": {
         "preset": "desktop"

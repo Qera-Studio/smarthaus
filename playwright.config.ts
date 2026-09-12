@@ -1,5 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Port 3000 is a shared default — another project's dev server squatting on it
+// would silently be tested instead of this one. Use a project-specific port and
+// never adopt a foreign server that happens to be listening.
+const PORT = Number(process.env["PLAYWRIGHT_PORT"] ?? 3210);
+const BASE_URL = `http://localhost:${PORT}`;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -8,7 +14,7 @@ export default defineConfig({
   workers: process.env["CI"] ? 1 : undefined,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: BASE_URL,
     trace: "on-first-retry",
   },
   projects: [
@@ -26,8 +32,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm build && pnpm start",
-    port: 3000,
-    reuseExistingServer: !process.env["CI"],
+    command: `pnpm build && pnpm start --port ${PORT}`,
+    port: PORT,
+    reuseExistingServer: false,
   },
 });

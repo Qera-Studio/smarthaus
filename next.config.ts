@@ -97,7 +97,7 @@ const nextConfig: NextConfig = {
 
           // Content-Security-Policy: defence-in-depth against XSS, data injection, and framing.
           // 'unsafe-inline' is needed for Next.js style injection in dev/prod.
-          // No 'unsafe-eval', no wildcards.
+          // No wildcards. 'unsafe-eval' is dev-server only (see script-src below).
           //
           // script-src 'unsafe-inline': Next.js emits inline <script> tags for the
           // bootstrap payload and streaming chunks. A nonce-based CSP would require
@@ -108,7 +108,9 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              // React's dev-only debugging (callstack reconstruction) requires
+              // 'unsafe-eval'. Dev server only — never emitted in production.
+              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data:",
               "font-src 'self'",

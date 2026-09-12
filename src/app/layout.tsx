@@ -1,7 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
-import Nav from "@/components/Nav";
-import Footer from "@/components/Footer";
 import "../styles/globals.scss";
 
 const manrope = Manrope({
@@ -28,6 +26,14 @@ export const metadata: Metadata = {
   },
 };
 
+// themeColor paints the browser chrome (mobile Safari/Chrome address bar) to
+// match --color-bg-canvas, so the viewport reads as one surface. No
+// maximumScale or userScalable limits — pinch-zoom is a WCAG 1.4.4 requirement.
+export const viewport: Viewport = {
+  themeColor: "#f0e9dd",
+  colorScheme: "light",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" dir="ltr" className={manrope.variable}>
@@ -35,9 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
-        <Nav />
         <main id="main-content">{children}</main>
-        <Footer />
       </body>
     </html>
   );
