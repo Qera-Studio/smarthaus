@@ -234,11 +234,19 @@ $bp-2xl: 1536px;
 
 // --- L1: Layout -------------------------------------------------------------
 
+// Compile-time forms of the layout customs below, for any media query that
+// needs them — media queries cannot read CSS custom properties. Keep in step
+// with the :root values.
+$content-max: 1440px;
+$page-gutter: $space-6;
+
 :root {
   --measure-prose: 65ch;
   // Site-wide viewport cap. Content stops growing here and centres in the
   // canvas on wider screens.
-  --content-max: 1440px;
+  --content-max: #{$content-max};
+  // Inline gutter, applied below the cap only (see globals.scss).
+  --page-gutter: #{$page-gutter};
   --content-gutter: #{$space-6};
 
   @media (min-width: 768px) {

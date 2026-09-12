@@ -47,6 +47,18 @@
     // shared edge, rather than each block re-declaring its own container.
     max-inline-size: var(--content-max);
     margin-inline: auto;
+
+    // A single declaration instead of a breakpoint, because the two spacings
+    // must not stack. Below the cap the auto margin is 0 and this is the full
+    // gutter; above it the margin grows and this shrinks to 0 at the width
+    // where the margin alone equals a gutter. The gap therefore only ever
+    // increases with viewport width — a media query on the cap leaves a band
+    // just above it hugging the edge, and one on cap + 2 gutters makes the gap
+    // bulge then shrink again.
+    padding-inline: max(
+      0px,
+      min(var(--page-gutter), (var(--content-max) + 2 * var(--page-gutter) - 100vw) / 2)
+    );
   }
 
   ::selection {
