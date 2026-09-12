@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "../styles/globals.scss";
 
@@ -24,6 +24,14 @@ export const metadata: Metadata = {
     locale: "en_AE",
     siteName: "Smarthaus",
   },
+};
+
+// themeColor paints the browser chrome (mobile Safari/Chrome address bar) to
+// match --color-bg-canvas, so the viewport reads as one surface. No
+// maximumScale or userScalable limits — pinch-zoom is a WCAG 1.4.4 requirement.
+export const viewport: Viewport = {
+  themeColor: "#f0e9dd",
+  colorScheme: "light",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

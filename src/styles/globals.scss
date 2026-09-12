@@ -29,6 +29,10 @@ a {
   transition: color var(--duration-fast) var(--ease-out);
 }
 
+.visually-hidden {
+  @include visually-hidden;
+}
+
 .skip-link {
   @include visually-hidden;
 
