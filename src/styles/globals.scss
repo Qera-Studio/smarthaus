@@ -22,15 +22,15 @@
   html {
     background-color: var(--color-bg-canvas);
 
-    // Brown-900 dot with a 4px radius (8px across), drawn in a 16px canvas so
+    // Brown-900 dot with a 16px radius (32px across), drawn in a 40px canvas so
     // the circle is not clipped at the image edge, with the hotspot at its
     // centre. `auto` is the fallback if the SVG cursor is unsupported.
     //
     // The colour is inlined rather than tokenised: cursor data URIs are parsed
     // by the image loader, which cannot resolve var() or SCSS interpolation.
     cursor:
-      url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="4" fill="%2314110E"/></svg>')
-        8 8,
+      url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="%2314110E"/></svg>')
+        20 20,
       auto;
   }
 
@@ -45,11 +45,6 @@
     // shared edge, rather than each block re-declaring its own container.
     max-inline-size: var(--content-max);
     margin-inline: auto;
-
-    // The single site gutter. Sections align to this edge instead of each
-    // declaring their own inline padding, so the nav, hero and every block
-    // below share one vertical line.
-    padding-inline: var(--page-gutter);
   }
 
   ::selection {

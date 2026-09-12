@@ -239,9 +239,6 @@ $bp-2xl: 1536px;
   // Site-wide viewport cap. Content stops growing here and centres in the
   // canvas on wider screens.
   --content-max: 1440px;
-  // The single inline gutter, set on body. Every section aligns to it, so
-  // components carry no inline padding of their own.
-  --page-gutter: 36px;
   --content-gutter: #{$space-6};
 
   @media (min-width: 768px) {
