@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
-import Nav from "@/components/Nav";
-import Footer from "@/components/Footer";
 import "../styles/globals.scss";
 
 const manrope = Manrope({
@@ -35,9 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
-        <Nav />
         <main id="main-content">{children}</main>
-        <Footer />
       </body>
     </html>
   );
