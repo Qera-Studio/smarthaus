@@ -98,16 +98,23 @@ const nextConfig: NextConfig = {
           // Content-Security-Policy: defence-in-depth against XSS, data injection, and framing.
           // 'unsafe-inline' is needed for Next.js style injection in dev/prod.
           // No 'unsafe-eval', no wildcards.
+          //
+          // script-src 'unsafe-inline': Next.js emits inline <script> tags for the
+          // bootstrap payload and streaming chunks. A nonce-based CSP would require
+          // per-request header generation, which forces dynamic rendering and defeats
+          // this site's static-generation performance strategy.
+          // Revisit if the site ever adds authentication or renders user-generated content.
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data:",
               "font-src 'self'",
               "connect-src 'self'",
               "media-src 'self'",
+              "object-src 'none'",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

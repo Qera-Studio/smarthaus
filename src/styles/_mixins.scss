@@ -1,5 +1,5 @@
-@use 'sass:math';
-@use 'variables' as *;
+@use "sass:math";
+@use "variables" as *;
 
 // ============================================================================
 // Mixins — Smarthaus
@@ -11,15 +11,39 @@
 }
 
 // --- Breakpoints (mobile-first: min-width) ----------------------------------
-@mixin bp-xs  { @media (min-width: $bp-xs)  { @content; } }
-@mixin bp-sm  { @media (min-width: $bp-sm)  { @content; } }
-@mixin bp-md  { @media (min-width: $bp-md)  { @content; } }
-@mixin bp-lg  { @media (min-width: $bp-lg)  { @content; } }
-@mixin bp-xl  { @media (min-width: $bp-xl)  { @content; } }
-@mixin bp-2xl { @media (min-width: $bp-2xl) { @content; } }
+@mixin bp-xs {
+  @media (min-width: $bp-xs) {
+    @content;
+  }
+}
+@mixin bp-sm {
+  @media (min-width: $bp-sm) {
+    @content;
+  }
+}
+@mixin bp-md {
+  @media (min-width: $bp-md) {
+    @content;
+  }
+}
+@mixin bp-lg {
+  @media (min-width: $bp-lg) {
+    @content;
+  }
+}
+@mixin bp-xl {
+  @media (min-width: $bp-xl) {
+    @content;
+  }
+}
+@mixin bp-2xl {
+  @media (min-width: $bp-2xl) {
+    @content;
+  }
+}
 
 // --- Focus ring (visible on keyboard, hidden on pointer) --------------------
-@mixin focus-ring($color: var(--bronze), $offset: 2px) {
+@mixin focus-ring($color: var(--color-border-focus), $offset: 2px) {
   &:focus-visible {
     outline: 2px solid #{$color};
     outline-offset: #{$offset};
@@ -44,7 +68,8 @@
 @mixin fluid-type($min-size, $max-size, $min-vw: $bp-xs, $max-vw: $bp-xl) {
   font-size: clamp(
     #{$min-size},
-    #{$min-size} + #{strip-unit($max-size - $min-size)} * ((100vw - #{$min-vw}) / #{strip-unit($max-vw - $min-vw)}),
+    #{$min-size} + #{strip-unit($max-size - $min-size)} *
+      ((100vw - #{$min-vw}) / #{strip-unit($max-vw - $min-vw)}),
     #{$max-size}
   );
 }
