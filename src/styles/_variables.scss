@@ -34,20 +34,20 @@ $brown-50: #f8f5f0;
 
   // L1 semantics — these are what components use
   // Backgrounds
-  --color-bg-canvas: #{$brown-50};
-  --color-bg-surface: #{$brown-100};
+  --color-bg-canvas: #{$brown-100};
+  --color-bg-surface: #{$brown-50};
   --color-bg-muted: #{$brown-200};
   --color-bg-inverse: #{$brown-900};
 
   // Text (all pass AA 4.5:1 on their intended background)
   --color-text-primary: #{$brown-900}; // 15.6:1 on canvas, 17.3:1 on surface
-  --color-text-secondary: #{$brown-700}; // 8.5:1 on surface
-  --color-text-muted: #{$brown-600}; // 5.5:1 on surface — minimum for body text
+  --color-text-secondary: #{$brown-700}; // 8.5:1 on canvas
+  --color-text-muted: #{$brown-600}; // 5.5:1 on canvas — minimum for body text
   --color-text-inverse: #{$brown-100}; // 15.6:1 on inverse
 
   // Accent — bronze is decorative on light, text-legal on dark only
-  --color-accent: #{$brown-400}; // 2.9:1 on light (decorative only), 5.4:1 on dark (text-legal)
-  --color-accent-text: #{$brown-600}; // 5.5:1 on light — use when accent must be readable
+  --color-accent: #{$brown-400}; // 2.9:1 on canvas (decorative only), 5.4:1 on dark (text-legal)
+  --color-accent-text: #{$brown-600}; // 5.5:1 on canvas — use when accent must be readable
 
   // Borders
   --color-border: #{$brown-200};
