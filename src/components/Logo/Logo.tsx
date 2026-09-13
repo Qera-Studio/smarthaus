@@ -27,6 +27,22 @@ const VIEW_BOX: Record<LogoVariant, string> = {
 };
 
 /**
+ * The lockup's width:height, read off its own viewBox so there is exactly one
+ * copy of these numbers.
+ *
+ * Published to CSS as --logo-ratio alongside --logo-size, because a bare
+ * `height` attribute is not enough to size an SVG reliably: any stylesheet that
+ * sets `block-size: auto` on it discards the attribute, and the width then has
+ * to be inferred from the parent — which collapsed the nav logo to 0×0 in
+ * WebKit (see Nav.module.scss). With the ratio available, a consumer can make
+ * both axes definite without measuring an ancestor.
+ */
+function aspectRatio(variant: LogoVariant): string {
+  const [, , width, height] = VIEW_BOX[variant].split(" ");
+  return `${width} / ${height}`;
+}
+
+/**
  * Smarthaus lockup — mark, wordmark, or both.
  *
  * Inlined rather than loaded via <img> so the artwork inherits `currentColor`,
@@ -41,6 +57,14 @@ export function Logo({ size = 32, variant = "full", className }: LogoProps) {
       fill="none"
       aria-hidden="true"
       focusable="false"
+      // The attribute above stays for the no-CSS case; these let a stylesheet
+      // size the artwork on both axes without depending on the parent box.
+      style={
+        {
+          "--logo-size": `${size}px`,
+          "--logo-ratio": aspectRatio(variant),
+        } as React.CSSProperties
+      }
       {...(className ? { className } : {})}
     >
       <g transform="translate(-345 -158)">
