@@ -19,7 +19,7 @@
     // The scrolled capsule's width from lg up. A max, not a fixed size: on a
     // 1024px window the content column is already narrower than this, and the
     // capsule should never grow past the gutters it sits inside.
-    --nav-stuck-size: 750px;
+    --nav-stuck-size: 650px;
     // How far the scrolled capsule floats below the top edge. Only applies once
     // stuck — the tall top-of-page bar sits flush against the viewport top.
     --nav-stuck-inset: #{$space-6};
