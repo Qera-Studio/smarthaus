@@ -68,6 +68,41 @@ const optionalEmail = optionalText.refine(
   { message: "Check the email address." },
 );
 
+/**
+ * An unticked checkbox posts nothing at all; a ticked one posts "on". So the
+ * absence of the key is the "no" case, and only the literal "on" is a yes.
+ *
+ * Written as a coercion rather than `z.boolean()` because FormData never
+ * carries booleans — a naive boolean schema would reject every submission.
+ */
+const checkbox = z
+  .union([z.literal("on"), z.undefined(), z.null()])
+  .transform((value) => value === "on")
+  // `.optional()` so a MISSING key parses, not just an explicit `undefined`.
+  // Without it the union rejects an absent property, and an unticked box is
+  // absent from FormData — so the optional marketing box would have failed
+  // every submission where the visitor left it alone, which is most of them.
+  .optional()
+  .transform((value) => value === true);
+
+/**
+ * Contact consent, and the reason it is a separate field from marketing.
+ *
+ * Legal §6 prohibits bundled consent, and the consent deck records a standing
+ * objection to this checkbox even in its narrowed form: requiring a tick to get
+ * a reply makes the consent less than freely given, which is a weak basis —
+ * while "steps toward a contract", the basis the privacy policy already
+ * states, is strong and needs no tick at all.
+ *
+ * It is kept because the deck's §6.1 narrowed it to consent for one specific
+ * thing rather than dropping it, and that is the reviewed position. If counsel
+ * later takes the notice-only variant, this becomes `.optional()` and the
+ * component renders a line of static text: see the note in ContactForm.
+ */
+const contactConsent = checkbox.refine((value) => value === true, {
+  message: "Please confirm you would like us to contact you about your enquiry.",
+});
+
 export const contactSchema = z.object({
   name,
   phone,
@@ -79,6 +114,15 @@ export const contactSchema = z.object({
    * unrecognised value means the payload was not produced by our form.
    */
   interest: z.enum(INTERESTS),
+  /** Required. See contactConsent above for why that is contested. */
+  contactConsent,
+  /**
+   * Marketing, and never required. Separate from contactConsent because
+   * Legal §6 requires marketing consent to be distinct from service consent —
+   * bundling them is precisely what "no bundled consent" prohibits. Unticked by
+   * default; a pre-ticked box is basket sneaking.
+   */
+  marketingConsent: checkbox,
 });
 
 export type ContactInput = z.input<typeof contactSchema>;

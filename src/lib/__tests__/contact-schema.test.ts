@@ -17,6 +17,13 @@ const valid = (): any => ({
   community: "Dubai Hills",
   message: "Six villas next year.",
   interest: INTERESTS[0],
+  // "on" is what a ticked checkbox posts. Required, so every valid fixture
+  // carries it — see the contactConsent note in contact-schema.ts for why that
+  // requirement is contested and how it would be relaxed.
+  contactConsent: "on",
+  // Absent rather than "on": marketing is optional and must never be
+  // pre-ticked, so the default fixture is the untouched state.
+  marketingConsent: undefined,
 });
 
 describe("contact schema", () => {
@@ -32,6 +39,7 @@ describe("contact schema", () => {
       community: "",
       message: "",
       interest: INTERESTS[2],
+      contactConsent: "on",
     });
     expect(result.success).toBe(true);
   });
@@ -106,5 +114,61 @@ describe("contact schema", () => {
     const input = valid();
     delete input.interest;
     expect(contactSchema.safeParse(input).success).toBe(false);
+  });
+
+  describe("consent fields", () => {
+    it("rejects a submission with the contact box unticked", () => {
+      // An unticked box is ABSENT from FormData, which is the case that
+      // matters: the schema must not read a missing key as agreement.
+      const input = valid();
+      delete input.contactConsent;
+      const result = contactSchema.safeParse(input);
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.message).toBe(
+        "Please confirm you would like us to contact you about your enquiry.",
+      );
+    });
+
+    it("does not accept a stray truthy value as consent", () => {
+      // Only the literal "on" is a tick. A hand-crafted payload saying
+      // "true", "1" or "yes" is not a checkbox a person clicked.
+      for (const value of ["true", "1", "yes", "false"]) {
+        const input = valid();
+        input.contactConsent = value;
+        expect(contactSchema.safeParse(input).success).toBe(false);
+      }
+    });
+
+    it("treats marketing as optional and defaults it to false", () => {
+      // Never required, never gates submission. Legal §6 keeps marketing
+      // consent distinct from service consent, and an absent box is a "no".
+      const input = valid();
+      delete input.marketingConsent;
+      const result = contactSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      expect(result.data?.marketingConsent).toBe(false);
+    });
+
+    it("records marketing consent when it is given", () => {
+      const input = valid();
+      input.marketingConsent = "on";
+      expect(contactSchema.safeParse(input).data?.marketingConsent).toBe(true);
+    });
+
+    it("keeps the two consents independent", () => {
+      // Bundling them is what "no bundled consent" prohibits, so declining
+      // marketing must not affect the enquiry, and vice versa.
+      const marketingOnly = valid();
+      delete marketingOnly.contactConsent;
+      marketingOnly.marketingConsent = "on";
+      expect(contactSchema.safeParse(marketingOnly).success).toBe(false);
+
+      const contactOnly = valid();
+      contactOnly.marketingConsent = undefined;
+      const result = contactSchema.safeParse(contactOnly);
+      expect(result.success).toBe(true);
+      expect(result.data?.contactConsent).toBe(true);
+      expect(result.data?.marketingConsent).toBe(false);
+    });
   });
 });

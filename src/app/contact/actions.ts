@@ -33,6 +33,11 @@ export async function submitEnquiry(
     community: formData.get("community"),
     message: formData.get("message"),
     interest: formData.get("interest"),
+    // An unticked checkbox is absent from FormData, so `get` returns null and
+    // the schema's coercion reads that as false. Passed explicitly rather than
+    // spread so a new form field cannot reach the schema unvalidated.
+    contactConsent: formData.get("contactConsent"),
+    marketingConsent: formData.get("marketingConsent"),
   });
 
   if (!parsed.success) {
