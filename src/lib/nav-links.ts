@@ -23,6 +23,7 @@ export const PAGE_LINKS: readonly NavLink[] = [
   { href: "/about", label: "About" },
   { href: "/designers", label: "Designers" },
   { href: "/developers", label: "Developers" },
+  { href: "/faq", label: "FAQs" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
