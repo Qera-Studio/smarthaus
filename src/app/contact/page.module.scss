@@ -620,4 +620,99 @@
     color: var(--color-text-secondary);
     text-wrap: pretty;
   }
+
+  // --- Consent checkboxes ---------------------------------------------------
+  //
+  // Two of them, above the submit button: one required (contact), one optional
+  // (marketing). Separate controls because Legal §6 requires marketing consent
+  // to be distinct from service consent.
+
+  .consents {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+    margin-block-start: $space-6;
+  }
+
+  .consent {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+  }
+
+  .consentRow {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-3;
+  }
+
+  // A native checkbox, restyled rather than replaced. `appearance: none` drops
+  // the OS control and keeps every behaviour the platform provides: keyboard
+  // operation, the accessibility tree, form semantics, and `:checked` reaching
+  // CSS with no aria bookkeeping. Same reasoning as the <select> above.
+  .checkbox {
+    appearance: none;
+    // 24px visual box, 44px hit area via the padding below (WCAG 2.2 · 2.5.8
+    // asks 24 minimum; 44 is the floor on coarse pointers).
+    inline-size: 24px;
+    block-size: 24px;
+    flex: 0 0 auto;
+    // Optically align with the first line of the label rather than its box.
+    margin-block-start: 2px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--color-text-secondary);
+    border-radius: 0;
+    background-color: var(--color-bg-surface);
+    cursor: pointer;
+
+    transition-property: background-color, border-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:checked {
+      background-color: var(--color-bg-inverse-strong);
+      border-color: var(--color-bg-inverse-strong);
+      // The tick. A background image rather than a pseudo-element: an <input>
+      // is a replaced element and cannot host ::before reliably across engines.
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f0e9dd' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 18px 18px;
+    }
+
+    @include focus-ring;
+  }
+
+  .consentLabel {
+    font-size: var(--font-size-sm);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-primary);
+    cursor: pointer;
+  }
+
+  // Visible text, never colour alone.
+  .requiredMarker {
+    color: var(--color-text-secondary);
+  }
+
+  .consentHelper {
+    // Indented to the label's start edge, so it reads as belonging to it rather
+    // than to the form.
+    padding-inline-start: calc(24px + #{$space-3});
+    font-size: var(--font-size-sm);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+  }
+
+  // The invalid state marks the checkbox itself, not the whole form: one field
+  // failed and the design should say which.
+  //
+  // Primary ink, not a red. The palette has no error hue on purpose —
+  // CLAUDE.md rules out security-industry red outright — so this matches the
+  // treatment the text fields already use at line 143: a shift to the darkest
+  // ink against the muted default, with the message carrying the meaning.
+  .consent[data-invalid="true"] .checkbox {
+    border-color: var(--color-text-primary);
+  }
 }

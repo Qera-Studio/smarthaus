@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FaqAccordion, FaqSchema } from "../../components/Faq";
 import { LegalPage, LegalSectionBlock, type LegalSection } from "../../components/LegalPage";
+import { ClosingCta } from "../../components/ClosingCta";
 import { FAQ_CATEGORIES } from "../../content/faq";
 import styles from "../../components/Faq/Faq.module.scss";
 
@@ -73,6 +74,31 @@ export default function FaqPage() {
           </LegalSectionBlock>
         ))}
       </LegalPage>
+
+      {/*
+        Outside LegalPage, not inside it: that component lays its children into
+        the prose column beside the ToC rail, and this is a full-width centred
+        band. Nesting it would have indented it under the rail and broken the
+        centring on desktop.
+
+        The copy carries no figures or commitments on purpose. /faq is still
+        gated (FAQ_IS_PUBLISHABLE above) precisely because several answers hold
+        unconfirmed numbers, so a closing prompt that invited a claim would be
+        the wrong thing to add to this page of all pages.
+      */}
+      <ClosingCta
+        heading="Still have doubts?"
+        // No em dash: the house rule the legal, placeholder and contact pages
+        // all assert, and e2e/faq.spec.ts checks the collapsed answers too.
+        //
+        // Deliberately not a second "we'd rather answer it than have you
+        // guess" either. The intro paragraph at the top of the page already
+        // says that, and repeating a line verbatim at the foot reads as
+        // filler rather than as a close.
+        body="Every home is different, and the questions above will not cover yours. Tell us what you are planning and we will answer it properly."
+        href="/contact"
+        label="Contact Us"
+      />
     </div>
   );
 }

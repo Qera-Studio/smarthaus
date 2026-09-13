@@ -47,6 +47,12 @@ test("a valid submission confirms with the name and number given", async ({ page
   await form(page).getByLabel("Name").fill("Nadia");
   await form(page).getByLabel("Phone").fill("0543755150");
   await form(page).getByLabel("Email").fill("nadia@example.com");
+  // Required, and deliberately unticked by default: a pre-ticked consent box is
+  // basket sneaking, and a tick the visitor did not make is not a choice. So a
+  // valid submission has to include this click.
+  await form(page)
+    .getByLabel(/I would like Smarthaus to contact me/)
+    .check();
 
   await page.getByRole("button", { name: "Book a site visit" }).click();
 
@@ -166,4 +172,43 @@ test("the page does not overflow horizontally", async ({ page }) => {
     () => document.documentElement.scrollWidth > window.innerWidth + 1,
   );
   expect(overflows).toBe(false);
+});
+
+test("the consent boxes start unticked and the required one gates submission", async ({ page }) => {
+  const contact = form(page).getByLabel(/I would like Smarthaus to contact me/);
+  const marketing = form(page).getByLabel(/Occasionally send me new projects/);
+
+  // Neither is pre-ticked. Both are named dark patterns if they are: a
+  // pre-ticked box is basket sneaking, and bundled consent is prohibited
+  // outright by Legal §6.
+  await expect(contact).not.toBeChecked();
+  await expect(marketing).not.toBeChecked();
+
+  // Submitting with everything else valid still fails, and says why on the
+  // field rather than flashing the whole form.
+  await form(page).getByLabel("Name").fill("Ravi");
+  await form(page).getByLabel("Phone").fill("0543755150");
+  await page.getByRole("button", { name: "Book a site visit" }).click();
+  await expect(
+    page.getByText("Please confirm you would like us to contact you about your enquiry."),
+  ).toBeVisible();
+});
+
+test("the marketing box never gates submission", async ({ page }) => {
+  // Marketing consent has to be separable from the enquiry: requiring it would
+  // be exactly the bundling Legal §6 prohibits.
+  await form(page).getByLabel("Name").fill("Aditya");
+  await form(page).getByLabel("Phone").fill("0543755150");
+  await form(page)
+    .getByLabel(/I would like Smarthaus to contact me/)
+    .check();
+  // Marketing left untouched.
+  await page.getByRole("button", { name: "Book a site visit" }).click();
+
+  await expect(page.getByRole("status")).toBeVisible();
+});
+
+test("the required marker is visible text, not colour alone", async ({ page }) => {
+  // A required marker a colourblind visitor cannot perceive is not a marker.
+  await expect(form(page).getByText("(required)")).toBeVisible();
 });

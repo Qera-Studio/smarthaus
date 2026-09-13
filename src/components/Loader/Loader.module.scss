@@ -1,0 +1,227 @@
+@layer components {
+  .loader {
+    // L2 component tokens.
+    //
+    // One cycle = all five strands drawn on, then all five swallowed. The
+    // component can override this via --loader-cycle for tuning; see the
+    // cycleSeconds prop.
+    //
+    // 2s was chosen by watching the sequence side by side at 1.6s, 2s and 2.5s
+    // on /loader-preview: 1.6s reads rushed and 2.5s drags, since the chain
+    // gives each of the six events only 1/5.4 of the cycle and at 1.6s that is
+    // under 300ms per strand. Still short enough that a loader stays an apology
+    // for a wait rather than a title sequence.
+    --loader-cycle: 2s;
+    --loader-size: 64px;
+
+    // --- The 90% chain -------------------------------------------------------
+    //
+    // The sequence is six events, and each one starts when the previous is 90%
+    // finished:
+    //
+    //   1 grow centre  ->  2 grow inner  ->  3 grow outer
+    //     ->  4 swallow centre  ->  5 swallow inner  ->  6 swallow outer
+    //     ->  back to 1
+    //
+    // Near-sequential on purpose. An earlier version overlapped these much more
+    // (each event began when the previous was only ~50% through), which read as
+    // five strands milling about rather than one thing handing off to the next.
+    //
+    // Six events chained at 90% means the cycle is 6 * 0.9 = 5.4 event
+    // durations, so:
+    //
+    //   stagger        = 1/6      of the cycle = 16.6667%
+    //   event duration = 1/5.4    of the cycle = 18.5185%
+    //
+    // Those two numbers are what every timing below is derived from, and the
+    // 90% rule is exactly what they encode: a step of 1/6 against a duration of
+    // 1/5.4 is 0.9 of a duration. Change --loader-chain and both follow.
+    //
+    // The wrap is part of the chain, not an afterthought: the outer pair's
+    // swallow runs 83.33% -> 101.85%, crossing the cycle boundary, so the next
+    // cycle's centre strand begins while they still have 10% to go. That
+    // overlap is the requirement, and `animation-delay` with an infinite count
+    // handles it without a second track.
+    --loader-chain: 0.9;
+    // Three groups, each with a grow and a swallow = six events in the chain.
+    --loader-events: 6;
+    // Fraction of the cycle between consecutive events.
+    --loader-stagger: calc(1 / var(--loader-events));
+    // Fraction of the cycle one event occupies.
+    --loader-event: calc(1 / (var(--loader-events) * var(--loader-chain)));
+
+    display: grid;
+    place-items: center;
+    inline-size: var(--loader-size);
+    // The mark is very slightly taller than wide (149.5 x 155 viewBox), and
+    // --loader-size names the WIDTH, so the block size follows the ratio rather
+    // than being set to the same number.
+    block-size: calc(var(--loader-size) * 155 / 149.5);
+    color: var(--color-text-primary);
+  }
+
+  .mark {
+    inline-size: 100%;
+    block-size: 100%;
+    // The reset's `block-size: auto` would override the 100% above, so both
+    // axes are stated explicitly. Same class of trap as the nav logo collapsing
+    // in WebKit; see Nav.module.scss.
+    max-inline-size: none;
+  }
+
+  // The clip window. One per strand, and the only thing that animates.
+  //
+  // ## Why transform, and not the rect's own y/height
+  //
+  // The obvious implementation animates `y` and `height` on the <rect>, which
+  // are real animatable CSS properties and which `CSS.supports()` reports as
+  // supported in both engines. WebKit does not actually deliver it: measured
+  // over a 10s cycle, every rect sat unchanged at y -0.2 / height 148.5 while
+  // Chromium animated, so iOS would show a static mark and no animation at
+  // all. `CSS.supports` agreeing is exactly why this needed measuring rather
+  // than trusting.
+  //
+  // The `transform` SHORTHAND, by contrast, is applied identically by both —
+  // measured, the same matrix with transform-box honoured — so the rect keeps a
+  // fixed full-height geometry and is squashed and slid instead: scaled up from
+  // the base to draw the strand on, then translated up into the tip to swallow
+  // it. Note this rules out the individual `scale` and `translate` properties
+  // too: NEITHER engine applies those to an SVG element (both report
+  // `scale: none` on a rect), and Chromium animating their computed values
+  // without painting them is what made a first attempt look correct in
+  // instrumentation while rendering nothing.
+  .window {
+    // Percentage transform-origin and percentage translate both resolve against
+    // this rect's own bounding box rather than the SVG viewport, which is what
+    // lets "the base" and "the tip" be written as 100% and 0%.
+    transform-box: fill-box;
+    // Starts squashed onto the BASE. transform-origin is animated by the
+    // keyframes — it is what flips which end of the strand stays put between
+    // the two phases, and it is itself an animatable property.
+    transform-origin: 50% 100%;
+    // The base state is the empty one. Without it the full mark paints on the
+    // first frame before the animation takes over — exactly what a loader must
+    // not do.
+    transform: scaleY(0);
+
+    animation-name: strand;
+    animation-duration: var(--loader-cycle);
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-delay: calc(var(--loader-cycle) * var(--loader-stagger) * var(--step, 0));
+    // `both`: `backwards` holds the flat start during the stagger delay, so a
+    // later strand stays invisible rather than flashing its finished state, and
+    // `forwards` holds the last frame between iterations.
+    animation-fill-mode: both;
+  }
+
+  // One strand's whole life, in a single animation.
+  //
+  // The two phases are one `transform` track rather than two animations,
+  // because two animations on one element both writing `transform` conflict —
+  // the later one simply wins. The individual `scale` and `translate`
+  // properties would sidestep that, and cannot be used: neither engine applies
+  // them to SVG elements (measured — both report `scale: none` on a rect while
+  // honouring the `transform` shorthand identically).
+  //
+  // Both phases are a plain scaleY. What differs is the ORIGIN, and flipping it
+  // mid-animation is the whole mechanism:
+  //
+  //   grow     (0 -> 18.5185%): origin at the base, scaleY 0 -> 1. The bottom
+  //                         edge is pinned and the top edge travels up, so the
+  //                         strand grows bottom-to-top.
+  //   hold     (18.5185 -> 50%): fully drawn, and the origin flips at 50%. At
+  //                         scaleY(1) the transform is the identity from either
+  //                         anchor, so the switch cannot be seen.
+  //   swallow  (50 -> 68.5185%): origin at the tip, scaleY 1 -> 0. The top edge
+  //                         is pinned and the bottom edge climbs to meet it, so
+  //                         the strand is consumed from its base upward into
+  //                         the point it converges at.
+  //   empty    (68.5185 -> 100%): nothing painted, so this strand is clear while
+  //                         the later ones finish their own swallow.
+  //
+  // An earlier attempt used one fixed origin and a translateY to move the
+  // window for phase 2. It cannot work: with the origin at the base, phase 1 is
+  // correct but the swallow slides the whole window and pins the wrong edge;
+  // moving the origin to the tip fixes the swallow and inverts the draw-on so
+  // the strand grows downward out of its tip. Measured both ways before
+  // arriving at the origin flip.
+  //
+  // ## Where these percentages come from
+  //
+  // Keyframe selectors must be literal percentages — `var()` is not allowed in
+  // a selector — so the chain arithmetic from --loader-chain above is baked in
+  // here. With six events chained at 90%:
+  //
+  //   event duration = 1 / (6 * 0.9) = 18.5185% of the cycle
+  //   grow    0%  ->  18.5185%
+  //   swallow 50% ->  68.5185%
+  //
+  // The 50% is not a free choice either: a strand's grow and its swallow are
+  // three chain steps apart (grow centre, inner, outer, THEN swallow centre),
+  // and 3 * (1/6) = exactly half the cycle. That is what lets all five strands
+  // share this one track and differ only by --step, and it is why the two
+  // phases sit exactly half a cycle apart rather than at some tuned-by-eye gap.
+  //
+  // Keep these in step with --loader-events and --loader-chain. If either
+  // changes, recompute: grow end = 100/(events*chain), swallow start = 100 *
+  // (events/2)/events, swallow end = swallow start + grow end.
+  //
+  // The percentages are identical for every strand; the per-strand delay above
+  // is the only difference, and is what makes each group follow the last.
+  @keyframes strand {
+    // --- Phase 1: grow from the base upward --------------------------------
+    // Origin at the BASE (100%), so scaling up holds the bottom edge still and
+    // the window's TOP edge travels up the strand.
+    0% {
+      transform-origin: 50% 100%;
+      transform: scaleY(0);
+    }
+    18.5185% {
+      transform-origin: 50% 100%;
+      transform: scaleY(1);
+    }
+
+    // --- Hold, fully drawn --------------------------------------------------
+    // The origin flips here, while the window is at full size. At scaleY(1) the
+    // transform is the identity whichever end it is anchored to, so this switch
+    // is invisible — which is what lets one property do both jobs.
+    49.9% {
+      transform-origin: 50% 100%;
+      transform: scaleY(1);
+    }
+    50% {
+      transform-origin: 50% 0%;
+      transform: scaleY(1);
+    }
+
+    // --- Phase 2: swallow into the tip -------------------------------------
+    // Origin at the TIP (0%), so scaling back down holds the top edge still and
+    // the window's BOTTOM edge climbs to meet it. The strand is consumed from
+    // its base upward into the point it converges at.
+    68.5185% {
+      transform-origin: 50% 0%;
+      transform: scaleY(0);
+    }
+
+    // --- Empty, waiting for the loop ---------------------------------------
+    100% {
+      transform-origin: 50% 0%;
+      transform: scaleY(0);
+    }
+  }
+
+  // Reduced motion: no cycle at all.
+  //
+  // The _reset.scss reduced-motion block zeroes animation durations globally,
+  // which would freeze this on whatever frame it happened to be — possibly an
+  // empty one, leaving a blank box where a loading indicator should be. So the
+  // finished mark is pinned explicitly instead. The role="status" live region
+  // still announces the wait, which is the part that carries the meaning.
+  @media (prefers-reduced-motion: reduce) {
+    .window {
+      animation: none;
+      transform: scaleY(1);
+    }
+  }
+}

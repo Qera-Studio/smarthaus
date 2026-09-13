@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 
 import { HONEYPOT_FIELD, INTERESTS } from "../../lib/contact-schema";
+import { CONSENT_FORM_COPY } from "../../content/consent";
 import { whatsappLink } from "../../lib/contact";
 import { submitEnquiry } from "./actions";
 import { INITIAL_STATE, type ContactState } from "./state";
@@ -19,7 +20,10 @@ import styles from "./page.module.scss";
  */
 
 /** Fields that can carry an error, in DOM order — the first one gets focus. */
-const FOCUS_ORDER = ["name", "email", "phone", "interest"] as const;
+// Order matters: the first failing field in this list is the one focused. The
+// consent checkbox is last because it sits below the field grid, so sending a
+// visitor there only happens when nothing above it also failed.
+const FOCUS_ORDER = ["name", "email", "phone", "interest", "contactConsent"] as const;
 
 export function ContactForm() {
   const [state, formAction] = useActionState(submitEnquiry, INITIAL_STATE);
@@ -161,8 +165,104 @@ export function ContactForm() {
         />
       </div>
 
+      {/*
+        Consent, above the submit button and below the fields.
+
+        Both start unticked. A pre-ticked consent box is basket sneaking, a
+        named dark pattern, and it also makes the consent worthless: a tick the
+        visitor did not make is not a choice.
+
+        The two are separate fields rather than one because Legal §6 requires
+        marketing consent to be distinct from service consent. Bundling them is
+        exactly what that prohibits.
+      */}
+      <div className={styles.consents}>
+        <Checkbox
+          id="contactConsent"
+          error={errors.contactConsent}
+          label={
+            <>
+              {CONSENT_FORM_COPY.required.label}{" "}
+              {/* Visible text, not colour alone — a required marker a
+                  colourblind visitor cannot see is not a marker. */}
+              <span className={styles.requiredMarker}>{CONSENT_FORM_COPY.required.marker}</span>
+            </>
+          }
+          helper={
+            <>
+              {CONSENT_FORM_COPY.required.helperLead}{" "}
+              <Link href={CONSENT_FORM_COPY.required.helperHref}>
+                {CONSENT_FORM_COPY.required.helperLinkText}
+              </Link>
+              .
+            </>
+          }
+        />
+
+        <Checkbox id="marketingConsent" label={CONSENT_FORM_COPY.marketing.label} />
+      </div>
+
       <Submit />
     </form>
+  );
+}
+
+/**
+ * One consent checkbox.
+ *
+ * A native `<input type="checkbox">`, styled — never a styled div. The platform
+ * gives keyboard operation, the accessibility tree, form semantics and the
+ * `:checked` state for nothing, and the consent brief rules out reimplementing
+ * them.
+ *
+ * The error attaches to this field, not the form. One field failed, and the
+ * design should say which rather than red-flashing everything.
+ *
+ * If counsel takes the notice-only variant for the required box, this component
+ * stays and the required instance becomes a line of static text: the label and
+ * helper are already nodes, so nothing here needs rebuilding.
+ */
+function Checkbox({
+  id,
+  label,
+  helper,
+  error,
+}: {
+  id: string;
+  label: React.ReactNode;
+  helper?: React.ReactNode;
+  error?: string | undefined;
+}) {
+  const helperId = helper ? `${id}-helper` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [helperId, errorId].filter(Boolean).join(" ") || undefined;
+
+  return (
+    <div className={styles.consent} data-invalid={error ? "true" : undefined}>
+      <div className={styles.consentRow}>
+        <input
+          id={id}
+          name={id}
+          type="checkbox"
+          className={styles.checkbox}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+        />
+        <label htmlFor={id} className={styles.consentLabel}>
+          {label}
+        </label>
+      </div>
+      {helper && (
+        <p id={helperId} className={styles.consentHelper}>
+          {helper}
+        </p>
+      )}
+      {error && (
+        <p id={errorId} className={styles.fieldError} role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 

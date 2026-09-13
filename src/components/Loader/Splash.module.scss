@@ -1,0 +1,192 @@
+@use "../../styles/variables" as *;
+
+@layer components {
+  .splash {
+    // Must match DURATION_MS in Splash.tsx and --loader-cycle in
+    // Loader.module.scss. The bar reaching 100% and the mark finishing its one
+    // cycle are the same moment, which is the whole point of the timing.
+    --splash-duration: 2s;
+    // How long the overlay takes to fade once the time is out.
+    --splash-exit: 320ms;
+    // Thin, per the brief. A hairline that holds its weight on a 3x phone
+    // screen rather than disappearing.
+    --splash-bar-size: 2px;
+    // The mark's rendered width. Must match the `size` passed to Loader in
+    // Splash.tsx — the bar is positioned off the mark's HEIGHT, and the Loader
+    // derives its height from this width via the 149.5 x 155 viewBox, so the
+    // two cannot be decoupled.
+    --splash-mark-size: 96px;
+    // The mark's height, from that ratio.
+    --splash-mark-block: calc(var(--splash-mark-size) * 155 / 149.5);
+    // Clear air between the mark's base and the bar.
+    --splash-gap: #{$space-10};
+    // Where the bar sits. The mark is centred on 50svh, so its base is half its
+    // own height below that — the bar has to clear THAT, not the centre line,
+    // or the line cuts across the bottom of the strands.
+    --splash-bar-inset: calc(50svh + var(--splash-mark-block) / 2 + var(--splash-gap));
+
+    position: fixed;
+    // `inset: 0` rather than logical longhands: this is a viewport-filling
+    // overlay with no writing-mode-dependent edges, so there is nothing for
+    // logical properties to express here.
+    inset: 0;
+    // Above everything, including the nav (--z-sticky, 200).
+    z-index: var(--z-overlay);
+
+    display: grid;
+    // The mark sits in the middle of the viewport; the bar and readout are
+    // pinned near the bottom by their own rules below.
+    place-items: center;
+
+    // Opaque, and the same ground the page uses, so the splash lifting does not
+    // read as a colour change. Set as a flat colour rather than inherited: this
+    // paints before the page's own background is necessarily resolved.
+    background-color: var(--color-bg-canvas);
+    color: var(--color-text-primary);
+
+    // Cannot be interacted with or scrolled behind.
+    overflow: hidden;
+
+    opacity: 1;
+    transition-property: opacity;
+    transition-duration: var(--splash-exit);
+    transition-timing-function: var(--ease-out);
+  }
+
+  // Set by the script when the time is out: the fade.
+  .splash[data-leaving] {
+    opacity: 0;
+    // Stop it swallowing a click during the fade — 320ms is long enough for a
+    // visitor to reach for something underneath.
+    pointer-events: none;
+  }
+
+  // Set once the fade has finished. This is where the splash actually goes
+  // away, and it is a CSS state rather than a DOM removal on purpose: the
+  // element belongs to React's tree, and detaching it from a script made
+  // React's reconciler throw NotFoundError on the next render. See the note in
+  // Splash.tsx.
+  //
+  // `display: none` rather than visibility or a transform, because it has to
+  // leave the flow, hit testing AND the accessibility tree — a full-viewport
+  // overlay that is merely transparent still covers the page. The [hidden]-like
+  // behaviour is what makes this equivalent to removing it, without touching
+  // the DOM React owns.
+  .splash[data-done] {
+    display: none;
+  }
+
+  .centre {
+    display: grid;
+    place-items: center;
+  }
+
+  // --- The progress bar -----------------------------------------------------
+
+  // Full viewport width, per the brief, pinned below the centred mark rather
+  // than sitting directly under it — so its ends reach the screen edges and the
+  // line reads as a full-width rule.
+  .track {
+    position: absolute;
+    inset-inline: 0;
+    // Clear of the mark's base — see --splash-bar-inset. svh rather than vh so
+    // the bar does not jump when mobile browser chrome shows or hides.
+    inset-block-start: var(--splash-bar-inset);
+    block-size: var(--splash-bar-size);
+    // The unfilled part of the line. Faint: the filled portion is the signal,
+    // and a strong track would read as two competing rules.
+    background-color: var(--color-border);
+  }
+
+  .fill {
+    block-size: 100%;
+    // Animated rather than transitioned, because there is no state change to
+    // transition FROM — the bar starts filling the moment it paints, with no
+    // JavaScript involved. That is what lets the bar work even if the inline
+    // script never runs.
+    inline-size: 0;
+    background-color: var(--color-text-primary);
+    animation-name: fill;
+    animation-duration: var(--splash-duration);
+    // Linear, deliberately. An eased progress bar implies the work is speeding
+    // up or slowing down, and a fake bar should not tell that story.
+    animation-timing-function: linear;
+    animation-iteration-count: 1;
+    animation-fill-mode: both;
+  }
+
+  @keyframes fill {
+    from {
+      inline-size: 0;
+    }
+    to {
+      inline-size: 100%;
+    }
+  }
+
+  // --- The percentage readout ----------------------------------------------
+
+  // Parked at the END of the bar, and it does NOT move.
+  //
+  // An earlier version animated this along with the fill so the number sat
+  // under the bar's leading edge. It tracked correctly and was useless: a
+  // digit sliding the full width of the viewport in two seconds cannot be
+  // read, which is the whole job of a counter. It is pinned to where the bar
+  // FINISHES instead, so the eye has one fixed place to look and only the
+  // digits change.
+  //
+  // Right-aligned against the viewport edge, pulled in by the same gutter the
+  // rest of the page uses, and the box is wide enough for "100%" so the text
+  // does not shift as it grows from one digit to three.
+  .readout {
+    position: absolute;
+    inset-block-start: calc(var(--splash-bar-inset) + var(--splash-bar-size) + #{$space-3});
+    inset-inline-end: $space-4;
+    display: flex;
+    align-items: baseline;
+    // Tight, so "100" and "%" read as one token rather than two words.
+    gap: 0.1em;
+    // Right-align the pair, so the % sign is the fixed anchor and the digits
+    // grow leftward into the space instead of pushing the sign along.
+    justify-content: flex-end;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-regular;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+
+  // The number itself. Two things stop it twitching as it counts:
+  //
+  //   - tabular-nums, so every digit occupies the same advance width and the
+  //     value does not breathe as, say, a 1 becomes an 8;
+  //   - a fixed 3-character box, so growing from "0" to "100" does not shove
+  //     the % sign along. Right-aligned inside that box so the ones column
+  //     stays put and the hundreds column fills leftward.
+  //
+  // ch rather than a measured px value: with tabular figures 1ch is one
+  // digit's width, so this tracks the font size automatically. 3.25 not 3 —
+  // measured, three tabular digits came to 26px against a 3ch box of 25.6px,
+  // so a flat 3ch grew the box by 0.4px on the step to "100". The % sign did
+  // not visibly move either way, but the slack costs nothing and removes the
+  // last reflow.
+  .pct {
+    display: inline-block;
+    min-inline-size: 3.25ch;
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
+
+  // --- Reduced motion -------------------------------------------------------
+  //
+  // The splash still appears and still dismisses — it is load feedback, not
+  // decoration, so suppressing it entirely would leave a blank ground. What
+  // stops is the movement: the bar shows complete rather than sweeping. The
+  // readout needs nothing here since it no longer moves; the script mirrors
+  // this by putting the counter straight to 100.
+  @media (prefers-reduced-motion: reduce) {
+    .fill {
+      animation: none;
+      inline-size: 100%;
+    }
+  }
+}

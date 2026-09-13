@@ -7,6 +7,8 @@ import { Manrope } from "next/font/google";
 import "../styles/globals.scss";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
+import { Splash } from "../components/Loader/Splash";
+import { Consent } from "../components/Consent";
 
 const manrope = Manrope({
   variable: "--font-sans",
@@ -122,6 +124,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" dir="ltr" className={manrope.variable}>
       <body>
+        {/*
+          FIRST child of <body>, deliberately: it is in the server HTML, so it
+          covers the viewport from the very first paint rather than appearing
+          after hydration over content the user can already see.
+
+          Development only for this trial. A fixed 2s splash in production
+          withholds content for two seconds on every navigation and sits on top
+          of the homepage's LCP element, which would fail the project's own LCP
+          and Lighthouse gates. Wiring it to real progress, and deciding whether
+          it runs on first load only, is the next decision — see Splash.tsx.
+        */}
+        {process.env.NODE_ENV === "development" ? <Splash /> : null}
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
@@ -131,6 +145,29 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             direct child of body. The footer reserves the mobile nav's height
             itself, since the reservation on main does not reach it. */}
         <Footer />
+        {/*
+          Last in the body, after the footer.
+
+          Position in the source matters for two reasons. It is a
+          fixed-position region, so it paints last and sits above the page
+          without needing to out-rank anything in the stacking context beyond
+          the nav. And it is last in document order, so it comes after the
+          content rather than standing between a keyboard visitor and the page.
+
+          Document order is the guarantee — NOT "the banner never takes the
+          first Tab". Safari omits links from the Tab sequence by default, so on
+          iOS the banner's buttons are the first tab stops simply because they
+          are the first focusable elements Safari counts. That is Safari's
+          behaviour for the whole site rather than something this introduces
+          (with no banner, Tab on a fresh load focuses nothing there at all),
+          and it is why e2e/consent.spec.ts asserts DOM position instead.
+
+          Deliberately NOT a modal: no scrim, no focus trap, and the page stays
+          scrollable and readable behind it. A visitor may ignore this
+          indefinitely. See Consent.tsx for why, and for what it does not do
+          (it loads no analytics).
+        */}
+        <Consent />
       </body>
     </html>
   );

@@ -1,0 +1,74 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  .closing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    // Generous top space: this closes the page, and the gap is what separates
+    // "more content" from "we are done, here is the next step".
+    padding-block-start: clamp(#{$space-16}, 10vw, #{$space-24});
+    padding-block-end: clamp(#{$space-16}, 10vw, #{$space-24});
+    padding-inline: $space-6;
+    text-align: center;
+  }
+
+  .heading {
+    // Display scale, but the bottom of it — this is a prompt, not a page
+    // title, so it should not compete with the h1 above it.
+    font-size: var(--type-h2);
+    font-weight: $font-weight-extrabold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.03em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+  }
+
+  .body {
+    // Narrower than the prose column. Centred text is harder to read across a
+    // long measure, so this is tighter than the 60-70ch a left-aligned
+    // paragraph would take.
+    max-inline-size: 52ch;
+    margin-block-start: $space-4;
+    font-size: var(--type-body-lg);
+    color: var(--color-text-secondary);
+    // `pretty` over `balance`: this is two lines of running copy, where
+    // avoiding a short last line matters more than evening every line.
+    text-wrap: pretty;
+  }
+
+  // Matches the CTA in ComingSoon — same square band, same hover, same focus
+  // treatment. Restated rather than shared because a CSS Module's class names
+  // are local to its file: importing one stylesheet into another to reuse a
+  // button would pull that component's whole chunk in with it. When a third
+  // copy appears, this belongs in a Button component instead.
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    margin-block-start: clamp(#{$space-8}, 4vw, #{$space-12});
+    padding-block: $space-3;
+    padding-inline: $space-6;
+    // Square, per the brand's architectural edges — see the commit that took
+    // the radius off every control.
+    border-radius: 0;
+    background-color: var(--color-bg-inverse-strong);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    text-decoration: none;
+
+    // Longhands, never the `transition` shorthand: var() substitution happens
+    // before the shorthand is parsed, so one missing token would silently
+    // invalidate the whole declaration.
+    transition-property: background-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      background-color: var(--color-hover);
+    }
+
+    @include focus-ring;
+  }
+}

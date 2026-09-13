@@ -14,7 +14,7 @@ const PLACEHOLDER_ROUTES = [
   "/designers",
   "/developers",
   // /contact is a real page now. Its own suite is e2e/contact.spec.ts.
-  "/cookie-preferences",
+  // /cookie-preferences is a real page now. Its own suite is e2e/consent.spec.ts.
 ] as const;
 
 for (const route of PLACEHOLDER_ROUTES) {

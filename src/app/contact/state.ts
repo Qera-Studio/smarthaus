@@ -8,7 +8,9 @@
  * INITIAL_STATE is a real object and has to live outside.
  */
 
-export type FieldErrors = Partial<Record<"name" | "phone" | "email" | "interest", string>>;
+export type FieldErrors = Partial<
+  Record<"name" | "phone" | "email" | "interest" | "contactConsent", string>
+>;
 
 export type ContactState =
   | { status: "idle" }

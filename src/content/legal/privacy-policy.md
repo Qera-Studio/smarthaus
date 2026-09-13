@@ -136,13 +136,33 @@ Serving a web page necessarily involves your device telling our hosting provider
 
 We use this for security, fraud and abuse prevention, and to diagnose faults. The basis is our legitimate interest in keeping the site available and secure. These logs are held by our hosting provider under its own retention schedule (section 6).
 
-### 3.3 Cookies and tracking
+### 3.3 Cookies and analytics
 
-**This website does not set advertising or tracking cookies, and there is no advertising or social media tracking pixel on it.** There is no Google Analytics, no Meta Pixel, and no third-party chat widget.
+<!--
+  Rewritten from consent-content-deck.md §7.1, in the same change that shipped
+  the consent banner and preferences panel. The previous text stated there was
+  no consent banner and called it "a deliberate design decision, not an
+  omission" — accurate until the banner existed, a misrepresentation the moment
+  it did. Legal System §5: an inaccurate policy is worse than none.
 
-Because we do not set non-essential cookies, there is no cookie consent banner. This is a deliberate design decision, not an omission.
+  TWO SENTENCES DEVIATE FROM §7.1 and are flagged for the pending counsel
+  review. §7.1 is written for the state where the tags are live and says "we
+  use Google Analytics and Microsoft Clarity". Neither is installed: the gate
+  ships first because deck §13 lists six blocking items before the tags may
+  fire, five outside engineering. Verbatim §7.1 would replace one false claim
+  with another, so the two sentences asserting present use are future-tense.
+  The rest is §7.1 as written. Keep in step with src/app/privacy/page.tsx.
+-->
 
-If we later add analytics, this section and section 4 will be updated before it goes live, and anything requiring consent will ask for it first.
+**Essential cookies** keep the site working: they remember your cookie choice and help us reject spam submissions. These are always active.
+
+**Analytics cookies are off until you turn them on.** We are preparing to use Google Analytics and Microsoft Clarity to understand which pages are read and where people get stuck. Neither is installed yet, and neither will load unless you accept it.
+
+Microsoft Clarity records how pages are used, including scrolling, clicks and pointer movement, and can replay a session. **Anything you type into a form will be masked and never recorded.** We will verify that before it processes anything.
+
+We do not use advertising or remarketing cookies. There is no Meta Pixel, no ad-network tag, and no third-party chat widget on this site.
+
+You can change your choice at any time from **Cookie preferences** in the footer of any page. Turning analytics off stops it immediately.
 
 ### 3.4 Children
 
@@ -225,13 +245,16 @@ Where information leaves the UAE, we rely on the transfer routes the PDPL permit
 
 We do not keep personal information indefinitely.
 
-| Information                           | Retention                                                                                  | Why                                                                                                                                                          |
-| ------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Enquiries that do not become projects | [PLACEHOLDER: proposed 24 months] from last contact                                        | Enquiries in this sector mature slowly — a villa renovation decision can take a year or more, and we would rather know we have spoken before than start cold |
-| Enquiries that become projects        | For the life of the project and [PLACEHOLDER: proposed 7 years] after completion           | Warranty, as-built records, and statutory record-keeping                                                                                                     |
-| Marketing list subscriptions          | Until you unsubscribe, then a minimal suppression record                                   | The suppression record is how we ensure we do not email you again after you ask us to stop                                                                   |
-| Server logs                           | Per our hosting provider's schedule — [PLACEHOLDER: confirm Vercel's log retention period] | Security and fault diagnosis                                                                                                                                 |
-| Records we must keep by law           | For the period the relevant UAE law requires                                               | Where tax, accounting or other law requires retention, that obligation governs that specific record                                                          |
+| Information                                   | Retention                                                                                  | Why                                                                                                                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Enquiries that do not become projects         | [PLACEHOLDER: proposed 24 months] from last contact                                        | Enquiries in this sector mature slowly — a villa renovation decision can take a year or more, and we would rather know we have spoken before than start cold |
+| Enquiries that become projects                | For the life of the project and [PLACEHOLDER: proposed 7 years] after completion           | Warranty, as-built records, and statutory record-keeping                                                                                                     |
+| Marketing list subscriptions                  | Until you unsubscribe, then a minimal suppression record                                   | The suppression record is how we ensure we do not email you again after you ask us to stop                                                                   |
+| Server logs                                   | Per our hosting provider's schedule — [PLACEHOLDER: confirm Vercel's log retention period] | Security and fault diagnosis                                                                                                                                 |
+| Your cookie choice                            | 12 months from the choice                                                                  | Proving what was consented to and when, and not asking you again inside that period                                                                          |
+| Analytics data, once analytics is enabled     | Up to 14 months                                                                            | Year-on-year comparison, then deletion                                                                                                                       |
+| Session recordings, once analytics is enabled | Microsoft's own retention period — [PLACEHOLDER: confirm from Microsoft documentation]     | Diagnosing where pages fail                                                                                                                                  |
+| Records we must keep by law                   | For the period the relevant UAE law requires                                               | Where tax, accounting or other law requires retention, that obligation governs that specific record                                                          |
 
 When a retention period ends, we delete the information or anonymise it so it can no longer identify you.
 
