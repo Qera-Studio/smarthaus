@@ -1,0 +1,32 @@
+@use "../../styles/variables" as *;
+
+@layer blocks {
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: $space-8;
+    // Matches the legal pages' vertical rhythm: this sits beside Privacy and
+    // Terms in the footer and a visitor moves between them.
+    padding-block: clamp(#{$space-16}, 12vw, #{$space-24}) $space-16;
+    padding-inline: var(--content-gutter);
+    // Narrower than the prose pages. The panel is a control surface, not a
+    // document, and stretching two switch rows across a full measure leaves the
+    // control an inch from the copy it belongs to.
+    max-inline-size: 720px;
+    margin-inline: auto;
+  }
+
+  .header {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+  }
+
+  .title {
+    font-size: var(--type-h1);
+    font-weight: $font-weight-extrabold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+}

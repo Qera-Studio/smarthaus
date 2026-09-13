@@ -1,0 +1,505 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  .consent {
+    // L2 component tokens.
+    //
+    // Dark surface, and NOT the glass mixin. The glass tint is a light
+    // mid-tone that requires dark ink, and _variables.scss carries a tripwire
+    // saying it drops to 2.66:1 over a near-black backdrop with the note
+    // "there is no such backdrop on the site today". This panel would be
+    // exactly that backdrop. brown-950 with brown-100 ink is 16.6:1, and it is
+    // what ClosingCta and the contact CTA already use.
+    --consent-bg: var(--color-bg-inverse-strong);
+    --consent-ink: var(--color-text-inverse);
+    // Body copy one step down from the heading ink. Still on a near-black
+    // ground, so it clears 4.5:1 comfortably.
+    --consent-ink-muted: var(--brown-300);
+    --consent-border: #{rgba($brown-100, 0.16)};
+    // Desktop width. The brief's guidance is that the body reads on one or two
+    // lines at roughly this measure.
+    --consent-size: 460px;
+    // How far the card floats from the viewport edges.
+    --consent-inset: #{$space-6};
+    // Clearance above the mobile bottom nav. Composed from the nav's OWN
+    // tokens rather than the brief's quoted "64px + 16px": the bar is actually
+    // --nav-bar-block-size (60px) and the float is --nav-float-inset (16px),
+    // and reading them here means a change to the nav moves this with it
+    // instead of leaving a stale literal behind.
+    --consent-nav-clearance: calc(
+      var(--nav-bar-block-size) + var(--nav-float-inset) * 2 + env(safe-area-inset-bottom)
+    );
+
+    position: fixed;
+    // Logical, not `right`: Arabic ships in V2 and this must mirror with it.
+    inset-inline-end: var(--consent-inset);
+    inset-block-end: var(--consent-inset);
+    // Above the nav (--z-sticky, 200) but below a true modal. It overlaps the
+    // page; it does not own it.
+    z-index: var(--z-overlay);
+
+    inline-size: min(var(--consent-size), calc(100vw - var(--consent-inset) * 2));
+    // Never taller than the viewport: the Analytics row runs to three
+    // paragraphs and on a short landscape phone the panel would otherwise
+    // overflow off-screen with no way to reach the buttons.
+    max-block-size: calc(100svh - var(--consent-inset) * 2);
+    overflow-y: auto;
+    // Momentum scrolling inside the card must not chain to the page behind it.
+    overscroll-behavior: contain;
+
+    background-color: var(--consent-bg);
+    color: var(--consent-ink);
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--consent-border);
+    box-shadow: $shadow-xl;
+
+    // Below lg the nav is a fixed bottom bar, so a bottom-anchored card
+    // collides with it. Stacked above it, which is the brief's own preferred
+    // option: both stay anchored and predictable, and the nav — primary
+    // navigation — never disappears.
+    @include bp-max($bp-lg) {
+      inset-inline: var(--nav-float-inset);
+      inset-block-end: var(--consent-nav-clearance);
+      inline-size: auto;
+      max-block-size: calc(100svh - var(--consent-nav-clearance) - #{$space-4});
+    }
+  }
+
+  // Stand down while the mobile menu is open.
+  //
+  // The brief planned for the collapsed nav BAR and this clears it, but not for
+  // the EXPANDED menu, which grows upward from the bar into exactly the space
+  // the banner occupies. Measured on a Pixel 7: the banner spanned 398-747 and
+  // the open panel 515-773, so the banner covered the nav's own links and
+  // e2e/nav-footer.spec.ts could not click "About".
+  //
+  // Hidden rather than repositioned. Moving it would mean finding somewhere it
+  // fits beside a menu that already fills most of a phone screen, and opening
+  // the menu is a deliberate act: the visitor has asked for navigation, so the
+  // banner can wait for them to finish. It returns on close, undecided and
+  // unrecorded, which keeps the consent question outstanding rather than
+  // resolving it by accident.
+  //
+  // `:has()` on the sibling <header>, so this needs no extra state and no
+  // coupling in JS — the nav already exposes its own open state as a data
+  // attribute for its own choreography.
+  //
+  // visibility, not display: the panel's 0fr -> 1fr expansion must not be torn
+  // out of the layout mid-transition, and visibility also removes it from hit
+  // testing and the accessibility tree, which display:none would do at the
+  // cost of that animation.
+  // Written as a full selector rather than with a nested `&`. Sass compiles
+  // `body:has(...) &` inside a nested block to `body:has(...) :scope`, which
+  // matches nothing — verified in the built CSS, where the rule was present and
+  // inert. Naming `.consent` explicitly is unambiguous.
+  @include bp-max($bp-lg) {
+    :global(body):has(:global(header)[data-open]) .consent {
+      opacity: 0;
+      visibility: hidden;
+      transition-property: opacity, visibility;
+      transition-duration: var(--duration-fast), 0s;
+      transition-delay: 0s, var(--duration-fast);
+    }
+  }
+
+  // The preferences page renders the same component in flow rather than
+  // floating: there is nothing to dismiss and nothing to overlap.
+  .consent[data-standalone] {
+    position: static;
+    z-index: auto;
+    inline-size: 100%;
+    max-block-size: none;
+    overflow-y: visible;
+
+    @include bp-max($bp-lg) {
+      inset: auto;
+      max-block-size: none;
+    }
+  }
+
+  .inner {
+    display: flex;
+    flex-direction: column;
+    padding: $space-6;
+    gap: $space-4;
+  }
+
+  .banner {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+  }
+
+  // --- Copy -----------------------------------------------------------------
+
+  .heading {
+    font-size: var(--font-size-lg);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+  }
+
+  .panelHeading {
+    font-size: var(--font-size-md);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-snug;
+  }
+
+  .body {
+    font-size: var(--font-size-sm);
+    line-height: $line-height-relaxed;
+    color: var(--consent-ink-muted);
+    text-wrap: pretty;
+  }
+
+  // The re-ask line. Sits above the body, and only ever appears for the two
+  // permitted re-asks: a genuinely expired choice, or a materially new tool.
+  .reAsk {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-relaxed;
+    color: var(--consent-ink);
+  }
+
+  .link {
+    align-self: flex-start;
+    font-size: var(--font-size-sm);
+    color: var(--consent-ink-muted);
+    text-decoration-line: underline;
+    text-underline-offset: 3px;
+
+    &:hover {
+      color: var(--consent-ink);
+    }
+
+    // The default focus ring is brown-600, which is nearly invisible on this
+    // ground. Re-coloured, as the contact page's inverse block does.
+    @include focus-ring(var(--consent-ink));
+  }
+
+  // --- The three banner buttons ---------------------------------------------
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-2;
+    margin-block-start: $space-2;
+  }
+
+  // ONE class for all three, and that is the point.
+  //
+  // Accept, Decline and "Choose what to share" must carry identical visual
+  // weight — same size, contrast and treatment. A ghosted or shrunken Decline
+  // is interface interference: a named dark pattern, and a [Base]
+  // non-negotiable in the Design System.
+  //
+  // Sharing a single class rather than three variants makes that structural:
+  // you cannot restyle one without restyling all three, so the rule cannot be
+  // broken by a later well-meaning tweak. If they ever must differ, reduce
+  // Accept — never promote Decline.
+  .action {
+    flex: 1 1 auto;
+    // 44px on coarse pointers is handled by the block padding plus the line
+    // box; stated as a floor so a font-size change cannot shrink it below the
+    // WCAG 2.2 target size.
+    min-block-size: 44px;
+    padding-block: $space-3;
+    padding-inline: $space-4;
+    border-radius: 0;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #{rgba($brown-100, 0.4)};
+    background-color: transparent;
+    color: var(--consent-ink);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    text-align: center;
+    cursor: pointer;
+
+    transition-property: background-color, border-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      background-color: #{rgba($brown-100, 0.12)};
+      border-color: var(--consent-ink);
+    }
+
+    @include focus-ring(var(--consent-ink));
+  }
+
+  // --- The expanding panel --------------------------------------------------
+
+  // 0fr -> 1fr, the same technique the nav uses: max-block-size needs a guessed
+  // target and snaps against the wrong distance, scaleY distorts the border,
+  // and clip-path reserves the full height in layout.
+  .panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition-property: grid-template-rows;
+    transition-duration: var(--duration-slow);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .panelInner {
+    // A grid item's automatic minimum size is its content height, which would
+    // refuse to shrink and defeat the 0fr row.
+    min-block-size: 0;
+    // `clip`, not `hidden`: no scroll container, so no scroll anchoring and no
+    // jump when something inside takes focus.
+    overflow: clip;
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+  }
+
+  .consent[data-expanded] .panel,
+  .consent[data-standalone] .panel {
+    grid-template-rows: 1fr;
+  }
+
+  // The panel is in flow on the preferences page, so it must not be clipped
+  // there — and with no transition there is nothing to clip for.
+  .consent[data-standalone] .panel {
+    transition-property: none;
+  }
+
+  // --- Category rows --------------------------------------------------------
+
+  .rows {
+    display: flex;
+    flex-direction: column;
+    gap: $space-5;
+    padding-block-start: $space-4;
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-block-start-color: var(--consent-border);
+  }
+
+  .row {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-4;
+  }
+
+  .rowBody {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    // Let the copy column shrink rather than pushing the control off the edge.
+    min-inline-size: 0;
+    flex: 1 1 auto;
+  }
+
+  .rowControl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-1;
+    flex: 0 0 auto;
+  }
+
+  .rowLabel {
+    font-size: var(--font-size-base);
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-snug;
+  }
+
+  .rowText {
+    font-size: var(--font-size-sm);
+    line-height: $line-height-relaxed;
+    color: var(--consent-ink-muted);
+    text-wrap: pretty;
+  }
+
+  // The Clarity session-recording disclosure.
+  //
+  // Given its own treatment deliberately. The design brief singles this
+  // paragraph out: it is the one a careful reader would object to if they found
+  // it undisclosed, and a designer's instinct is to merge it into the body
+  // above. The start border and inset keep it visually separate without making
+  // it look like a warning.
+  .disclosure {
+    padding-inline-start: $space-3;
+    border-inline-start-style: solid;
+    border-inline-start-width: 2px;
+    border-inline-start-color: #{rgba($brown-100, 0.28)};
+    font-size: var(--font-size-sm);
+    line-height: $line-height-relaxed;
+    color: var(--consent-ink-muted);
+    text-wrap: pretty;
+  }
+
+  .rowMeta {
+    font-size: var(--font-size-sm);
+    line-height: $line-height-normal;
+    color: var(--consent-ink-muted);
+  }
+
+  // --- The switch -----------------------------------------------------------
+
+  // A native checkbox, restyled. `appearance: none` strips the OS control while
+  // keeping every behaviour the platform provides: keyboard operation, the
+  // accessibility tree, form semantics, find-in-page. :checked and :disabled
+  // reach CSS for free, which is why there is no aria-checked bookkeeping in
+  // the component.
+  .switch {
+    appearance: none;
+    // 44px hit area on coarse pointers (WCAG 2.2 · 2.5.8), from a 28px visual
+    // track. The padding is what carries the target size, so the control can
+    // look like a switch and still be tappable.
+    inline-size: 48px;
+    block-size: 28px;
+    flex: 0 0 auto;
+    margin: 0;
+    border-radius: $radius-full;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #{rgba($brown-100, 0.45)};
+    background-color: #{rgba($brown-100, 0.1)};
+    position: relative;
+    cursor: pointer;
+
+    transition-property: background-color, border-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    // The knob.
+    &::after {
+      content: "";
+      position: absolute;
+      inset-block-start: 3px;
+      inset-inline-start: 3px;
+      inline-size: 20px;
+      block-size: 20px;
+      border-radius: $radius-full;
+      background-color: var(--consent-ink);
+      transition-property: translate;
+      transition-duration: var(--duration-fast);
+      transition-timing-function: var(--ease-out);
+    }
+
+    &:checked {
+      background-color: #{rgba($brown-100, 0.9)};
+      border-color: #{rgba($brown-100, 0.9)};
+    }
+
+    // Logical translate, so the knob travels toward the end edge in RTL too.
+    &:checked::after {
+      translate: 20px 0;
+      background-color: var(--color-bg-inverse-strong);
+    }
+
+    // Essential: visibly on and genuinely not operable. Reduced contrast is
+    // correct HERE, because it truly is not interactive — which is the opposite
+    // of a greyed-out Decline, where the same treatment would be a dark
+    // pattern.
+    &:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+
+    @include focus-ring(var(--consent-ink));
+  }
+
+  .stateLabel {
+    font-size: var(--font-size-sm);
+    color: var(--consent-ink-muted);
+    text-align: center;
+  }
+
+  // --- Panel actions --------------------------------------------------------
+
+  // Here the hierarchy MAY differ: neither button is a decline, so the
+  // interface-interference rule does not apply. Save is the primary action of
+  // the panel; Accept is a shortcut.
+  .panelActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-2;
+    padding-block-start: $space-4;
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-block-start-color: var(--consent-border);
+  }
+
+  .primary,
+  .secondary {
+    flex: 1 1 auto;
+    min-block-size: 44px;
+    padding-block: $space-3;
+    padding-inline: $space-4;
+    border-radius: 0;
+    border-style: solid;
+    border-width: 1px;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    text-align: center;
+    cursor: pointer;
+
+    transition-property: background-color, border-color, color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    @include focus-ring(var(--consent-ink));
+  }
+
+  .primary {
+    background-color: var(--consent-ink);
+    border-color: var(--consent-ink);
+    color: var(--color-bg-inverse-strong);
+
+    &:hover {
+      background-color: #{$brown-200};
+      border-color: #{$brown-200};
+    }
+  }
+
+  .secondary {
+    background-color: transparent;
+    border-color: #{rgba($brown-100, 0.4)};
+    color: var(--consent-ink);
+
+    &:hover {
+      background-color: #{rgba($brown-100, 0.12)};
+      border-color: var(--consent-ink);
+    }
+  }
+
+  // Current state, announced politely after a save. Empty until there is
+  // something to say, so a screen reader is not handed a blank live region.
+  .status {
+    font-size: var(--font-size-sm);
+    color: var(--consent-ink-muted);
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  .withdraw {
+    font-size: var(--font-size-sm);
+    line-height: $line-height-relaxed;
+    color: var(--consent-ink-muted);
+    text-wrap: pretty;
+  }
+
+  // --- Reduced motion -------------------------------------------------------
+  //
+  // No entrance animation, and no expand transition. The banner is simply
+  // present. _reset.scss zeroes durations globally, which covers the
+  // transitions above; this is here so the intent is stated at the component
+  // rather than inherited silently.
+  @media (prefers-reduced-motion: reduce) {
+    .panel,
+    .switch,
+    .switch::after,
+    .action,
+    .primary,
+    .secondary {
+      transition-property: none;
+    }
+  }
+}
