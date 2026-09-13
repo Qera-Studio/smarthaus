@@ -68,6 +68,141 @@ test.describe("404", () => {
   });
 });
 
+test.describe("404 particle physics", () => {
+  // Desktop only — the canvas does not mount without a fine pointer.
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  /** Opaque pixels currently painted on the canvas. */
+  const painted = (page: import("@playwright/test").Page) =>
+    page.evaluate(() => {
+      const c = document.querySelector("canvas") as HTMLCanvasElement | null;
+      if (!c) return -1;
+      const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+      let n = 0;
+      for (let i = 3; i < d.length; i += 4) if (d[i]! > 0) n++;
+      return n;
+    });
+
+  test("the field keeps drifting when nothing is touching it", async ({ page }) => {
+    await page.goto(MISSING);
+    await page.waitForTimeout(2000);
+    if ((await page.locator("canvas").count()) === 0) test.skip();
+
+    // Cursor never enters. The field must still be moving: every particle
+    // wanders slowly around its origin so the "404" reads as alive rather than
+    // printed.
+    //
+    // This assertion is deliberately the INVERSE of what it used to be. An
+    // earlier REST_EPSILON clamp pinned every particle to its origin, and the
+    // test asserted a painted-pixel spread under 20 — which passed at exactly
+    // 0, and was precisely the "completely static" problem. Drift now moves
+    // this number by hundreds.
+    const samples: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      await page.waitForTimeout(450);
+      samples.push(await painted(page));
+    }
+    const spread = Math.max(...samples) - Math.min(...samples);
+    expect(spread).toBeGreaterThan(20);
+
+    // But the drift must stay a breath, not a shuffle: the glyphs have to stay
+    // legible, so the painted area cannot swing wildly.
+    const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
+    expect(spread).toBeLessThan(mean * 0.1);
+  });
+
+  test("momentum decays after the cursor stops", async ({ page }) => {
+    await page.goto(MISSING);
+    await page.waitForTimeout(2000);
+    if ((await page.locator("canvas").count()) === 0) test.skip();
+
+    /** Vertical spread of painted pixels — grows as particles leave the glyph. */
+    const spread = () =>
+      page.evaluate(() => {
+        const c = document.querySelector("canvas") as HTMLCanvasElement;
+        const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+        let min = Infinity;
+        let max = -1;
+        for (let y = 0; y < c.height; y++) {
+          for (let x = 0; x < c.width; x += 2) {
+            if (d[(y * c.width + x) * 4 + 3]! > 0) {
+              if (y < min) min = y;
+              if (y > max) max = y;
+              break;
+            }
+          }
+        }
+        return max - min;
+      });
+
+    // Throw the field open, then stop dead and let it recover.
+    await page.mouse.move(520, 450);
+    await page.mouse.move(1000, 455, { steps: 4 });
+    const justAfter = await spread();
+
+    await page.mouse.move(1350, 860, { steps: 5 });
+    await page.waitForTimeout(2500);
+    const recovered = await spread();
+
+    // The bloom must collapse back toward the glyph rather than leaving
+    // particles stranded where the cursor left them.
+    expect(recovered).toBeLessThanOrEqual(justAfter);
+  });
+
+  test("no particle enters the exclusion zone around the cursor", async ({ page }) => {
+    await page.goto(MISSING);
+    await page.waitForTimeout(1200);
+    if ((await page.locator("canvas").count()) === 0) test.skip();
+
+    // Park inside a solid stroke, NOT the hollow middle of the "0" — parking in
+    // a counter measures the distance to the stroke edge rather than to a
+    // cavity, which made earlier readings look random (2.4px to 33px).
+    const CX = 536;
+    const CY = 453;
+    await page.mouse.move(CX, CY, { steps: 12 });
+    await page.waitForTimeout(1800);
+
+    const nearestCssPx = await page.evaluate(
+      ([cx, cy]) => {
+        const c = document.querySelector("canvas") as HTMLCanvasElement;
+        const box = c.getBoundingClientRect();
+        const dpr = c.width / box.width;
+        const lx = (cx! - box.left) * dpr;
+        const ly = (cy! - box.top) * dpr;
+        const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+        let best = Infinity;
+        for (let y = 0; y < c.height; y++) {
+          for (let x = 0; x < c.width; x++) {
+            // Threshold at half alpha: the outermost pixels of an anti-aliased
+            // disc are a faint feather, not the particle's body, and counting
+            // them understates the gap by most of a pixel.
+            if (d[(y * c.width + x) * 4 + 3]! >= 128) {
+              const dd = Math.hypot(x - lx, y - ly);
+              if (dd < best) best = dd;
+            }
+          }
+        }
+        return best / dpr;
+      },
+      [CX, CY],
+    );
+
+    // The bubble is CLEAR_RADIUS (the 8px cursor dot + a 4px margin) plus each
+    // particle's own drawn radius, enforced as a position clamp after
+    // integration — so it holds even on a fast pass that would otherwise tunnel
+    // a particle through the cursor.
+    //
+    // The lower bound is the point of the test: an earlier 4px bubble measured
+    // a perfect 4.01px while particles still visibly buried the cursor, because
+    // the bubble was smaller than the dot's own 8px radius. Anything at or below
+    // the dot radius is a regression, however consistent it looks.
+    expect(nearestCssPx).toBeGreaterThan(9);
+    // And the cavity must stay proportionate to the cursor, not a wide soft
+    // dent: before STATIC_PUSH was zeroed this measured up to 33px.
+    expect(nearestCssPx).toBeLessThan(22);
+  });
+});
+
 test.describe("404 motion gates", () => {
   test("no canvas and fully visible text under reduced motion", async ({ browser }) => {
     // The reset's reduced-motion block only zeroes CSS durations — a rAF loop

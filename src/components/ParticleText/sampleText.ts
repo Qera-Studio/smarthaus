@@ -20,10 +20,14 @@ export type Particle = {
   vy: number;
   /** Per-particle radius, jittered so the field does not read as a grid. */
   r: number;
+  /** Seed for the idle drift, so each particle wanders on its own path rather
+   *  than the whole field pulsing in unison. */
+  phase: number;
 };
 
 type SampleOptions = {
-  text: string;
+  /** One entry per line. Multiple lines are centred and stacked. */
+  lines: readonly string[];
   /** Device-pixel width/height of the target canvas. */
   width: number;
   height: number;
@@ -31,16 +35,25 @@ type SampleOptions = {
   gap: number;
   /** CSS font shorthand, e.g. "800 320px Manrope, sans-serif". */
   font: string;
+  /** Baseline-to-baseline distance in device px. Required for 2+ lines. */
+  lineHeight: number;
 };
 
 /**
- * Rasterise `text`, then keep one particle per `gap`-spaced opaque pixel.
+ * Rasterise `lines`, then keep one particle per `gap`-spaced opaque pixel.
  *
  * Returns an empty array when the canvas has no size or no 2D context, which is
  * the correct degradation — the caller renders its static fallback instead.
  */
-export function sampleText({ text, width, height, gap, font }: SampleOptions): Particle[] {
-  if (width <= 0 || height <= 0) return [];
+export function sampleText({
+  lines,
+  width,
+  height,
+  gap,
+  font,
+  lineHeight,
+}: SampleOptions): Particle[] {
+  if (width <= 0 || height <= 0 || lines.length === 0) return [];
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -52,7 +65,15 @@ export function sampleText({ text, width, height, gap, font }: SampleOptions): P
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = font;
-  ctx.fillText(text, width / 2, height / 2);
+
+  // Centre the block of lines on the canvas: the first baseline sits half a
+  // block above the middle, so 1 line behaves exactly as before and 2+ lines
+  // stack symmetrically around the same centre.
+  const blockHeight = (lines.length - 1) * lineHeight;
+  const firstY = height / 2 - blockHeight / 2;
+  lines.forEach((line, index) => {
+    ctx.fillText(line, width / 2, firstY + index * lineHeight);
+  });
 
   const { data } = ctx.getImageData(0, 0, width, height);
   const particles: Particle[] = [];
@@ -68,8 +89,11 @@ export function sampleText({ text, width, height, gap, font }: SampleOptions): P
       // Jitter the resting position by a fraction of the gap. Without this the
       // particles sit on a perfect lattice, which reads as a halftone print
       // rather than as a swarm, and makes the grid visible in the gaps.
-      const jx = (Math.random() - 0.5) * gap * 0.6;
-      const jy = (Math.random() - 0.5) * gap * 0.6;
+      //
+      // Kept modest: the idle drift now adds its own continuous wander on top,
+      // and jitter plus drift together were enough to thin the glyphs visibly.
+      const jx = (Math.random() - 0.5) * gap * 0.4;
+      const jy = (Math.random() - 0.5) * gap * 0.4;
       const ox = x + jx;
       const oy = y + jy;
 
@@ -84,6 +108,7 @@ export function sampleText({ text, width, height, gap, font }: SampleOptions): P
         // reading as a blob at the sizes this is displayed at. Relative to gap,
         // so density and dot size stay in proportion when gap is retuned.
         r: gap * (0.24 + Math.random() * 0.18),
+        phase: Math.random() * Math.PI * 2,
       });
     }
   }

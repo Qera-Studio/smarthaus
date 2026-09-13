@@ -40,10 +40,10 @@
   .cta {
     display: inline-flex;
     align-items: center;
-    margin-block-start: $space-10;
-    padding-block: $space-4;
-    padding-inline: $space-8;
-    border-radius: var(--radius-full);
+    margin-block-start: $space-6;
+    padding-block: $space-3;
+    padding-inline: $space-6;
+    border-radius: var(--radius-sm);
     background-color: var(--color-bg-inverse-strong);
     color: var(--color-text-inverse);
     font-size: var(--font-size-sm);

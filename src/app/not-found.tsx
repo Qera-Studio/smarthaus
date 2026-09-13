@@ -23,10 +23,7 @@ export default function NotFound() {
         <ParticleText text="404" label="404" as="h1" />
       </div>
 
-      <p className={styles.body}>
-        This page has moved, or it never existed. Either way, it is not here — and the rest of the
-        site is.
-      </p>
+      <p className={styles.body}>Oops, looks like this page does not exist.</p>
 
       <Link href="/" className={styles.cta}>
         Back to home
