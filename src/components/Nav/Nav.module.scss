@@ -56,8 +56,10 @@
     // the open feel, which is tuned.
     --nav-stagger-step-out: 60ms;
     --nav-item-duration-out: #{$duration-normal};
-    // The glass closes faster than it opens, for the same reason.
-    --nav-collapse-duration: #{$duration-slow};
+    // The glass closes faster than it opens, for the same reason. Off the
+    // duration scale, like --nav-expand-duration and for the same reason: the
+    // scale stops at 600ms and this surface sits just past it.
+    --nav-collapse-duration: 650ms;
     // How long the collapse waits for the contents to fade out. The last item
     // to leave starts at 4 * step-out and takes --nav-item-duration-out, so the
     // fade-out window is (4 * step-out + duration-out); the panel starts moving
