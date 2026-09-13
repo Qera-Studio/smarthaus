@@ -23,6 +23,23 @@
     // How far the scrolled capsule floats below the top edge. Only applies once
     // stuck — the tall top-of-page bar sits flush against the viewport top.
     --nav-stuck-inset: #{$space-6};
+    // How long the capsule takes to shrink and to come back.
+    //
+    // --duration-normal (240ms) was too short for the distance: the box travels
+    // ~640px of width plus 32px of padding, and at that speed the last stretch
+    // arrives while the eye is still following the first.
+    //
+    // 450ms, not the 700ms first tried. An in-out curve spends its opening on
+    // acceleration, so at 700ms the bar showed no visible movement for 214ms
+    // after the scroll began and read as lagging the input. At 450ms the first
+    // movement lands around 140ms, which tracks the scroll instead of trailing
+    // it, and the eased shape is unchanged.
+    --nav-stuck-duration: 450ms;
+    // A symmetric in-out curve. Not --ease-in-out (0.45, 0, 0.55, 1), which is
+    // gentler than this over the middle and leaves the long shrink feeling
+    // slack; this holds a firmer centre while still starting and ending at
+    // rest. See the note at the transition for the measurements.
+    --nav-stuck-ease: cubic-bezier(0.65, 0, 0.35, 1);
     --nav-gap: #{$space-6};
     --nav-link-size: #{$font-size-sm};
     --nav-link-weight: #{$font-weight-medium};
@@ -393,8 +410,18 @@
       // but the nav is a sticky element with `contain` below lg and a single
       // grid row here, so the reflow is bounded to its own three children.
       transition-property: background-color, box-shadow, max-inline-size, padding, border-radius;
-      transition-duration: var(--duration-normal);
-      transition-timing-function: var(--ease-out);
+      transition-duration: var(--nav-stuck-duration);
+      // An in-out curve, because this is a SIZE CHANGE in both directions —
+      // unlike the mobile panel, which is a reveal and wants to leave fast.
+      //
+      // Both of the obvious candidates front-load and read as a snap. Measured
+      // as percentage of distance covered at the halfway point:
+      //   --ease-out          (0.22, 1, 0.36, 1)  97% by 1/3 of the time
+      //   --nav-expand-ease   (0.32, 0.72, 0, 1)  94% shrink / 100% restore
+      //   this curve          (0.65, 0, 0.35, 1)  ~50%, symmetric
+      // Easing in as well as out is what makes it seamless: the box starts from
+      // rest rather than jumping, and arrives without a visible crawl.
+      transition-timing-function: var(--nav-stuck-ease);
     }
 
     .bar {
