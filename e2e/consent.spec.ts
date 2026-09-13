@@ -70,6 +70,17 @@ test.describe("the consent banner", () => {
     // No dismiss control. A ✕ would have to behave exactly like Decline, at
     // which point it is a second, vaguer decline — two controls doing one job
     // with one of them ambiguous is trick wording.
+    //
+    // This assertion now does double duty. There IS a ✕ in development, added
+    // because the dev gate forces the banner open on every reload and it would
+    // otherwise cover a corner of every page for the whole session. It is
+    // wrapped in `process.env.NODE_ENV === "development"`, which the bundler
+    // inlines, so the branch is dropped from a production build.
+    //
+    // This suite runs against a production build (PLAYWRIGHT=1), so this is
+    // what proves that stripping actually happens rather than being assumed.
+    // If the gate ever leaks — a runtime flag, a cookie, an env var read at
+    // request time — this test fails, which is the point.
     await expect(banner.getByRole("button", { name: /close|dismiss|✕|×/i })).toHaveCount(0);
   });
 

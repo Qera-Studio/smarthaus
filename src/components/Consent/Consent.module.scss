@@ -215,6 +215,52 @@
     display: flex;
     flex-direction: column;
     gap: $space-3;
+    // Anchor for the dev dismiss button below.
+    position: relative;
+  }
+
+  // The development-only dismiss control. See ConsentShell for why it exists
+  // and why it is not in the production bundle.
+  //
+  // brown-200 at 50%. That is 4.05:1 over brown-950 — under the 4.5:1 text
+  // floor, which for a shipped control would be a defect. It is acceptable
+  // only because this button does not exist in production: nothing a visitor
+  // can reach is below the floor. Stated rather than left to be discovered,
+  // and the reason the opacity is baked into the colour rather than applied as
+  // `opacity` to the element: an `opacity` here would also fade the focus ring.
+  .dismiss {
+    position: absolute;
+    inset-block-start: 0;
+    // Logical, so "top right" becomes top-left under dir="rtl" along with the
+    // rest of the card.
+    inset-inline-end: 0;
+    // 44px target on a 16px glyph, so it is hittable on a phone without
+    // drawing a box around it.
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    // Pulled out of the flow's own padding so the glyph sits in the corner
+    // rather than 44px inside it.
+    margin-block-start: -#{$space-2};
+    margin-inline-end: -#{$space-2};
+    border-style: none;
+    border-radius: 0;
+    background-color: transparent;
+    color: #{rgba($brown-200, 0.5)};
+    font-size: var(--font-size-sm);
+    line-height: 1;
+    cursor: pointer;
+
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      color: var(--consent-ink);
+    }
+
+    @include focus-ring(var(--consent-ink));
   }
 
   // --- Copy -----------------------------------------------------------------
@@ -224,6 +270,18 @@
     font-weight: $font-weight-bold;
     line-height: $line-height-snug;
     letter-spacing: -0.01em;
+  }
+
+  // Keep the banner's heading clear of the dev dismiss button in the same
+  // corner.
+  //
+  // `:has()` on the banner rather than a sibling selector: the heading arrives
+  // inside the server-rendered `intro` slot, so it is a DESCENDANT of .banner
+  // and not a sibling of .dismiss — `.dismiss + .heading` would compile fine
+  // and match nothing. Reserving the space only when the button is present
+  // means production keeps the full measure. 0,2,0.
+  .banner:has(.dismiss) .heading {
+    padding-inline-end: $space-6;
   }
 
   .panelHeading {
@@ -718,6 +776,7 @@
     .action,
     .customise,
     .back,
+    .dismiss,
     .primary {
       transition-property: none;
     }

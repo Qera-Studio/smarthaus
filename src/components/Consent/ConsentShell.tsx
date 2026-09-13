@@ -138,6 +138,9 @@ export function ConsentShell({
   };
   const customiseRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // The card itself, measured so ScrollToTop can sit above it. See the
+  // ResizeObserver effect below.
+  const cardRef = useRef<HTMLElement>(null);
   // False until the first stage change, so the focus effect below does not fire
   // on mount. See the effect for why that distinction matters.
   const stageSwitched = useRef(false);
@@ -152,11 +155,37 @@ export function ConsentShell({
   // picked up here instead of leaving two tabs disagreeing about whether
   // analytics is on.
   useEffect(() => {
-    const sync = () => {
+    /**
+     * `force` is the development gate: show the banner on every reload,
+     * whatever is stored.
+     *
+     * Otherwise the banner is a one-shot surface — make a choice and it is gone
+     * for twelve months, and the only way back is clearing the cookie by hand,
+     * which makes the thing being worked on the hardest thing on the site to
+     * look at.
+     *
+     * It overrides `ask` ONLY, and never clears the cookie or writes a record,
+     * so this changes what is rendered and nothing about what is stored.
+     * `analyticsOn` still comes from the real record, so the switch opens
+     * reflecting the actual stored choice rather than lying about it.
+     */
+    const sync = (force = false) => {
       const next = readConsentState(readConsentCookie(document.cookie));
-      setState(next);
+      setState(force ? { ...next, ask: true } : next);
       setAnalyticsOn(next.analytics);
     };
+
+    // NODE_ENV is inlined by the bundler, so in a production build this is
+    // `if (false)` and the branch is dropped: no runtime flag a visitor could
+    // flip, and no path for it to reach a real deployment. Verified by grepping
+    // the built client bundle for the dismiss button's label.
+    if (process.env.NODE_ENV === "development") {
+      sync(true);
+      // No `focus` listener here. Re-syncing on tab focus would re-read the
+      // stored record and close the forced-open banner mid-look, which is the
+      // behaviour this gate exists to prevent.
+      return;
+    }
 
     if (hasOptOutSignal()) {
       // Do Not Track or GPC. Recorded as a decline with basis "signal" so the
@@ -171,8 +200,15 @@ export function ConsentShell({
     sync();
     // `focus` rather than the `storage` event: `storage` fires for
     // localStorage, never for cookies, so it would never see this change.
-    window.addEventListener("focus", sync);
-    return () => window.removeEventListener("focus", sync);
+    //
+    // Wrapped rather than passed directly. `sync` now takes a `force` flag, and
+    // addEventListener would hand it the FocusEvent as that argument — an event
+    // object is truthy, so every tab focus would force the banner open again
+    // even in production, re-asking a visitor who had already chosen. Exactly
+    // the nagging the deck prohibits.
+    const onFocus = () => sync();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   const commit = useCallback(
@@ -190,6 +226,50 @@ export function ConsentShell({
     },
     [standalone],
   );
+
+  /**
+   * Publish the card's height as `--consent-block-size` on <html>.
+   *
+   * ScrollToTop reads it to sit above the banner. Below lg the banner spans the
+   * full width and is anchored to the same bottom calc as that button, so
+   * without this they land on the same line and the banner — at --z-overlay
+   * against the button's --z-sticky — swallows every click on it.
+   *
+   * Measured rather than reserved as a literal, because the height is
+   * content-driven: the body wraps to a different number of lines per viewport,
+   * the action row wraps below md, and the re-ask line adds a paragraph when
+   * present. A number hardcoded in either component would be correct on the
+   * device it was measured on and quietly wrong on the rest.
+   *
+   * `anchor()` is the right tool for this and WebKit does not ship it.
+   *
+   * Skipped when standalone: the preferences page renders the card in flow, so
+   * it is not overlapping anything and has no reason to push the button around.
+   */
+  useEffect(() => {
+    if (standalone) return;
+    const card = cardRef.current;
+    const root = document.documentElement;
+    if (!card) {
+      // Nothing mounted — clear it, or a stale height from a previous render
+      // keeps the button pushed up with no banner to clear.
+      root.style.removeProperty("--consent-block-size");
+      return;
+    }
+
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      root.style.setProperty("--consent-block-size", `${Math.ceil(entry.contentRect.height)}px`);
+    });
+    observer.observe(card);
+
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--consent-block-size");
+    };
+    // `expanded` is a dependency because the two stages have different heights
+    // and the panel stage remounts the card's contents.
+  }, [standalone, expanded, state?.ask]);
 
   /**
    * Move focus into the panel when it replaces the banner.
@@ -280,6 +360,7 @@ export function ConsentShell({
 
   return (
     <section
+      ref={cardRef}
       className={styles.consent}
       // Dark surface. Without this the custom cursor dot is brown-900 on
       // brown-950 at 1.06:1 and effectively invisible — see globals.scss.
@@ -303,6 +384,40 @@ export function ConsentShell({
         */}
         {!standalone && !expanded && (
           <div className={styles.banner}>
+            {/*
+              Dismiss, and DEVELOPMENT ONLY.
+
+              The design brief rules out a ✕ on the shipped banner, and the
+              reasoning holds: dismissing without choosing is not consent, so a
+              ✕ has to behave exactly like Decline — at which point it is a
+              second, vaguer decline control, and two controls doing one job
+              with one of them ambiguous is trick wording. e2e/consent.spec.ts
+              asserts there is no close control, and that assertion stays.
+
+              It exists here because the dev gate above forces the banner open
+              on every reload, so without it the banner covers a corner of
+              every page for the whole session with no way to move it aside.
+              That is a development ergonomics problem, not a consent surface.
+
+              Like the gate, `NODE_ENV` is inlined at build time, so this
+              button does not exist in a production bundle.
+
+              It stores NOTHING — same as Escape. The banner returns on the next
+              reload, so dismissing it here cannot be mistaken for a decision.
+            */}
+            {process.env.NODE_ENV === "development" && (
+              <button
+                type="button"
+                className={styles.dismiss}
+                // Named for what it is, so it cannot be mistaken for a real
+                // control if it ever leaks into a screenshot or a test run.
+                aria-label="Dismiss (development only)"
+                onClick={() => setState({ ask: false, analytics: false })}
+              >
+                {/* aria-hidden: the accessible name is on the button. */}
+                <span aria-hidden="true">✕</span>
+              </button>
+            )}
             {reAsk && <p className={styles.reAsk}>{reAsk}</p>}
             {intro}
 
