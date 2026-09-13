@@ -129,7 +129,7 @@ export default function ContactPage() {
               src="/contact-location.jpg"
               alt="Downtown Dubai at dusk, looking along Sheikh Zayed Road towards the Burj Khalifa"
               fill
-              sizes="(min-width: 1024px) 22vw, (min-width: 768px) 40vw, 90vw"
+              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 45vw, 90vw"
               className={styles.locationPhoto}
             />
           </div>
