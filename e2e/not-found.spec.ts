@@ -69,8 +69,20 @@ test.describe("404", () => {
 });
 
 test.describe("404 particle physics", () => {
-  // Desktop only — the canvas does not mount without a fine pointer.
+  // These drive the field with `page.mouse` and measure a hovering cursor, so
+  // they are desktop-only in the real sense: a mouse that stays where it was
+  // put. Skipped on the touch projects rather than relying on the canvas being
+  // absent there — it used to be, because the component required a fine
+  // pointer, and the `count() === 0` guards in each test silently skipped the
+  // mobile runs. Touch now mounts the canvas (see "404 particle physics on
+  // touch" below), so that accidental skip is gone and the exclusion-zone
+  // measurement started failing on iPhone 14 at a viewport it was never tuned
+  // for. The intent was always "desktop"; this states it.
   test.use({ viewport: { width: 1440, height: 900 } });
+
+  test.beforeEach(({ isMobile }) => {
+    if (isMobile) test.skip();
+  });
 
   /** Opaque pixels currently painted on the canvas. */
   const painted = (page: import("@playwright/test").Page) =>
@@ -203,6 +215,128 @@ test.describe("404 particle physics", () => {
   });
 });
 
+// Runs on the touch device profiles the config already declares (iPhone 14 and
+// Pixel 7) rather than pinning one here: `devices[...]` carries
+// `defaultBrowserType`, which Playwright refuses inside a describe group, and
+// gating on `isMobile` covers both engines instead of just WebKit.
+test.describe("404 particle physics on touch", () => {
+  /** Centre of mass of the painted pixels — moves when the field deforms. */
+  const centroid = (page: import("@playwright/test").Page) =>
+    page.evaluate(() => {
+      const c = document.querySelector("canvas") as HTMLCanvasElement;
+      const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+      let n = 0;
+      let sx = 0;
+      let sy = 0;
+      for (let i = 3; i < d.length; i += 4) {
+        if (d[i]! > 10) {
+          const px = (i - 3) / 4;
+          n++;
+          sx += px % c.width;
+          sy += Math.floor(px / c.width);
+        }
+      }
+      return { x: n ? sx / n : 0, y: n ? sy / n : 0 };
+    });
+
+  const shift = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+
+  /**
+   * Drag a synthetic finger across the canvas.
+   *
+   * PointerEvents are dispatched directly rather than driven through
+   * `page.touchscreen`, because the component listens on `window` for a
+   * *stream* of pointermove with `pointerType: "touch"`, and the touchscreen
+   * API emits a tap rather than a sustained drag with intermediate moves.
+   */
+  const drag = async (
+    page: import("@playwright/test").Page,
+    box: { x: number; y: number; width: number; height: number },
+    opts: { down: boolean },
+  ) => {
+    const y = box.y + box.height / 2;
+    for (let i = 0; i <= 14; i++) {
+      const x = box.x + 8 + ((box.width - 16) * i) / 14;
+      await page.evaluate(
+        ([x, y, first, down]) => {
+          const mk = (type: string) =>
+            new PointerEvent(type, {
+              clientX: x as number,
+              clientY: y as number,
+              pointerType: "touch",
+              isPrimary: true,
+              bubbles: true,
+              pointerId: 1,
+            });
+          if (first && down) window.dispatchEvent(mk("pointerdown"));
+          window.dispatchEvent(mk("pointermove"));
+        },
+        [x, y, i === 0, opts.down] as const,
+      );
+      await page.waitForTimeout(28);
+    }
+  };
+
+  test("a finger drag deforms the field, and lifting it lets the field recover", async ({
+    page,
+    isMobile,
+  }) => {
+    if (!isMobile) test.skip();
+    await page.goto(MISSING);
+    await page.locator("canvas").waitFor({ state: "attached" });
+    await page.waitForTimeout(1200);
+
+    const box = (await page.locator("canvas").boundingBox())!;
+    const atRest = await centroid(page);
+
+    await drag(page, box, { down: true });
+    const dragged = await centroid(page);
+
+    // The swipe is the energy source, exactly as a mouse sweep is: the field
+    // must actually move, not merely idle-drift. Measured ~66px.
+    expect(shift(atRest, dragged)).toBeGreaterThan(25);
+
+    // Lift, then let friction and the spring carry it home. A lifted finger is
+    // not hovering anywhere, so nothing keeps pushing.
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new PointerEvent("pointerup", {
+          pointerType: "touch",
+          isPrimary: true,
+          bubbles: true,
+          pointerId: 1,
+        }),
+      ),
+    );
+    await page.waitForTimeout(1800);
+    const settled = await centroid(page);
+
+    // Back to within the idle drift's own amplitude — no permanent dent left
+    // where the finger was, which is the failure mode of treating a touch's
+    // last position as a hover.
+    expect(shift(atRest, settled)).toBeLessThan(15);
+  });
+
+  test("pointermove with no finger down does not disturb the field", async ({ page, isMobile }) => {
+    if (!isMobile) test.skip();
+    await page.goto(MISSING);
+    await page.locator("canvas").waitFor({ state: "attached" });
+    await page.waitForTimeout(1200);
+
+    const box = (await page.locator("canvas").boundingBox())!;
+    const before = await centroid(page);
+
+    // The same move stream, without the pointerdown. On touch this is what a
+    // browser emits around scrolls and cancelled gestures, and it must be
+    // ignored — otherwise the glyphs dent as the user scrolls past them.
+    await drag(page, box, { down: false });
+    const after = await centroid(page);
+
+    expect(shift(before, after)).toBeLessThan(15);
+  });
+});
+
 test.describe("404 motion gates", () => {
   test("no canvas and fully visible text under reduced motion", async ({ browser }) => {
     // The reset's reduced-motion block only zeroes CSS durations — a rAF loop
@@ -217,10 +351,33 @@ test.describe("404 motion gates", () => {
     await page.close();
   });
 
-  test("no canvas on a touch device", async ({ browser }) => {
-    // No hover means no cursor to orbit, so the loop would burn battery on an
-    // effect that cannot be triggered.
+  test("the canvas mounts on a touch device", async ({ browser }) => {
+    // This assertion is the INVERSE of what it used to be. The component
+    // previously required `(hover: hover) and (pointer: fine)` and shipped the
+    // static fallback to every phone, on the reasoning that there is no cursor
+    // to orbit. But a finger drag reports the same pointermove stream a mouse
+    // does, so the field is drivable on touch — it just has to be driven only
+    // while a finger is down, which is what the drag gating below covers.
     const context = await browser.newContext({ ...devices["iPhone 14"] });
+    const page = await context.newPage();
+    await page.goto(MISSING);
+    await page.locator("canvas").waitFor({ state: "attached" });
+
+    await expect(page.locator("canvas")).toHaveCount(1);
+    // The real text stays in the accessibility tree, faded behind the canvas —
+    // same contract as desktop.
+    await expect(page.locator("h1")).toHaveCSS("opacity", "0");
+    await expect(page.getByRole("heading", { level: 1, name: "404" })).toBeAttached();
+    await context.close();
+  });
+
+  test("reduced motion still wins on touch", async ({ browser }) => {
+    // Relaxing the pointer gate must not have relaxed the motion gate with it:
+    // reduced-motion is a hard floor, and a rAF loop ignores the CSS reset.
+    const context = await browser.newContext({
+      ...devices["iPhone 14"],
+      reducedMotion: "reduce",
+    });
     const page = await context.newPage();
     await page.goto(MISSING);
     await page.waitForTimeout(400);
