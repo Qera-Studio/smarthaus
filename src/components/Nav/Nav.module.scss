@@ -151,10 +151,12 @@
   }
 
   .cta {
-    // 6px all round — off the 4/8 scale on purpose. The CTA is a control, so
-    // it is sized optically against its own label rather than to the layout
-    // rhythm the rest of the bar follows.
-    padding: 6px;
+    // Off the 4/8 scale on purpose. The CTA is a control, so it is sized
+    // optically against its own label rather than to the layout rhythm the
+    // rest of the bar follows: 6px block keeps it compact, 12px inline gives
+    // the text room to sit in.
+    padding-block: 6px;
+    padding-inline: $space-3;
     font-size: var(--nav-cta-size);
     font-weight: var(--nav-cta-weight);
     line-height: $line-height-normal;
@@ -182,7 +184,7 @@
     display: none; // shown per band below
     align-items: center;
     justify-content: center;
-    padding: $space-2;
+    padding: $space-1;
     background: none;
     border: 0;
     color: var(--nav-ink);
@@ -270,7 +272,10 @@
   }
 
   .footerBy {
-    font-size: var(--nav-link-size);
+    // 2px under the links. Not --nav-link-size minus a step: this is a
+    // sign-off sized against the wordmark above it, so it gets its own value
+    // rather than tracking a token that exists for navigation.
+    font-size: 12px;
     font-weight: var(--nav-link-weight);
     // 75% of the wordmark's weight in the hierarchy, not a separate colour.
     opacity: 0.75;

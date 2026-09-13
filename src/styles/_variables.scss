@@ -124,38 +124,47 @@ $shadow-xl: 0 16px 48px rgba(20, 17, 14, 0.16);
 }
 
 // --- L1: Glass surface ------------------------------------------------------
-// A dark brown-tinted frosted panel, applied via the glass() mixin in
+// A light brown-tinted frosted panel, applied via the glass() mixin in
 // _mixins.scss. Declared here rather than with the other L1 colours because it
 // depends on the radius and shadow scales above, and Sass resolves top to
 // bottom.
 //
 // THE TINT IS A LIGHT MID-TONE, SO THE INK ON IT MUST BE DARK
 //
-// brown-300 at 0.55, measured in LINEAR light:
-//
-//   ink on glass    over the canvas   over a future dark hero
-//   brown-900          11.39:1              4.78:1    <- what we use
-//   brown-100           1.42:1              3.04:1       illegible
-//
-// Light ink is not an option at any alpha on this tint: it tops out around
+// Light ink is not an option at any alpha on this tint — it tops out around
 // 1.6:1 over the canvas. Anything sitting on this glass stays dark.
 //
-// This replaced a brown-800 tint at 0.85, which sat right on the 4.61:1 floor.
-// The lighter tint is both MORE see-through and has far more headroom, because
-// the glass and the page are now on the same side of the ink rather than
-// fighting across it.
+// WHY 0.35, AND THE TRIPWIRE THAT COMES WITH IT
 //
-// Lowering --glass-alpha lowers text contrast on every surface that uses it.
-// Re-run the maths before touching it: composite luminance is
-// alpha * tint + (1 - alpha) * backdrop, computed in LINEAR light. The worst
-// case is the DARKEST backdrop, because the tint is light — the inverse of the
+// brown-900 ink on brown-300 glass, composited in LINEAR light:
+//
+//   alpha   canvas    white   mid-tone   black
+//   0.55    11.39    12.84      5.66     4.78   safe everywhere
+//   0.35    12.92    15.01      4.64     3.37   <- here
+//   0.20    14.06    16.64      3.87     2.31   fails on anything dark
+//
+// Counter-intuitively a LOWER alpha reads better on the light canvas: less
+// tint means less is interposed between dark ink and a light ground. The cost
+// is all at the dark end, where the glass no longer lifts the backdrop enough.
+//
+// 0.35 clears AA against the canvas and against mid-tones, and fails only over
+// a near-black backdrop. There is no such backdrop on the site today.
+//
+// TRIPWIRE: the Blender hero is a DUSK scene. When it lands, anything dark
+// enough to sit under this nav puts the ink below 4.5:1. Re-measure then, and
+// if it fails give the hero section its own --glass-alpha rather than raising
+// this one — the light pages do not need it.
+//
+// Re-run the maths before touching this: composite luminance is
+// alpha * tint + (1 - alpha) * backdrop, in LINEAR light. The worst case is
+// the DARKEST backdrop, because the tint is light — the inverse of the
 // old dark-tint rule, which is exactly the sort of thing that gets missed.
 
 :root {
   // Space-separated, not comma: the `/ <alpha>` form of rgb() is only valid
   // with space-separated channels, and the comma form fails silently.
   --glass-tint: 196 163 125; // brown-300
-  --glass-alpha: 0.55;
+  --glass-alpha: 0.35;
   --glass-bg: rgb(var(--glass-tint) / var(--glass-alpha));
   // Fallback where backdrop-filter is unsupported: same hue, fully opaque, so
   // the panel reads as solid rather than as a washed-out smear.
