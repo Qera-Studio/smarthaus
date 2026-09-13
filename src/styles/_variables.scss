@@ -311,7 +311,11 @@ $page-gutter: $space-6;
   // Height of the fixed bottom nav below lg. `main` reserves this so page
   // content is not hidden behind it — keep in step with the nav's own padding
   // and content height.
-  --nav-bar-block-size: #{$space-16};
+  // 58px measured: 8px padding + a 40px toggle (the tallest item in the row)
+  // + 2 * 1px glass border. Rounded up, and off the spacing scale on purpose —
+  // this reserves space rather than creating it, so erring high costs nothing
+  // while erring low hides page content behind the bar.
+  --nav-bar-block-size: 60px;
   // How far that bar floats clear of the screen edges below lg. Global rather
   // than a nav-local token because `main` has to reserve it too, and the two
   // must not drift apart.

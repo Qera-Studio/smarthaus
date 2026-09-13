@@ -48,9 +48,11 @@
     --nav-stagger-step: #{$duration-fast};
     // How far each link travels as it fades in.
     --nav-link-rise: #{$space-3};
-    // Tablet only: how far the collapsed glass capsule is inset from each
-    // edge. A percentage so it needs no content measurement.
-    --nav-capsule-inset: 32%;
+    // The capsule's width for the whole sub-1024px band — one value, not a
+    // per-breakpoint set. It is a MAX only: below it the capsule shrinks with
+    // the viewport (keeping its float gutter), above it the width holds and
+    // the capsule centres. Nothing about the nav changes at 768px any more.
+    --nav-capsule-size: 400px;
     // Height of the wordmark in the open panel's footer. 15px — 25% under the
     // $space-5 it was, so off the spacing scale on purpose: this is optical
     // sizing of artwork against the label beneath it, not layout rhythm.
@@ -351,7 +353,16 @@
       // bottom inset stacks on top of the home-indicator inset so the glass
       // never sits under the gesture bar.
       inset-block-end: calc(var(--nav-float-inset) + env(safe-area-inset-bottom));
-      inset-inline: var(--nav-float-inset);
+      // One capsule width for the whole band, centred. `inset-inline: 0` plus
+      // auto margins rather than a left/right inset pair: that gives the box a
+      // definite containing width to centre within, which `inset-inline: auto`
+      // would not.
+      inset-inline: 0;
+      // Below the capsule width the box shrinks with the viewport but keeps
+      // its float gutter, so it never touches the screen edges. Above it the
+      // width is capped and the auto margins centre it.
+      max-inline-size: min(var(--nav-capsule-size), calc(100% - 2 * var(--nav-float-inset)));
+      margin-inline: auto;
       z-index: var(--z-sticky);
       // Keep paint and layout local — the panel animates margin and rows, and
       // nothing outside the nav should be asked to re-layout for it.
@@ -475,45 +486,13 @@
     }
   }
 
-  // --- Tablet (md..lg): centred capsule that grows to full width ------------
-
-  @include bp-md {
-    @include bp-max($bp-lg) {
-      .nav {
-        // Collapsed the glass hugs the centre; open it spans the full width.
-        // A percentage margin interpolates without measuring content, and on a
-        // fixed element it reflows nothing.
-        margin-inline: var(--nav-capsule-inset);
-        transition-property: margin-inline;
-        transition-duration: var(--nav-expand-duration);
-        transition-timing-function: var(--nav-expand-ease);
-      }
-
-      .nav[data-open] {
-        margin-inline: 0;
-      }
-
-      .list {
-        flex-direction: row;
-        justify-content: center;
-        gap: var(--nav-gap);
-      }
-
-      .link {
-        font-size: var(--nav-link-size);
-      }
-
-      .panelInner {
-        align-items: center;
-      }
-
-      // The wordmark sign-off is a mobile-menu detail; at tablet width the
-      // two-row bar is short and it would only pad it out.
-      .panelFooter {
-        display: none;
-      }
-    }
-  }
+  // There is deliberately NO tablet band. Everything from 0 to 1023px is the
+  // one capsule above: a single max width that shrinks responsively beneath
+  // itself. The previous md..lg block gave tablets their own layout — a
+  // percentage-inset capsule that animated out to full width, links in a
+  // horizontal row, footer hidden — which is exactly the per-breakpoint
+  // divergence this replaces. A 400px capsule has no room for a link row, and
+  // the footer belongs wherever the vertical menu is, which is now everywhere.
 
   // --- Reduced motion -------------------------------------------------------
 
