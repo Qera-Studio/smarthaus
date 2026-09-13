@@ -6,6 +6,7 @@ import { Manrope } from "next/font/google";
 // before @layer reset and the reset wins. globals.scss declares the order.
 import "../styles/globals.scss";
 import { Nav } from "../components/Nav";
+import { Footer } from "../components/Footer";
 
 const manrope = Manrope({
   variable: "--font-sans",
@@ -48,6 +49,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </a>
         <Nav />
         <main id="main-content">{children}</main>
+        {/* Sibling of main, not inside it: contentinfo is only a landmark as a
+            direct child of body. The footer reserves the mobile nav's height
+            itself, since the reservation on main does not reach it. */}
+        <Footer />
       </body>
     </html>
   );
