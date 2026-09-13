@@ -97,3 +97,51 @@ test("an open menu does not survive the bar hiding", async ({ page, isMobile }) 
   // reappear mid-expansion on the way back up.
   await expect(page.locator("header[data-open]")).toHaveCount(0);
 });
+
+test("tapping outside an open menu closes it", async ({ page, isMobile }) => {
+  // The toggle only exists below lg; from lg up the links are always on show
+  // and the panel is not a disclosure at all.
+  if (!isMobile) test.skip();
+
+  await page.goto("/terms");
+  const toggle = page.getByRole("button", { name: /open menu/i });
+  await toggle.click();
+  await expect(page.locator("header[data-open]")).toHaveCount(1);
+
+  // Tap near the top of the page. The bar is fixed to the BOTTOM below lg, so
+  // this is comfortably outside it — a tap in the lower half could land on the
+  // nav itself and pass for the wrong reason.
+  await page.mouse.click(40, 80);
+  await expect(page.locator("header[data-open]")).toHaveCount(0);
+});
+
+test("the toggle still closes the menu itself", async ({ page, isMobile }) => {
+  if (!isMobile) test.skip();
+
+  // The outside-tap handler runs on pointerdown at the capture phase, so it
+  // sees the toggle's own tap before the button's onClick does. If it did not
+  // exclude the header, it would close the panel and the click would then
+  // reopen it — a menu that could never be dismissed by its own button.
+  await page.goto("/terms");
+  await page.getByRole("button", { name: /open menu/i }).click();
+  await expect(page.locator("header[data-open]")).toHaveCount(1);
+
+  await page.getByRole("button", { name: /close menu/i }).click();
+  await expect(page.locator("header[data-open]")).toHaveCount(0);
+});
+
+test("a link inside the open menu is still clickable", async ({ page, isMobile }) => {
+  if (!isMobile) test.skip();
+
+  // Same risk from the other side: a capture-phase pointerdown that closed the
+  // panel before the link resolved would make every menu item inert.
+  await page.goto("/terms");
+  await page.getByRole("button", { name: /open menu/i }).click();
+  await expect(page.locator("header[data-open]")).toHaveCount(1);
+
+  await page
+    .getByRole("navigation", { name: "Primary" })
+    .getByRole("link", { name: "About" })
+    .click();
+  await expect(page).toHaveURL(/\/about$/);
+});
