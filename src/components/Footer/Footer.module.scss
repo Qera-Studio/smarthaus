@@ -284,7 +284,9 @@
     border-style: solid;
     border-width: var(--footer-field-border-size);
     border-color: var(--footer-field-bg);
-    border-radius: var(--radius-sm);
+    // Square. The brand's edges are architectural rather than soft — see the
+    // matching zero on .submit and .socialLink.
+    border-radius: 0;
     // The control's own height plus the padding and border that sit outside
     // it, so the inner input lands at exactly --footer-field-size.
     block-size: calc(
@@ -341,7 +343,7 @@
     padding-inline: var(--space-4);
     background-color: #{$brown-100};
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: 0;
     font-size: var(--font-size-sm);
     font-weight: $font-weight-semibold;
     color: #{$brown-900}; // 15.59:1 on brown-100
@@ -429,7 +431,7 @@
     inline-size: var(--footer-chip-size);
     block-size: var(--footer-chip-size);
     background-color: #{$brown-100};
-    border-radius: var(--radius-sm);
+    border-radius: 0;
     // brown-900 at 75% on the brown-100 chip — 7.64:1, rising to 15.59:1 on
     // hover. Colour-only, so the reduced-motion reset covers it for free.
     color: rgb(20 17 14 / 0.75);
