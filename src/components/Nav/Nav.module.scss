@@ -12,6 +12,14 @@
   .nav {
     // L2 component tokens — the override surface for this component.
     --nav-padding: #{$space-6};
+    // The scrolled capsule's padding — 8px on all four sides, against the 24px
+    // block padding of the tall top-of-page bar. Its own token so the two
+    // states cannot drift into each other.
+    --nav-padding-stuck: #{$space-2};
+    // The scrolled capsule's width from lg up. A max, not a fixed size: on a
+    // 1024px window the content column is already narrower than this, and the
+    // capsule should never grow past the gutters it sits inside.
+    --nav-stuck-size: 1000px;
     --nav-gap: #{$space-6};
     --nav-link-size: #{$font-size-sm};
     --nav-link-weight: #{$font-weight-medium};
@@ -351,8 +359,21 @@
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
       gap: var(--nav-gap);
+      // An explicit LENGTH rather than `none` or `100%`. Both alternatives make
+      // the shrink jump in a single frame: `none` has no value to interpolate
+      // from, and a percentage cannot interpolate against the stuck state's
+      // length (measured: 1392 -> 1000 with two distinct widths, no frames
+      // between). --content-max is the width the body caps at, so this is the
+      // box the nav already occupied, expressed in the same unit the stuck
+      // state uses.
+      max-inline-size: var(--content-max);
       padding-block: var(--nav-padding);
-      transition-property: background-color, box-shadow;
+      // max-inline-size and padding are here because the stuck state shrinks
+      // the capsule; without them the width and padding would jump while the
+      // glass faded in. They are layout properties rather than compositor ones,
+      // but the nav is a sticky element with `contain` below lg and a single
+      // grid row here, so the reflow is bounded to its own three children.
+      transition-property: background-color, box-shadow, max-inline-size, padding, border-radius;
       transition-duration: var(--duration-normal);
       transition-timing-function: var(--ease-out);
     }
@@ -396,8 +417,35 @@
     // the glass so it stays legible over whatever is passing beneath it. No
     // colour change: the glass is a light mid-tone and the ink that works on
     // the page works on it too (11.4:1).
+    //
+    // It also shrinks to a capsule: narrower than the content column, padded
+    // down to 8px on all four sides, and with the wordmark swapped for the mark
+    // alone. The full lockup is ~7:1, so at this height it would either crowd
+    // the links or force the capsule wider than it wants to be.
     .nav[data-stuck] {
-      @include glass(0);
+      @include glass($radius-md);
+
+      // A MAX, not a fixed width: below --nav-stuck-size the capsule keeps the
+      // content column's own width rather than growing past it, so it never
+      // exceeds the gutters it sits between. The auto margins centre it above
+      // that width.
+      max-inline-size: var(--nav-stuck-size);
+      margin-inline: auto;
+      // 8px on every side, replacing the 24px block padding of the tall bar.
+      // The shorthand is safe here — a single token, no var() composition.
+      padding: var(--nav-padding-stuck);
+      border-radius: $radius-md;
+    }
+
+    // Mark only once stuck; the full lockup is the top-of-page state.
+    .nav[data-stuck] .brandFull {
+      display: none;
+    }
+
+    .nav[data-stuck] .brandMark {
+      display: flex;
+      grid-column: 1;
+      grid-row: 1;
     }
 
     // Sticky at the top here, so it leaves upwards.
