@@ -19,7 +19,10 @@
     // The scrolled capsule's width from lg up. A max, not a fixed size: on a
     // 1024px window the content column is already narrower than this, and the
     // capsule should never grow past the gutters it sits inside.
-    --nav-stuck-size: 600px;
+    --nav-stuck-size: 750px;
+    // How far the scrolled capsule floats below the top edge. Only applies once
+    // stuck — the tall top-of-page bar sits flush against the viewport top.
+    --nav-stuck-inset: #{$space-6};
     --nav-gap: #{$space-6};
     --nav-link-size: #{$font-size-sm};
     --nav-link-weight: #{$font-weight-medium};
@@ -367,7 +370,23 @@
       // box the nav already occupied, expressed in the same unit the stuck
       // state uses.
       max-inline-size: var(--content-max);
-      padding-block: var(--nav-padding);
+      // Reserved in BOTH states so sticking changes nothing in the document
+      // flow. The stuck capsule floats this far below the viewport top via its
+      // own inset-block-start; here the same value simply sits above the tall
+      // bar, and the padding below is reduced by it so the bar's overall height
+      // is unchanged.
+      margin-block-start: var(--nav-stuck-inset);
+      // Both reduced by the 1px border reserved below, so the bar's overall
+      // height is exactly what it was before either reservation existed.
+      padding-block-start: calc(var(--nav-padding) - var(--nav-stuck-inset) - 1px);
+      padding-block-end: calc(var(--nav-padding) - 1px);
+      // A transparent border of the same width the glass will paint. Without
+      // it the glass's 1px border appears on stick and grows the document by
+      // 2px, shifting every element below. Reserving it here means the border
+      // only ever changes colour.
+      border-style: solid;
+      border-width: 1px;
+      border-color: transparent;
       // max-inline-size and padding are here because the stuck state shrinks
       // the capsule; without them the width and padding would jump while the
       // glass faded in. They are layout properties rather than compositor ones,
@@ -425,12 +444,30 @@
     .nav[data-stuck] {
       @include glass($radius-md);
 
+      // `auto` outer tracks, not the 1fr pair the tall bar uses. 1fr splits the
+      // leftover space equally, which gave the 23px mark a 90px track while the
+      // CTA needed 129px — the mark floated in dead space and the links were
+      // pushed right of true centre. `auto` sizes each edge to its own content,
+      // so the mark takes only the width it is, and the links then centre
+      // optically between them rather than being shoved by an empty track.
+      grid-template-columns: auto 1fr auto;
+      // The links are centred inside the middle track, which is now the real
+      // remaining space rather than a track balanced against a phantom.
+      justify-items: center;
+
       // A MAX, not a fixed width: below --nav-stuck-size the capsule keeps the
       // content column's own width rather than growing past it, so it never
       // exceeds the gutters it sits between. The auto margins centre it above
       // that width.
       max-inline-size: var(--nav-stuck-size);
       margin-inline: auto;
+      // The gap above the floating capsule. Only the sticky inset moves here —
+      // the margin that creates the gap is reserved on the UNSTUCK nav (see
+      // below), because adding it on stick would grow the document by 26px and
+      // push every following element down mid-scroll. Measured before the
+      // split: main moved 81 -> 107 and the page grew 8911 -> 8937, which is
+      // exactly the layout shift the project's CLS budget exists to prevent.
+      inset-block-start: var(--nav-stuck-inset);
       // 8px on every side, replacing the 24px block padding of the tall bar.
       // The shorthand is safe here — a single token, no var() composition.
       padding: var(--nav-padding-stuck);
