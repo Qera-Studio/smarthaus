@@ -160,24 +160,11 @@ export function Footer() {
           <svg className={styles.gradientDefs} aria-hidden="true" focusable="false">
             <defs>
               <linearGradient id="footer-wordmark-gradient" x1="0" y1="0" x2="0" y2="1">
-                {/* Solid to the halfway mark, then a fade that finishes early.
-                    Two stops from 0% dimmed the letterforms immediately, so the
-                    wordmark never read at full strength anywhere; holding
-                    brown-100 to 50% gives it a solid top half.
-
-                    The dark end lands at 90%, not 100%, so the lowest tenth of
-                    the letterforms is already at the footer's own ground colour
-                    and reads as absorbed rather than merely dim.
-
-                    Full opacity on that stop: at 0.8 the tail composited to a
-                    lighter brown than the ground beneath it, leaving a visible
-                    edge exactly where the wordmark was supposed to disappear.
-                    The colour matches --color-bg-inverse-strong, so it must be
-                    changed with that token. */}
+                {/* brown-100 at the top, brown-950 by the halfway mark. The
+                    dark colour matches --color-bg-inverse-strong, the footer's
+                    ground, so it must change with that token. */}
                 <stop offset="0%" stopColor="#f0e9dd" />
-                <stop offset="50%" stopColor="#f0e9dd" />
-                <stop offset="90%" stopColor="#0a0807" />
-                <stop offset="100%" stopColor="#0a0807" />
+                <stop offset="50%" stopColor="#0a0807" />
               </linearGradient>
             </defs>
           </svg>
