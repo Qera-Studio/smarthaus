@@ -44,13 +44,27 @@
     // with no overshoot: it leaves slowly, moves through the middle, and
     // settles without bouncing the glass edge.
     --nav-expand-ease: cubic-bezier(0.32, 0.72, 0, 1);
-    // Gap between consecutive links fading in (and out).
+    // Gap between consecutive links fading in.
     --nav-stagger-step: #{$duration-fast};
+    // How long each item takes to fade in.
+    --nav-item-duration: #{$duration-slower};
+
+    // --- Closing runs the same choreography, faster --------------------------
+    // Opening is a reveal and can take its time; closing is an acknowledgement
+    // of a click and wants to get out of the way. Same shape, ~40% of the
+    // clock — these exist so the collapse can be quickened without touching
+    // the open feel, which is tuned.
+    --nav-stagger-step-out: 60ms;
+    --nav-item-duration-out: #{$duration-normal};
+    // The glass closes faster than it opens, for the same reason.
+    --nav-collapse-duration: #{$duration-slow};
     // How long the collapse waits for the contents to fade out. The last item
-    // to leave starts at 4 * step and takes --duration-slower, so the fade-out
-    // window is (4 * step + slower); the panel starts moving at 90% of it, the
-    // same 90% handover the opening uses in the other direction.
-    --nav-collapse-hold: calc((4 * var(--nav-stagger-step) + var(--duration-slower)) * 0.9);
+    // to leave starts at 4 * step-out and takes --nav-item-duration-out, so the
+    // fade-out window is (4 * step-out + duration-out); the panel starts moving
+    // at 90% of it — the same handover the opening uses in the other direction.
+    --nav-collapse-hold: calc(
+      (4 * var(--nav-stagger-step-out) + var(--nav-item-duration-out)) * 0.9
+    );
     // How far each link travels as it fades in.
     --nav-link-rise: #{$space-3};
     // The capsule's width for the whole sub-1024px band — one value, not a
@@ -118,12 +132,14 @@
     display: grid;
     grid-template-rows: 0fr;
     transition-property: grid-template-rows;
-    transition-duration: var(--nav-expand-duration);
+    // This rule is the CLOSED state, so these are the collapse values; the
+    // [data-open] rule below carries the slower expansion ones.
+    transition-duration: var(--nav-collapse-duration);
     transition-timing-function: var(--nav-expand-ease);
     // Collapsing waits for the contents to clear. Declared here rather than on
-    // [data-open] because this is the state being transitioned TO when the
-    // menu closes; the open rule below zeroes it so expansion starts at once.
-    // Below lg only — on desktop the panel is not a disclosure.
+    // [data-open] for the same reason, and the open rule zeroes it so
+    // expansion starts at once. Below lg only — on desktop the panel is not a
+    // disclosure.
     @include bp-max($bp-lg) {
       transition-delay: var(--nav-collapse-hold);
     }
@@ -140,6 +156,7 @@
 
   .nav[data-open] .panel {
     grid-template-rows: 1fr;
+    transition-duration: var(--nav-expand-duration);
     // Opening starts immediately; only the collapse holds back.
     transition-delay: 0ms;
   }
@@ -495,17 +512,19 @@
       opacity: 0;
       transform: translateY(var(--nav-link-rise));
       transition-property: opacity, transform;
-      // Long and on the panel's own curve, so a link arriving does not read as
-      // a separate, faster event layered on top of the expansion.
-      transition-duration: var(--duration-slower);
+      transition-duration: var(--nav-item-duration-out);
       transition-timing-function: var(--nav-expand-ease);
-      transition-delay: calc((4 - var(--link-index, 4)) * var(--nav-stagger-step));
+      transition-delay: calc((4 - var(--link-index, 4)) * var(--nav-stagger-step-out));
     }
 
     .nav[data-open] .item,
     .nav[data-open] .panelFooter {
       opacity: 1;
       transform: none;
+      // Long and on the panel's own curve, so a link arriving does not read as
+      // a separate, faster event layered on top of the expansion. Restated
+      // here because the base rule now carries the quicker closing duration.
+      transition-duration: var(--nav-item-duration);
       // Hold until the expansion is 90% done, then one step per link.
       transition-delay: calc(
         var(--nav-expand-duration) * 0.9 + var(--link-index, 4) * var(--nav-stagger-step)
