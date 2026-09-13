@@ -134,21 +134,23 @@ $shadow-xl: 0 16px 48px rgba(20, 17, 14, 0.16);
 // Light ink is not an option at any alpha on this tint — it tops out around
 // 1.6:1 over the canvas. Anything sitting on this glass stays dark.
 //
-// WHY 0.35, AND THE TRIPWIRE THAT COMES WITH IT
+// WHY 0.25, AND THE TRIPWIRE THAT COMES WITH IT
 //
 // brown-900 ink on brown-300 glass, composited in LINEAR light:
 //
 //   alpha   canvas    white   mid-tone   black
-//   0.55    11.39    12.84      5.66     4.78   safe everywhere
-//   0.35    12.92    15.01      4.64     3.37   <- here
-//   0.20    14.06    16.64      3.87     2.31   fails on anything dark
+//   0.55    11.39    12.84      6.05     4.78   safe everywhere
+//   0.35    12.92    15.01      5.88     3.37
+//   0.25    13.68    16.10      5.56     2.66   <- here
+//   0.20    14.06    16.64      5.40     2.31
 //
 // Counter-intuitively a LOWER alpha reads better on the light canvas: less
 // tint means less is interposed between dark ink and a light ground. The cost
 // is all at the dark end, where the glass no longer lifts the backdrop enough.
 //
-// 0.35 clears AA against the canvas and against mid-tones, and fails only over
-// a near-black backdrop. There is no such backdrop on the site today.
+// 0.25 clears AA against the canvas and against mid-tones by a wide margin, and
+// fails only over a near-black backdrop. There is no such backdrop on the site
+// today.
 //
 // TRIPWIRE: the Blender hero is a DUSK scene. When it lands, anything dark
 // enough to sit under this nav puts the ink below 4.5:1. Re-measure then, and
@@ -164,16 +166,16 @@ $shadow-xl: 0 16px 48px rgba(20, 17, 14, 0.16);
   // Space-separated, not comma: the `/ <alpha>` form of rgb() is only valid
   // with space-separated channels, and the comma form fails silently.
   --glass-tint: 196 163 125; // brown-300
-  --glass-alpha: 0.35;
+  --glass-alpha: 0.25;
   --glass-bg: rgb(var(--glass-tint) / var(--glass-alpha));
   // Fallback where backdrop-filter is unsupported: same hue, fully opaque, so
   // the panel reads as solid rather than as a washed-out smear.
   --glass-bg-opaque: #{$brown-300};
-  // Half the original 24px. At that radius the backdrop dissolved into a flat
-  // wash and the panel read as opaque tint rather than as glass; 12px still
-  // separates the bar from what passes under it while leaving the shapes
-  // beneath legible enough to register as movement.
-  --glass-blur: 12px;
+  // A third of the original 24px. At that radius the backdrop dissolved into a
+  // flat wash and the panel read as opaque tint rather than as glass. 8px is
+  // the low end of what still reads as frosted — below roughly 4px it stops
+  // looking like glass and becomes plain translucent tint.
+  --glass-blur: 8px;
   --glass-saturate: 1.4;
   // A dark hairline: the panel is lighter than a dark backdrop, so the edge
   // that reads as "pane of glass" is a shadow, not a highlight.
@@ -191,11 +193,15 @@ $shadow-xl: 0 16px 48px rgba(20, 17, 14, 0.16);
   // one it replaced (1.2% of level vs 6.2%), so the value had to rise with the
   // re-tint rather than carry over. Grain is a surface quality of the glass,
   // never speckle over the content.
-  --glass-noise-opacity: 0.5;
+  // Lowered with the alpha. Grain reads as a surface quality of the glass, and
+  // a thinner pane carries less of it — at 0.5 the texture stayed as strong as
+  // it was on the denser panel and read as speckle sitting over the content
+  // rather than as the pane's own finish.
+  --glass-noise-opacity: 0.3;
   --glass-noise: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="140" height="140" filter="url(%23n)"/></svg>');
   // Text on glass. Dark, and the same semantics the canvas uses — the tint is
   // light enough that there is no separate inverse scale to keep in step.
-  --glass-text: var(--color-text-primary); // 11.4:1 on canvas, 4.8:1 over black
+  --glass-text: var(--color-text-primary); // 13.7:1 on canvas, 2.7:1 over black
   --glass-text-muted: var(--color-text-secondary);
 }
 
