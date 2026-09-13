@@ -10,6 +10,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 1,
     },
+    {
+      // The only conversion event on the site, so it ranks just below home.
+      url: `${BASE_URL}/contact`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
     // /privacy and /terms are deliberately absent while they carry
     // `robots: noindex` as unreviewed drafts — listing a noindex URL in the
     // sitemap asks a crawler to index a page the page itself refuses, which is

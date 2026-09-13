@@ -15,6 +15,8 @@
  * the real accounts before launch.
  */
 
+import { whatsappLink } from "../../lib/contact";
+
 export type Social = {
   readonly id: string;
   /** Accessible name. Names the platform AND the brand: "WhatsApp" alone is
@@ -25,18 +27,13 @@ export type Social = {
   readonly path: string;
 };
 
-/**
- * WhatsApp is built from the env number rather than hardcoded, per AGENTS.md.
- * Falls back to the documented number from .env.example when unset so local
- * dev and preview builds do not render a broken link.
- */
-const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "971543755150";
-
 export const SOCIALS: readonly Social[] = [
   {
     id: "whatsapp",
     label: "Smarthaus on WhatsApp",
-    href: `https://wa.me/${whatsappNumber}`,
+    // No pre-filled message: this is the footer's generic profile link, with no
+    // page context to draw one from. The contact page passes its own.
+    href: whatsappLink(),
     // ponytail: placeholder glyph — swap for the real WhatsApp mark.
     path: "M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 20Z",
   },

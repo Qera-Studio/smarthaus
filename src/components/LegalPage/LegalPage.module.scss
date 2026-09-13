@@ -54,13 +54,19 @@
 
   .header {
     max-inline-size: var(--legal-measure);
-    margin-block-end: $space-16;
+    // An L2 token rather than a literal, because the correct gap depends on
+    // what the header ends with. On /privacy and /terms that is the metadata
+    // strip — a ruled band that already reads as a divider, so the space below
+    // it is deliberately large. /faq has no strip, and inherits a gap sized for
+    // one, leaving ~150px of dead space under the standfirst. It overrides this
+    // rather than fighting the margin.
+    margin-block-end: var(--legal-header-gap, #{$space-16});
 
     // From lg the header is a grid item in .layout's middle column, so it needs
     // no inline offset of its own — sharing the prose's track is what keeps the
     // two on one left edge at every width.
     @include bp-lg {
-      margin-block-end: $space-20;
+      margin-block-end: var(--legal-header-gap-lg, #{$space-20});
     }
   }
 
@@ -304,7 +310,9 @@
     gap: $space-3;
     padding-block: $space-2;
     padding-inline: $space-3;
-    border-radius: var(--radius-sm);
+    // Square, matching the nav, footer and CTAs. The active entry's tint is a
+    // rectangular band rather than a pill.
+    border-radius: 0;
     font-size: var(--type-small);
     font-weight: $font-weight-medium;
     line-height: $line-height-snug;

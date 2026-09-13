@@ -13,7 +13,7 @@ const PLACEHOLDER_ROUTES = [
   "/about",
   "/designers",
   "/developers",
-  "/contact",
+  // /contact is a real page now. Its own suite is e2e/contact.spec.ts.
   "/cookie-preferences",
 ] as const;
 

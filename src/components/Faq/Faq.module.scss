@@ -1,0 +1,196 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  // Overrides on the shared legal shell, set from outside it.
+  //
+  // These are the L2 tokens LegalPage declares for exactly this — /faq has no
+  // metadata strip closing its header, so it does not want the gap sized for
+  // one. Setting the tokens on a wrapper keeps the legal pages untouched.
+  .shell {
+    --legal-header-gap: #{$space-8};
+    --legal-header-gap-lg: #{$space-10};
+  }
+
+  // The page's intro paragraph, above the first category.
+  //
+  // It needs its own separation from the heading that follows it, because
+  // LegalPage only spaces sections from EACH OTHER (.section + .section) — the
+  // first one has no top margin, so the intro and "1. About the company"
+  // collide. The legal pages never hit this: their first section follows a
+  // metadata strip, which this page has none of.
+  .intro {
+    margin-block-end: $space-12;
+  }
+
+  // The accordion list. One hairline between rows and one closing the stack,
+  // which is the rule in the design: every question sits in a ruled band.
+  //
+  // The rule lives on the row's block-start with a closing rule on the last
+  // child, rather than block-end on every row — that way a category heading
+  // sitting above the list does not end up double-ruled against the first row.
+  .list {
+    margin-block-start: $space-6;
+  }
+
+  .entry {
+    border-block-start: 1px solid var(--color-border);
+
+    &:last-child {
+      border-block-end: 1px solid var(--color-border);
+    }
+
+    // Smooth open and close, matching /contact.
+    //
+    // <details> snaps because its content box goes from display:none to laid
+    // out in one frame. Three things unstick it, and all three are needed:
+    //   1. interpolate-size lets a height transition resolve to/from `auto`.
+    //   2. ::details-content is the generated box wrapping everything after the
+    //      summary — the only thing that can actually be sized.
+    //   3. content-visibility in the transition-property list, with
+    //      allow-discrete, defers the display flip to the end of the close
+    //      instead of the start.
+    //
+    // Browsers without support ignore all of it and keep the instant toggle,
+    // which is a fine fallback rather than a broken one.
+    interpolate-size: allow-keywords;
+
+    &::details-content {
+      block-size: 0;
+      overflow: hidden;
+      // Fades slightly behind the height so the text does not appear to slide
+      // out from under the summary.
+      opacity: 0;
+
+      transition-property: block-size, opacity, content-visibility;
+      transition-duration: var(--duration-slow);
+      transition-timing-function: var(--ease-out);
+      transition-behavior: allow-discrete;
+    }
+
+    &[open]::details-content {
+      block-size: auto;
+      opacity: 1;
+    }
+  }
+
+  // --- The question row -----------------------------------------------------
+
+  .question {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-5;
+    // Generous, per the design — the rows are the page's rhythm and a tight
+    // band makes 34 of them read as a table rather than a conversation.
+    padding-block: $space-5;
+    cursor: pointer;
+    // The default disclosure triangle, removed in favour of the chevron. Both
+    // are needed: ::-webkit-details-marker for Safari, list-style for the rest.
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    // The whole row is the hit target, so the ring has to trace the row rather
+    // than the text inside it. Negative offset keeps it inside the hairlines.
+    @include focus-ring($offset: -2px);
+
+    &:hover .questionText {
+      color: var(--color-accent-text);
+    }
+  }
+
+  .questionText {
+    // Sub-token size, declared locally the same way Nav, Footer and LegalPage
+    // do — the type scale has no step between body-lg and h4 and this sits
+    // between them.
+    font-size: var(--type-body-lg);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    color: var(--color-text-primary);
+    text-wrap: pretty;
+
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .chevron {
+    flex: none;
+    color: var(--color-text-muted);
+
+    // Rotation, not a swap to a second icon: one element, and the turn reads
+    // as the row opening rather than as a different control appearing.
+    transition-property: rotate, color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .entry[open] .chevron {
+    rotate: 180deg;
+    color: var(--color-accent-text);
+  }
+
+  .entry[open] .questionText {
+    font-weight: $font-weight-semibold;
+  }
+
+  // --- The answer -----------------------------------------------------------
+
+  .answer {
+    // Ends flush with the row's block padding; the chevron column's width is
+    // left free so the answer is not artificially narrowed.
+    padding-block-end: $space-5;
+    // Short of the full measure — an answer set to the same width as the
+    // question it sits under loses the indent that marks it as subordinate.
+    max-inline-size: 62ch;
+
+    p {
+      margin-block-start: $space-3;
+      font-size: var(--legal-body-size, 13px);
+      line-height: $line-height-relaxed;
+      color: var(--color-text-secondary);
+      text-wrap: pretty;
+
+      &:first-child {
+        margin-block-start: 0;
+      }
+    }
+  }
+
+  // The reviewer-facing note under an unconfirmed answer. Not prose — it is a
+  // marker, and it is removed along with the placeholder it flags.
+  .pendingNote {
+    margin-block-start: $space-4;
+    font-size: var(--type-small);
+  }
+
+  // --- Category heading -----------------------------------------------------
+  // .prose in LegalPage already numbers and styles the <h2>, so this only adds
+  // the standfirst that introduces a group of questions.
+
+  .categoryIntro {
+    margin-block-start: $space-4;
+    color: var(--color-text-secondary);
+  }
+
+  // --- Reduced motion -------------------------------------------------------
+  // The chevron's rotation is real movement, so it is zeroed rather than
+  // argued about. The colour fades go with it for consistency.
+
+  @media (prefers-reduced-motion: reduce) {
+    .chevron,
+    .questionText {
+      transition-duration: 0s;
+    }
+
+    // The disclosure height too, or reduced motion still gets a 400ms slide.
+    // The global reset clamps durations to 0.01ms; stating it here keeps this
+    // block the one place the component's motion is described.
+    .entry::details-content {
+      transition-duration: 0s;
+    }
+  }
+}

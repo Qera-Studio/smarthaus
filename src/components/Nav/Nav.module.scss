@@ -20,6 +20,13 @@
     // 1024px window the content column is already narrower than this, and the
     // capsule should never grow past the gutters it sits inside.
     --nav-stuck-size: 650px;
+    // Width of the grid's first column, which holds the brand. The tall bar
+    // shows the full lockup (133px) and the capsule shows the mark alone
+    // (23px); both are measured, and both are LENGTHS so the column can be
+    // animated between them. `auto` in either state would make the track list
+    // untweenable and the whole row would snap.
+    --nav-brand-track: 133px;
+    --nav-brand-track-stuck: 23px;
     // How far the scrolled capsule floats below the top edge. Only applies once
     // stuck — the tall top-of-page bar sits flush against the viewport top.
     --nav-stuck-inset: #{$space-6};
@@ -250,7 +257,8 @@
     // is 12.5:1 against the glass, so it holds as a shape too.
     background-color: var(--nav-cta-bg);
     color: var(--nav-cta-ink);
-    border-radius: $radius-sm;
+    // Square, at every breakpoint and in both nav states.
+    border-radius: 0;
     text-decoration: none;
     white-space: nowrap;
     transition-property: opacity;
@@ -380,8 +388,24 @@
       inset-block-start: 0;
       z-index: var(--z-sticky);
       display: grid;
-      grid-template-columns: 1fr auto 1fr;
+      // Both states share this track STRUCTURE, and differ only in the value of
+      // --nav-brand-track. Track lists interpolate only when the types line up
+      // position by position, so the old pair (1fr auto 1fr unstuck, auto 1fr
+      // auto stuck) could never tween: the columns snapped in one frame and
+      // took the CTA 379px and the links' baseline with them.
+      //
+      // The brand track is a length rather than `auto` for the same reason — it
+      // is the only one that actually changes size, from the 133px lockup to
+      // the 23px mark, and a length is what can be animated between them. The
+      // CTA track is `auto` in both states because its content never changes
+      // width, and the middle 1fr simply absorbs the remainder.
+      grid-template-columns: var(--nav-brand-track) 1fr auto;
       align-items: center;
+      // Each item is placed by its own justify-self below, in both states, so
+      // nothing flips on stick. The old rule set justify-items only on
+      // [data-stuck], which re-placed every item in a single frame — that is
+      // the CTA's hop and the links' small vertical lift, separate from the
+      // horizontal jump.
       gap: var(--nav-gap);
       // An explicit LENGTH rather than `none` or `100%`. Both alternatives make
       // the shrink jump in a single frame: `none` has no value to interpolate
@@ -424,8 +448,13 @@
       // glass faded in. They are layout properties rather than compositor ones,
       // but the nav is a sticky element with `contain` below lg and a single
       // grid row here, so the reflow is bounded to its own three children.
+      // grid-template-columns is in the list because the brand column resizes
+      // on stick. It only animates because both states now declare the same
+      // three track TYPES — a list whose types differ position-by-position is
+      // not interpolable and jumps regardless of being listed here.
       transition-property:
-        background-color, box-shadow, max-inline-size, margin, padding, border-radius;
+        background-color, box-shadow, max-inline-size, margin, padding, border-radius,
+        grid-template-columns;
       // This rule is the EXPANDED state, so these are the expand values — a
       // transition reads its duration from the state it is moving TO. The
       // collapse values live on [data-stuck] below.
@@ -461,6 +490,9 @@
       grid-column: 2;
       grid-row: 1;
       grid-template-rows: 1fr;
+      // Centred in both states, so sticking changes the track's width but never
+      // how the links sit inside it.
+      justify-self: center;
     }
 
     .ctaSlot {
@@ -546,18 +578,17 @@
     // alone. The full lockup is ~7:1, so at this height it would either crowd
     // the links or force the capsule wider than it wants to be.
     .nav[data-stuck] {
-      @include glass($radius-md);
+      // 0, not $radius-md: the shrunk bar keeps square corners. The mixin takes
+      // the radius as an argument, so this is the single place it is set —
+      // overriding border-radius after the include would leave the mixin's own
+      // value in the cascade for anything else that reads it.
+      @include glass(0);
 
-      // `auto` outer tracks, not the 1fr pair the tall bar uses. 1fr splits the
-      // leftover space equally, which gave the 23px mark a 90px track while the
-      // CTA needed 129px — the mark floated in dead space and the links were
-      // pushed right of true centre. `auto` sizes each edge to its own content,
-      // so the mark takes only the width it is, and the links then centre
-      // optically between them rather than being shoved by an empty track.
-      grid-template-columns: auto 1fr auto;
-      // The links are centred inside the middle track, which is now the real
-      // remaining space rather than a track balanced against a phantom.
-      justify-items: center;
+      // Only the brand column's WIDTH changes; the track structure is shared
+      // with the expanded state above so the three columns can interpolate
+      // instead of snapping. The mark takes just the width it is, and the links
+      // centre in the remaining 1fr rather than being pushed by an empty track.
+      --nav-brand-track: var(--nav-brand-track-stuck);
 
       // A MAX, not a fixed width: below --nav-stuck-size the capsule keeps the
       // content column's own width rather than growing past it, so it never
@@ -580,7 +611,7 @@
       // 8px on every side, replacing the 24px block padding of the tall bar.
       // The shorthand is safe here — a single token, no var() composition.
       padding: var(--nav-padding-stuck);
-      border-radius: $radius-md;
+      border-radius: 0;
     }
 
     // Mark only once stuck; the full lockup is the top-of-page state.
@@ -641,9 +672,11 @@
       // its top edge travels. The bar does not move at all.
       display: flex;
       flex-direction: column;
-      border-radius: $radius-md;
+      // Square on mobile too, in both states: the collapsed bar and the
+      // expanded menu panel share this box.
+      border-radius: 0;
 
-      @include glass($radius-md);
+      @include glass(0);
     }
 
     .bar {
