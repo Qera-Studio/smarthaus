@@ -7,9 +7,14 @@ type LegalPageProps = {
   title: string;
   /** One-line statement of what the document governs, above the fold. */
   standfirst: string;
-  /** Rendered into the metadata strip under the standfirst. */
-  lastUpdated: string;
-  version: string;
+  /**
+   * Rendered into the metadata strip under the standfirst. Both optional, and
+   * the strip is omitted entirely when neither is given — /faq reuses this
+   * shell for its ToC rail and prose column, and a version number on an FAQ
+   * would be a legal-document affordance applied to a page that is not one.
+   */
+  lastUpdated?: string;
+  version?: string;
   sections: readonly LegalSection[];
   /** The document body — a sequence of <LegalSection> elements. */
   children: ReactNode;
@@ -57,16 +62,22 @@ export function LegalPage({
         <header className={styles.header}>
           <h1 className={styles.title}>{title}</h1>
           <p className={styles.standfirst}>{standfirst}</p>
-          <dl className={styles.meta}>
-            <div className={styles.metaPair}>
-              <dt className={styles.metaLabel}>Last updated</dt>
-              <dd className={styles.metaValue}>{lastUpdated}</dd>
-            </div>
-            <div className={styles.metaPair}>
-              <dt className={styles.metaLabel}>Version</dt>
-              <dd className={styles.metaValue}>{version}</dd>
-            </div>
-          </dl>
+          {lastUpdated || version ? (
+            <dl className={styles.meta}>
+              {lastUpdated ? (
+                <div className={styles.metaPair}>
+                  <dt className={styles.metaLabel}>Last updated</dt>
+                  <dd className={styles.metaValue}>{lastUpdated}</dd>
+                </div>
+              ) : null}
+              {version ? (
+                <div className={styles.metaPair}>
+                  <dt className={styles.metaLabel}>Version</dt>
+                  <dd className={styles.metaValue}>{version}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
         </header>
 
         <article className={styles.prose}>{children}</article>

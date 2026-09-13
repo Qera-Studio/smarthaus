@@ -47,7 +47,18 @@
   // that must work without JS, so the smoothing is CSS-only. The
   // prefers-reduced-motion block in _reset.scss sets
   // `scroll-behavior: auto !important`, which overrides this.
-  html:has([data-legal-page]) {
+  //
+  // `:target` is what keeps this to ANCHOR clicks. Smooth scrolling on <html>
+  // also applies to the scroll reset a route change performs, so arriving from
+  // another page ANIMATED down-to-up instead of starting at the top — and, on a
+  // long page, settled short of it (measured: landing at scrollY 75 rather than
+  // 0, which left the nav stuck in its scrolled capsule on a page the reader
+  // had not scrolled). Requiring an active :target means the smoothing is armed
+  // only once a #hash is in play, which is exactly when the ToC wants it.
+  //
+  // The first ToC click on a page still smooths: the href sets the hash, so
+  // :target matches before the scroll is performed.
+  html:has([data-legal-page]):has(:target) {
     scroll-behavior: smooth;
   }
 
