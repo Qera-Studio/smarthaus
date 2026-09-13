@@ -53,13 +53,27 @@
     transition-timing-function: var(--ease-out);
   }
 
-  // Set by the script when the time is out. The element is removed from the DOM
-  // once this transition ends, so nothing is left covering the page.
+  // Set by the script when the time is out: the fade.
   .splash[data-leaving] {
     opacity: 0;
     // Stop it swallowing a click during the fade — 320ms is long enough for a
     // visitor to reach for something underneath.
     pointer-events: none;
+  }
+
+  // Set once the fade has finished. This is where the splash actually goes
+  // away, and it is a CSS state rather than a DOM removal on purpose: the
+  // element belongs to React's tree, and detaching it from a script made
+  // React's reconciler throw NotFoundError on the next render. See the note in
+  // Splash.tsx.
+  //
+  // `display: none` rather than visibility or a transform, because it has to
+  // leave the flow, hit testing AND the accessibility tree — a full-viewport
+  // overlay that is merely transparent still covers the page. The [hidden]-like
+  // behaviour is what makes this equivalent to removing it, without touching
+  // the DOM React owns.
+  .splash[data-done] {
+    display: none;
   }
 
   .centre {

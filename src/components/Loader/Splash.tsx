@@ -69,11 +69,15 @@ const SPLASH_DURATION_MS = 2000;
  *
  * The overlay is `aria-hidden` and the Loader's own role="status" carries the
  * announcement, so a screen reader hears "Loading" once rather than a stream of
- * percentages. Nothing inside is focusable, so it cannot trap the keyboard, and
- * it is removed from the DOM entirely rather than merely hidden, so no stale
- * tab stop is left behind. Under `prefers-reduced-motion` the bar and counter
- * do not animate: the splash still appears and still dismisses, it simply does
- * not count up.
+ * percentages. Nothing inside is focusable, so it cannot trap the keyboard.
+ *
+ * When it finishes it is hidden with `display: none` rather than detached from
+ * the DOM — see the note in the script — which takes it out of the flow, hit
+ * testing and the accessibility tree alike, so it leaves behind neither a
+ * stale tab stop nor an invisible sheet over the page.
+ *
+ * Under `prefers-reduced-motion` the bar and counter do not animate: the splash
+ * still appears and still dismisses, it simply does not count up.
  */
 export function Splash() {
   return (
@@ -178,18 +182,31 @@ export function Splash() {
   }
 
   var gone = false;
+  // Marks the splash finished. It is HIDDEN, never removed.
+  //
+  // An earlier version called parentNode.removeChild(el) here, and that threw
+  // three NotFoundErrors from React's own reconciler:
+  // "insertBefore/removeChild: the node is not a child of this node". The
+  // splash is a React element in the root layout's tree, so tearing it out of
+  // the DOM from a plain script leaves React's copy of the tree describing a
+  // child that is gone — and the next reconcile, on a route change or an HMR
+  // update, tries to operate against the missing node and fails.
+  //
+  // Never remove React-owned DOM from outside React. data-done takes it out of
+  // the flow and out of hit testing by CSS instead, which reaches the same
+  // visual end state while leaving the tree exactly as React rendered it.
   function drop() {
     if (gone) return;
     gone = true;
-    if (el && el.parentNode) el.parentNode.removeChild(el);
+    if (el) el.setAttribute("data-done", "");
   }
 
   function done() {
     if (gone || !el) return;
     el.setAttribute("data-leaving", "");
-    // Remove after the fade so nothing lingers over the page. The timeout is
-    // the fallback for when transitionend never fires — reduced motion zeroes
-    // the duration, and a backgrounded tab may not fire it at all.
+    // Hide after the fade, so nothing covers the page. The timeout is the
+    // fallback for when transitionend never fires — reduced motion zeroes the
+    // duration, and a backgrounded tab may not fire it at all.
     el.addEventListener("transitionend", drop, { once: true });
     setTimeout(drop, 600);
   }
