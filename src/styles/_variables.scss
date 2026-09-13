@@ -123,6 +123,42 @@ $shadow-xl: 0 16px 48px rgba(20, 17, 14, 0.16);
   --shadow-xl: #{$shadow-xl};
 }
 
+// --- L1: Glass surface ------------------------------------------------------
+// A brown-tinted frosted panel, applied via the glass() mixin in _mixins.scss.
+// Declared here rather than with the other L1 colours because it depends on
+// the radius and shadow scales above, and Sass resolves top to bottom.
+//
+// The tint is LIGHT, not dark. brown-100 at 0.6 alpha clears AA for brown-900
+// text over ANY backdrop — 9.7:1 composited over pure black, 15.6:1 over the
+// canvas. A brown-900 tint would need 0.88 alpha to reach the same 4.5:1
+// floor, by which point it is only 12% see-through and reads as a solid panel
+// rather than glass.
+//
+// Lowering --glass-alpha lowers text contrast on every surface that uses it.
+// Re-run the maths before touching it: composite luminance is
+// alpha * tint + (1 - alpha) * backdrop, computed in LINEAR light, and the
+// worst case is a pure black backdrop.
+
+:root {
+  // Space-separated, not comma: the `/ <alpha>` form of rgb() is only valid
+  // with space-separated channels, and the comma form fails silently.
+  --glass-tint: 240 233 221; // brown-100
+  --glass-alpha: 0.6;
+  --glass-bg: rgb(var(--glass-tint) / var(--glass-alpha));
+  // Fallback where backdrop-filter is unsupported: same hue, fully opaque, so
+  // the panel reads as solid rather than as a washed-out smear.
+  --glass-bg-opaque: #{$brown-100};
+  --glass-blur: 16px;
+  --glass-saturate: 1.4;
+  --glass-border: rgb(20 17 14 / 0.08); // brown-900, barely-there edge
+  --glass-shadow: #{$shadow-lg};
+  --glass-radius: #{$radius-lg};
+  // Text on glass. Both reuse the canvas semantics, because the tint IS the
+  // canvas colour — there is no separate inverse scale to keep in step.
+  --glass-text: var(--color-text-primary); // 9.7:1 worst case on glass
+  --glass-text-muted: var(--color-text-secondary); // 5.3:1 worst case on glass
+}
+
 // --- L0: Motion -------------------------------------------------------------
 
 $duration-instant: 80ms;
@@ -245,6 +281,10 @@ $page-gutter: $space-6;
   // Site-wide viewport cap. Content stops growing here and centres in the
   // canvas on wider screens.
   --content-max: #{$content-max};
+  // Height of the fixed bottom nav below lg. `main` reserves this so page
+  // content is not hidden behind it — keep in step with the nav's own padding
+  // and content height.
+  --nav-bar-block-size: #{$space-20};
   // Inline gutter, applied below the cap only (see globals.scss).
   --page-gutter: #{$page-gutter};
   --content-gutter: #{$space-6};

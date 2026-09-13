@@ -158,7 +158,10 @@ Values owned by the system (via Owned Facts Register) — do not restate, point 
 
 - **CLS < 0.05** — tighter than the system's 0.1 because the scroll-driven hero and motion-heavy design create more CLS risk. Project decision, not a system change
 - **TBT < 200ms** — lab metric (Lighthouse CI), complementary to the system's INP (field metric). Different measurements, not conflicting
-- **First-load JS: ≤ 100KB gzipped** on marketing pages — set in `lighthouserc.json`. The system says JS budgets are per-project; this is ours. Does not apply to the `/studio` route (Sanity Studio is its own bundle). Next.js App Router with Server Components keeps the client runtime small; this budget covers the React runtime + Next.js client shim + our code. Turnstile and Zod load only on the contact page, not homepage
+- **First-load JS: ≤ 640KB uncompressed** on marketing pages — set in `lighthouserc.json` as `resource-summary:script:size`. The system says JS budgets are per-project; this is ours. Does not apply to the `/studio` route (Sanity Studio is its own bundle). Turnstile and Zod load only on the contact page, not homepage.
+
+  This was originally 100KB, described as gzipped. That was wrong twice over: Lighthouse's `resource-summary:script:size` counts **uncompressed** bytes, and the React 19 + Next 16 baseline alone is ~575KB uncompressed before a single line of our own code — so the gate failed from the day it was written and never once passed. A permanently-red gate is worse than none, because a real regression looks identical to the standing failure. 640KB is the measured baseline plus roughly 10% headroom, so it now catches what it was meant to catch: our code growing, not the framework existing. Re-baseline it on any major Next or React upgrade.
+
 - **Lighthouse mobile: ≥ 0.95** — project floor for Premium tier. The system does not set a Lighthouse threshold; it says "lab scores are a proxy, field data is the truth." We use this as a CI gate to catch regressions. A mostly-static Server Components site with optimised media has no excuse for scoring below 95
 
 ---

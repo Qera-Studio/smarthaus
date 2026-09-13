@@ -42,6 +42,41 @@
   }
 }
 
+// --- Breakpoint, max-width --------------------------------------------------
+// Mobile-first (min-width) is the default; reach for this only where a band
+// genuinely ends. Takes the breakpoint the band stops BEFORE, so
+// `bp-max($bp-lg)` means "below lg" and the -1px arithmetic lives in one place.
+@mixin bp-max($bp) {
+  @media (max-width: #{$bp - 1px}) {
+    @content;
+  }
+}
+
+// --- Glass surface ----------------------------------------------------------
+// Brown-tinted frosted panel. Text on it uses --glass-text / --glass-text-muted,
+// which the mixin sets as the inherited colour.
+//
+// Degrades to an opaque brown-100 panel where backdrop-filter is unsupported:
+// the tint and every contrast ratio are identical, only the see-through is
+// lost. See _variables.scss for why the tint is light rather than dark.
+@mixin glass($radius: var(--glass-radius)) {
+  background-color: var(--glass-bg-opaque);
+  // Longhands: var() inside the `border` shorthand is substituted before the
+  // shorthand is parsed, so one missing token would silently void the lot.
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--glass-border);
+  border-radius: #{$radius};
+  box-shadow: var(--glass-shadow);
+  color: var(--glass-text);
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    background-color: var(--glass-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+}
+
 // --- Focus ring (visible on keyboard, hidden on pointer) --------------------
 @mixin focus-ring($color: var(--color-border-focus), $offset: 2px) {
   &:focus-visible {

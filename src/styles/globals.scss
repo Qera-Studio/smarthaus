@@ -61,6 +61,15 @@
     );
   }
 
+  // Below lg the nav is a fixed bottom bar, which is out of flow and would
+  // otherwise cover the end of every page. Reserve its height plus the home
+  // indicator so the last element stays reachable.
+  main {
+    @include bp-max($bp-lg) {
+      padding-block-end: calc(var(--nav-bar-block-size) + env(safe-area-inset-bottom));
+    }
+  }
+
   ::selection {
     background-color: var(--color-accent);
     color: var(--color-bg-canvas);

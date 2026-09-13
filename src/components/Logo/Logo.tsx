@@ -1,22 +1,42 @@
+type LogoVariant = "full" | "mark" | "wordmark";
+
 type LogoProps = {
-  /** Rendered height in px. Width follows the lockup's aspect ratio. */
+  /** Rendered height in px. Width follows the chosen lockup's aspect ratio. */
   size?: number;
+  /**
+   * Which lockup to show. `full` is mark + wordmark; `mark` and `wordmark` are
+   * the two halves, for the mobile bar and the menu footer respectively.
+   */
+  variant?: LogoVariant;
   className?: string;
 };
 
 /**
- * Smarthaus horizontal lockup — mark + wordmark.
+ * Each variant is a crop of the same artwork, not a separate drawing — the
+ * mark and wordmark sit side by side in one horizontal lockup, so narrowing
+ * the viewBox to one half selects it. That keeps a single copy of the path
+ * data for all three.
+ *
+ * True ink bounds: the wordmark sits below the mark's baseline, so a viewBox
+ * flush to 0..148 shaves its bottom edge — hence the -3 origin and 155 height.
+ */
+const VIEW_BOX: Record<LogoVariant, string> = {
+  full: "0 -3 1076.5 155",
+  mark: "0 -3 149.5 155",
+  wordmark: "211 -3 865.5 155",
+};
+
+/**
+ * Smarthaus lockup — mark, wordmark, or both.
  *
  * Inlined rather than loaded via <img> so the artwork inherits `currentColor`,
  * which is what lets one file serve every colourway. Decorative by default:
  * the accessible name comes from the link that wraps it.
  */
-export function Logo({ size = 32, className }: LogoProps) {
+export function Logo({ size = 32, variant = "full", className }: LogoProps) {
   return (
     <svg
-      /* True ink bounds: the wordmark sits below the mark's baseline, so a
-         viewBox flush to 0..148 shaved its bottom edge. */
-      viewBox="0 -3 1076.5 155"
+      viewBox={VIEW_BOX[variant]}
       height={size}
       fill="none"
       aria-hidden="true"

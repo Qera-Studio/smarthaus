@@ -2,40 +2,48 @@
 @use "../../styles/mixins" as *;
 
 @layer components {
+  // Marks the top of the document. Once it leaves the viewport the nav is
+  // "stuck" and picks up the glass. Zero-height so it occupies no space.
+  .sentinel {
+    block-size: 1px;
+    margin-block-end: -1px;
+  }
+
   .nav {
     // L2 component tokens — the override surface for this component.
     --nav-padding: #{$space-6};
     --nav-gap: #{$space-6};
     --nav-link-size: #{$font-size-sm};
     --nav-link-weight: #{$font-weight-medium};
+    // How long the panel takes to open. The link stagger is derived from it.
+    --nav-expand-duration: #{$duration-slow};
+    // Gap between consecutive links fading in.
+    --nav-stagger-step: #{$duration-instant};
+    // How far each link travels as it fades in.
+    --nav-link-rise: #{$space-3};
+    // Tablet only: how far the collapsed glass capsule is inset from each
+    // edge. A percentage so it needs no content measurement.
+    --nav-capsule-inset: 32%;
+    // Height of the wordmark in the open panel's footer.
+    --nav-footer-mark-size: #{$space-5};
 
-    // Three equal end columns keep the link list centred against the nav's full
-    // width, not the gap between logo and CTA — so it stays put as either grows.
+    color: var(--color-text-primary);
+  }
+
+  // --- The persistent row: brand, toggle, CTA -------------------------------
+
+  // The persistent row. Its grid is declared per band: below lg it is a real
+  // three-column row, from lg up it dissolves (display: contents) so brand,
+  // links and CTA become direct children of .nav's own grid.
+  .bar {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: var(--nav-gap);
-    // Block only — the inline gutter comes from body (--page-gutter), so the
-    // nav aligns to the same edge as every section below it.
-    padding-block: var(--nav-padding);
-    color: var(--color-text-primary);
-
-    // Below lg the centre column is empty (links are hidden), so drop it
-    // entirely — otherwise its gap pushes logo and CTA toward each other.
-    @media (max-width: #{$bp-lg - 1px}) {
-      grid-template-columns: auto auto;
-      justify-content: space-between;
-    }
   }
 
   .logo {
     display: flex;
     align-items: center;
-    // Shrink to the artwork so the focus ring hugs the logo, not the column.
-    justify-self: start;
-    // The lockup is ~7.3:1, so at 32px it is 233px wide. Let it scale down
-    // rather than crowd the CTA on narrow screens; the SVG keeps its ratio.
-    min-inline-size: 0;
     color: var(--color-text-primary);
 
     @include focus-ring;
@@ -46,22 +54,55 @@
     }
   }
 
-  .links {
-    // Below lg the links move to the mobile bottom bar (not built until the
-    // hero lands — see AGENTS.md nav behaviour table). The centre column
-    // collapses to nothing so the row is just logo | CTA.
-    @media (max-width: #{$bp-lg - 1px}) {
-      display: none;
-    }
+  .brandMark,
+  .brandFull {
+    display: flex;
+    align-items: center;
+    // Shrink to the artwork so the focus ring hugs the logo, not the column.
+    justify-self: start;
+    // The full lockup is ~7:1, so it must be allowed to scale down rather than
+    // crowd the CTA on narrow screens.
+    min-inline-size: 0;
+  }
+
+  .ctaSlot {
+    display: flex;
+    justify-self: end;
+  }
+
+  // --- The expanding panel --------------------------------------------------
+
+  .panel {
+    // 0fr -> 1fr is the only height animation that interpolates a real value:
+    // max-block-size needs a guessed target (so the easing runs against the
+    // wrong distance and visibly snaps), scaleY distorts the glass border and
+    // radius, and clip-path reserves the full height in layout.
+    display: grid;
+    grid-template-rows: 0fr;
+    transition-property: grid-template-rows;
+    transition-duration: var(--nav-expand-duration);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .panelInner {
+    // A grid item's automatic minimum size is its content height, which would
+    // refuse to shrink and defeat the 0fr row.
+    min-block-size: 0;
+    // `clip` not `hidden`: no scroll container, so no scroll anchoring and no
+    // jump if something inside is focused.
+    overflow: clip;
+  }
+
+  .nav[data-open] .panel {
+    grid-template-rows: 1fr;
   }
 
   .list {
     display: flex;
     align-items: center;
     gap: var(--nav-gap);
-    // The reset only strips markers from ul[role="list"], and an explicit
-    // role on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip
-    // them here instead.
+    // The reset only strips markers from ul[role="list"], and an explicit role
+    // on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip here.
     list-style: none;
   }
 
@@ -69,7 +110,7 @@
     font-size: var(--nav-link-size);
     font-weight: var(--nav-link-weight);
     line-height: $line-height-normal;
-    color: var(--color-text-primary);
+    color: inherit;
     text-decoration: none;
 
     // Hover feedback is the character roll (see RollingText), not a fade.
@@ -77,8 +118,6 @@
   }
 
   .cta {
-    // Shrink to the label so the button is not stretched across its column.
-    justify-self: end;
     padding-block: $space-2;
     padding-inline: $space-4;
     font-size: var(--nav-link-size);
@@ -89,6 +128,7 @@
     color: var(--color-text-inverse);
     border-radius: $radius-sm;
     text-decoration: none;
+    white-space: nowrap;
     transition-property: opacity;
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out);
@@ -97,6 +137,285 @@
 
     &:hover {
       opacity: 0.85;
+    }
+  }
+
+  // --- Hamburger ------------------------------------------------------------
+
+  .toggle {
+    display: none; // shown per band below
+    align-items: center;
+    justify-content: center;
+    padding: $space-2;
+    background: none;
+    border: 0;
+    // brown-950, 10.3:1 on the glass at --glass-alpha 0.6 (worst case, over a
+    // black backdrop) — comfortably past the 3:1 floor for UI components.
+    color: var(--color-bg-inverse-strong);
+
+    @include focus-ring;
+  }
+
+  .burger {
+    inline-size: $space-6;
+    block-size: $space-6;
+    stroke: currentColor;
+    stroke-width: 1.25;
+    stroke-linecap: round;
+    fill: none;
+  }
+
+  .burgerTop,
+  .burgerMid,
+  .burgerBot {
+    // Rotate about the icon's centre, not each line's own box.
+    transform-origin: 12px 12px;
+    transition-property: transform, opacity;
+    transition-duration: var(--duration-normal);
+    // Slight overshoot — this is the spring the brief asked for.
+    transition-timing-function: var(--ease-spring);
+  }
+
+  .nav[data-open] .burgerTop {
+    transform: translateY(#{$space-1}) rotate(45deg);
+  }
+
+  .nav[data-open] .burgerMid {
+    opacity: 0;
+  }
+
+  .nav[data-open] .burgerBot {
+    transform: translateY(-#{$space-1}) rotate(-45deg);
+  }
+
+  // --- Panel footer: wordmark + parent company ------------------------------
+
+  .panelFooter {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-2;
+    color: var(--glass-text);
+  }
+
+  // The reset gives every svg `max-inline-size: 100%; block-size: auto`, which
+  // makes an unconstrained lockup stretch to its container and recompute its
+  // height from that width, ignoring the `height` attribute. Pin the height
+  // and derive the width from the artwork's own ratio so it cannot stretch.
+  .footerMark {
+    block-size: var(--nav-footer-mark-size);
+    inline-size: auto;
+    // wordmark viewBox is 865.5 x 155.
+    aspect-ratio: 865.5 / 155;
+    color: currentColor;
+  }
+
+  .footerBy {
+    font-size: var(--nav-link-size);
+    font-weight: var(--nav-link-weight);
+    // 75% of the wordmark's weight in the hierarchy, not a separate colour.
+    opacity: 0.75;
+  }
+
+  // --- Desktop (>= lg): links always visible, glass on scroll ---------------
+
+  @include bp-lg {
+    // .bar and .panel are siblings, so on desktop the grid lives on .nav and
+    // .bar dissolves into it — that puts brand, links and CTA in one row of
+    // three columns without duplicating the links into a second element.
+    .nav {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: var(--z-sticky);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: var(--nav-gap);
+      padding-block: var(--nav-padding);
+      transition-property: background-color, box-shadow;
+      transition-duration: var(--duration-normal);
+      transition-timing-function: var(--ease-out);
+    }
+
+    .bar {
+      display: contents;
+    }
+
+    // The panel follows the bar in source order, so every slot needs an
+    // explicit column — otherwise the panel lands in a fourth track after the
+    // CTA instead of between brand and CTA.
+    .brandFull {
+      grid-column: 1;
+    }
+
+    // Not a disclosure here — it is simply the centre column, always open.
+    .panel {
+      grid-column: 2;
+      grid-row: 1;
+      grid-template-rows: 1fr;
+    }
+
+    .ctaSlot {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .panelInner {
+      overflow: visible;
+    }
+
+    .brandMark,
+    .panelFooter,
+    .toggle {
+      display: none;
+    }
+
+    // Once the sentinel at the top of the page scrolls away, the nav picks up
+    // the glass so it stays legible over whatever is passing beneath it.
+    .nav[data-stuck] {
+      @include glass(0);
+    }
+  }
+
+  // --- Below lg: fixed bottom bar, glass, disclosure panel ------------------
+
+  @include bp-max($bp-lg) {
+    .nav {
+      position: fixed;
+      inset-block-end: 0;
+      inset-inline: 0;
+      z-index: var(--z-sticky);
+      // Keep paint and layout local — the panel animates margin and rows, and
+      // nothing outside the nav should be asked to re-layout for it.
+      contain: layout paint;
+
+      @include glass;
+    }
+
+    .bar {
+      // Brand and toggle and CTA; the wordmark is dropped for the mark.
+      grid-template-columns: auto 1fr auto;
+      padding-inline: var(--nav-padding);
+      // Clear the iOS home indicator and Android gesture bar.
+      padding-block-end: max(var(--nav-padding), env(safe-area-inset-bottom));
+    }
+
+    .brandFull {
+      display: none;
+    }
+
+    .toggle {
+      display: flex;
+      justify-self: center;
+    }
+
+    .panel {
+      // Panel sits above the bar in source order so it grows upward, and Tab
+      // reaches the links straight after the toggle.
+      order: -1;
+    }
+
+    .panelInner {
+      display: flex;
+      flex-direction: column;
+      padding-inline: var(--nav-padding);
+      padding-block-start: var(--nav-padding);
+    }
+
+    .list {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: $space-4;
+    }
+
+    .link {
+      font-size: var(--font-size-lg);
+    }
+
+    // Pinned close to the bar, after a deliberate gap from the links.
+    .panelFooter {
+      margin-block-start: $space-16;
+    }
+
+    // Each link fades and rises, starting once the panel is nearly open.
+    .item,
+    .panelFooter {
+      opacity: 0;
+      transform: translateY(var(--nav-link-rise));
+      transition-property: opacity, transform;
+      transition-duration: var(--duration-normal);
+      transition-timing-function: var(--ease-out);
+      // Closing: everything leaves together, ahead of the panel collapsing.
+      transition-delay: 0ms;
+    }
+
+    .nav[data-open] .item,
+    .nav[data-open] .panelFooter {
+      opacity: 1;
+      transform: none;
+      // Hold until the expansion is 90% done, then one step per link.
+      transition-delay: calc(
+        var(--nav-expand-duration) * 0.9 + var(--link-index, 4) * var(--nav-stagger-step)
+      );
+    }
+  }
+
+  // --- Tablet (md..lg): centred capsule that grows to full width ------------
+
+  @include bp-md {
+    @include bp-max($bp-lg) {
+      .nav {
+        // Collapsed the glass hugs the centre; open it spans the full width.
+        // A percentage margin interpolates without measuring content, and on a
+        // fixed element it reflows nothing.
+        margin-inline: var(--nav-capsule-inset);
+        transition-property: margin-inline;
+        transition-duration: var(--nav-expand-duration);
+        transition-timing-function: var(--ease-out);
+      }
+
+      .nav[data-open] {
+        margin-inline: 0;
+      }
+
+      .list {
+        flex-direction: row;
+        justify-content: center;
+        gap: var(--nav-gap);
+      }
+
+      .link {
+        font-size: var(--nav-link-size);
+      }
+
+      .panelInner {
+        align-items: center;
+      }
+
+      // The wordmark sign-off is a mobile-menu detail; at tablet width the
+      // two-row bar is short and it would only pad it out.
+      .panelFooter {
+        display: none;
+      }
+    }
+  }
+
+  // --- Reduced motion -------------------------------------------------------
+
+  // The global reset zeroes transition-duration but NOT transition-delay, so
+  // without this the panel would snap open instantly and the links would then
+  // pop in one by one over the following half second — worse than either
+  // extreme. Zero the delays so open/close is a single state change.
+  @media (prefers-reduced-motion: reduce) {
+    .nav[data-open] .item,
+    .nav[data-open] .panelFooter {
+      transition-delay: 0s;
+    }
+
+    .item,
+    .panelFooter {
+      // A 0ms rise reads as a glitch; let opacity alone carry the state.
+      transform: none;
     }
   }
 }
