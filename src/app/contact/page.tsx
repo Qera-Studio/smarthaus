@@ -20,9 +20,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * The FAQ content, and the source of the FAQPage structured data below. One
- * array, two consumers, so the markup a crawler reads cannot drift from the
- * text a visitor reads.
+ * The FAQ content. Rendered only as visible text — see the note below on why
+ * this page emits no FAQPage structured data.
  *
  * No em dashes: the house rule, asserted by the e2e suites.
  */
