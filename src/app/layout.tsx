@@ -7,6 +7,7 @@ import { Manrope } from "next/font/google";
 import "../styles/globals.scss";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
+import { Splash } from "../components/Loader/Splash";
 
 const manrope = Manrope({
   variable: "--font-sans",
@@ -122,6 +123,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" dir="ltr" className={manrope.variable}>
       <body>
+        {/*
+          FIRST child of <body>, deliberately: it is in the server HTML, so it
+          covers the viewport from the very first paint rather than appearing
+          after hydration over content the user can already see.
+
+          Development only for this trial. A fixed 2s splash in production
+          withholds content for two seconds on every navigation and sits on top
+          of the homepage's LCP element, which would fail the project's own LCP
+          and Lighthouse gates. Wiring it to real progress, and deciding whether
+          it runs on first load only, is the next decision — see Splash.tsx.
+        */}
+        {process.env.NODE_ENV === "development" ? <Splash /> : null}
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>

@@ -1,0 +1,64 @@
+@use "../../styles/variables" as *;
+
+// Development-only harness, so this is deliberately plain — no brand polish, no
+// responsive refinement beyond wrapping. It exists to make the animation
+// legible while tuning it, and it 404s in production.
+@layer blocks {
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: $space-8;
+    padding-block: $space-24 $space-16;
+    padding-inline: $space-6;
+    max-inline-size: 1100px;
+    margin-inline: auto;
+  }
+
+  .heading {
+    font-size: var(--font-size-3xl);
+    font-weight: $font-weight-extrabold;
+    letter-spacing: -0.03em;
+  }
+
+  .blurb {
+    max-inline-size: 60ch;
+    color: var(--color-text-secondary);
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-8;
+    align-items: flex-start;
+  }
+
+  .cell {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+  }
+
+  // A bordered box so the mark's bounds are visible — the point is partly to
+  // check that the strands stay inside the viewBox as they animate.
+  .stage {
+    display: grid;
+    place-items: center;
+    padding: $space-6;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--color-border);
+    background-color: var(--color-bg-surface);
+  }
+
+  // The loader takes its colour from `currentColor`, so this verifies it
+  // inverts cleanly rather than being hardcoded to the ink token.
+  .inverse {
+    background-color: var(--color-bg-inverse);
+    color: var(--color-text-inverse);
+  }
+
+  .caption {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+}
