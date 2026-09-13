@@ -44,8 +44,13 @@
     // with no overshoot: it leaves slowly, moves through the middle, and
     // settles without bouncing the glass edge.
     --nav-expand-ease: cubic-bezier(0.32, 0.72, 0, 1);
-    // Gap between consecutive links fading in.
+    // Gap between consecutive links fading in (and out).
     --nav-stagger-step: #{$duration-fast};
+    // How long the collapse waits for the contents to fade out. The last item
+    // to leave starts at 4 * step and takes --duration-slower, so the fade-out
+    // window is (4 * step + slower); the panel starts moving at 90% of it, the
+    // same 90% handover the opening uses in the other direction.
+    --nav-collapse-hold: calc((4 * var(--nav-stagger-step) + var(--duration-slower)) * 0.9);
     // How far each link travels as it fades in.
     --nav-link-rise: #{$space-3};
     // The capsule's width for the whole sub-1024px band — one value, not a
@@ -53,10 +58,10 @@
     // the viewport (keeping its float gutter), above it the width holds and
     // the capsule centres. Nothing about the nav changes at 768px any more.
     --nav-capsule-size: 400px;
-    // Height of the wordmark in the open panel's footer. 15px — 25% under the
-    // $space-5 it was, so off the spacing scale on purpose: this is optical
-    // sizing of artwork against the label beneath it, not layout rhythm.
-    --nav-footer-mark-size: 15px;
+    // Height of the wordmark in the open panel's footer. Off the spacing scale
+    // on purpose: this is optical sizing of artwork against the label beneath
+    // it, not layout rhythm.
+    --nav-footer-mark-size: 12px;
     // --nav-float-inset is global (see _variables.scss) — `main` reserves it
     // as well, so it cannot live on this component.
 
@@ -115,6 +120,13 @@
     transition-property: grid-template-rows;
     transition-duration: var(--nav-expand-duration);
     transition-timing-function: var(--nav-expand-ease);
+    // Collapsing waits for the contents to clear. Declared here rather than on
+    // [data-open] because this is the state being transitioned TO when the
+    // menu closes; the open rule below zeroes it so expansion starts at once.
+    // Below lg only — on desktop the panel is not a disclosure.
+    @include bp-max($bp-lg) {
+      transition-delay: var(--nav-collapse-hold);
+    }
   }
 
   .panelInner {
@@ -128,6 +140,8 @@
 
   .nav[data-open] .panel {
     grid-template-rows: 1fr;
+    // Opening starts immediately; only the collapse holds back.
+    transition-delay: 0ms;
   }
 
   .list {
@@ -255,7 +269,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: $space-2;
+    // Tight: the wordmark and the parent-company line are one lockup, not two
+    // stacked items, so they sit closer than the 8px the scale would give.
+    gap: $space-1;
     color: var(--nav-ink);
   }
 
@@ -466,7 +482,14 @@
       margin-block-end: $space-2;
     }
 
-    // Each link fades and rises, starting once the panel is nearly open.
+    // Each link fades and rises. This block is the CLOSING state, because a
+    // transition's delay is read from the state being transitioned TO — so the
+    // reverse stagger lives here and the forward one on [data-open] below.
+    //
+    // Closing runs bottom-up, the mirror of opening: the footer leaves first
+    // (--link-index falls back to 4, so 4 - 4 = 0), then About, Developers,
+    // Designers, Solutions. The panel itself then waits for this to be 90%
+    // done before collapsing — see the .panel rule below.
     .item,
     .panelFooter {
       opacity: 0;
@@ -476,8 +499,7 @@
       // a separate, faster event layered on top of the expansion.
       transition-duration: var(--duration-slower);
       transition-timing-function: var(--nav-expand-ease);
-      // Closing: everything leaves together, ahead of the panel collapsing.
-      transition-delay: 0ms;
+      transition-delay: calc((4 - var(--link-index, 4)) * var(--nav-stagger-step));
     }
 
     .nav[data-open] .item,
@@ -506,8 +528,15 @@
   // pop in one by one over the following half second — worse than either
   // extreme. Zero the delays so open/close is a single state change.
   @media (prefers-reduced-motion: reduce) {
+    // Every delay, in BOTH directions — the open stagger, the reverse close
+    // stagger, and the collapse hold. Durations are already ~0 via the reset,
+    // so any surviving delay would strand the panel open for the best part of
+    // a second after the contents had gone, with nothing animating.
     .nav[data-open] .item,
-    .nav[data-open] .panelFooter {
+    .nav[data-open] .panelFooter,
+    .item,
+    .panelFooter,
+    .panel {
       transition-delay: 0s;
     }
 
