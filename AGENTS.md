@@ -24,7 +24,7 @@ Before guessing a rule, check the owning document.
 
 | Concern                                       | Document                                                    | Key sections                                                |
 | --------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
-| Legal, privacy, PDPL, breach clocks           | `qera-system/systems/1-legal-system.md`                     | §8 (breach), §10 (cookie/consent)                           |
+| Legal, privacy, PDPL, breach clocks           | `qera-system/systems/1-legal-system.md`                     | §6 (consent/cookies), §8 (breach)                           |
 | Security headers, CSP, deps, SSRF             | `qera-system/systems/2-security-system.md`                  | §1 (auth), §5 (headers), §13 (deps)                         |
 | WCAG conformance, contrast, motion, a11y      | `qera-system/systems/3-accessibility-system.md`             | §4 (contrast), §5 (keyboard), §7 (motion)                   |
 | TypeScript, deps policy, AI code, testing     | `qera-system/systems/4-engineering-system.md`               | Part A (TS), Part C (deps), Part E (AI)                     |
@@ -277,7 +277,7 @@ The current CSP in `next.config.ts` is `default-src 'self'` everywhere. As third
 
 1. Security System §5 (headers) — new origins expand the attack surface
 2. Engineering System Part C (dependency policy) — is there a data flow? does it send PII?
-3. Legal System §10 (consent) — does it set cookies? does it track users?
+3. Legal System §6 (consent, cookies & tracking) — does it set cookies? does it track users?
 
 ---
 
@@ -335,11 +335,17 @@ Embedded at `/studio` via `next-sanity`. Authenticated route — not public, not
 
 ## Analytics
 
-**Vercel Web Analytics + Speed Insights.** Nothing else at launch.
+**Vercel Web Analytics + Speed Insights.** Nothing else loading today.
 
-No GA4. No Meta Pixel. No third-party tracking scripts on initial load. These are the largest sources of JS bloat and CLS on marketing sites, and they require cookie consent banners under UAE PDPL — consent infrastructure that doesn't exist yet.
+No Meta Pixel. No ad-network tag. No chat widget SDK. No third-party tracking script on initial load, ever — these are the largest sources of JS bloat and CLS on marketing sites.
 
-If GA4 or Meta Pixel is needed later, it loads behind a consent gate (Legal System §10) and is added to the CSP in the same PR.
+**GA4 and Microsoft Clarity are planned and consent-gated.** The consent infrastructure now exists: `src/components/Consent/` renders the banner and preferences panel, `src/lib/consent.ts` holds the record, and `/cookie-preferences` is the permanent withdrawal route. Nothing is loaded yet — the gate ships ahead of the tags on purpose.
+
+**Before either tag may fire**, every blocking item in `src/content/legal/consent-content-deck.md` §13 has to clear. Five are not engineering work: the regime confirmation (client), a DPIA screen for session recording (counsel), the cross-border transfer basis for Google and Microsoft (counsel), counsel review of the deck alongside the privacy policy, and the new-tool intake gate. The sixth is: a real Clarity replay must be watched and the person who watched it named, because the privacy policy promises form input is masked and that promise is unverified until someone has looked.
+
+When they do land, the CSP entries from deck §8 and the §7.2 provider-table move ship in the **same PR** as the tags. The consent record already exposes everything a loader needs.
+
+Consent is owned by **Legal System §6** (Consent, Cookies & Tracking). Earlier revisions of this file cited §10; §10 is now Accessibility as a Legal Requirement.
 
 ---
 
@@ -415,7 +421,7 @@ Before adding any dependency, answer:
 
 1. **Does it already exist in the codebase or stdlib?** Check first
 2. **What does it cost?** Run `npx import-cost` or check bundlephobia. If it's > 10KB gzipped and only used in one place, inline the logic
-3. **Does it touch user data?** If yes, check Security System §13 (supply chain) and Legal System §10 (data flow)
+3. **Does it touch user data?** If yes, check Security System §13 (supply chain) and Legal System §1 (lawful basis, data flow)
 4. **Does it need a CSP change?** If yes, the CSP update ships in the same PR
 5. **Is it maintained?** Last publish > 12 months with open security issues = no
 

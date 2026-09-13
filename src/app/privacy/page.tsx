@@ -204,21 +204,52 @@ export default function PrivacyPolicy() {
           our hosting provider under its own retention schedule (section 6).
         </p>
 
-        <h3>Cookies and tracking</h3>
+        {/*
+          Rewritten from consent-content-deck.md §7.1, which supplies this text
+          and requires it to ship in the same change as the consent UI. The
+          previous version stated in bold that there was no consent banner and
+          called it "a deliberate design decision, not an omission" — true until
+          the banner existed, and a misrepresentation the moment it did. Legal
+          System §5 is explicit that an inaccurate policy is worse than none.
+
+          The `id` is what the banner's "How we use cookies" link targets. It is
+          on the heading rather than a wrapper so the anchor lands on the
+          heading itself.
+
+          TWO SENTENCES DEVIATE FROM §7.1, deliberately, and are flagged for the
+          counsel review that is already pending on this page:
+
+          §7.1 is written for the state where the tags are live, and says "we
+          use Google Analytics and Microsoft Clarity". They are not installed:
+          the consent gate ships first because the deck's own §13 lists six
+          items as blocking before the tags may fire, five of them outside
+          engineering. Shipping §7.1 verbatim would swap one false claim for
+          another in the opposite direction, so the two sentences that assert
+          present use are future-tense here. Everything else is §7.1 as written.
+        */}
+        <h3 id="cookies">Cookies and analytics</h3>
         <p>
-          <strong>
-            This website does not set advertising or tracking cookies, and there is no advertising
-            or social media tracking pixel on it.
-          </strong>{" "}
-          There is no Google Analytics, no Meta Pixel, and no third-party chat widget.
+          <strong>Essential cookies</strong> keep the site working: they remember your cookie choice
+          and help us reject spam submissions. These are always active.
         </p>
         <p>
-          Because we do not set non-essential cookies, there is no cookie consent banner. This is a
-          deliberate design decision, not an omission.
+          <strong>Analytics cookies are off until you turn them on.</strong> We are preparing to use
+          Google Analytics and Microsoft Clarity to understand which pages are read and where people
+          get stuck. Neither is installed yet, and neither will load unless you accept it.
         </p>
         <p>
-          If we later add analytics, this section and section 4 will be updated before it goes live,
-          and anything requiring consent will ask for it first.
+          Microsoft Clarity records how pages are used, including scrolling, clicks and pointer
+          movement, and can replay a session.{" "}
+          <strong>Anything you type into a form will be masked and never recorded.</strong> We will
+          verify that before it processes anything.
+        </p>
+        <p>
+          We do not use advertising or remarketing cookies. There is no Meta Pixel, no ad-network
+          tag, and no third-party chat widget on this site.
+        </p>
+        <p>
+          You can change your choice at any time from <strong>Cookie preferences</strong> in the
+          footer of any page. Turning analytics off stops it immediately.
         </p>
 
         <h3>Children</h3>
@@ -381,6 +412,39 @@ export default function PrivacyPolicy() {
                 Per our hosting provider’s schedule: <Placeholder>confirm period</Placeholder>
               </td>
               <td>Security and fault diagnosis</td>
+            </tr>
+            {/*
+              Rows added per consent-content-deck.md §7.3, in the same change as
+              the consent UI.
+
+              The cookie-choice row is the one that matters today: the consent
+              record is itself stored information, and a retention table that
+              does not mention it is incomplete the moment the banner ships.
+
+              The analytics rows describe what will be kept once the tags are
+              live. Clarity's own retention period is still a placeholder in the
+              deck ("confirm from Microsoft documentation"), so it renders
+              through <Placeholder> rather than carrying an invented figure —
+              AGENTS.md's claims audit rules out guessing it.
+            */}
+            <tr>
+              <th scope="row">Your cookie choice</th>
+              <td>12 months from the choice</td>
+              <td>
+                Proving what was consented to and when, and not asking you again inside that period
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Analytics data, once analytics is enabled</th>
+              <td>Up to 14 months</td>
+              <td>Year-on-year comparison, then deletion</td>
+            </tr>
+            <tr>
+              <th scope="row">Session recordings, once analytics is enabled</th>
+              <td>
+                Microsoft’s own retention period: <Placeholder>confirm period</Placeholder>
+              </td>
+              <td>Diagnosing where pages fail</td>
             </tr>
             <tr>
               <th scope="row">Records we must keep by law</th>
