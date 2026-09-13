@@ -1,0 +1,81 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+// The coming-soon placeholder is the 404's composition with a different lockup,
+// so the rules are the same ones. They are restated here rather than imported
+// because a CSS Module's class names are local to its own file — there is no
+// `@extend` across modules — and the alternative (one shared module imported by
+// both pages) would put the 404's styles in every placeholder route's chunk.
+//
+// Keep in step with `src/app/not-found.module.scss`. The two are intentionally
+// identical apart from --stage-block-size below; if one changes, change both.
+
+@layer blocks {
+  .page {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    // Fills the viewport minus the space the layout already reserves for the
+    // bottom nav below lg, so the block is optically centred rather than
+    // centred in a box that extends behind the nav.
+    min-block-size: calc(100svh - var(--nav-bar-block-size));
+    padding-inline: var(--content-gutter);
+    // padding-block: $space-6;
+    text-align: center;
+
+    @include bp-lg {
+      min-block-size: 100svh;
+    }
+  }
+
+  .stage {
+    inline-size: 100%;
+    // Two stacked lines need more vertical room than the 404's single line, or
+    // the sampler shrinks the type to fit the box and the lockup reads small.
+    // ParticleText derives its font size from this height, so this is the one
+    // value that sets the lockup's scale.
+    --particle-stage-block-size: clamp(220px, 40vw, 460px);
+
+    // The stage box is deliberately taller than the glyphs — the particles need
+    // room to swing outside the letterforms without being clipped at the canvas
+    // edge. That headroom reads as dead space below the type, so pull the copy
+    // back up into it rather than shrinking the box and cropping the bloom.
+    margin-block-end: clamp(-#{$space-16}, -6vw, -#{$space-8});
+  }
+
+  .body {
+    max-inline-size: 60ch;
+    margin-block-start: $space-16;
+    font-size: var(--type-body-lg);
+    // line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    margin-block-start: $space-16;
+    padding-block: $space-3;
+    padding-inline: $space-6;
+    border-radius: var(--radius-sm);
+    background-color: var(--color-bg-inverse-strong);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    text-decoration: none;
+
+    // Longhands, never the `transition` shorthand: var() substitution happens
+    // before the shorthand is parsed, so one missing token would silently
+    // invalidate the whole declaration.
+    transition-property: background-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      background-color: var(--color-hover);
+    }
+
+    @include focus-ring;
+  }
+}
