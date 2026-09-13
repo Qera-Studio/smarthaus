@@ -169,7 +169,11 @@ $shadow-xl: 0 16px 48px rgba(20, 17, 14, 0.16);
   // Fallback where backdrop-filter is unsupported: same hue, fully opaque, so
   // the panel reads as solid rather than as a washed-out smear.
   --glass-bg-opaque: #{$brown-300};
-  --glass-blur: 24px;
+  // Half the original 24px. At that radius the backdrop dissolved into a flat
+  // wash and the panel read as opaque tint rather than as glass; 12px still
+  // separates the bar from what passes under it while leaving the shapes
+  // beneath legible enough to register as movement.
+  --glass-blur: 12px;
   --glass-saturate: 1.4;
   // A dark hairline: the panel is lighter than a dark backdrop, so the edge
   // that reads as "pane of glass" is a shadow, not a highlight.
