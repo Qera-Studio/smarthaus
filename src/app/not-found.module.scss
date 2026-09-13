@@ -1,0 +1,66 @@
+@use "../styles/variables" as *;
+@use "../styles/mixins" as *;
+
+@layer blocks {
+  .page {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    // Fills the viewport minus the space the layout already reserves for the
+    // bottom nav below lg, so the block is optically centred rather than
+    // centred in a box that extends behind the nav.
+    min-block-size: calc(100svh - var(--nav-bar-block-size));
+    padding-inline: var(--content-gutter);
+    padding-block: $space-16;
+    text-align: center;
+
+    @include bp-lg {
+      min-block-size: 100svh;
+    }
+  }
+
+  .stage {
+    inline-size: 100%;
+    // The stage box is deliberately taller than the glyphs — the particles need
+    // room to swing outside the letterforms without being clipped at the canvas
+    // edge. That headroom reads as dead space below the numerals, so pull the
+    // copy back up into it rather than shrinking the box and cropping the warp.
+    margin-block-end: clamp(-#{$space-16}, -6vw, -#{$space-8});
+  }
+
+  .body {
+    max-inline-size: 42ch;
+    margin-block-start: $space-6;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    margin-block-start: $space-6;
+    padding-block: $space-3;
+    padding-inline: $space-6;
+    border-radius: var(--radius-sm);
+    background-color: var(--color-bg-inverse-strong);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    text-decoration: none;
+
+    // Longhands, never the `transition` shorthand: var() substitution happens
+    // before the shorthand is parsed, so one missing token would silently
+    // invalidate the whole declaration.
+    transition-property: background-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      background-color: var(--color-hover);
+    }
+
+    @include focus-ring;
+  }
+}

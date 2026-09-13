@@ -123,6 +123,88 @@ $shadow-xl: 0 16px 48px rgba(20, 17, 14, 0.16);
   --shadow-xl: #{$shadow-xl};
 }
 
+// --- L1: Glass surface ------------------------------------------------------
+// A light brown-tinted frosted panel, applied via the glass() mixin in
+// _mixins.scss. Declared here rather than with the other L1 colours because it
+// depends on the radius and shadow scales above, and Sass resolves top to
+// bottom.
+//
+// THE TINT IS A LIGHT MID-TONE, SO THE INK ON IT MUST BE DARK
+//
+// Light ink is not an option at any alpha on this tint — it tops out around
+// 1.6:1 over the canvas. Anything sitting on this glass stays dark.
+//
+// WHY 0.25, AND THE TRIPWIRE THAT COMES WITH IT
+//
+// brown-900 ink on brown-300 glass, composited in LINEAR light:
+//
+//   alpha   canvas    white   mid-tone   black
+//   0.55    11.39    12.84      6.05     4.78   safe everywhere
+//   0.35    12.92    15.01      5.88     3.37
+//   0.25    13.68    16.10      5.56     2.66   <- here
+//   0.20    14.06    16.64      5.40     2.31
+//
+// Counter-intuitively a LOWER alpha reads better on the light canvas: less
+// tint means less is interposed between dark ink and a light ground. The cost
+// is all at the dark end, where the glass no longer lifts the backdrop enough.
+//
+// 0.25 clears AA against the canvas and against mid-tones by a wide margin, and
+// fails only over a near-black backdrop. There is no such backdrop on the site
+// today.
+//
+// TRIPWIRE: the Blender hero is a DUSK scene. When it lands, anything dark
+// enough to sit under this nav puts the ink below 4.5:1. Re-measure then, and
+// if it fails give the hero section its own --glass-alpha rather than raising
+// this one — the light pages do not need it.
+//
+// Re-run the maths before touching this: composite luminance is
+// alpha * tint + (1 - alpha) * backdrop, in LINEAR light. The worst case is
+// the DARKEST backdrop, because the tint is light — the inverse of the
+// old dark-tint rule, which is exactly the sort of thing that gets missed.
+
+:root {
+  // Space-separated, not comma: the `/ <alpha>` form of rgb() is only valid
+  // with space-separated channels, and the comma form fails silently.
+  --glass-tint: 196 163 125; // brown-300
+  --glass-alpha: 0.25;
+  --glass-bg: rgb(var(--glass-tint) / var(--glass-alpha));
+  // Fallback where backdrop-filter is unsupported: same hue, fully opaque, so
+  // the panel reads as solid rather than as a washed-out smear.
+  --glass-bg-opaque: #{$brown-300};
+  // A third of the original 24px. At that radius the backdrop dissolved into a
+  // flat wash and the panel read as opaque tint rather than as glass. 8px is
+  // the low end of what still reads as frosted — below roughly 4px it stops
+  // looking like glass and becomes plain translucent tint.
+  --glass-blur: 8px;
+  --glass-saturate: 1.4;
+  // A dark hairline: the panel is lighter than a dark backdrop, so the edge
+  // that reads as "pane of glass" is a shadow, not a highlight.
+  --glass-border: rgb(20 17 14 / 0.1);
+  --glass-shadow: #{$shadow-lg};
+  --glass-radius: #{$radius-lg};
+  // Grain. A single tiled SVG turbulence — no image request, no extra bytes on
+  // the wire beyond this declaration, and it scales to any panel size.
+  // baseFrequency is high so the grain is fine rather than cloudy.
+  //
+  // Tuned by measuring per-channel standard deviation across a flat area of
+  // the panel on a 3x screenshot, RELATIVE to the panel's own level — grain
+  // visibility tracks local contrast, not absolute deviation. The same opacity
+  // reads about five times weaker on this light tint than it did on the dark
+  // one it replaced (1.2% of level vs 6.2%), so the value had to rise with the
+  // re-tint rather than carry over. Grain is a surface quality of the glass,
+  // never speckle over the content.
+  // Lowered with the alpha. Grain reads as a surface quality of the glass, and
+  // a thinner pane carries less of it — at 0.5 the texture stayed as strong as
+  // it was on the denser panel and read as speckle sitting over the content
+  // rather than as the pane's own finish.
+  --glass-noise-opacity: 0.3;
+  --glass-noise: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="140" height="140" filter="url(%23n)"/></svg>');
+  // Text on glass. Dark, and the same semantics the canvas uses — the tint is
+  // light enough that there is no separate inverse scale to keep in step.
+  --glass-text: var(--color-text-primary); // 13.7:1 on canvas, 2.7:1 over black
+  --glass-text-muted: var(--color-text-secondary);
+}
+
 // --- L0: Motion -------------------------------------------------------------
 
 $duration-instant: 80ms;
@@ -245,6 +327,18 @@ $page-gutter: $space-6;
   // Site-wide viewport cap. Content stops growing here and centres in the
   // canvas on wider screens.
   --content-max: #{$content-max};
+  // Height of the fixed bottom nav below lg. `main` reserves this so page
+  // content is not hidden behind it — keep in step with the nav's own padding
+  // and content height.
+  // 58px measured: 8px padding + a 40px toggle (the tallest item in the row)
+  // + 2 * 1px glass border. Rounded up, and off the spacing scale on purpose —
+  // this reserves space rather than creating it, so erring high costs nothing
+  // while erring low hides page content behind the bar.
+  --nav-bar-block-size: 60px;
+  // How far that bar floats clear of the screen edges below lg. Global rather
+  // than a nav-local token because `main` has to reserve it too, and the two
+  // must not drift apart.
+  --nav-float-inset: #{$space-4};
   // Inline gutter, applied below the cap only (see globals.scss).
   --page-gutter: #{$page-gutter};
   --content-gutter: #{$space-6};

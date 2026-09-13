@@ -1,0 +1,579 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  .page {
+    // L2 component tokens — the override surface for the legal pages.
+    --legal-rail-size: 240px;
+    // Gap between the rail and the prose column.
+    --legal-rail-gap: #{$space-16};
+    // Measure of the prose column.
+    //
+    // A fixed px width, not `62ch`. `ch` resolves against each element's OWN
+    // font size, so the same token gave the header (at its larger type) a very
+    // different width from the prose — 1392px against 505px, which is why the
+    // two stopped lining up. One pixel value means one column edge for both.
+    //
+    // 720px is ~95 characters at the 13px body, wider than the old 62ch (505px)
+    // so the text no longer has to shrink into a narrow ribbon, and still short
+    // of the line length where a reader loses their place returning to the left
+    // edge.
+    --legal-measure: 720px;
+    --legal-section-gap: #{$space-16};
+    // Clearance above an anchored heading, so the fixed nav capsule never
+    // covers the heading a reader just jumped to.
+    --legal-anchor-offset: #{$space-24};
+    // Sub-14px sizes have no L0 token; Nav and Footer declare their own the
+    // same way.
+    --legal-toc-heading-size: 12px;
+    --legal-body-size: 13px;
+    --legal-subheading-size: 16px;
+
+    padding-block: $space-16 $space-24;
+    // No inline padding below md: body already supplies the site gutter
+    // (globals.scss), and adding --content-gutter on top of it squeezed the
+    // text into a narrow ribbon on a phone. From md up the page has room for
+    // its own breathing space again.
+    padding-inline: 0;
+
+    @include bp-md {
+      padding-inline: var(--content-gutter);
+    }
+
+    // NOTE: scroll-behavior is NOT set here. It has to live on the scrolling
+    // element, which is <html> — setting it on this container computes fine but
+    // does nothing, because this element does not scroll. See globals.scss,
+    // where it is scoped to :has(.page) so only the legal pages get it.
+
+    @include bp-lg {
+      padding-block-start: $space-24;
+    }
+  }
+
+  // --- Header ---------------------------------------------------------------
+
+  .header {
+    max-inline-size: var(--legal-measure);
+    margin-block-end: $space-16;
+
+    // From lg the header is a grid item in .layout's middle column, so it needs
+    // no inline offset of its own — sharing the prose's track is what keeps the
+    // two on one left edge at every width.
+    @include bp-lg {
+      margin-block-end: $space-20;
+    }
+  }
+
+  .title {
+    font-size: var(--type-h1);
+    font-weight: $font-weight-extrabold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+  }
+
+  .standfirst {
+    margin-block-start: $space-5;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  // --- Metadata strip -------------------------------------------------------
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-3 $space-8;
+    margin-block-start: $space-8;
+    padding-block-start: $space-5;
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  .metaPair {
+    display: flex;
+    align-items: baseline;
+    gap: $space-2;
+  }
+
+  .metaLabel {
+    font-size: var(--type-small);
+    font-weight: $font-weight-medium;
+    color: var(--color-text-muted);
+  }
+
+  .metaValue {
+    font-size: var(--type-small);
+    font-weight: $font-weight-semibold;
+    color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  // --- Layout ---------------------------------------------------------------
+
+  .layout {
+    @include bp-lg {
+      display: grid;
+      grid-template-columns: var(--legal-rail-size) minmax(0, 1fr);
+      column-gap: var(--legal-rail-gap);
+
+      // Two rows, header then prose, with the rail spanning both so its column
+      // starts at the top of the page.
+      grid-template-rows: auto 1fr;
+
+      > .rail {
+        grid-row: 1 / -1;
+        grid-column: 1;
+      }
+
+      > .header {
+        grid-row: 1;
+        grid-column: 2;
+      }
+
+      > .prose {
+        grid-row: 2;
+        grid-column: 2;
+      }
+      // `start`, not `stretch`: the rail column must still be the full height
+      // of the row for the sticky ToC inside it to have somewhere to travel.
+      // That height comes from .rail's own `block-size: 100%` below, which
+      // resolves against the row — so the prose is free to be its own height.
+      align-items: stretch;
+    }
+
+    // Centre the prose in the page rather than anchoring the rail+prose unit
+    // to the left gutter. With a 240px rail and a 64px gap the prose centre
+    // otherwise lands ~100px left of the page centre, which reads as
+    // off-centre against a full-width footer. The rail keeps its column and
+    // sits to the left of the centred prose.
+    //
+    // Gated at xl, not lg: below ~1200px a centred prose column leaves less
+    // than the rail's own width to its left, and the rail is pushed off-screen
+    // (measured -21px at 1100px). Between lg and xl the left-anchored grid
+    // above is correct and stays.
+    // Centre the PROSE on the page, with the rail beside it.
+    //
+    // Three columns, the outer two equal: the rail sits in the first, the prose
+    // in the middle, and the third is left empty purely to balance the first.
+    // `1fr` on both outer tracks is what makes this hold at every width — a
+    // fixed phantom track is ignored by justify-content (grid only places
+    // tracks that have items), and a fixed padding drifts as the viewport grows
+    // (measured: correct at 1280, -77px by 1800).
+    //
+    // The rail is wider than the gutter allows below xl, which is why this is
+    // gated: between lg and xl the left-anchored grid above is correct.
+    @include bp-xl {
+      // `max-content` on the middle track, not `min(--legal-measure, 100%)`:
+      // the measure is in `ch`, so it shrinks with the body font size, and a
+      // fixed track wider than the prose leaves it left-aligned inside its own
+      // column — 50px off centre once the body dropped to 13px. Sizing the
+      // track to the prose keeps the two the same width at any font size.
+      grid-template-columns:
+        minmax(var(--legal-rail-size), 1fr)
+        min(var(--legal-measure), 100%)
+        minmax(var(--legal-rail-size), 1fr);
+
+      // The rail keeps the first track; the header and prose share the centred
+      // middle one, which is what puts them on a single left edge.
+      > .rail {
+        grid-column: 1;
+      }
+
+      > .header,
+      > .prose {
+        grid-column: 2;
+      }
+    }
+  }
+
+  // --- The rail -------------------------------------------------------------
+  // Below lg the ToC is not rendered at all (see .toc): on a phone a fixed rail
+  // would eat the screen, and the document's own headings are the better
+  // navigation. From lg up this column reserves the space and the nav inside it
+  // is fixed to the viewport's vertical centre.
+
+  .rail {
+    display: none;
+
+    @include bp-lg {
+      display: block;
+      // Full height, not the old `block-size: 0`. The ToC inside is now sticky
+      // rather than fixed, and a sticky element can only travel within its
+      // containing block — so this column has to be as tall as the article for
+      // the rail to follow the reader, and to stop when the article ends.
+      block-size: 100%;
+    }
+
+    // From xl the first column is a flexible 1fr (see .layout), so it is wider
+    // than the rail. Push the rail to the end of it, keeping it beside the
+    // prose rather than stranded out at the page edge.
+    @include bp-xl {
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+
+  .toc {
+    display: none;
+
+    @include bp-lg {
+      display: flex;
+      flex-direction: column;
+      // Sticky, not fixed. Fixed positioning is relative to the viewport, so
+      // the rail had no relationship to the article at all: it stayed pinned
+      // past the last section and the footer merely painted over it. Sticky is
+      // scoped by its containing block (.rail), so the rail travels with the
+      // article and releases at its end.
+      position: sticky;
+      // The sticky box is exactly one viewport tall and centres the rail inside
+      // itself. `align-self: start` is what holds it to 100vh — without it the
+      // grid stretches the item to the row's full height and the "centre" lands
+      // halfway down the article instead.
+      //
+      // The centring is flex, not `translate: 0 -50%` as before: a translate is
+      // applied at paint time, so a sticky element still stops on its
+      // un-translated box and the rail would overshoot the end of the article
+      // by half its own height.
+      align-self: start;
+      // Stick clear of the top edge, and never exceed the height left below it.
+      //
+      // Sized to its content rather than a flat 100vh: a full-viewport box
+      // starting partway down the page (the rail's column begins under the
+      // page's top padding) ran off the bottom of the screen, leaving the last
+      // ToC entries unreachable until the reader scrolled. `fit-content` plus a
+      // max keeps the whole rail on screen at any viewport height, and the list
+      // inside scrolls when even that is not enough.
+      inset-block-start: $space-16;
+      block-size: fit-content;
+      // The rail's column starts below the page's own top padding, so the space
+      // left on screen is a viewport minus that offset and the sticky inset —
+      // not a whole viewport. Sizing against 100vh overflowed the bottom edge
+      // on shorter windows (measured: 178..770 in a 720px viewport) and hid the
+      // last ToC entries until the reader scrolled.
+      max-block-size: calc(100vh - #{$space-24} - #{$space-16 * 2});
+      justify-content: flex-start;
+      // Width is inherited from the reserved column rather than restated, so
+      // the rail and its column cannot drift apart.
+      inline-size: var(--legal-rail-size);
+    }
+  }
+
+  .tocHeading {
+    flex: none;
+    margin-block-end: $space-4;
+    // The tracking and the uppercase are what keep this legible at 12px.
+    font-size: var(--legal-toc-heading-size);
+    font-weight: $font-weight-semibold;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .tocList {
+    // The rail is the scroll container when the list is taller than the
+    // viewport; the page keeps scrolling independently either way.
+    overflow-y: auto;
+    // Never taller than what is left on screen below the page's top padding and
+    // the rail's sticky inset. Matches the cap on .toc, minus the heading above
+    // this list, so the two cannot disagree about where the bottom edge is.
+    max-block-size: calc(100vh - #{$space-24} - #{$space-16 * 2} - #{$space-10});
+    // Momentum scrolling inside the rail must not chain to the page once the
+    // list hits its end — otherwise reaching the bottom of the ToC starts
+    // scrolling the document underneath it.
+    overscroll-behavior: contain;
+    // Counteract the negative inline margin on the links, so the active
+    // background can extend past the text without the list overflowing.
+    padding-inline: $space-3;
+    margin-inline: -$space-3;
+    list-style: none;
+    counter-reset: legal-toc;
+  }
+
+  .tocItem {
+    counter-increment: legal-toc;
+
+    & + & {
+      margin-block-start: $space-1;
+    }
+  }
+
+  .tocLink {
+    display: flex;
+    gap: $space-3;
+    padding-block: $space-2;
+    padding-inline: $space-3;
+    border-radius: var(--radius-sm);
+    font-size: var(--type-small);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    // Muted is the resting state and clears AA at 5.5:1 — the rail is
+    // secondary navigation, so it recedes until it is the section you are in.
+    color: var(--color-text-muted);
+    text-decoration: none;
+    text-wrap: pretty;
+
+    // Longhands, never the `transition` shorthand: var() is substituted before
+    // the shorthand is parsed, so one missing token voids the whole thing.
+    transition-property: color, background-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    // The section number. A counter rather than markup, so the ToC and the
+    // page body cannot disagree about numbering.
+    &::before {
+      content: counter(legal-toc);
+      flex: none;
+      font-variant-numeric: tabular-nums;
+      // Never the emphasis in the row — the label is what is read.
+      color: var(--color-text-muted);
+      opacity: 0.65;
+    }
+
+    &:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-surface);
+    }
+
+    @include focus-ring;
+
+    // --- The active section ------------------------------------------------
+    // "A subtle bg", as specified: the warm surface tint, one step off the
+    // canvas. No border, no accent bar — the shift in weight and colour is
+    // enough to locate yourself, and the rail stays quiet while reading.
+    &[data-active] {
+      background-color: var(--color-bg-surface);
+      color: var(--color-text-primary);
+      font-weight: $font-weight-semibold;
+
+      &::before {
+        color: var(--color-accent-text);
+        opacity: 1;
+      }
+    }
+  }
+
+  // --- Prose ----------------------------------------------------------------
+
+  .prose {
+    max-inline-size: var(--legal-measure);
+    // Not display:grid — the prose is a flow of text, and normal block layout
+    // is what margin collapsing and text-wrap expect.
+    //
+    // 15px at weight 500 on brown-900, rather than 16px/400 on brown-700:
+    // legal copy is scanned for a single clause, and a slightly tighter, darker
+    // body sets more of it in the same measure without crowding. The colour is
+    // also a contrast improvement — brown-900 on the canvas is 15.6:1 against
+    // brown-700's 8.5:1.
+    font-size: var(--legal-body-size);
+    font-weight: $font-weight-medium;
+    // brown-950, the darkest ground in the ramp. 18.4:1 on the canvas.
+    color: #{$brown-950};
+    // Drives the heading numbers in .sectionTitle::before.
+    counter-reset: legal-body;
+  }
+
+  .section {
+    & + & {
+      margin-block-start: var(--legal-section-gap);
+    }
+  }
+
+  .sectionTitle {
+    // Clears the fixed nav when a #hash anchor or a ToC link lands here.
+    scroll-margin-block-start: var(--legal-anchor-offset);
+    font-size: var(--type-h3);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+    counter-increment: legal-body;
+
+    // Numbered to match the rail. Same counter approach, so a reader following
+    // the ToC sees the same number on the heading they arrive at.
+    &::before {
+      content: counter(legal-body) ".";
+      margin-inline-end: $space-3;
+      font-weight: $font-weight-semibold;
+      color: var(--color-accent-text);
+    }
+  }
+
+  // Element styles for the prose flow. Scoped under .prose rather than applied
+  // as classes on every node: legal copy is long-form text, and a class on each
+  // paragraph would be noise in the JSX for no gain.
+  .prose {
+    p {
+      margin-block-start: $space-4;
+      line-height: $line-height-relaxed;
+      text-wrap: pretty;
+    }
+
+    // Tightens the gap between a heading and its first paragraph, which the
+    // heading's own margin would otherwise double.
+    .sectionTitle + p {
+      margin-block-start: $space-5;
+    }
+
+    strong {
+      // Bold, not semibold: the body is now 500, and 600 against it is too
+      // slight a step to register as emphasis.
+      font-weight: $font-weight-bold;
+      color: var(--color-text-primary);
+    }
+
+    a:not(.tocLink) {
+      color: var(--color-accent-text);
+      text-decoration-line: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.2em;
+
+      &:hover {
+        color: var(--color-text-primary);
+      }
+    }
+
+    ul,
+    ol {
+      margin-block-start: $space-5;
+      // Logical property: padding-left would break under RTL, which V1 is
+      // preparing for even though Arabic ships in V2.
+      padding-inline-start: $space-6;
+      line-height: $line-height-relaxed;
+    }
+
+    li + li {
+      margin-block-start: $space-3;
+    }
+
+    li::marker {
+      color: var(--color-text-muted);
+    }
+
+    h3 {
+      // 32px, not 40: a smaller heading that still sits 40px from the previous
+      // paragraph reads as detached from the text it introduces.
+      margin-block-start: $space-8;
+      // Fixed 17px rather than --type-h4, which reaches 24px at desktop — too
+      // close to .sectionTitle's 20-32px against a 15px body, so the two
+      // heading levels stopped reading as different levels.
+      font-size: var(--legal-subheading-size);
+      font-weight: $font-weight-semibold;
+      line-height: $line-height-snug;
+      color: var(--color-text-primary);
+      scroll-margin-block-start: var(--legal-anchor-offset);
+    }
+  }
+
+  // --- Definition tables ----------------------------------------------------
+  // The entity-details and retention tables. Wrapped in a scroll container
+  // because a table is one of the three things AGENTS.md allows to exceed the
+  // prose measure, and it must scroll itself rather than the page body.
+
+  .tableWrap {
+    overflow-x: auto;
+    margin-block-start: $space-6;
+    // Contains momentum scroll so swiping a table's end does not pan the page.
+    overscroll-behavior-x: contain;
+
+    // The wrapper is focusable so the scroll region is keyboard-operable (see
+    // LegalTable.tsx), which makes a visible ring mandatory rather than
+    // optional — a tab stop a sighted keyboard user cannot see is its own
+    // failure. Offset sits outside the table's own edge.
+    @include focus-ring($offset: 3px);
+  }
+
+  .table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--type-small);
+    text-align: start;
+
+    th,
+    td {
+      padding-block: $space-3;
+      padding-inline: 0 $space-6;
+      border-block-end: 1px solid var(--color-border);
+      vertical-align: baseline;
+      line-height: $line-height-normal;
+      // Explicit, not inherited from .table: the UA stylesheet sets
+      // `th { text-align: center }`, which is a direct match on the element and
+      // so beats an inherited value. Without this the header column of the
+      // multi-column tables centres its text in a wide column and reads as an
+      // empty first column with the label floating in it.
+      text-align: start;
+    }
+
+    th {
+      font-weight: $font-weight-semibold;
+      color: var(--color-text-primary);
+      white-space: nowrap;
+    }
+
+    td {
+      color: var(--color-text-secondary);
+    }
+
+    // Header row of a multi-column table.
+    thead th {
+      border-block-end-color: var(--color-text-muted);
+      font-size: var(--type-small);
+    }
+
+    tbody tr:last-child :is(th, td) {
+      border-block-end: none;
+    }
+  }
+
+  // Two-column key/value tables only (no thead). Scoped by :not(:has(thead))
+  // so the multi-column tables, where even columns are correct, keep theirs.
+  .table:not(:has(thead)) {
+    // `table-layout: fixed` is what makes the column width below actually
+    // apply. Under the default `auto`, the browser sizes columns from their
+    // content and silently ignores a percentage width — which is why the
+    // labels stayed shrink-wrapped and read as right-aligned against the
+    // values, even with the width set.
+    table-layout: fixed;
+
+    tbody th {
+      inline-size: 30%;
+      // Labels wrap rather than force the column wider. The nowrap inherited
+      // from .table th is what pinned the column to its longest label.
+      white-space: normal;
+    }
+  }
+
+  // --- Placeholder marker ---------------------------------------------------
+  // Deliberately conspicuous. An unresolved legal fact reading as though it
+  // were real is the failure this is here to prevent — see the note in
+  // LegalPage.tsx. Every instance must be gone before publication.
+
+  .placeholder {
+    padding-block: 1px;
+    padding-inline: $space-2;
+    border-radius: var(--radius-sm);
+    // Not a token: this is a review affordance that must not blend into the
+    // brand palette, and it is removed before launch along with the markers.
+    // ponytail: hardcoded amber, intentionally outside the token system so it
+    // cannot be mistaken for a supported surface. Delete with the placeholders.
+    background-color: #fde9c8;
+    box-shadow: inset 0 0 0 1px #e0a95f;
+    color: #6b4410;
+    font-size: 0.9em;
+    font-weight: $font-weight-semibold;
+    font-style: normal;
+  }
+
+  // --- Reduced motion -------------------------------------------------------
+  // The rail's colour transition is the only motion here, and it is a colour
+  // fade rather than movement — but honouring the preference is a floor, so it
+  // is zeroed rather than argued about.
+
+  @media (prefers-reduced-motion: reduce) {
+    .tocLink {
+      transition-duration: 0s;
+    }
+  }
+}

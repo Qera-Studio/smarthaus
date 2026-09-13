@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
+    // The e2e suite serves plain HTTP on loopback. HSTS and
+    // upgrade-insecure-requests both make WebKit refuse those assets, so they
+    // are omitted for that run only — see the CSP note below. Never set this
+    // variable outside the Playwright webServer command.
+    const isE2E = Boolean(process.env["PLAYWRIGHT"]);
+
     return [
       {
         source: "/(.*)",
@@ -25,9 +31,11 @@ const nextConfig: NextConfig = {
           },
 
           // Enforces HTTPS for 2 years with subdomains; eligible for browser preload list.
+          // max-age 0 under Playwright so a cached policy from an earlier run
+          // cannot keep upgrading the plain-HTTP test server.
           {
             key: "Strict-Transport-Security",
-            value: "max-age=63072000; includeSubDomains; preload",
+            value: isE2E ? "max-age=0" : "max-age=63072000; includeSubDomains; preload",
           },
 
           // Stops browsers from MIME-sniffing the content-type, preventing XSS via type confusion.
@@ -120,7 +128,17 @@ const nextConfig: NextConfig = {
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
-              "upgrade-insecure-requests",
+              // Omitted when PLAYWRIGHT is set, and only then. That server is plain
+              // HTTP on loopback, and WebKit honours this directive there:
+              // every script and stylesheet is upgraded to https, the handshake
+              // fails, and the page never hydrates. Server Components still
+              // render, so page-level assertions pass and the gap is silent —
+              // any test of client behaviour checks a dead page.
+              //
+              // Chromium exempts loopback, which is why this only ever showed
+              // up on the iPhone project. Production is unaffected: PLAYWRIGHT
+              // is set by the e2e run, nothing else.
+              ...(isE2E ? [] : ["upgrade-insecure-requests"]),
             ].join("; "),
           },
         ],

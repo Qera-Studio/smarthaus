@@ -1,0 +1,623 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  .footer {
+    // --- L2 component tokens — the override surface for this component ------
+
+    // Sizing. No L0 token exists at these values; Nav declares its own
+    // --nav-cta-size at 12px for the same reason.
+    --footer-legal-size: 12px;
+    --footer-field-size: 36px;
+    --footer-chip-size: #{$space-8}; // 32px
+    --footer-chip-icon-size: #{$space-4}; // 16px
+
+    // --- Ink ---------------------------------------------------------------
+    // Colour tokens rather than `opacity` declarations: opacity inherits down
+    // to every descendant, so an element that must be full strength inside a
+    // faded parent becomes impossible without a second stacking context. All
+    // ratios below measured against brown-950, this footer's ground.
+    --footer-ink: #{$brown-100}; // 16.56:1
+    --footer-ink-75: rgb(240 233 221 / 0.75); // 9.37:1
+    // 60%, not the 50% first specced: 50% measures 4.57:1, which clears AA's
+    // 4.5:1 by 0.07 and leaves no margin at all for a future palette tweak.
+    // 60% is 6.22:1 and visually near-identical at 12px.
+    --footer-ink-60: rgb(240 233 221 / 0.6); // 6.22:1
+    // Placeholder ONLY. 2.08:1 on the field — far below any text threshold,
+    // which is why the input carries a real visually-hidden <label> and the
+    // placeholder is never the accessible name. Never use this for text.
+    --footer-ink-25: rgb(240 233 221 / 0.25);
+
+    // --- Field -------------------------------------------------------------
+    --footer-field-bg: #{$brown-800};
+    // brown-800 on brown-950 is 1.31:1 — the field's own boundary is
+    // effectively invisible and fails WCAG 1.4.11 (3:1 for the boundary of a
+    // UI component). The 4px border is what fixes it: brown-300 measures
+    // 8.45:1 on this ground.
+    --footer-field-border: #{$brown-300};
+    --footer-field-border-size: #{$space-1}; // 4px
+    --footer-field-padding: #{$space-1}; // 4px
+
+    // --- Focus -------------------------------------------------------------
+    // The global ring is --color-border-focus (brown-600), ~1.7:1 on brown-950
+    // — invisible on this ground. brown-100 is 16.56:1. focus-ring() takes a
+    // $color parameter for exactly this case.
+    --footer-focus: #{$brown-100};
+
+    // --- Layout ------------------------------------------------------------
+    display: flex;
+    flex-direction: column;
+    // The floor for the flexible gap, never its fixed value — .spacer grows
+    // past this to fill a tall viewport and collapses back to it on a short
+    // one. See .spacer below.
+    //
+    // Two gaps of --space-16 are 128px that no longer fit once the two halves
+    // are tall: at 1440x900 the content measured 800px, which with 48px of
+    // padding and those gaps came to 976px against a 900px viewport — the
+    // footer overflowed by 76px despite the spacer already sitting at 0.
+    //
+    // The gap is now the floor only, and the SPACER carries the separation
+    // (see its min-block-size below). A gap cannot shrink — it is not a flex
+    // item — so any gap large enough to look right when the viewport is tall
+    // is dead height that overflows when it is short. A spacer can do both.
+    gap: var(--space-4);
+    // Longhands, not the `padding` shorthand: the top is its own value and a
+    // shorthand would hide that behind a four-value list.
+    padding-block-start: var(--space-12); // 48px
+    padding-block-end: var(--space-6);
+    padding-inline: var(--space-6);
+    color: var(--footer-ink);
+
+    // Below lg the footer's own gutter is redundant: body already applies the
+    // full --page-gutter at these widths (it only shrinks once the viewport
+    // passes --content-max), so the two stacked to 48px a side and squeezed
+    // the two link columns into one. The ground is painted by the box-shadow
+    // above, which is unaffected by padding, so dropping this does not expose
+    // a bare edge.
+    @media (max-width: #{$bp-lg - 1px}) {
+      padding-inline: 0;
+    }
+
+    // --- Full-bleed ground -------------------------------------------------
+    // body is capped at --content-max (1440px) with margin-inline: auto, so a
+    // plain background-color stops at the cap and leaves bare canvas at the
+    // viewport edges on wider screens.
+    //
+    // border-image-outset rather than a 100vw pseudo-element: 100vw includes
+    // the classic scrollbar on desktop Windows/Linux and this codebase has no
+    // overflow-x guard, so that route forces a horizontal scrollbar whose fix
+    // would have to live in globals.scss. Per CSS Backgrounds §6.5 an outset
+    // never creates scrollable overflow, so this escapes the cap for free.
+    //
+    // A box-shadow with a large spread and no blur: it paints a solid field
+    // well past the element on every side, and a shadow NEVER contributes to
+    // scrollable overflow — so this escapes the cap without the horizontal
+    // scrollbar that a 100vw pseudo-element or a negative-margin border causes,
+    // and without an overflow-x guard in globals.scss (the navbar branch's
+    // file). Measured at 390-1800px: both viewport edges paint brown-950 and
+    // documentElement.scrollWidth never exceeds the viewport.
+    //
+    // border-image-outset was tried first and paints nothing: with
+    // border-image-width 0 there is no border area to draw into. A real border
+    // width plus a negative margin does paint, but reintroduces the overflow.
+    //
+    // A fixed 9999px rather than 100vmax: vmax resolves against the viewport's
+    // larger axis, which is too small to reach the edges on a short, wide
+    // window.
+    //
+    // The shadow spreads in EVERY direction, so it must be clipped back on the
+    // block axis or it paints over the whole page above the footer (measured:
+    // it did). clip-path keeps the inline axis open — a large negative inset
+    // on the sides, zero top and bottom — so the ground reaches both viewport
+    // edges and stops exactly at the footer's own edges vertically.
+    background-color: var(--color-bg-inverse-strong);
+    box-shadow: 0 0 0 9999px var(--color-bg-inverse-strong);
+    clip-path: inset(0 -9999px);
+
+    @include bp-lg {
+      // svh, not vh or dvh. 100vh on iOS Safari is the LARGE viewport, so the
+      // bottom row would sit under the retracted URL bar. 100dvh changes as
+      // that bar collapses, which would animate the spacer and reflow the
+      // 258px wordmark mid-scroll — visible jank, and CLS against a project
+      // budget of < 0.05. svh is the small viewport: stable, and the footer is
+      // free to exceed it when content demands.
+      min-block-size: 100svh;
+
+      // The cap is what makes the spacer work. min-block-size is a MINIMUM, so
+      // flex saw no deficit and never asked the spacer to give anything back —
+      // it sat at its 64px basis while the footer overflowed by roughly that
+      // amount (962px in a 900px window). Matching max turns the overflow into
+      // a real deficit, and the spacer is the only shrinkable item, so it
+      // absorbs exactly what is needed and the footer lands on 100svh.
+      //
+      // Gated on height, not applied everywhere. The two halves plus the
+      // padding measured 866px at their tallest, so below roughly 880px of
+      // viewport there is no dead space left to reclaim and the cap starts
+      // cutting into the content instead: at 1366x768 it clipped 92px off the
+      // bottom of the wordmark. Above that floor the cap only ever removes
+      // slack the spacer was holding.
+      @media (min-height: 880px) {
+        max-block-size: 100svh;
+      }
+    }
+
+    // FOLLOW-UP, once feature/navbar lands: below lg that branch turns the nav
+    // into a bar fixed above the bottom edge, and reserves its height on `main`
+    // in globals.scss. This footer is a sibling of main and gets no such
+    // reservation, so the bar will cover the legal row and the wordmark. The
+    // fix is to reserve the same values here, from the same global tokens, so
+    // the two reservations cannot drift:
+    //
+    //   @include bp-max($bp-lg) {
+    //     padding-block-end: calc(
+    //       var(--space-6) + var(--nav-bar-block-size) + var(--nav-float-inset) +
+    //         env(safe-area-inset-bottom)
+    //     );
+    //   }
+    //
+    // Not written yet because on main the nav is not fixed and none of
+    // bp-max(), --nav-bar-block-size or --nav-float-inset exist — reserving
+    // space here now would guard against a bar that is not there.
+  }
+
+  // The footer's single flexible dimension. An explicit empty item rather than
+  // `justify-content: space-between` on the parent: with exactly two children
+  // the two are equivalent, but space-between silently breaks the moment a
+  // third child lands between them. A named spacer says what it is and cannot
+  // be broken by a sibling.
+  //
+  // Grows to fill a tall viewport, and collapses to nothing on a short one.
+  //
+  // `flex: 1 1 auto` with a basis, not `1 0 0`: the separation between the two
+  // halves lives here rather than in the parent's gap, because a gap cannot
+  // shrink and so becomes dead height that pushes the footer past the viewport
+  // (measured: 976px in a 900px window). As a flex item this gives the space
+  // back when the content already fills the screen.
+  .spacer {
+    flex: 1 1 auto;
+    flex-basis: var(--space-16);
+    min-block-size: 0;
+  }
+
+  // --- Footer top ----------------------------------------------------------
+
+  .top {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-16);
+    align-items: start;
+
+    // bp-max() is a feature/navbar addition and does not exist on main, so
+    // the -1px form is written out here. Switch to @include bp-max($bp-lg)
+    // once that branch lands.
+    @media (max-width: #{$bp-lg - 1px}) {
+      grid-template-columns: 1fr;
+      gap: var(--space-10);
+    }
+  }
+
+  // Content height only. This does NOT stretch or space-between its children —
+  // the spacer owns every pixel of slack in the footer, so the three groups
+  // here stay packed at their natural rhythm at any viewport height.
+  .left {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+  }
+
+  // --- Top group 1: brand --------------------------------------------------
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .brandMark {
+    // The reset gives every svg `block-size: auto`, which overrides the height
+    // attribute the Logo component sets. Size it from the block axis and let
+    // the aspect ratio carry the inline axis — the mark's own viewBox is
+    // 149.5 x 155. Same fix as Nav's .footerMark.
+    block-size: var(--space-10);
+    inline-size: auto;
+    aspect-ratio: 149.5 / 155;
+    color: var(--footer-ink);
+  }
+
+  .tagline {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-regular;
+    line-height: $line-height-normal;
+    color: var(--footer-ink);
+  }
+
+  .brandParent {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-regular;
+    color: var(--footer-ink-75);
+  }
+
+  .brandParentLink {
+    color: inherit;
+    text-decoration: none;
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      color: var(--footer-ink);
+    }
+
+    @include focus-ring(var(--footer-focus), 2px);
+  }
+
+  // --- Top group 2: newsletter ---------------------------------------------
+
+  .newsletter {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-inline-size: 320px;
+  }
+
+  .newsletterTitle {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-regular;
+    color: var(--footer-ink);
+  }
+
+  .newsletterSubtitle {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-regular;
+    color: var(--footer-ink-75);
+    margin-block-end: var(--space-2);
+  }
+
+  .field {
+    display: flex;
+    align-items: center;
+    gap: var(--footer-field-padding);
+    padding: var(--footer-field-padding);
+    background-color: var(--footer-field-bg);
+    // Longhands, not the `border` shorthand: var() substitution happens before
+    // the shorthand is parsed, so one missing token silently voids the lot.
+    border-style: solid;
+    border-width: var(--footer-field-border-size);
+    border-color: var(--footer-field-bg);
+    border-radius: var(--radius-sm);
+    // The control's own height plus the padding and border that sit outside
+    // it, so the inner input lands at exactly --footer-field-size.
+    block-size: calc(
+      var(--footer-field-size) + 2 * (var(--footer-field-padding) + var(--footer-field-border-size))
+    );
+    transition-property: border-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    // The ring lives here, not on the inner input: the field reads as one
+    // control, and two rings on nested boxes look like a rendering bug.
+    &:focus-within {
+      border-color: var(--footer-focus);
+    }
+
+    // Dim the field itself, not its children. A blanket `opacity` here also
+    // multiplied through the submit button, so a brown-100 face rendered at
+    // 0.6 over brown-950 and read as a dull grey — the button looked broken
+    // rather than disabled. Muting the ground and letting each control state
+    // its own disabled colour keeps the button legible as a button.
+    // The border keeps its brown-300 so the field's boundary still clears the
+    // 3:1 of WCAG 1.4.11 — brown-900 against the brown-950 footer is 1.06:1
+    // and would make the field vanish rather than read as disabled.
+    &[data-disabled] {
+      --footer-field-bg: #{$brown-900};
+    }
+  }
+
+  .input {
+    flex: 1 1 auto;
+    // Without this a flex item refuses to shrink below its content width and
+    // the field overflows its container on narrow screens.
+    min-inline-size: 0;
+    block-size: 100%;
+    padding-inline: var(--space-3);
+    background-color: transparent;
+    border: 0;
+    font-size: var(--font-size-sm);
+    color: var(--footer-ink);
+
+    &::placeholder {
+      color: var(--footer-ink-25);
+    }
+
+    // Suppressed deliberately — see .field:focus-within above.
+    &:focus-visible {
+      outline: 0;
+    }
+  }
+
+  .submit {
+    flex: 0 0 auto;
+    block-size: var(--footer-field-size);
+    padding-inline: var(--space-4);
+    background-color: #{$brown-100};
+    border: 0;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    color: #{$brown-900}; // 15.59:1 on brown-100
+
+    @include focus-ring(var(--footer-focus), 2px);
+
+    // Disabled reads through the ground, not through opacity: brown-700 on
+    // brown-200 measures 6.22:1, so the label stays legible while the button
+    // is clearly not live. 1.4.3 exempts disabled controls from the contrast
+    // minimum, but a label nobody can read is a usability problem whether or
+    // not it is a conformance one.
+    &:disabled {
+      background-color: #{$brown-200};
+      color: #{$brown-700};
+    }
+  }
+
+  .newsletterNote {
+    font-size: var(--footer-legal-size);
+    line-height: $line-height-normal;
+    color: var(--footer-ink-75);
+
+    a {
+      color: var(--footer-ink);
+
+      @include focus-ring(var(--footer-focus), 2px);
+    }
+  }
+
+  // --- Top group 3: contact ------------------------------------------------
+
+  .contact {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .contactTitle {
+    font-size: var(--font-size-base);
+    font-weight: $font-weight-semibold;
+    color: var(--footer-ink);
+    margin-block-end: var(--space-1);
+  }
+
+  .contactList {
+    display: flex;
+    flex-direction: column;
+    // gap: var(--space-1);
+    // The reset only strips markers from ul[role="list"], and an explicit
+    // role on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip
+    // them here instead. Same trade-off Nav already makes.
+    list-style: none;
+  }
+
+  .contactItem {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-regular;
+    color: var(--footer-ink-75);
+    text-decoration: none;
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      color: var(--footer-ink);
+    }
+
+    @include focus-ring(var(--footer-focus), 2px);
+  }
+
+  .socials {
+    display: flex;
+    gap: var(--space-2);
+    margin-block-start: var(--space-4);
+    // The reset only strips markers from ul[role="list"], and an explicit
+    // role on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip
+    // them here instead. Same trade-off Nav already makes.
+    list-style: none;
+  }
+
+  .chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--footer-chip-size);
+    block-size: var(--footer-chip-size);
+    background-color: #{$brown-100};
+    border-radius: var(--radius-sm);
+    // brown-900 at 75% on the brown-100 chip — 7.64:1, rising to 15.59:1 on
+    // hover. Colour-only, so the reduced-motion reset covers it for free.
+    color: rgb(20 17 14 / 0.75);
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover,
+    &:focus-visible {
+      color: #{$brown-900};
+    }
+
+    @include focus-ring(var(--footer-focus), 2px);
+  }
+
+  .chipIcon {
+    inline-size: var(--footer-chip-icon-size);
+    block-size: var(--footer-chip-icon-size);
+    fill: currentColor;
+  }
+
+  // --- Top right: link columns ---------------------------------------------
+
+  // Two columns at every width. A grid of two equal tracks rather than flex:
+  // on mobile the columns must stay side by side down to 320px, and 1fr tracks
+  // share the width evenly instead of sizing to the longest label — which is
+  // what let "Smart home automation" push the other column off-screen.
+  .right {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    gap: var(--space-16);
+
+    // Below lg the columns must stay side by side but the two are not equal:
+    // "Pages" holds short words while "What we install" holds labels up to
+    // 156px. Sizing both to 1fr split a 320px viewport into 128px tracks and
+    // wrapped those labels — and RollingText cannot wrap, because its animated
+    // copy is one absolutely-positioned row of per-character cells that has no
+    // line to break at. `auto max-content` gives the long column exactly the
+    // width its longest label needs and leaves the rest to Pages.
+    @media (max-width: #{$bp-lg - 1px}) {
+      grid-template-columns: auto max-content;
+      justify-content: space-between;
+      gap: var(--space-6);
+    }
+  }
+
+  .linkCol {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-inline-size: 0;
+  }
+
+  .linkColTitle {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    color: var(--footer-ink);
+  }
+
+  .linkList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    // The reset only strips markers from ul[role="list"], and an explicit
+    // role on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip
+    // them here instead. Same trade-off Nav already makes.
+    list-style: none;
+  }
+
+  .link {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-regular;
+    color: var(--footer-ink-75);
+    text-decoration: none;
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      color: var(--footer-ink);
+    }
+
+    @include focus-ring(var(--footer-focus), 2px);
+  }
+
+  // --- Footer bottom -------------------------------------------------------
+
+  .bottom {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .legal {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--space-6);
+    font-size: var(--footer-legal-size);
+    font-weight: $font-weight-regular;
+    color: var(--footer-ink-60);
+
+    @media (max-width: #{$bp-lg - 1px}) {
+      grid-template-columns: 1fr;
+      justify-items: start;
+      gap: var(--space-3);
+    }
+  }
+
+  .copyright {
+    justify-self: start;
+  }
+
+  .legalLinks {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-4);
+    // The reset only strips markers from ul[role="list"], and an explicit
+    // role on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip
+    // them here instead. Same trade-off Nav already makes.
+    list-style: none;
+  }
+
+  .legalLink {
+    color: inherit;
+    text-decoration: none;
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      color: var(--footer-ink);
+    }
+
+    @include focus-ring(var(--footer-focus), 2px);
+  }
+
+  .credit {
+    justify-self: end;
+    // The one full-strength element in a row that is otherwise 60%.
+    color: var(--footer-ink);
+
+    @media (max-width: #{$bp-lg - 1px}) {
+      justify-self: start;
+    }
+  }
+
+  // Already at full strength via .credit, so there is no hover colour change
+  // to make — the roll is the whole hover affordance here.
+  .creditLink {
+    color: inherit;
+    text-decoration: none;
+
+    @include focus-ring(var(--footer-focus), 2px);
+  }
+
+  // --- Gradient wordmark ---------------------------------------------------
+
+  .wordmarkWrap {
+    position: relative;
+    inline-size: 100%;
+    max-inline-size: var(--content-max);
+    margin-inline: auto;
+  }
+
+  // Holds only the <linearGradient> paint server. Zero-size so it occupies no
+  // layout — the gradient is referenced by id from .wordmark's fill.
+  .gradientDefs {
+    position: absolute;
+    inline-size: 0;
+    block-size: 0;
+  }
+
+  .wordmark {
+    // As with .brandMark, the reset's `block-size: auto` defeats the Logo's
+    // height attribute — so no size prop is passed and the sizing lives here.
+    // The wordmark viewBox is 865.5 x 155.
+    inline-size: 100%;
+    block-size: auto;
+    aspect-ratio: 865.5 / 155;
+
+    // `fill` as a CSS property beats the fill="currentColor" presentation
+    // ATTRIBUTE on each path, which is what lets the gradient apply without
+    // any change to Logo.tsx — a component the navbar branch also renders.
+    path {
+      fill: url("#footer-wordmark-gradient");
+    }
+  }
+}

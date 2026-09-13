@@ -2,41 +2,156 @@
 @use "../../styles/mixins" as *;
 
 @layer components {
+  // Marks the top of the document. Once it leaves the viewport the nav is
+  // "stuck" and picks up the glass. Zero-height so it occupies no space.
+  .sentinel {
+    block-size: 1px;
+    margin-block-end: -1px;
+  }
+
   .nav {
     // L2 component tokens — the override surface for this component.
     --nav-padding: #{$space-6};
+    // The scrolled capsule's padding — 8px on all four sides, against the 24px
+    // block padding of the tall top-of-page bar. Its own token so the two
+    // states cannot drift into each other.
+    --nav-padding-stuck: #{$space-2};
+    // The scrolled capsule's width from lg up. A max, not a fixed size: on a
+    // 1024px window the content column is already narrower than this, and the
+    // capsule should never grow past the gutters it sits inside.
+    --nav-stuck-size: 650px;
+    // How far the scrolled capsule floats below the top edge. Only applies once
+    // stuck — the tall top-of-page bar sits flush against the viewport top.
+    --nav-stuck-inset: #{$space-6};
+    // How long the capsule takes to shrink and to come back.
+    //
+    // --duration-normal (240ms) was too short for the distance: the box travels
+    // ~640px of width plus 32px of padding, and at that speed the last stretch
+    // arrives while the eye is still following the first.
+    //
+    // 450ms, not the 700ms first tried. An in-out curve spends its opening on
+    // acceleration, so at 700ms the bar showed no visible movement for 214ms
+    // after the scroll began and read as lagging the input. At 450ms the first
+    // movement lands around 140ms, which tracks the scroll instead of trailing
+    // it, and the eased shape is unchanged.
+    --nav-stuck-duration: 450ms;
+    // Expanding back to the full bar is quicker than collapsing. Returning to
+    // the top of a page is a decisive move and the bar should already be there;
+    // collapsing happens while reading and should not pull the eye.
+    --nav-expand-back-duration: 320ms;
+    // A symmetric in-out curve. Not --ease-in-out (0.45, 0, 0.55, 1), which is
+    // gentler than this over the middle and leaves the long shrink feeling
+    // slack; this holds a firmer centre while still starting and ending at
+    // rest. See the note at the transition for the measurements.
+    --nav-stuck-ease: cubic-bezier(0.65, 0, 0.35, 1);
     --nav-gap: #{$space-6};
     --nav-link-size: #{$font-size-sm};
     --nav-link-weight: #{$font-weight-medium};
+    // 2px under the links (14 -> 12). Its own token because the CTA and the
+    // links no longer share a size and a future tweak to one must not move the
+    // other.
+    --nav-cta-size: 14px;
+    // One notch above the links, so the CTA reads as the primary action even
+    // at the smaller size. Its own token so a change to --nav-link-weight
+    // cannot silently drag it along.
+    --nav-cta-weight: #{$font-weight-bold};
+    // --- Colour surface ------------------------------------------------------
+    // Every colour in the nav resolves through these four rather than being
+    // restated on each descendant. The glass is a light mid-tone, so the ink
+    // stays dark on every surface and in every state — see _variables.scss for
+    // why light ink is not an option on this tint.
+    --nav-ink: var(--color-text-primary); // brand mark, burger
+    --nav-cta-bg: var(--color-bg-inverse-strong);
+    --nav-cta-ink: var(--color-text-inverse);
+    --nav-link-ink: var(--color-text-primary);
+    // How long the panel takes to open. The link stagger is derived from it.
+    // Off the duration scale deliberately: the scale stops at 600ms and this
+    // is the one surface that wants longer, so a bespoke value beats adding a
+    // $duration-slowest that nothing else would ever use.
+    --nav-expand-duration: 850ms;
+    // The expansion has its OWN ease, not the global --ease-out. $ease-out is
+    // cubic-bezier(0.22, 1, ...), which covers ~90% of its distance in the
+    // first third — fine for a 160ms colour fade, but on a panel travelling
+    // 300px+ it reads as a snap followed by a crawl. This is a gentler curve
+    // with no overshoot: it leaves slowly, moves through the middle, and
+    // settles without bouncing the glass edge.
+    --nav-expand-ease: cubic-bezier(0.32, 0.72, 0, 1);
+    // Gap between consecutive links fading in.
+    --nav-stagger-step: #{$duration-fast};
+    // How long each item takes to fade in.
+    --nav-item-duration: #{$duration-slower};
 
-    // Three equal end columns keep the link list centred against the nav's full
-    // width, not the gap between logo and CTA — so it stays put as either grows.
+    // --- Closing runs the same choreography, faster --------------------------
+    // Opening is a reveal and can take its time; closing is an acknowledgement
+    // of a click and wants to get out of the way. Same shape, ~40% of the
+    // clock — these exist so the collapse can be quickened without touching
+    // the open feel, which is tuned.
+    --nav-stagger-step-out: 60ms;
+    --nav-item-duration-out: #{$duration-normal};
+    // The glass closes faster than it opens, for the same reason. Off the
+    // duration scale, like --nav-expand-duration and for the same reason: the
+    // scale stops at 600ms and this surface sits just past it.
+    --nav-collapse-duration: 650ms;
+    // How long the collapse waits for the contents to fade out. The last item
+    // to leave starts at 4 * step-out and takes --nav-item-duration-out, so the
+    // fade-out window is (4 * step-out + duration-out); the panel starts moving
+    // at 90% of it — the same handover the opening uses in the other direction.
+    --nav-collapse-hold: calc(
+      (4 * var(--nav-stagger-step-out) + var(--nav-item-duration-out)) * 0.9
+    );
+    // How far each link travels as it fades in.
+    --nav-link-rise: #{$space-3};
+    // The capsule's width for the whole sub-1024px band — one value, not a
+    // per-breakpoint set. It is a MAX only: below it the capsule shrinks with
+    // the viewport (keeping its float gutter), above it the width holds and
+    // the capsule centres. Nothing about the nav changes at 768px any more.
+    --nav-capsule-size: 400px;
+    // Height of the wordmark in the open panel's footer. Off the spacing scale
+    // on purpose: this is optical sizing of artwork against the label beneath
+    // it, not layout rhythm.
+    --nav-footer-mark-size: 12px;
+    // --nav-float-inset is global (see _variables.scss) — `main` reserves it
+    // as well, so it cannot live on this component.
+
+    color: var(--nav-ink);
+  }
+
+  // --- Hidden over the footer -----------------------------------------------
+
+  // The footer carries the same links, so once it owns the screen the bar has
+  // nothing to add and — below lg, where it floats over the page — is covering
+  // the footer's own links. NavShell sets this at 70% viewport coverage.
+  //
+  // opacity and transform only: both are compositor-driven, so this cannot
+  // cause layout or reflow the footer it sits over. `visibility` finishes the
+  // job after the fade so the hidden bar stops taking pointer events, and
+  // needs its own zero-duration entry to switch at the END of the transition
+  // rather than the start. Each band sets its own translate direction, since
+  // the bar is sticky at the top on desktop and fixed at the bottom below it.
+  .nav[data-at-footer] {
+    opacity: 0;
+    visibility: hidden;
+    transition-property: opacity, transform, visibility;
+    transition-duration: var(--duration-normal), var(--duration-normal), 0s;
+    transition-delay: 0s, 0s, var(--duration-normal);
+    transition-timing-function: var(--ease-out);
+  }
+
+  // --- The persistent row: brand, toggle, CTA -------------------------------
+
+  // The persistent row. Its grid is declared per band: below lg it is a real
+  // three-column row, from lg up it dissolves (display: contents) so brand,
+  // links and CTA become direct children of .nav's own grid.
+  .bar {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: var(--nav-gap);
-    // Block only — the inline gutter comes from body (--page-gutter), so the
-    // nav aligns to the same edge as every section below it.
-    padding-block: var(--nav-padding);
-    color: var(--color-text-primary);
-
-    // Below lg the centre column is empty (links are hidden), so drop it
-    // entirely — otherwise its gap pushes logo and CTA toward each other.
-    @media (max-width: #{$bp-lg - 1px}) {
-      grid-template-columns: auto auto;
-      justify-content: space-between;
-    }
   }
 
   .logo {
     display: flex;
     align-items: center;
-    // Shrink to the artwork so the focus ring hugs the logo, not the column.
-    justify-self: start;
-    // The lockup is ~7.3:1, so at 32px it is 233px wide. Let it scale down
-    // rather than crowd the CTA on narrow screens; the SVG keeps its ratio.
-    min-inline-size: 0;
-    color: var(--color-text-primary);
+    color: var(--nav-ink);
 
     @include focus-ring;
 
@@ -46,22 +161,67 @@
     }
   }
 
-  .links {
-    // Below lg the links move to the mobile bottom bar (not built until the
-    // hero lands — see AGENTS.md nav behaviour table). The centre column
-    // collapses to nothing so the row is just logo | CTA.
-    @media (max-width: #{$bp-lg - 1px}) {
-      display: none;
+  .brandMark,
+  .brandFull {
+    display: flex;
+    align-items: center;
+    // Shrink to the artwork so the focus ring hugs the logo, not the column.
+    justify-self: start;
+    // The full lockup is ~7:1, so it must be allowed to scale down rather than
+    // crowd the CTA on narrow screens.
+    min-inline-size: 0;
+  }
+
+  .ctaSlot {
+    display: flex;
+    justify-self: end;
+  }
+
+  // --- The expanding panel --------------------------------------------------
+
+  .panel {
+    // 0fr -> 1fr is the only height animation that interpolates a real value:
+    // max-block-size needs a guessed target (so the easing runs against the
+    // wrong distance and visibly snaps), scaleY distorts the glass border and
+    // radius, and clip-path reserves the full height in layout.
+    display: grid;
+    grid-template-rows: 0fr;
+    transition-property: grid-template-rows;
+    // This rule is the CLOSED state, so these are the collapse values; the
+    // [data-open] rule below carries the slower expansion ones.
+    transition-duration: var(--nav-collapse-duration);
+    transition-timing-function: var(--nav-expand-ease);
+    // Collapsing waits for the contents to clear. Declared here rather than on
+    // [data-open] for the same reason, and the open rule zeroes it so
+    // expansion starts at once. Below lg only — on desktop the panel is not a
+    // disclosure.
+    @include bp-max($bp-lg) {
+      transition-delay: var(--nav-collapse-hold);
     }
+  }
+
+  .panelInner {
+    // A grid item's automatic minimum size is its content height, which would
+    // refuse to shrink and defeat the 0fr row.
+    min-block-size: 0;
+    // `clip` not `hidden`: no scroll container, so no scroll anchoring and no
+    // jump if something inside is focused.
+    overflow: clip;
+  }
+
+  .nav[data-open] .panel {
+    grid-template-rows: 1fr;
+    transition-duration: var(--nav-expand-duration);
+    // Opening starts immediately; only the collapse holds back.
+    transition-delay: 0ms;
   }
 
   .list {
     display: flex;
     align-items: center;
     gap: var(--nav-gap);
-    // The reset only strips markers from ul[role="list"], and an explicit
-    // role on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip
-    // them here instead.
+    // The reset only strips markers from ul[role="list"], and an explicit role
+    // on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip here.
     list-style: none;
   }
 
@@ -69,7 +229,7 @@
     font-size: var(--nav-link-size);
     font-weight: var(--nav-link-weight);
     line-height: $line-height-normal;
-    color: var(--color-text-primary);
+    color: var(--nav-link-ink);
     text-decoration: none;
 
     // Hover feedback is the character roll (see RollingText), not a fade.
@@ -77,18 +237,22 @@
   }
 
   .cta {
-    // Shrink to the label so the button is not stretched across its column.
-    justify-self: end;
-    padding-block: $space-2;
+    // Off the 4/8 scale on purpose. The CTA is a control, so it is sized
+    // optically against its own label rather than to the layout rhythm the
+    // rest of the bar follows: 6px block keeps it compact, 12px inline gives
+    // the text room to sit in.
+    padding-block: 6px;
     padding-inline: $space-3;
-    font-size: var(--nav-link-size);
-    font-weight: var(--nav-link-weight);
+    font-size: var(--nav-cta-size);
+    font-weight: var(--nav-cta-weight);
     line-height: $line-height-normal;
-    // brown-950 ground with brown-100 text — 17.9:1, well clear of AA.
-    background-color: var(--color-bg-inverse-strong);
-    color: var(--color-text-inverse);
+    // brown-950 ground with brown-100 text: 16.6:1 as text, and the box itself
+    // is 12.5:1 against the glass, so it holds as a shape too.
+    background-color: var(--nav-cta-bg);
+    color: var(--nav-cta-ink);
     border-radius: $radius-sm;
     text-decoration: none;
+    white-space: nowrap;
     transition-property: opacity;
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out);
@@ -97,6 +261,558 @@
 
     &:hover {
       opacity: 0.85;
+    }
+  }
+
+  // --- Hamburger ------------------------------------------------------------
+
+  .toggle {
+    display: none; // shown per band below
+    align-items: center;
+    justify-content: center;
+    padding: $space-1;
+    background: none;
+    border: 0;
+    color: var(--nav-ink);
+
+    @include focus-ring;
+  }
+
+  .burger {
+    inline-size: $space-6;
+    block-size: $space-6;
+    stroke: currentColor;
+    stroke-width: 1.25;
+    stroke-linecap: round;
+    fill: none;
+  }
+
+  .burgerTop,
+  .burgerMid,
+  .burgerBot {
+    // `view-box` is what makes the morph work. Without it transform-origin on
+    // an SVG child resolves against that child's own bounding box — and a
+    // <line> has a ZERO-HEIGHT box, so "12px 12px" lands far outside it and
+    // each line swings through a wide arc instead of pivoting on the icon's
+    // centre. view-box resolves the origin against the 24x24 viewBox, which is
+    // the coordinate space the 12,12 was written in.
+    transform-box: view-box;
+    transform-origin: 12px 12px;
+    transition-property: transform, opacity;
+    transition-duration: var(--duration-normal);
+    // Slight overshoot — this is the spring the brief asked for.
+    transition-timing-function: var(--ease-spring);
+  }
+
+  // The middle line leaves before the outer two rotate, so they cross a clear
+  // field rather than through it; on the way back it waits for them to level.
+  .burgerMid {
+    transition-property: opacity;
+    transition-duration: var(--duration-fast);
+    transition-delay: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .nav[data-open] .burgerMid {
+    transition-delay: 0ms;
+  }
+
+  // ROTATE FIRST, THEN TRANSLATE. Transform functions apply right-to-left in
+  // the element's own frame, so `translateY() rotate()` does the move in the
+  // ALREADY-ROTATED frame and slides each arm along its own diagonal: the two
+  // arms then cross off-centre and the X reads short and lopsided. Measured on
+  // the broken form, the arm centres sat 2.3px apart and each arm's box was
+  // 11.3px inside a 24px icon; this order puts both centres on the same point.
+  .nav[data-open] .burgerTop {
+    transform: rotate(45deg) translateY(#{$space-1});
+  }
+
+  .nav[data-open] .burgerMid {
+    opacity: 0;
+  }
+
+  .nav[data-open] .burgerBot {
+    transform: rotate(-45deg) translateY(-#{$space-1});
+  }
+
+  // --- Panel footer: wordmark + parent company ------------------------------
+
+  .panelFooter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    // Tight: the wordmark and the parent-company line are one lockup, not two
+    // stacked items, so they sit closer than the 8px the scale would give.
+    gap: $space-1;
+    color: var(--nav-ink);
+  }
+
+  // The reset gives every svg `max-inline-size: 100%; block-size: auto`, which
+  // makes an unconstrained lockup stretch to its container and recompute its
+  // height from that width, ignoring the `height` attribute. Pin the height
+  // and derive the width from the artwork's own ratio so it cannot stretch.
+  .footerMark {
+    block-size: var(--nav-footer-mark-size);
+    inline-size: auto;
+    // wordmark viewBox is 865.5 x 155.
+    aspect-ratio: 865.5 / 155;
+    color: currentColor;
+  }
+
+  .footerBy {
+    // 2px under the links. Not --nav-link-size minus a step: this is a
+    // sign-off sized against the wordmark above it, so it gets its own value
+    // rather than tracking a token that exists for navigation.
+    font-size: 12px;
+    font-weight: var(--nav-link-weight);
+    // 75% of the wordmark's weight in the hierarchy, not a separate colour.
+    opacity: 0.75;
+  }
+
+  // --- Desktop (>= lg): links always visible, glass on scroll ---------------
+
+  @include bp-lg {
+    // .bar and .panel are siblings, so on desktop the grid lives on .nav and
+    // .bar dissolves into it — that puts brand, links and CTA in one row of
+    // three columns without duplicating the links into a second element.
+    .nav {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: var(--z-sticky);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: var(--nav-gap);
+      // An explicit LENGTH rather than `none` or `100%`. Both alternatives make
+      // the shrink jump in a single frame: `none` has no value to interpolate
+      // from, and a percentage cannot interpolate against the stuck state's
+      // length (measured: 1392 -> 1000 with two distinct widths, no frames
+      // between). --content-max is the width the body caps at, so this is the
+      // box the nav already occupied, expressed in the same unit the stuck
+      // state uses.
+      max-inline-size: var(--content-max);
+      // Centring as an interpolable LENGTH, not `margin-inline: auto`. An auto
+      // margin resolves discretely: the frame [data-stuck] dropped, centring
+      // vanished and the capsule teleported 321px to the left gutter, then grew
+      // its right edge alone — the box appeared to expand out of the top-left
+      // corner instead of from its centre. Measured: left went 345 -> 24 in one
+      // frame while the width barely moved.
+      //
+      // Half the difference between the full width and the capsule's, clamped
+      // at 0 so it never goes negative on a viewport narrower than the capsule.
+      // Both edges now travel together, and both directions interpolate.
+      margin-inline: 0;
+      // Reserved in BOTH states so sticking changes nothing in the document
+      // flow. The stuck capsule floats this far below the viewport top via its
+      // own inset-block-start; here the same value simply sits above the tall
+      // bar, and the padding below is reduced by it so the bar's overall height
+      // is unchanged.
+      margin-block-start: var(--nav-stuck-inset);
+      // Both reduced by the 1px border reserved below, so the bar's overall
+      // height is exactly what it was before either reservation existed.
+      padding-block-start: calc(var(--nav-padding) - var(--nav-stuck-inset) - 1px);
+      padding-block-end: calc(var(--nav-padding) - 1px);
+      // A transparent border of the same width the glass will paint. Without
+      // it the glass's 1px border appears on stick and grows the document by
+      // 2px, shifting every element below. Reserving it here means the border
+      // only ever changes colour.
+      border-style: solid;
+      border-width: 1px;
+      border-color: transparent;
+      // max-inline-size and padding are here because the stuck state shrinks
+      // the capsule; without them the width and padding would jump while the
+      // glass faded in. They are layout properties rather than compositor ones,
+      // but the nav is a sticky element with `contain` below lg and a single
+      // grid row here, so the reflow is bounded to its own three children.
+      transition-property:
+        background-color, box-shadow, max-inline-size, margin, padding, border-radius;
+      // This rule is the EXPANDED state, so these are the expand values — a
+      // transition reads its duration from the state it is moving TO. The
+      // collapse values live on [data-stuck] below.
+      transition-duration: var(--nav-expand-back-duration);
+      // An in-out curve, because this is a SIZE CHANGE in both directions —
+      // unlike the mobile panel, which is a reveal and wants to leave fast.
+      //
+      // Both of the obvious candidates front-load and read as a snap. Measured
+      // as percentage of distance covered at the halfway point:
+      //   --ease-out          (0.22, 1, 0.36, 1)  97% by 1/3 of the time
+      //   --nav-expand-ease   (0.32, 0.72, 0, 1)  94% shrink / 100% restore
+      //   this curve          (0.65, 0, 0.35, 1)  ~50%, symmetric
+      // Easing in as well as out is what makes it seamless: the box starts from
+      // rest rather than jumping, and arrives without a visible crawl.
+      transition-timing-function: var(--nav-stuck-ease);
+    }
+
+    .bar {
+      display: contents;
+    }
+
+    // Every slot pins BOTH its column and its row. Source order here is panel,
+    // brand, toggle, CTA — nothing like the visual order — so auto-placement
+    // would scatter them across extra rows and tracks. Pinning all three makes
+    // this band immune to the source order the mobile band needs.
+    .brandFull {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    // Not a disclosure here — it is simply the centre column, always open.
+    .panel {
+      grid-column: 2;
+      grid-row: 1;
+      grid-template-rows: 1fr;
+    }
+
+    .ctaSlot {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .panelInner {
+      overflow: visible;
+    }
+
+    .panelFooter,
+    .toggle {
+      display: none;
+    }
+
+    // The two lockups share one grid cell and cross-fade between them. Both are
+    // laid out at all times so the cell never re-measures mid-transition; only
+    // opacity changes. pointer-events follows opacity so the hidden one cannot
+    // take the click, and the link inside it is what carries the tab stop —
+    // see the aria-hidden note below.
+    .brandFull,
+    .brandMark {
+      grid-column: 1;
+      grid-row: 1;
+      transition-timing-function: var(--nav-stuck-ease);
+    }
+
+    // The hidden lockup is absolutely positioned so it leaves the track's
+    // sizing. Sharing the cell in flow made the track size to the WIDER of the
+    // two — a 133px column around a 23px mark once stuck, which is the empty
+    // gap to the mark's right. Only the visible one is in flow, so the track
+    // measures what is actually shown; the other still paints in the same
+    // place and cross-fades.
+    .nav[data-stuck] .brandFull,
+    .nav:not([data-stuck]) .brandMark {
+      position: absolute;
+    }
+
+    .brandFull {
+      opacity: 1;
+      visibility: visible;
+      transition-property: opacity, visibility;
+      transition-duration: var(--nav-expand-back-duration), 0s;
+      transition-delay: 0s, 0s;
+    }
+
+    // The inactive lockup is faded AND taken out of the a11y tree. Opacity
+    // alone leaves both links focusable and announced: measured, the nav
+    // exposed two "Smarthaus — home" links and two tab stops. `visibility`
+    // does both jobs — it removes the element from the tree and from hit
+    // testing — and unlike `display` it still animates, switching at the END
+    // of the fade via its own zero-duration entry.
+    .brandMark {
+      display: flex;
+      opacity: 0;
+      visibility: hidden;
+      transition-property: opacity, visibility;
+      transition-duration: var(--nav-expand-back-duration), 0s;
+      transition-delay: 0s, var(--nav-expand-back-duration);
+    }
+
+    .nav[data-stuck] .brandFull {
+      visibility: hidden;
+      transition-property: opacity, visibility;
+      transition-duration: var(--nav-stuck-duration), 0s;
+      transition-delay: 0s, var(--nav-stuck-duration);
+    }
+
+    .nav[data-stuck] .brandMark {
+      visibility: visible;
+      transition-duration: var(--nav-stuck-duration), 0s;
+      transition-delay: 0s, 0s;
+    }
+
+    // Once the sentinel at the top of the page scrolls away, the nav picks up
+    // the glass so it stays legible over whatever is passing beneath it. No
+    // colour change: the glass is a light mid-tone and the ink that works on
+    // the page works on it too (11.4:1).
+    //
+    // It also shrinks to a capsule: narrower than the content column, padded
+    // down to 8px on all four sides, and with the wordmark swapped for the mark
+    // alone. The full lockup is ~7:1, so at this height it would either crowd
+    // the links or force the capsule wider than it wants to be.
+    .nav[data-stuck] {
+      @include glass($radius-md);
+
+      // `auto` outer tracks, not the 1fr pair the tall bar uses. 1fr splits the
+      // leftover space equally, which gave the 23px mark a 90px track while the
+      // CTA needed 129px — the mark floated in dead space and the links were
+      // pushed right of true centre. `auto` sizes each edge to its own content,
+      // so the mark takes only the width it is, and the links then centre
+      // optically between them rather than being shoved by an empty track.
+      grid-template-columns: auto 1fr auto;
+      // The links are centred inside the middle track, which is now the real
+      // remaining space rather than a track balanced against a phantom.
+      justify-items: center;
+
+      // A MAX, not a fixed width: below --nav-stuck-size the capsule keeps the
+      // content column's own width rather than growing past it, so it never
+      // exceeds the gutters it sits between. The auto margins centre it above
+      // that width.
+      max-inline-size: var(--nav-stuck-size);
+      // See the margin-inline note on the base rule: this is the centring, as a
+      // length that can interpolate. `max(0px, ...)` so a viewport narrower
+      // than the capsule gets 0 rather than a negative margin.
+      margin-inline: max(0px, calc((100% - var(--nav-stuck-size)) / 2));
+      // The collapse is the slower of the two — see --nav-stuck-duration.
+      transition-duration: var(--nav-stuck-duration);
+      // The gap above the floating capsule. Only the sticky inset moves here —
+      // the margin that creates the gap is reserved on the UNSTUCK nav (see
+      // below), because adding it on stick would grow the document by 26px and
+      // push every following element down mid-scroll. Measured before the
+      // split: main moved 81 -> 107 and the page grew 8911 -> 8937, which is
+      // exactly the layout shift the project's CLS budget exists to prevent.
+      inset-block-start: var(--nav-stuck-inset);
+      // 8px on every side, replacing the 24px block padding of the tall bar.
+      // The shorthand is safe here — a single token, no var() composition.
+      padding: var(--nav-padding-stuck);
+      border-radius: $radius-md;
+    }
+
+    // Mark only once stuck; the full lockup is the top-of-page state.
+    //
+    // Both occupy the SAME grid cell and cross-fade, rather than one being
+    // display:none. A display swap happens in a single frame while the capsule
+    // is still resizing around it, so the lockup vanished and the mark appeared
+    // mid-flight — and because the two have different widths (133px vs 23px)
+    // the grid re-measured under them at the same time. Stacking them keeps the
+    // cell's width settled by the capsule alone.
+    .nav[data-stuck] .brandFull {
+      opacity: 0;
+    }
+
+    .nav[data-stuck] .brandMark {
+      opacity: 1;
+    }
+
+    // Sticky at the top here, so it leaves upwards.
+    .nav[data-at-footer] {
+      transform: translateY(-100%);
+    }
+  }
+
+  // --- Below lg: fixed bottom bar, glass, disclosure panel ------------------
+
+  @include bp-max($bp-lg) {
+    .nav {
+      // 8px here, not on the token at :root — the desktop band reads
+      // --nav-padding too, and this override must not reach it.
+      --nav-padding: #{$space-2};
+
+      position: fixed;
+      // Floats clear of all three edges rather than spanning the screen. The
+      // bottom inset stacks on top of the home-indicator inset so the glass
+      // never sits under the gesture bar.
+      inset-block-end: calc(var(--nav-float-inset) + env(safe-area-inset-bottom));
+      // One capsule width for the whole band, centred. `inset-inline: 0` plus
+      // auto margins rather than a left/right inset pair: that gives the box a
+      // definite containing width to centre within, which `inset-inline: auto`
+      // would not.
+      inset-inline: 0;
+      // Below the capsule width the box shrinks with the viewport but keeps
+      // its float gutter, so it never touches the screen edges. Above it the
+      // width is capped and the auto margins centre it.
+      max-inline-size: min(var(--nav-capsule-size), calc(100% - 2 * var(--nav-float-inset)));
+      margin-inline: auto;
+      z-index: var(--z-sticky);
+      // Keep paint and layout local — the panel animates margin and rows, and
+      // nothing outside the nav should be asked to re-layout for it.
+      contain: layout paint;
+      // A real flex column, so the panel and bar are flex ITEMS. Previously
+      // this was a block box and `.panel { order: -1 }` silently did nothing —
+      // order only applies to flex/grid children — which left the panel after
+      // the bar in flow, so opening the menu pushed the bar 249px up the
+      // screen. Source order now puts the panel first (see NavShell.tsx) and
+      // the bar last, and because the box is pinned by its BOTTOM edge, only
+      // its top edge travels. The bar does not move at all.
+      display: flex;
+      flex-direction: column;
+      border-radius: $radius-md;
+
+      @include glass($radius-md);
+    }
+
+    .bar {
+      // Brand and toggle and CTA; the wordmark is dropped for the mark.
+      // Symmetric outer tracks, not `auto 1fr auto`. The mark (23px) and the
+      // toggle (40px) are different widths, so with auto tracks the centre
+      // column is not the bar's centre and the CTA sits ~8px off. Equal 1fr
+      // edges put the middle track dead centre whatever the two controls
+      // measure; `auto` on the middle lets the CTA keep its own width.
+      grid-template-columns: 1fr auto 1fr;
+      padding: var(--nav-padding);
+    }
+
+    // Fixed at the bottom here, so it leaves downwards. The float inset is
+    // added so the capsule clears its own gutter and the home indicator, not
+    // just its own height.
+    .nav[data-at-footer] {
+      transform: translateY(calc(100% + var(--nav-float-inset)));
+    }
+
+    .brandFull {
+      display: none;
+    }
+
+    // Swap the two controls: the CTA takes the centre column, the hamburger
+    // moves to the end. Explicit columns rather than reordering the DOM — the
+    // toggle must stay before the CTA in source so Tab reaches the menu
+    // control before the call to action, and below lg the source order of
+    // .panel and .bar is already load-bearing for the layout.
+    //
+    // The ROW is pinned as well, and has to be: source order is toggle then
+    // CTA, so once the toggle claims column 3 the auto-placement cursor has
+    // passed column 2, and the CTA wraps to a second row instead of sitting
+    // beside it. Naming the row keeps all three on one line.
+    .brandMark {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .toggle {
+      display: flex;
+      grid-column: 3;
+      grid-row: 1;
+      justify-self: end;
+    }
+
+    .ctaSlot {
+      grid-column: 2;
+      grid-row: 1;
+      justify-self: center;
+    }
+
+    .panelInner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      // Its own value, not --nav-padding: the bar is now 8px so the collapsed
+      // capsule stays tight, but the open panel's content still wants room to
+      // breathe against the glass edge.
+      padding-inline: $space-3;
+      // MUST stay 0. This is the element the 0fr track sizes, and a 0fr track
+      // zeroes only the FREE space — padding is part of the box and survives,
+      // so 24px here left the collapsed panel permanently 24px tall. Any top
+      // spacing for the open panel goes on .list instead, which the track is
+      // free to collapse along with everything else.
+      padding-block-start: 0;
+    }
+
+    .list {
+      flex-direction: column;
+      align-items: center;
+      // Tighter than the old $space-4 — the links read as one block rather
+      // than a loose list.
+      gap: $space-2;
+      // The panel's top spacing lives here, not on .panelInner — see the note
+      // there about the 0fr track.
+      padding-block-start: $space-6;
+    }
+
+    .link {
+      font-size: var(--font-size-lg);
+    }
+
+    // Pinned close to the bar, after a deliberate gap from the links.
+    .panelFooter {
+      margin-block-start: $space-12;
+      margin-block-end: $space-2;
+    }
+
+    // Each link fades and rises. This block is the CLOSING state, because a
+    // transition's delay is read from the state being transitioned TO — so the
+    // reverse stagger lives here and the forward one on [data-open] below.
+    //
+    // Closing runs bottom-up, the mirror of opening: the footer leaves first
+    // (--link-index falls back to 4, so 4 - 4 = 0), then About, Developers,
+    // Designers, Solutions. The panel itself then waits for this to be 90%
+    // done before collapsing — see the .panel rule below.
+    .item,
+    .panelFooter {
+      opacity: 0;
+      transform: translateY(var(--nav-link-rise));
+      transition-property: opacity, transform;
+      transition-duration: var(--nav-item-duration-out);
+      transition-timing-function: var(--nav-expand-ease);
+      transition-delay: calc((4 - var(--link-index, 4)) * var(--nav-stagger-step-out));
+    }
+
+    .nav[data-open] .item,
+    .nav[data-open] .panelFooter {
+      opacity: 1;
+      transform: none;
+      // Long and on the panel's own curve, so a link arriving does not read as
+      // a separate, faster event layered on top of the expansion. Restated
+      // here because the base rule now carries the quicker closing duration.
+      transition-duration: var(--nav-item-duration);
+      // Hold until the expansion is 90% done, then one step per link.
+      transition-delay: calc(
+        var(--nav-expand-duration) * 0.9 + var(--link-index, 4) * var(--nav-stagger-step)
+      );
+    }
+  }
+
+  // There is deliberately NO tablet band. Everything from 0 to 1023px is the
+  // one capsule above: a single max width that shrinks responsively beneath
+  // itself. The previous md..lg block gave tablets their own layout — a
+  // percentage-inset capsule that animated out to full width, links in a
+  // horizontal row, footer hidden — which is exactly the per-breakpoint
+  // divergence this replaces. A 400px capsule has no room for a link row, and
+  // the footer belongs wherever the vertical menu is, which is now everywhere.
+
+  // --- Reduced motion -------------------------------------------------------
+
+  // The global reset zeroes transition-duration but NOT transition-delay, so
+  // without this the panel would snap open instantly and the links would then
+  // pop in one by one over the following half second — worse than either
+  // extreme. Zero the delays so open/close is a single state change.
+  @media (prefers-reduced-motion: reduce) {
+    // Every delay, in BOTH directions — the open stagger, the reverse close
+    // stagger, and the collapse hold. Durations are already ~0 via the reset,
+    // so any surviving delay would strand the panel open for the best part of
+    // a second after the contents had gone, with nothing animating.
+    .nav[data-open] .item,
+    .nav[data-open] .panelFooter,
+    .item,
+    .panelFooter,
+    .panel {
+      transition-delay: 0s;
+    }
+
+    // The burger's middle line holds back so the outer two cross a clear
+    // field. With durations zeroed that delay would strand it visible for
+    // 160ms after the X had already formed.
+    .burgerMid {
+      transition-delay: 0s;
+    }
+
+    .item,
+    .panelFooter {
+      // A 0ms rise reads as a glitch; let opacity alone carry the state.
+      transform: none;
+    }
+
+    // The bar disappears rather than sliding away. The reset zeroes the
+    // durations, so the slide would be an instant jump — and the delayed
+    // `visibility` would otherwise still wait out its full delay, leaving a
+    // hidden-but-present bar for a quarter second.
+    .nav[data-at-footer] {
+      transform: none;
+      transition-delay: 0s;
     }
   }
 }
