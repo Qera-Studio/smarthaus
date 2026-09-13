@@ -84,6 +84,26 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
       <div ref={sentinelRef} className={styles.sentinel} aria-hidden="true" />
 
       <header className={styles.nav} data-open={open || undefined} data-stuck={stuck || undefined}>
+        {/*
+          The panel comes FIRST so that below lg — where <header> is a flex
+          column pinned to the bottom of the screen — it grows upward while the
+          bar stays welded to the bottom edge. This is source order doing the
+          work; an `order` property cannot, and previously did not.
+
+          `inert` when closed, not just visually clipped: overflow alone would
+          leave the links tabbable and in the accessibility tree, giving
+          keyboard and screen-reader users phantom stops on a hidden menu.
+          React needs `undefined` rather than `false` to drop the attribute.
+        */}
+        <div id={panelId} className={styles.panel} inert={(!isDesktop && !open) || undefined}>
+          <div className={styles.panelInner}>
+            <nav className={styles.panelLinks} aria-label="Primary">
+              {links}
+            </nav>
+            <div className={styles.panelFooter}>{footer}</div>
+          </div>
+        </div>
+
         <div className={styles.bar}>
           <span className={styles.brandMark}>{brandMark}</span>
           <span className={styles.brandFull}>{brandFull}</span>
@@ -106,21 +126,6 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
           </button>
 
           <span className={styles.ctaSlot}>{cta}</span>
-        </div>
-
-        {/*
-          `inert` when closed, not just visually clipped: overflow alone would
-          leave the links tabbable and in the accessibility tree, giving
-          keyboard and screen-reader users phantom stops on a hidden menu.
-          React needs `undefined` rather than `false` to drop the attribute.
-        */}
-        <div id={panelId} className={styles.panel} inert={(!isDesktop && !open) || undefined}>
-          <div className={styles.panelInner}>
-            <nav className={styles.panelLinks} aria-label="Primary">
-              {links}
-            </nav>
-            <div className={styles.panelFooter}>{footer}</div>
-          </div>
         </div>
       </header>
     </>

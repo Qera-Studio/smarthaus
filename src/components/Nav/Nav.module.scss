@@ -19,17 +19,24 @@
     // links no longer share a size and a future tweak to one must not move the
     // other.
     --nav-cta-size: 12px;
-    // --- Inversion surface ---------------------------------------------------
-    // Every colour in the nav resolves through these four, so opening the menu
-    // flips the whole component by reassigning them in ONE place rather than
-    // restating a colour on each descendant. Closed = dark ink on the light
-    // page; open = light ink on the dark glass.
+    // One notch above the links, so the CTA reads as the primary action even
+    // at the smaller size. Its own token so a change to --nav-link-weight
+    // cannot silently drag it along.
+    --nav-cta-weight: #{$font-weight-semibold};
+    // --- Colour surface ------------------------------------------------------
+    // Every colour in the nav resolves through these four rather than being
+    // restated on each descendant. The glass is a light mid-tone, so the ink
+    // stays dark on every surface and in every state — see _variables.scss for
+    // why light ink is not an option on this tint.
     --nav-ink: var(--color-text-primary); // brand mark, burger
     --nav-cta-bg: var(--color-bg-inverse-strong);
     --nav-cta-ink: var(--color-text-inverse);
     --nav-link-ink: var(--color-text-primary);
     // How long the panel takes to open. The link stagger is derived from it.
-    --nav-expand-duration: #{$duration-slower};
+    // Off the duration scale deliberately: the scale stops at 600ms and this
+    // is the one surface that wants longer, so a bespoke value beats adding a
+    // $duration-slowest that nothing else would ever use.
+    --nav-expand-duration: 850ms;
     // The expansion has its OWN ease, not the global --ease-out. $ease-out is
     // cubic-bezier(0.22, 1, ...), which covers ~90% of its distance in the
     // first third — fine for a 160ms colour fade, but on a panel travelling
@@ -38,7 +45,7 @@
     // settles without bouncing the glass edge.
     --nav-expand-ease: cubic-bezier(0.32, 0.72, 0, 1);
     // Gap between consecutive links fading in.
-    --nav-stagger-step: #{$duration-instant};
+    --nav-stagger-step: #{$duration-fast};
     // How far each link travels as it fades in.
     --nav-link-rise: #{$space-3};
     // Tablet only: how far the collapsed glass capsule is inset from each
@@ -50,16 +57,6 @@
     // as well, so it cannot live on this component.
 
     color: var(--nav-ink);
-  }
-
-  // Open: the whole component inverts. One rule, four tokens — every
-  // descendant already reads its colour from these, so nothing else changes.
-  // Specificity 0,2,0, well inside the 0,3,0 ceiling.
-  .nav[data-open] {
-    --nav-ink: #{$brown-100};
-    --nav-cta-bg: #{$brown-100};
-    --nav-cta-ink: #{$brown-900};
-    --nav-link-ink: #{$brown-100};
   }
 
   // --- The persistent row: brand, toggle, CTA -------------------------------
@@ -77,9 +74,6 @@
     display: flex;
     align-items: center;
     color: var(--nav-ink);
-    transition-property: color;
-    transition-duration: var(--duration-normal);
-    transition-timing-function: var(--ease-out);
 
     @include focus-ring;
 
@@ -147,9 +141,6 @@
     line-height: $line-height-normal;
     color: var(--nav-link-ink);
     text-decoration: none;
-    transition-property: color;
-    transition-duration: var(--duration-normal);
-    transition-timing-function: var(--ease-out);
 
     // Hover feedback is the character roll (see RollingText), not a fade.
     @include focus-ring;
@@ -163,17 +154,17 @@
     padding-block: $space-1;
     padding-inline: $space-3;
     font-size: var(--nav-cta-size);
-    font-weight: var(--nav-link-weight);
+    font-weight: var(--nav-cta-weight);
     line-height: $line-height-normal;
-    // Closed: brown-950 ground, brown-100 text (16.6:1). Open: inverted to a
-    // brown-100 ground with brown-900 text (15.6:1). Both clear AA by miles.
+    // brown-950 ground with brown-100 text: 16.6:1 as text, and the box itself
+    // is 12.5:1 against the glass, so it holds as a shape too.
     background-color: var(--nav-cta-bg);
     color: var(--nav-cta-ink);
     border-radius: $radius-sm;
     text-decoration: none;
     white-space: nowrap;
-    transition-property: opacity, background-color, color;
-    transition-duration: var(--duration-fast), var(--duration-normal), var(--duration-normal);
+    transition-property: opacity;
+    transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out);
 
     @include focus-ring;
@@ -193,9 +184,6 @@
     background: none;
     border: 0;
     color: var(--nav-ink);
-    transition-property: color;
-    transition-duration: var(--duration-normal);
-    transition-timing-function: var(--ease-out);
 
     @include focus-ring;
   }
@@ -239,8 +227,14 @@
     transition-delay: 0ms;
   }
 
+  // ROTATE FIRST, THEN TRANSLATE. Transform functions apply right-to-left in
+  // the element's own frame, so `translateY() rotate()` does the move in the
+  // ALREADY-ROTATED frame and slides each arm along its own diagonal: the two
+  // arms then cross off-centre and the X reads short and lopsided. Measured on
+  // the broken form, the arm centres sat 2.3px apart and each arm's box was
+  // 11.3px inside a 24px icon; this order puts both centres on the same point.
   .nav[data-open] .burgerTop {
-    transform: translateY(#{$space-1}) rotate(45deg);
+    transform: rotate(45deg) translateY(#{$space-1});
   }
 
   .nav[data-open] .burgerMid {
@@ -248,7 +242,7 @@
   }
 
   .nav[data-open] .burgerBot {
-    transform: translateY(-#{$space-1}) rotate(-45deg);
+    transform: rotate(-45deg) translateY(-#{$space-1});
   }
 
   // --- Panel footer: wordmark + parent company ------------------------------
@@ -304,11 +298,13 @@
       display: contents;
     }
 
-    // The panel follows the bar in source order, so every slot needs an
-    // explicit column — otherwise the panel lands in a fourth track after the
-    // CTA instead of between brand and CTA.
+    // Every slot pins BOTH its column and its row. Source order here is panel,
+    // brand, toggle, CTA — nothing like the visual order — so auto-placement
+    // would scatter them across extra rows and tracks. Pinning all three makes
+    // this band immune to the source order the mobile band needs.
     .brandFull {
       grid-column: 1;
+      grid-row: 1;
     }
 
     // Not a disclosure here — it is simply the centre column, always open.
@@ -334,16 +330,11 @@
     }
 
     // Once the sentinel at the top of the page scrolls away, the nav picks up
-    // the glass so it stays legible over whatever is passing beneath it. The
-    // glass is dark, so the contents invert with it — same four tokens the
-    // mobile open state uses, so the two states cannot drift apart.
+    // the glass so it stays legible over whatever is passing beneath it. No
+    // colour change: the glass is a light mid-tone and the ink that works on
+    // the page works on it too (11.4:1).
     .nav[data-stuck] {
       @include glass(0);
-
-      --nav-ink: #{$brown-100};
-      --nav-cta-bg: #{$brown-100};
-      --nav-cta-ink: #{$brown-900};
-      --nav-link-ink: #{$brown-100};
     }
   }
 
@@ -351,6 +342,10 @@
 
   @include bp-max($bp-lg) {
     .nav {
+      // 12px here, not on the token at :root — the desktop band reads
+      // --nav-padding too, and this override must not reach it.
+      --nav-padding: #{$space-3};
+
       position: fixed;
       // Floats clear of all three edges rather than spanning the screen. The
       // bottom inset stacks on top of the home-indicator inset so the glass
@@ -361,17 +356,24 @@
       // Keep paint and layout local — the panel animates margin and rows, and
       // nothing outside the nav should be asked to re-layout for it.
       contain: layout paint;
+      // A real flex column, so the panel and bar are flex ITEMS. Previously
+      // this was a block box and `.panel { order: -1 }` silently did nothing —
+      // order only applies to flex/grid children — which left the panel after
+      // the bar in flow, so opening the menu pushed the bar 249px up the
+      // screen. Source order now puts the panel first (see NavShell.tsx) and
+      // the bar last, and because the box is pinned by its BOTTOM edge, only
+      // its top edge travels. The bar does not move at all.
+      display: flex;
+      flex-direction: column;
+      border-radius: $radius-md;
 
-      @include glass;
+      @include glass($radius-md);
     }
 
     .bar {
       // Brand and toggle and CTA; the wordmark is dropped for the mark.
       grid-template-columns: auto 1fr auto;
       padding: var(--nav-padding);
-      // The bar is the row that stays put; the panel grows above it. Its own
-      // padding is symmetric now that the glass no longer touches the screen
-      // edge, so the home-indicator allowance moved to the nav's inset above.
     }
 
     .brandFull {
@@ -383,18 +385,17 @@
       justify-self: center;
     }
 
-    .panel {
-      // Panel sits above the bar in source order so it grows upward, and Tab
-      // reaches the links straight after the toggle.
-      order: -1;
-    }
-
     .panelInner {
       display: flex;
       flex-direction: column;
       align-items: center;
       padding-inline: var(--nav-padding);
-      padding-block-start: $space-6;
+      // MUST stay 0. This is the element the 0fr track sizes, and a 0fr track
+      // zeroes only the FREE space — padding is part of the box and survives,
+      // so 24px here left the collapsed panel permanently 24px tall. Any top
+      // spacing for the open panel goes on .list instead, which the track is
+      // free to collapse along with everything else.
+      padding-block-start: 0;
     }
 
     .list {
@@ -403,6 +404,9 @@
       // Tighter than the old $space-4 — the links read as one block rather
       // than a loose list.
       gap: $space-2;
+      // The panel's top spacing lives here, not on .panelInner — see the note
+      // there about the 0fr track.
+      padding-block-start: $space-6;
     }
 
     .link {
@@ -421,8 +425,10 @@
       opacity: 0;
       transform: translateY(var(--nav-link-rise));
       transition-property: opacity, transform;
-      transition-duration: var(--duration-normal);
-      transition-timing-function: var(--ease-out);
+      // Long and on the panel's own curve, so a link arriving does not read as
+      // a separate, faster event layered on top of the expansion.
+      transition-duration: var(--duration-slower);
+      transition-timing-function: var(--nav-expand-ease);
       // Closing: everything leaves together, ahead of the panel collapsing.
       transition-delay: 0ms;
     }
