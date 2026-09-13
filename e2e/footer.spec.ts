@@ -10,6 +10,23 @@ import { test, expect } from "@playwright/test";
  *      without creating horizontal overflow.
  */
 
+/**
+ * These are viewport-geometry tests: they drive the window to specific sizes
+ * and assert the resulting layout. On a mobile device profile that is not
+ * meaningful — Playwright's mobile contexts carry their own isMobile and
+ * deviceScaleFactor, so a setViewportSize to 1800px does not produce an
+ * 1800px layout viewport (it measured 1784px), and the emulated device is
+ * being asked to behave like a desktop window it will never be. The
+ * behaviours under test are not device-specific, so they run once.
+ *
+ * The mobile profiles still cover the footer through smoke.spec.ts, and
+ * through the mobile-specific case below, which sets its own phone viewport.
+ */
+test.skip(
+  ({ isMobile }) => Boolean(isMobile),
+  "viewport-geometry assertions; runs on the desktop project only",
+);
+
 /** Read the three children of the footer: top, spacer, bottom. */
 async function measure(page: import("@playwright/test").Page, width: number, height: number) {
   await page.setViewportSize({ width, height });
