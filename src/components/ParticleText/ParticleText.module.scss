@@ -13,6 +13,23 @@
     place-items: center;
     inline-size: 100%;
     block-size: var(--particle-stage-block-size);
+    // Deliberately NOT clipped. The canvas hangs --particle-canvas-bleed
+    // outside this box on every side (see .canvas) and must be allowed to
+    // paint there — clipping here is what the bleed exists to avoid.
+    //
+    // `overflow: clip` with `overflow-clip-margin: <bleed>` looks like the
+    // exact tool for this and was tried first. It is not usable: WebKit
+    // supports `overflow: clip` but NOT `overflow-clip-margin` (measured:
+    // CSS.supports reports false on iOS, true in Chromium). The margin would
+    // be dropped and the clip would still apply, so the stage would clip flush
+    // at its own edge — putting the rectangle back, and more visibly than
+    // before, on the one platform this bug was reported from.
+    //
+    // Page-level horizontal overflow is avoided instead by clamping the INLINE
+    // bleed to the stage's own side gutter in `build`, so the widened canvas
+    // never reaches past the viewport and there is nothing to clip. The block
+    // axis bleeds freely — vertical overflow from an absolutely-positioned box
+    // costs nothing here.
     // Makes cqw units inside resolve against this box, which is what lets the
     // static fallback size itself to fit its longest line (see .fallback).
     container-type: inline-size;
@@ -23,13 +40,54 @@
   }
 
   .canvas {
+    // The canvas is deliberately LARGER than the stage, hanging outside it on
+    // every side by --particle-canvas-bleed.
+    //
+    // A particle thrown past the stage edge used to be clipped by the bitmap
+    // boundary, and the resulting straight cut made the canvas rectangle
+    // visible on the page — most obviously on a phone, where one fast flick
+    // throws the entire field at once. The extra surface means there is always
+    // bitmap wherever a particle can reach, so there is no edge to see.
+    //
+    // The value is SET BY THE COMPONENT on .stage (see BLEED in
+    // ParticleText.tsx, which derives it from MAX_OFFSET, the cap on how far a
+    // particle may travel). It is not duplicated here: the bleed and the travel
+    // cap are the same measurement, and a literal in this file would silently
+    // start clipping again the first time the cage is retuned.
+    //
+    // Note there is deliberately no local fallback declaration on THIS rule. A
+    // custom property set on the element itself beats one inherited from the
+    // parent, so `--particle-canvas-bleed: 0px` here silently shadowed the
+    // component's value and both insets resolved to zero — the canvas sat
+    // flush with the stage and clipped exactly as before. The var() fallback
+    // below covers the pre-mount frame instead.
     position: absolute;
-    // Logical inset rather than top/left, for the RTL work V1 is preparing for.
-    inset-block-start: 0;
-    inset-inline-start: 0;
-    // Sized in JS to match the device pixel ratio; these are the CSS-px box.
-    inline-size: 100%;
-    block-size: 100%;
+    // Negative insets, so the larger canvas stays CENTRED on the stage and
+    // grows outward in both directions instead of pushing the lockup off
+    // centre. The stage keeps its own size, so no layout moves and this cannot
+    // cause a shift — which matters, since this is the largest element on the
+    // page and the project's CLS budget is 0.05.
+    //
+    // Logical insets rather than top/left, for the RTL work V1 is preparing
+    // for.
+    // The inline value is clamped to the stage's side gutter by the component
+    // (see `build`), so it is published separately rather than reusing the
+    // block value — they are genuinely different numbers whenever the stage is
+    // close to the viewport width.
+    inset-block-start: calc(-1 * var(--particle-canvas-bleed, 0px));
+    inset-inline-start: calc(-1 * var(--particle-canvas-bleed-inline, 0px));
+    // Sized in JS to match the device pixel ratio; those inline styles are the
+    // CSS-px box (stage + 2 * bleed in each axis), so no width or height is
+    // declared here — a percentage would fight the JS value.
+    //
+    // The reset's `max-inline-size: 100%` has to be lifted, though. It caps
+    // this element at the stage's width, which silently clamped the horizontal
+    // bleed away while the unconstrained block axis grew as intended: measured
+    // 294x372 on a 294x180 stage, so the left and right edges still clipped
+    // and only the top and bottom were fixed. This is the deliberate exception
+    // to that reset — the canvas is MEANT to be wider than its container.
+    max-inline-size: none;
+    //
     // The canvas is decorative and sits over the fallback text. Without this it
     // would swallow the cursor — and since the page's custom cursor dot is the
     // thing the particles react to, the dot must stay visible over it.

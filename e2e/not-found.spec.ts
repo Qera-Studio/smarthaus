@@ -243,7 +243,25 @@ test.describe("404 particle physics on touch", () => {
     Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 
   /**
-   * Drag a synthetic finger across the canvas.
+   * The STAGE box — where the glyphs actually are.
+   *
+   * Not the canvas box. The canvas is deliberately larger than the stage and
+   * hangs outside it, so that it never clips a particle mid-flight; its own
+   * vertical centre therefore sits well below the type. Dragging across the
+   * canvas centre passed under the lockup and barely disturbed it (the shift
+   * measured 10px against the 66px a drag through the glyphs produces), which
+   * is a measurement artifact of the bleed rather than a physics change.
+   */
+  const stageBox = async (page: import("@playwright/test").Page) => {
+    const box = await page.locator("canvas").evaluate((c) => {
+      const r = (c.parentElement as HTMLElement).getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width, height: r.height };
+    });
+    return box;
+  };
+
+  /**
+   * Drag a synthetic finger across the given box.
    *
    * PointerEvents are dispatched directly rather than driven through
    * `page.touchscreen`, because the component listens on `window` for a
@@ -287,7 +305,7 @@ test.describe("404 particle physics on touch", () => {
     await page.locator("canvas").waitFor({ state: "attached" });
     await page.waitForTimeout(1200);
 
-    const box = (await page.locator("canvas").boundingBox())!;
+    const box = await stageBox(page);
     const atRest = await centroid(page);
 
     await drag(page, box, { down: true });
@@ -318,13 +336,67 @@ test.describe("404 particle physics on touch", () => {
     expect(shift(atRest, settled)).toBeLessThan(15);
   });
 
+  test("a hard flick never paints on the canvas edge", async ({ page, isMobile }) => {
+    if (!isMobile) test.skip();
+    await page.goto(MISSING);
+    await page.locator("canvas").waitFor({ state: "attached" });
+    await page.waitForTimeout(1200);
+
+    // This is the bug the canvas bleed exists to fix. Particles thrown past the
+    // old canvas boundary were clipped by the bitmap, and the resulting straight
+    // cut made the canvas rectangle visible on the page — reported from a phone,
+    // where one fast flick throws the whole field at once.
+    //
+    // Ink touching the outermost row or column of the bitmap IS that clipping:
+    // a particle drawn at the edge has had its disc cut off by the canvas. The
+    // bleed is MAX_OFFSET plus slack, which is the hard cap on how far a
+    // particle may stray, so a correct build cannot reach these pixels however
+    // hard it is flicked.
+    const box = await stageBox(page);
+    for (let pass = 0; pass < 3; pass++) {
+      await drag(page, { ...box, y: box.y + box.height * (0.2 * pass) }, { down: true });
+      await page.evaluate(() =>
+        window.dispatchEvent(
+          new PointerEvent("pointerup", {
+            pointerType: "touch",
+            isPrimary: true,
+            bubbles: true,
+            pointerId: 1,
+          }),
+        ),
+      );
+    }
+
+    const edge = await page.evaluate(() => {
+      const c = document.querySelector("canvas") as HTMLCanvasElement;
+      const { width: w, height: h } = c;
+      const d = c.getContext("2d")!.getImageData(0, 0, w, h).data;
+      const lit = (x: number, y: number) => d[(y * w + x) * 4 + 3]! > 10;
+      let top = 0;
+      let bottom = 0;
+      let left = 0;
+      let right = 0;
+      for (let x = 0; x < w; x++) {
+        if (lit(x, 0)) top++;
+        if (lit(x, h - 1)) bottom++;
+      }
+      for (let y = 0; y < h; y++) {
+        if (lit(0, y)) left++;
+        if (lit(w - 1, y)) right++;
+      }
+      return { top, bottom, left, right };
+    });
+
+    expect(edge).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+  });
+
   test("pointermove with no finger down does not disturb the field", async ({ page, isMobile }) => {
     if (!isMobile) test.skip();
     await page.goto(MISSING);
     await page.locator("canvas").waitFor({ state: "attached" });
     await page.waitForTimeout(1200);
 
-    const box = (await page.locator("canvas").boundingBox())!;
+    const box = await stageBox(page);
     const before = await centroid(page);
 
     // The same move stream, without the pointerdown. On touch this is what a
