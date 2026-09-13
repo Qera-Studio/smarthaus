@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   LegalDefTable,
-  LegalNote,
   LegalPage,
   LegalSectionBlock,
   LegalTable,
@@ -28,7 +27,7 @@ import {
 //      the check.
 // ---------------------------------------------------------------------------
 
-const LAST_UPDATED = "Draft — not yet effective";
+const LAST_UPDATED = "Draft, not yet effective";
 const VERSION = "0.1.0-draft";
 
 export const metadata: Metadata = {
@@ -43,19 +42,28 @@ export const metadata: Metadata = {
 };
 
 const ENTITY_ROWS = [
-  { label: "Legal entity", value: <Placeholder>registered legal name</Placeholder> },
+  { label: "Legal entity", value: "Maple Technologies Security Systems LLC" },
   { label: "Trading as", value: "Smarthaus" },
-  { label: "Trade licence number", value: <Placeholder>trade licence no.</Placeholder> },
-  { label: "Licensing authority", value: <Placeholder>licensing authority</Placeholder> },
-  { label: "Registered address", value: <Placeholder>registered address, Dubai, UAE</Placeholder> },
-  { label: "Privacy contact", value: <Placeholder>privacy@smarthaus.ae</Placeholder> },
-  { label: "General contact", value: <Placeholder>hello@smarthaus.ae</Placeholder> },
+  { label: "Trade licence number", value: "897839" },
+  { label: "SIRA licence number", value: "SSP202210037219" },
+  { label: "Licensing authority", value: "Dubai, UAE" },
+  {
+    label: "Registered address",
+    value: "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai",
+  },
+  { label: "Privacy contact", value: "contact@mapletech.ae" },
+  { label: "General contact", value: "contact@mapletech.ae" },
+  { label: "Phone", value: "+971 54 375 5150" },
 ] as const;
 
 const CONTACT_ROWS = [
-  { label: "Privacy and data protection", value: <Placeholder>privacy@smarthaus.ae</Placeholder> },
-  { label: "General enquiries", value: <Placeholder>hello@smarthaus.ae</Placeholder> },
-  { label: "Post", value: <Placeholder>registered address, Dubai, UAE</Placeholder> },
+  { label: "Privacy and data protection", value: "contact@mapletech.ae" },
+  { label: "General enquiries", value: "contact@mapletech.ae" },
+  { label: "Phone", value: "+971 54 375 5150" },
+  {
+    label: "Post",
+    value: "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai",
+  },
 ] as const;
 
 export default function PrivacyPolicy() {
@@ -80,9 +88,9 @@ export default function PrivacyPolicy() {
       {/* 1 */}
       <LegalSectionBlock section={S[0]!}>
         <p>
-          <Placeholder>full legal entity name</Placeholder> is the data controller for the
-          information described in this policy. This means we decide what personal information is
-          collected and why.
+          Maple Technologies Security Systems LLC is the data controller for the information
+          described in this policy. This means we decide what personal information is collected and
+          why.
         </p>
         <LegalDefTable rows={ENTITY_ROWS} caption="Smarthaus entity and contact details" />
         <p>
@@ -165,19 +173,17 @@ export default function PrivacyPolicy() {
           We ask for the minimum needed to respond usefully. Fields that are not required are marked
           optional, and leaving them blank does not stop us replying.
         </p>
-        <LegalNote>
-          <p>
-            <strong>We do not ask for and do not want:</strong> your identity documents, passport or
-            Emirates ID numbers, bank or card details, salary or financial information, or health
-            information. Do not send these through the website. If a project later requires any such
-            document, we will tell you how to provide it securely and why it is needed.
-          </p>
-        </LegalNote>
+        <p>
+          <strong>We do not ask for and do not want:</strong> your identity documents, passport or
+          Emirates ID numbers, bank or card details, salary or financial information, or health
+          information. Do not send these through the website. If a project later requires any such
+          document, we will tell you how to provide it securely and why it is needed.
+        </p>
         <p>
           <strong>If you contact us on WhatsApp,</strong> using a link on this site opens a
           conversation in your own WhatsApp application with a message pre-filled for convenience.
           You choose whether to send it. That conversation is carried by WhatsApp under WhatsApp’s
-          own privacy policy — we receive the message content and your WhatsApp display name and
+          own privacy policy. We receive the message content and your WhatsApp display name and
           number, as in any WhatsApp chat.
         </p>
 
@@ -230,7 +236,7 @@ export default function PrivacyPolicy() {
         </p>
         <p>
           We use a small number of service providers who process information on our instructions.
-          Each one is listed below — we would rather name them than describe them vaguely.
+          Each one is listed below. We would rather name them than describe them vaguely.
         </p>
 
         <h3>Currently in use</h3>
@@ -274,7 +280,7 @@ export default function PrivacyPolicy() {
             <tr>
               <th scope="row">Sanity</th>
               <td>Managing website content</td>
-              <td>Nothing you submit — content only, no enquiry data</td>
+              <td>Nothing you submit: content only, no enquiry data</td>
             </tr>
             <tr>
               <th scope="row">Vercel Web Analytics and Speed Insights</th>
@@ -293,7 +299,7 @@ export default function PrivacyPolicy() {
         <ul>
           <li>
             <strong>Within our group.</strong> Your enquiry may be seen by colleagues at{" "}
-            <Placeholder>parent company name</Placeholder> where they are handling it — for example
+            <Placeholder>parent company name</Placeholder> where they are handling it, for example
             an engineer scoping a site visit.
           </li>
           <li>
@@ -322,8 +328,8 @@ export default function PrivacyPolicy() {
       <LegalSectionBlock section={S[4]!}>
         <p>
           Smarthaus operates in the UAE. Some of our service providers are established outside the
-          UAE, which means your information may be processed outside the country — for example by
-          our hosting provider.
+          UAE, which means your information may be processed outside the country, for example by our
+          hosting provider.
         </p>
         <p>
           Where information leaves the UAE, we rely on the transfer routes the law permits: transfer
@@ -350,7 +356,7 @@ export default function PrivacyPolicy() {
                 <Placeholder>24 months</Placeholder> from last contact
               </td>
               <td>
-                Enquiries in this sector mature slowly — a villa renovation decision can take a year
+                Enquiries in this sector mature slowly: a villa renovation decision can take a year
                 or more, and we would rather know we have spoken before than start cold
               </td>
             </tr>
@@ -372,7 +378,7 @@ export default function PrivacyPolicy() {
             <tr>
               <th scope="row">Server logs</th>
               <td>
-                Per our hosting provider’s schedule — <Placeholder>confirm period</Placeholder>
+                Per our hosting provider’s schedule: <Placeholder>confirm period</Placeholder>
               </td>
               <td>Security and fault diagnosis</td>
             </tr>
@@ -390,14 +396,12 @@ export default function PrivacyPolicy() {
           When a retention period ends, we delete the information or anonymise it so it can no
           longer identify you.
         </p>
-        <LegalNote>
-          <p>
-            <strong>On the conflict between deletion and retention:</strong> if you ask us to delete
-            your information but we are legally required to keep part of it — an invoice, for
-            instance — we will delete what we can, keep only what the law requires, tell you which
-            is which, and delete the remainder when that obligation ends.
-          </p>
-        </LegalNote>
+        <p>
+          <strong>On the conflict between deletion and retention:</strong> if you ask us to delete
+          your information but we are legally required to keep part of it, an invoice, for instance,
+          we will delete what we can, keep only what the law requires, tell you which is which, and
+          delete the remainder when that obligation ends.
+        </p>
       </LegalSectionBlock>
 
       {/* 7 */}
@@ -437,24 +441,23 @@ export default function PrivacyPolicy() {
           </li>
         </ul>
         <p>
-          <strong>How to exercise a right:</strong> email{" "}
-          <Placeholder>privacy@smarthaus.ae</Placeholder> and tell us what you want. We will
-          acknowledge your request and respond within <Placeholder>30 days</Placeholder> of
-          receiving it. If a request is complex and needs longer, we will tell you why and when to
-          expect our response.
+          <strong>How to exercise a right:</strong> email contact@mapletech.ae and tell us what you
+          want. We will acknowledge your request and respond within{" "}
+          <Placeholder>30 days</Placeholder> of receiving it. If a request is complex and needs
+          longer, we will tell you why and when to expect our response.
         </p>
         <p>
           <strong>We will verify who you are first.</strong> Before we hand over or delete personal
           information, we need to be reasonably satisfied you are the person the information is
-          about — otherwise a request channel becomes a way to obtain someone else’s data. We will
+          about. Otherwise a request channel becomes a way to obtain someone else’s data. We will
           ask you to confirm details we already hold, and we will not ask for more identification
           than the request requires.
         </p>
         <p>
           <strong>If you are unhappy with how we have handled your information,</strong> tell us
-          first — most problems are faster to fix directly. Contact{" "}
-          <Placeholder>privacy@smarthaus.ae</Placeholder>, and we will investigate and respond. If
-          you remain dissatisfied, you may complain to the relevant UAE data protection authority.
+          first: most problems are faster to fix directly. Contact contact@mapletech.ae, and we will
+          investigate and respond. If you remain dissatisfied, you may complain to the relevant UAE
+          data protection authority.
         </p>
       </LegalSectionBlock>
 
@@ -482,14 +485,12 @@ export default function PrivacyPolicy() {
             cannot be exposed.
           </li>
         </ul>
-        <LegalNote>
-          <p>
-            <strong>What we will not claim:</strong> no organisation can promise that information
-            transmitted over the internet is completely secure, and we do not make that promise.
-            What we commit to is taking reasonable measures, keeping them under review, and telling
-            you honestly if something goes wrong.
-          </p>
-        </LegalNote>
+        <p>
+          <strong>What we will not claim:</strong> no organisation can promise that information
+          transmitted over the internet is completely secure, and we do not make that promise. What
+          we commit to is taking reasonable measures, keeping them under review, and telling you
+          honestly if something goes wrong.
+        </p>
         <p>
           <strong>If a breach occurs</strong> that is likely to harm you, we will notify the
           relevant authority and affected individuals as the law requires, tell you what happened

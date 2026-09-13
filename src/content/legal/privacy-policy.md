@@ -73,17 +73,18 @@ We have written this to be read, not to be impenetrable. If anything here is unc
 
 ## 1. Who is responsible for your information
 
-[PLACEHOLDER: full legal entity name, e.g. "Maple Technologies LLC, trading as Smarthaus"] is the data controller for the information described in this policy. This means we decide what personal information is collected and why.
+Maple Technologies Security Systems LLC is the data controller for the information described in this policy. This means we decide what personal information is collected and why.
 
-|                          |                                                                 |
-| ------------------------ | --------------------------------------------------------------- |
-| **Legal entity**         | [PLACEHOLDER: registered legal name]                            |
-| **Trading as**           | Smarthaus                                                       |
-| **Trade licence number** | [PLACEHOLDER: trade licence no.]                                |
-| **Licensing authority**  | [PLACEHOLDER: e.g. Dubai Department of Economy and Tourism]     |
-| **Registered address**   | [PLACEHOLDER: full registered address, Dubai, UAE]              |
-| **Privacy contact**      | [PLACEHOLDER: privacy@smarthaus.ae — must be a monitored inbox] |
-| **General contact**      | [PLACEHOLDER: hello@smarthaus.ae]                               |
+|                          |                                                                           |
+| ------------------------ | ------------------------------------------------------------------------- |
+| **Legal entity**         | Maple Technologies Security Systems LLC                                   |
+| **Trading as**           | Smarthaus                                                                 |
+| **Trade licence number** | 897839                                                                    |
+| **SIRA licence number**  | SSP202210037219                                                           |
+| **Licensing authority**  | Dubai, UAE                                                                |
+| **Registered address**   | The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai |
+| **Privacy contact**      | contact@mapletech.ae                                                      |
+| **General contact**      | contact@mapletech.ae                                                      |
 
 Smarthaus is a sub-brand of [PLACEHOLDER: confirm the exact corporate relationship — parent company name and whether the parent or the sub-brand is the contracting entity]. Where information is shared within the group, it is covered by section 4.
 
@@ -259,11 +260,11 @@ You have the following rights over your personal information. Exercising them is
 - **Ask for it in a portable form.** Receive the information you gave us in a structured, commonly used, machine-readable format.
 - **Stop marketing.** Opt out of marketing at any time, by the unsubscribe link in any marketing email or by contacting us. We act on this promptly and permanently.
 
-**How to exercise a right:** email [PLACEHOLDER: privacy@smarthaus.ae] and tell us what you want. We will acknowledge your request and respond within [PLACEHOLDER: proposed 30 days] of receiving it. If a request is complex and needs longer, we will tell you why and when to expect our response.
+**How to exercise a right:** email contact@mapletech.ae and tell us what you want. We will acknowledge your request and respond within [PLACEHOLDER: proposed 30 days] of receiving it. If a request is complex and needs longer, we will tell you why and when to expect our response.
 
 **We will verify who you are first.** Before we hand over or delete personal information, we need to be reasonably satisfied you are the person the information is about — otherwise a request channel becomes a way to obtain someone else's data. We will ask you to confirm details we already hold, and we will not ask for more identification than the request requires.
 
-**If you are unhappy with how we have handled your information,** tell us first — most problems are faster to fix directly. Contact [PLACEHOLDER: privacy@smarthaus.ae], and we will investigate and respond. If you remain dissatisfied, you may complain to the UAE Data Office.
+**If you are unhappy with how we have handled your information,** tell us first — most problems are faster to fix directly. Contact contact@mapletech.ae, and we will investigate and respond. If you remain dissatisfied, you may complain to the UAE Data Office.
 
 <!-- COUNSEL REVIEW POINT: the 30-day response window is a proposal drawn from
      common practice, NOT from the published federal PDPL executive regulations —
@@ -335,11 +336,11 @@ Where a change materially affects how we handle information we already hold abou
 
 ## 12. Contact
 
-|                                 |                                                    |
-| ------------------------------- | -------------------------------------------------- |
-| **Privacy and data protection** | [PLACEHOLDER: privacy@smarthaus.ae]                |
-| **General enquiries**           | [PLACEHOLDER: hello@smarthaus.ae]                  |
-| **Post**                        | [PLACEHOLDER: full registered address, Dubai, UAE] |
+|                                 |                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| **Privacy and data protection** | contact@mapletech.ae                                                      |
+| **General enquiries**           | contact@mapletech.ae                                                      |
+| **Post**                        | The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai |
 
 ---
 
@@ -350,10 +351,27 @@ PLACEHOLDER REGISTER — clear every row before publication
 
 IDENTITY
   [ ] Registered legal entity name (and whether parent or sub-brand contracts)
-  [ ] Trade licence number
+  [x] Trade licence number — 897839
+  [x] SIRA licence number — SSP202210037219
   [ ] Licensing authority — THIS ALSO SETTLES THE REGIME QUESTION (federal vs DIFC/ADGM)
   [ ] Registered address
   [ ] Exact corporate relationship to the parent company
+
+REGULATED SECTOR — NEW, TRIGGERED BY THE SIRA LICENCE
+  A SIRA licence means Smarthaus is regulated by Dubai's Security Industry
+  Regulatory Agency for security systems work (CCTV, access control, alarms).
+  Legal System §0 makes the regulated-sector check a (counsel) item, and says
+  sector rules stack ON TOP OF privacy law. Consequences to work through with
+  counsel before publication:
+  [ ] Do SIRA rules impose obligations on CCTV/surveillance footage that this
+      policy must describe? Footage of identifiable people is personal data, and
+      §2 of this policy currently disclaims post-handover systems entirely —
+      confirm that disclaimer is accurate for SIRA-regulated installations
+  [ ] Does SIRA require specific consumer-facing disclosures or a published
+      licence number? (The number is now published in §1 either way)
+  [ ] Federal PDPL §3 notes sectoral carve-outs exist — confirm none applies
+  [ ] Confirm whether SIRA imposes its own incident/breach reporting duty,
+      separate from and possibly tighter than the PDPL clock (§8)
 
 CHANNELS (a rights channel must exist and be monitored — Legal System §7)
   [ ] privacy@ inbox — created, monitored, owner named

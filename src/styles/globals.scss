@@ -36,6 +36,21 @@
       auto;
   }
 
+  // Smooth anchor scrolling for the legal pages' table of contents.
+  //
+  // It has to be on <html>: that is the scrolling element, and the property is
+  // read from whatever actually scrolls — setting it on the page container
+  // computes correctly but does nothing (measured: the container read
+  // `smooth` while html read `auto`, and ToC clicks still jumped).
+  //
+  // Scoped by :has() so only these pages get it; the ToC is plain anchor links
+  // that must work without JS, so the smoothing is CSS-only. The
+  // prefers-reduced-motion block in _reset.scss sets
+  // `scroll-behavior: auto !important`, which overrides this.
+  html:has([data-legal-page]) {
+    scroll-behavior: smooth;
+  }
+
   body {
     font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
     font-size: var(--font-size-base);

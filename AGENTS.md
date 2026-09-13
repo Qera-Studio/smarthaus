@@ -359,6 +359,12 @@ If GA4 or Meta Pixel is needed later, it loads behind a consent gate (Legal Syst
 **Only services Maple Technologies has actually delivered may appear as claims, hotspots, or package features.** The capability audit is the ground truth.
 
 - **Confirmed capabilities:** Security systems, access control, audio — these can be claimed
+- **Licences held, and evidenced — these are verifiable facts, not claims:**
+  - **Dubai trade licence: 897839**
+  - **SIRA licence: SSP202210037219** — the Security Industry Regulatory Agency licence for security systems work. This is the strongest credential the brand currently has: it is state-issued, independently checkable, and directly relevant to the security half of the offer. Use it on the About page and wherever James & Emma are looking for evidence that the company is real and regulated
+  - Both numbers are published in the Privacy Policy and Terms identity tables
+  - **The licence evidences security work — it is not a warranty of anything else.** Do not stretch it into a general quality or safety claim, and do not imply SIRA endorses Smarthaus
+  - **Regulated sector consequence:** a SIRA licence puts Smarthaus in a regulated sector, which Legal System §0 makes a `(counsel)` item — sector rules stack on top of privacy law. Open items are tracked in the privacy policy's placeholder register
 - **TIS and Fibaro partnerships are UNCONFIRMED.** No copy, badge, or logo may reference them until formalised. Ask before writing any partner/brand reference
 - The company founding year is a placeholder. Never invent one
 - "Sustainable Tomorrows" and similar unevidenced claims must not appear

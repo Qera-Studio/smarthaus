@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   LegalDefTable,
-  LegalNote,
   LegalPage,
   LegalSectionBlock,
   Placeholder,
@@ -23,7 +22,7 @@ import {
 // for. Do not invent a number here.
 // ---------------------------------------------------------------------------
 
-const LAST_UPDATED = "Draft — not yet effective";
+const LAST_UPDATED = "Draft, not yet effective";
 const VERSION = "0.1.0-draft";
 
 export const metadata: Metadata = {
@@ -38,23 +37,35 @@ export const metadata: Metadata = {
 };
 
 const ENTITY_ROWS = [
-  { label: "Legal entity", value: <Placeholder>registered legal name</Placeholder> },
+  { label: "Legal entity", value: "Maple Technologies Security Systems LLC" },
   { label: "Trading as", value: "Smarthaus" },
-  { label: "Trade licence number", value: <Placeholder>trade licence no.</Placeholder> },
-  { label: "Registered address", value: <Placeholder>registered address, Dubai, UAE</Placeholder> },
-  { label: "Contact", value: <Placeholder>hello@smarthaus.ae</Placeholder> },
+  { label: "Trade licence number", value: "897839" },
+  // SIRA = Dubai's Security Industry Regulatory Agency. Publishing it is a
+  // genuine credential for the security side of the offer, and exactly the kind
+  // of verifiable evidence the James & Emma persona is looking for.
+  { label: "SIRA licence number", value: "SSP202210037219" },
+  {
+    label: "Registered address",
+    value: "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai",
+  },
+  { label: "Contact", value: "contact@mapletech.ae" },
+  { label: "Phone", value: "+971 54 375 5150" },
 ] as const;
 
 const CONTACT_ROWS = [
-  { label: "Email", value: <Placeholder>hello@smarthaus.ae</Placeholder> },
-  { label: "Post", value: <Placeholder>registered address, Dubai, UAE</Placeholder> },
+  { label: "Email", value: "contact@mapletech.ae" },
+  { label: "Phone", value: "+971 54 375 5150" },
+  {
+    label: "Post",
+    value: "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai",
+  },
 ] as const;
 
 export default function TermsAndConditions() {
   return (
     <LegalPage
       title="Terms and Conditions"
-      standfirst="These terms govern your use of this website. They are not the agreement for installing a system in your home — that is a separate written contract."
+      standfirst="These terms govern your use of this website. They are not the agreement for installing a system in your home. That is a separate written contract."
       lastUpdated={LAST_UPDATED}
       version={VERSION}
       sections={S}
@@ -63,20 +74,17 @@ export default function TermsAndConditions() {
         These terms govern your use of the Smarthaus website at smarthaus.ae. Please read them
         before using the site.
       </p>
-      <LegalNote>
-        <p>
-          <strong>What these terms are, in one sentence:</strong> they cover using this website.
-          They are not the agreement for installing a system in your home — that is a separate
-          written contract, and nothing on this website commits either of us to it.
-        </p>
-      </LegalNote>
+      <p>
+        <strong>What these terms are, in one sentence:</strong> they cover using this website. They
+        are not the agreement for installing a system in your home. That is a separate written
+        contract, and nothing on this website commits either of us to it.
+      </p>
 
       {/* 1 */}
       <LegalSectionBlock section={S[0]!}>
         <p>
-          This website is operated by <Placeholder>registered legal entity name</Placeholder>, a
-          company licensed in <Placeholder>licensing authority and jurisdiction</Placeholder>,
-          trading as Smarthaus.
+          This website is operated by Maple Technologies Security Systems LLC, a company licensed in
+          Dubai, UAE, trading as Smarthaus.
         </p>
         <LegalDefTable rows={ENTITY_ROWS} caption="Smarthaus entity and contact details" />
         <p>
@@ -92,9 +100,9 @@ export default function TermsAndConditions() {
           the site.
         </p>
         <p>
-          If you are using the site on behalf of a company, practice, or other organisation — for
-          example as an interior designer or a developer enquiring for a client — you confirm you
-          are authorised to accept these terms on its behalf, and “you” includes that organisation.
+          If you are using the site on behalf of a company, practice, or other organisation, for
+          example as an interior designer or a developer enquiring for a client, you confirm you are
+          authorised to accept these terms on its behalf, and “you” includes that organisation.
         </p>
         <p>You must be at least 18 years old to submit an enquiry through this site.</p>
       </LegalSectionBlock>
@@ -117,7 +125,7 @@ export default function TermsAndConditions() {
         <p>
           You may use this site to learn about Smarthaus, view our work, and contact us. You may
           read, print, and share pages for your own use or for your organisation’s genuine
-          assessment of our services — including sharing them with your own client.
+          assessment of our services, including sharing them with your own client.
         </p>
         <p>You agree not to:</p>
         <ul>
@@ -152,16 +160,14 @@ export default function TermsAndConditions() {
 
       {/* 5 — the load-bearing clause */}
       <LegalSectionBlock section={S[4]!}>
-        <LegalNote>
-          <p>
-            <strong>
-              Nothing on this website is an offer to sell, a quotation, or a commitment to supply at
-              any particular price or on any particular timescale.
-            </strong>{" "}
-            Prices, indicative costs, package descriptions, timelines, and capability descriptions
-            are illustrative and may change.
-          </p>
-        </LegalNote>
+        <p>
+          <strong>
+            Nothing on this website is an offer to sell, a quotation, or a commitment to supply at
+            any particular price or on any particular timescale.
+          </strong>{" "}
+          Prices, indicative costs, package descriptions, timelines, and capability descriptions are
+          illustrative and may change.
+        </p>
         <p>A binding agreement between us comes into existence only when:</p>
         <ol>
           <li>we have discussed your project and, where relevant, surveyed the property;</li>
@@ -186,9 +192,9 @@ export default function TermsAndConditions() {
         </p>
         <p>
           We aim to respond to every genuine enquiry. We cannot guarantee a response time, and we
-          may decline an enquiry — for example where a project is outside the areas we serve,
-          outside our technical scope, or outside our current capacity. We are not obliged to give a
-          reason, though we usually will.
+          may decline an enquiry, for example where a project is outside the areas we serve, outside
+          our technical scope, or outside our current capacity. We are not obliged to give a reason,
+          though we usually will.
         </p>
         <p>
           An enquiry is not a booking. A site visit is arranged by agreement between us, and
@@ -204,8 +210,8 @@ export default function TermsAndConditions() {
       <LegalSectionBlock section={S[6]!}>
         <h3>What we own</h3>
         <p>
-          All content on this website — text, photographs, renders, animations, diagrams,
-          illustrations, the Smarthaus name and logo, the site’s design and code — is owned by us or
+          All content on this website, text, photographs, renders, animations, diagrams,
+          illustrations, the Smarthaus name and logo, the site’s design and code, is owned by us or
           licensed to us, and is protected by copyright, trademark, and other intellectual property
           law.
         </p>
@@ -215,7 +221,7 @@ export default function TermsAndConditions() {
         </p>
         <p>
           The Smarthaus name and logo are our trademarks. You may not use them without our written
-          permission, except to refer to us factually and accurately — for example an interior
+          permission, except to refer to us factually and accurately, for example an interior
           designer describing us as a specialist they work with.
         </p>
 
@@ -287,7 +293,7 @@ export default function TermsAndConditions() {
       {/* 9 */}
       <LegalSectionBlock section={S[8]!}>
         <p>
-          This site may link to websites we do not control — a manufacturer’s product page, for
+          This site may link to websites we do not control, a manufacturer’s product page, for
           instance.
         </p>
         <p>
@@ -321,16 +327,14 @@ export default function TermsAndConditions() {
           </li>
           <li>
             Where liability arising from your use of this website cannot be excluded, it is limited
-            to <Placeholder>figure and currency — counsel to advise</Placeholder>.
+            to <Placeholder>figure and currency: counsel to advise</Placeholder>.
           </li>
         </ul>
-        <LegalNote>
-          <p>
-            <strong>These limits apply to your use of this website only.</strong> Our liability in
-            relation to an installation, a supply of goods, or services we are engaged to perform is
-            governed by the signed contract for that project, not by this section.
-          </p>
-        </LegalNote>
+        <p>
+          <strong>These limits apply to your use of this website only.</strong> Our liability in
+          relation to an installation, a supply of goods, or services we are engaged to perform is
+          governed by the signed contract for that project, not by this section.
+        </p>
       </LegalSectionBlock>
 
       {/* 11 */}
@@ -388,7 +392,7 @@ export default function TermsAndConditions() {
           the Emirate of Dubai.
         </p>
         <p>
-          The courts of <Placeholder>forum — counsel to confirm</Placeholder> have jurisdiction over
+          The courts of <Placeholder>forum: counsel to confirm</Placeholder> have jurisdiction over
           any dispute arising out of or in connection with these terms or your use of this website.
         </p>
       </LegalSectionBlock>

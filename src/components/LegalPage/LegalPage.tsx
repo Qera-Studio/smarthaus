@@ -34,31 +34,40 @@ export function LegalPage({
   children,
 }: LegalPageProps) {
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{title}</h1>
-        <p className={styles.standfirst}>{standfirst}</p>
-        <dl className={styles.meta}>
-          <div className={styles.metaPair}>
-            <dt className={styles.metaLabel}>Last updated</dt>
-            <dd className={styles.metaValue}>{lastUpdated}</dd>
-          </div>
-          <div className={styles.metaPair}>
-            <dt className={styles.metaLabel}>Version</dt>
-            <dd className={styles.metaValue}>{version}</dd>
-          </div>
-        </dl>
-      </header>
-
+    // data-legal-page is the hook globals.scss uses to turn on smooth
+    // scrolling for these pages only. It has to be a plain attribute, not the
+    // CSS Module class, because that class name is hashed at build time and a
+    // global stylesheet cannot select it.
+    <div className={styles.page} data-legal-page>
       <div className={styles.layout}>
         {/*
-          The rail is a <div> wrapper around the nav so the fixed positioning
-          and the grid placement are separate concerns: the wrapper holds the
-          column, the inner nav is what gets fixed to the viewport centre.
+          The rail is a <div> wrapper around the nav so the sticky positioning
+          and the grid placement stay separate concerns: the wrapper holds the
+          column, the nav inside it is what sticks.
+
+          It spans both rows so its column starts at the top of the page rather
+          than below the header. With the header outside this grid the rail
+          began 463px down a 900px screen and its last entries were unreachable
+          until the reader scrolled.
         */}
         <div className={styles.rail}>
           <LegalToc sections={sections} label={`${title} sections`} />
         </div>
+
+        <header className={styles.header}>
+          <h1 className={styles.title}>{title}</h1>
+          <p className={styles.standfirst}>{standfirst}</p>
+          <dl className={styles.meta}>
+            <div className={styles.metaPair}>
+              <dt className={styles.metaLabel}>Last updated</dt>
+              <dd className={styles.metaValue}>{lastUpdated}</dd>
+            </div>
+            <div className={styles.metaPair}>
+              <dt className={styles.metaLabel}>Version</dt>
+              <dd className={styles.metaValue}>{version}</dd>
+            </div>
+          </dl>
+        </header>
 
         <article className={styles.prose}>{children}</article>
       </div>
@@ -91,16 +100,6 @@ export function LegalSectionBlock({ section, children }: LegalSectionBlockProps)
       {children}
     </section>
   );
-}
-
-/**
- * A callout for the clauses that carry the most weight for a reader — the
- * "nothing here is a quotation" clause, the deletion-versus-retention note.
- * Presentational, but it earns its place: these are the paragraphs a careful
- * buyer is looking for, and burying them in body copy reads as hiding them.
- */
-export function LegalNote({ children }: { children: ReactNode }) {
-  return <div className={styles.note}>{children}</div>;
 }
 
 /**

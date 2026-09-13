@@ -78,15 +78,16 @@ These terms govern your use of the Smarthaus website at smarthaus.ae. Please rea
 
 ## 1. Who we are
 
-This website is operated by [PLACEHOLDER: registered legal entity name], a company licensed in [PLACEHOLDER: licensing authority and jurisdiction], trading as Smarthaus.
+This website is operated by Maple Technologies Security Systems LLC, a company licensed in Dubai, UAE, trading as Smarthaus.
 
-|                          |                                                    |
-| ------------------------ | -------------------------------------------------- |
-| **Legal entity**         | [PLACEHOLDER: registered legal name]               |
-| **Trading as**           | Smarthaus                                          |
-| **Trade licence number** | [PLACEHOLDER: trade licence no.]                   |
-| **Registered address**   | [PLACEHOLDER: full registered address, Dubai, UAE] |
-| **Contact**              | [PLACEHOLDER: hello@smarthaus.ae]                  |
+|                          |                                                                           |
+| ------------------------ | ------------------------------------------------------------------------- |
+| **Legal entity**         | Maple Technologies Security Systems LLC                                   |
+| **Trading as**           | Smarthaus                                                                 |
+| **Trade licence number** | 897839                                                                    |
+| **SIRA licence number**  | SSP202210037219                                                           |
+| **Registered address**   | The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai |
+| **Contact**              | contact@mapletech.ae                                                      |
 
 In these terms, "we", "us" and "our" mean that entity. "You" means you, the person using this website.
 
@@ -315,10 +316,10 @@ The courts of Dubai, United Arab Emirates have jurisdiction over any dispute ari
 
 If you have a question about these terms, contact us.
 
-|           |                                                    |
-| --------- | -------------------------------------------------- |
-| **Email** | [PLACEHOLDER: hello@smarthaus.ae]                  |
-| **Post**  | [PLACEHOLDER: full registered address, Dubai, UAE] |
+|           |                                                                           |
+| --------- | ------------------------------------------------------------------------- |
+| **Email** | contact@mapletech.ae                                                      |
+| **Post**  | The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai |
 
 ---
 
@@ -330,7 +331,8 @@ PLACEHOLDER REGISTER — clear every row before publication
 IDENTITY (same set as the privacy policy — fill both together)
   [ ] Registered legal entity name
   [ ] Licensing authority and jurisdiction  ← ALSO SETTLES §14 FORUM
-  [ ] Trade licence number
+  [x] Trade licence number — 897839
+  [x] SIRA licence number — SSP202210037219
   [ ] Registered address
   [ ] hello@ inbox
   [ ] Effective date — set on counsel sign-off, not on merge
