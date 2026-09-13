@@ -57,6 +57,28 @@ type ParticleTextProps = {
 const GAP = 3;
 
 /**
+ * How far the canvas extends beyond the stage box on every side, in CSS px.
+ *
+ * MAX_OFFSET is the hard cap on how far a particle may stray from its origin,
+ * so a bleed of MAX_OFFSET guarantees there is bitmap to draw into wherever a
+ * particle can legally reach, and nothing is ever clipped by the canvas edge.
+ * Derived from MAX_OFFSET rather than typed as a literal: the two are the same
+ * measurement, and a hardcoded 92 here would silently start clipping again the
+ * first time the cage is retuned.
+ *
+ * A particle's drawn body extends its own radius past its centre, so a little
+ * slack is added on top — `r` is a fraction of GAP and is under a pixel at
+ * these sizes, but the whole point of this value is to not be exactly on the
+ * boundary.
+ *
+ * The cost is real but small: the canvas grows by 2 * BLEED in each axis, which
+ * is more pixels to clear each frame. It is not more PARTICLES — the glyphs are
+ * still sized to the stage — so the per-frame force loop, which dominates, is
+ * unchanged.
+ */
+const BLEED = MAX_OFFSET + 4;
+
+/**
  * "404" rendered as a field of particles that orbit the cursor.
  *
  * ## Why canvas, and why this is an exception
@@ -205,10 +227,56 @@ export function ParticleText({ text, label, as: Tag = "span" }: ParticleTextProp
       // Cap DPR at 2: beyond that the particle count grows quadratically for
       // no perceptible gain on the sizes drawn here.
       dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(rect.width * dpr);
-      canvas.height = Math.round(rect.height * dpr);
-      canvas.style.inlineSize = `${rect.width}px`;
-      canvas.style.blockSize = `${rect.height}px`;
+
+      // The canvas is larger than the stage and hangs outside it, so there is
+      // always bitmap wherever a particle can travel.
+      //
+      // Without it, a particle thrown past the stage edge was clipped by the
+      // bitmap boundary, and the straight cut made the canvas rectangle plainly
+      // visible — worst on a phone, where one fast flick throws the whole field
+      // at once. Widening MAX_OFFSET's cage was not an option (that is the
+      // look), and neither was shrinking the type, so the drawing surface grows
+      // instead of the motion shrinking.
+      //
+      // Everything below is split between two boxes, and the distinction is the
+      // whole trick:
+      //   - the CANVAS box is what gets drawn into, and
+      //   - the STAGE box (rect) is what the glyphs are sized to fit.
+      // Sampling against the canvas box instead would simply grow the type to
+      // fill the bleed, putting the glyph edges right back on the boundary.
+      //
+      // The two axes get different bleeds, and they have to:
+      //
+      // BLOCK axis — the full BLEED. Vertical overflow costs nothing here: the
+      // document already scrolls that way, the stage has copy above and below
+      // it rather than a viewport edge, and an absolutely-positioned box does
+      // not push the page taller.
+      //
+      // INLINE axis — capped at the stage's own side gutter. A full bleed made
+      // the canvas wider than the viewport (measured: clientWidth 390 against
+      // scrollWidth 438) and the PAGE became horizontally scrollable, which
+      // the project forbids outright and the coming-soon spec asserts against.
+      // `overflow: clip` + `overflow-clip-margin` on the stage is the textbook
+      // answer and is unusable — WebKit ships the first without the second, so
+      // iOS would clip flush at the stage edge and show the rectangle even more
+      // plainly. Fitting the bleed into the gutter needs no clipping at all.
+      //
+      // The gutter is usually generous enough (48px each side at 390px wide,
+      // and the glyphs only occupy 88% of the stage, so ink rarely reaches
+      // even that far), and where it is not, the horizontal reach is what it
+      // always was — no worse than before, and the block axis still gains.
+      const gutter = Math.max(0, (document.documentElement.clientWidth - rect.width) / 2);
+      const inlineBleed = Math.min(BLEED, Math.floor(gutter));
+
+      const cssWidth = rect.width + inlineBleed * 2;
+      const cssHeight = rect.height + BLEED * 2;
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
+      canvas.style.inlineSize = `${cssWidth}px`;
+      canvas.style.blockSize = `${cssHeight}px`;
+      // The stylesheet cannot know the clamped inline value, so the inset it
+      // uses is published from here. The block inset is the constant BLEED.
+      canvas.style.setProperty("--particle-canvas-bleed-inline", `${inlineBleed}px`);
 
       // Read the paint colour from the element's own computed style, so the
       // particles follow the design tokens instead of hardcoding a hex that
@@ -224,6 +292,9 @@ export function ParticleText({ text, label, as: Tag = "span" }: ParticleTextProp
       // canvas. Here a trial size is measured with the actual font and scaled by
       // the ratio it needs, so "404" and a stacked "COMING / SOON" both land
       // inside the same box.
+      // Both budgets come from `rect` — the STAGE box — not from the enlarged
+      // canvas, so the bleed is pure headroom for the motion and changes the
+      // rendered type size not at all.
       const lineCount = lines.length;
       // Vertical budget per line, leaving a little breathing room.
       const byHeight = ((rect.height * 0.92) / lineCount) * dpr;
@@ -237,6 +308,10 @@ export function ParticleText({ text, label, as: Tag = "span" }: ParticleTextProp
       const size = Math.min(byHeight, byWidth);
       particles = sampleText({
         lines,
+        // The full canvas, because sampleText centres the block in the box it
+        // is given — and the bleed is symmetric, so centring in the canvas puts
+        // the lockup exactly where centring in the stage did. The SIZE above is
+        // what keeps it fitting the stage.
         width: canvas.width,
         height: canvas.height,
         gap: Math.max(3, Math.round(GAP * dpr)),
@@ -498,13 +573,20 @@ export function ParticleText({ text, label, as: Tag = "span" }: ParticleTextProp
     <div
       ref={wrapRef}
       className={styles.stage}
-      // Drives the static fallback's type scale. Set from the longest line so a
-      // three-glyph "404" and a stacked "COMING / SOON" are each sized to fit
-      // rather than sharing one ramp tuned for the shorter of the two.
+      // --particle-fallback-* drive the static fallback's type scale. Set from
+      // the longest line so a three-glyph "404" and a stacked "COMING / SOON"
+      // are each sized to fit rather than sharing one ramp tuned for the
+      // shorter of the two.
+      //
+      // --particle-canvas-bleed is how far the canvas hangs outside this box.
+      // Published from BLEED so the stylesheet's negative insets and the
+      // canvas dimensions set in `build` cannot disagree — they are the same
+      // measurement, and this file owns it.
       style={
         {
           "--particle-fallback-ch": fallbackCh,
           "--particle-fallback-lines": fallbackLines.length,
+          "--particle-canvas-bleed": `${BLEED}px`,
         } as React.CSSProperties
       }
     >
