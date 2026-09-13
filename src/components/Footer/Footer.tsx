@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { INSTALL_LINKS, LEGAL_LINKS, PAGE_LINKS, type NavLink } from "../../lib/nav-links";
+import { RollingText } from "../RollingText";
 import { BrandArt } from "./BrandArt";
 import { SOCIALS } from "./socials";
 import styles from "./Footer.module.scss";
@@ -32,7 +33,21 @@ export function Footer() {
               <BrandArt part="mark" className={styles.brandMark} />
             </Link>
             <p className={styles.tagline}>Smarter living for a brighter tomorrow</p>
-            <p className={styles.brandParent}>Brand by Maple Technologies Security Systems LLC</p>
+            <p className={styles.brandParent}>
+              <a
+                className={styles.brandParentLink}
+                href="https://www.mapletech.ae"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {/* No RollingText here, unlike every other footer link. The roll
+                  lays each character out as a flex item on one unwrappable
+                  row, so this 47-character line ran 333px wide and overflowed
+                  a 320px viewport. It is the only footer link long enough to
+                  need two lines, and it keeps the colour hover instead. */}
+                Brand by Maple Technologies Security Systems LLC
+              </a>
+            </p>
           </div>
 
           <div className={styles.newsletter}>
@@ -79,12 +94,12 @@ export function Footer() {
             <ul className={styles.contactList}>
               <li>
                 <a className={styles.contactItem} href="tel:+971543755150">
-                  +971 54 375 5150
+                  <RollingText>+971 54 375 5150</RollingText>
                 </a>
               </li>
               <li>
                 <a className={styles.contactItem} href="mailto:contact@mapletech.ae">
-                  contact@mapletech.ae
+                  <RollingText>contact@mapletech.ae</RollingText>
                 </a>
               </li>
               <li className={styles.contactItem}>Dubai, U.A.E.</li>
@@ -141,14 +156,23 @@ export function Footer() {
               {LEGAL_LINKS.map(({ href, label }) => (
                 <li key={href}>
                   <Link className={styles.legalLink} href={href}>
-                    {label}
+                    <RollingText>{label}</RollingText>
                   </Link>
                 </li>
               ))}
             </ul>
           </nav>
 
-          <p className={styles.credit}>Built by Qera Studio</p>
+          <p className={styles.credit}>
+            <a
+              className={styles.creditLink}
+              href="https://www.qera.studio"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <RollingText>Built by Qera Studio</RollingText>
+            </a>
+          </p>
         </div>
 
         {/* Decorative: the brand name is already the accessible name of the
@@ -164,7 +188,8 @@ export function Footer() {
                     dark colour matches --color-bg-inverse-strong, the footer's
                     ground, so it must change with that token. */}
                 <stop offset="0%" stopColor="#f0e9dd" />
-                <stop offset="50%" stopColor="#0a0807" />
+                {/* <stop offset="50%" stopColor="#0a080725" /> */}
+                <stop offset="85%" stopColor="#0a0807" />
               </linearGradient>
             </defs>
           </svg>
@@ -195,7 +220,7 @@ function LinkColumn({
         {links.map(({ href, label }) => (
           <li key={href}>
             <Link className={styles.link} href={href}>
-              {label}
+              <RollingText>{label}</RollingText>
             </Link>
           </li>
         ))}

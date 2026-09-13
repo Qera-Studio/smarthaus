@@ -68,6 +68,16 @@
     padding-inline: var(--space-6);
     color: var(--footer-ink);
 
+    // Below lg the footer's own gutter is redundant: body already applies the
+    // full --page-gutter at these widths (it only shrinks once the viewport
+    // passes --content-max), so the two stacked to 48px a side and squeezed
+    // the two link columns into one. The ground is painted by the box-shadow
+    // above, which is unaffected by padding, so dropping this does not expose
+    // a bare edge.
+    @media (max-width: #{$bp-lg - 1px}) {
+      padding-inline: 0;
+    }
+
     // --- Full-bleed ground -------------------------------------------------
     // body is capped at --content-max (1440px) with margin-inline: auto, so a
     // plain background-color stops at the cap and leaves bare canvas at the
@@ -225,6 +235,20 @@
     font-size: var(--font-size-sm);
     font-weight: $font-weight-regular;
     color: var(--footer-ink-75);
+  }
+
+  .brandParentLink {
+    color: inherit;
+    text-decoration: none;
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      color: var(--footer-ink);
+    }
+
+    @include focus-ring(var(--footer-focus), 2px);
   }
 
   // --- Top group 2: newsletter ---------------------------------------------
@@ -429,13 +453,27 @@
 
   // --- Top right: link columns ---------------------------------------------
 
+  // Two columns at every width. A grid of two equal tracks rather than flex:
+  // on mobile the columns must stay side by side down to 320px, and 1fr tracks
+  // share the width evenly instead of sizing to the longest label — which is
+  // what let "Smart home automation" push the other column off-screen.
   .right {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: start;
     gap: var(--space-16);
 
-    @media (max-width: #{$bp-md - 1px}) {
-      flex-direction: column;
-      gap: var(--space-8);
+    // Below lg the columns must stay side by side but the two are not equal:
+    // "Pages" holds short words while "What we install" holds labels up to
+    // 156px. Sizing both to 1fr split a 320px viewport into 128px tracks and
+    // wrapped those labels — and RollingText cannot wrap, because its animated
+    // copy is one absolutely-positioned row of per-character cells that has no
+    // line to break at. `auto max-content` gives the long column exactly the
+    // width its longest label needs and leaves the rest to Pages.
+    @media (max-width: #{$bp-lg - 1px}) {
+      grid-template-columns: auto max-content;
+      justify-content: space-between;
+      gap: var(--space-6);
     }
   }
 
@@ -483,7 +521,7 @@
   .bottom {
     display: flex;
     flex-direction: column;
-    gap: var(--space-6);
+    gap: var(--space-3);
   }
 
   .legal {
@@ -539,6 +577,15 @@
     @media (max-width: #{$bp-lg - 1px}) {
       justify-self: start;
     }
+  }
+
+  // Already at full strength via .credit, so there is no hover colour change
+  // to make — the roll is the whole hover affordance here.
+  .creditLink {
+    color: inherit;
+    text-decoration: none;
+
+    @include focus-ring(var(--footer-focus), 2px);
   }
 
   // --- Gradient wordmark ---------------------------------------------------
