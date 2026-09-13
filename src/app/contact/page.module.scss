@@ -12,9 +12,9 @@
   .page {
     // L2 component tokens. Every override this page makes is declared here, so
     // the values it departs from the system on are readable in one place.
-    --contact-section-gap: #{$space-8};
+    --contact-section-gap: #{$space-10};
     --contact-rule: 1px solid var(--color-border);
-    --contact-field-gap: #{$space-6};
+    --contact-field-gap: #{$space-10};
     --contact-card-bg: #{$brown-900};
 
     padding-block: $space-12 $space-20;
@@ -51,12 +51,16 @@
 
   // The rule sits at the top of each section, so the block's own top padding is
   // the gap between the rule and its content, while the bottom padding is the
-  // gap to the NEXT section's rule. Weighting them 1:7 pulls each title up
-  // against its own divider and opens the space between sections.
+  // gap to the NEXT section's rule. Only the bottom doubles: the top is what
+  // holds each title against its own divider.
+  //
+  // The doubles are written as `* 2` rather than as 160px/192px literals. The
+  // spacing ramp stops at $space-32, and stating the relationship keeps these
+  // tied to the scale instead of becoming two numbers nobody can place.
   .section {
     display: grid;
     gap: var(--contact-section-gap);
-    padding-block: $space-3 $space-20;
+    padding-block: $space-3 ($space-20 * 2);
     border-block-start: var(--contact-rule);
 
     @include bp-lg {
@@ -64,7 +68,7 @@
       // asymmetric split reads as a mistake rather than as hierarchy.
       grid-template-columns: repeat(2, minmax(0, 1fr));
       column-gap: $space-12;
-      padding-block: $space-4 $space-24;
+      padding-block: $space-4 ($space-24 * 2);
     }
   }
 
@@ -163,6 +167,39 @@
       // placeholder is never the accessible name here, but it still has to be
       // legible to the sighted user relying on it.
       color: var(--color-text-muted);
+    }
+
+    // Autofill.
+    //
+    // Chromium paints an opaque blue on an autofilled field via an internal
+    // style that beats background-color — the only way out is to hide the
+    // painted colour behind a very long inset shadow in the colour we want.
+    // text-fill-color does the same job for the text, which `color` alone does
+    // not override. :autofill is the standard selector; the -webkit- one is
+    // still what older Chromium and Safari match, and both must be listed
+    // SEPARATELY: a selector list containing one name a browser does not know
+    // invalidates the whole rule.
+    //
+    // The shadow is canvas-coloured rather than transparent — transparent would
+    // let the blue show straight through.
+    // Each state repaints, so hover/focus/active are listed alongside the
+    // resting state rather than inherited from it.
+    &:autofill,
+    &:autofill:hover,
+    &:autofill:focus,
+    &:autofill:active {
+      box-shadow: inset 0 0 0 1000px var(--color-bg-canvas);
+      -webkit-text-fill-color: var(--color-text-primary);
+      caret-color: var(--color-text-primary);
+    }
+
+    &:-webkit-autofill,
+    &:-webkit-autofill:hover,
+    &:-webkit-autofill:focus,
+    &:-webkit-autofill:active {
+      box-shadow: inset 0 0 0 1000px var(--color-bg-canvas);
+      -webkit-text-fill-color: var(--color-text-primary);
+      caret-color: var(--color-text-primary);
     }
 
     // Suppressed deliberately — the ring is on .control, and two rings on
@@ -371,7 +408,9 @@
   }
 
   .channelValue {
-    font-size: calc(var(--font-size-md) + 2px);
+    // Interpolated so Sass emits the calc() verbatim. Written plainly it folds
+    // the expression and silently drops the + 2px, leaving 18px.
+    font-size: #{"calc(var(--font-size-md) + 2px)"};
     font-weight: $font-weight-semibold;
     color: var(--color-text-primary);
     overflow-wrap: anywhere;
@@ -495,12 +534,10 @@
     flex-direction: column;
   }
 
+  // Bottom rule only. A top rule on the first item would sit a few pixels under
+  // the section's own divider and read as a double line.
   .faq {
     border-block-end: var(--contact-rule);
-
-    &:first-child {
-      border-block-start: var(--contact-rule);
-    }
   }
 
   .faqQuestion {
@@ -561,7 +598,10 @@
       opacity: 0;
 
       transition-property: block-size, opacity, content-visibility;
-      transition-duration: var(--duration-normal);
+      // --duration-slow is 400ms against the previous 240ms. The review asked
+      // for roughly +200ms; the token lands 40ms under that, which is below
+      // the threshold anyone can see and is worth more than a magic number.
+      transition-duration: var(--duration-slow);
       transition-timing-function: var(--ease-out);
       transition-behavior: allow-discrete;
     }
