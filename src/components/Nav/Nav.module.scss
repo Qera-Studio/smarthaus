@@ -19,7 +19,7 @@
     // The scrolled capsule's width from lg up. A max, not a fixed size: on a
     // 1024px window the content column is already narrower than this, and the
     // capsule should never grow past the gutters it sits inside.
-    --nav-stuck-size: 1000px;
+    --nav-stuck-size: 600px;
     --nav-gap: #{$space-6};
     --nav-link-size: #{$font-size-sm};
     --nav-link-weight: #{$font-weight-medium};
