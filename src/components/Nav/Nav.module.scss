@@ -18,11 +18,11 @@
     // 2px under the links (14 -> 12). Its own token because the CTA and the
     // links no longer share a size and a future tweak to one must not move the
     // other.
-    --nav-cta-size: 12px;
+    --nav-cta-size: 14px;
     // One notch above the links, so the CTA reads as the primary action even
     // at the smaller size. Its own token so a change to --nav-link-weight
     // cannot silently drag it along.
-    --nav-cta-weight: #{$font-weight-semibold};
+    --nav-cta-weight: #{$font-weight-bold};
     // --- Colour surface ------------------------------------------------------
     // Every colour in the nav resolves through these four rather than being
     // restated on each descendant. The glass is a light mid-tone, so the ink
@@ -51,8 +51,10 @@
     // Tablet only: how far the collapsed glass capsule is inset from each
     // edge. A percentage so it needs no content measurement.
     --nav-capsule-inset: 32%;
-    // Height of the wordmark in the open panel's footer.
-    --nav-footer-mark-size: #{$space-5};
+    // Height of the wordmark in the open panel's footer. 15px — 25% under the
+    // $space-5 it was, so off the spacing scale on purpose: this is optical
+    // sizing of artwork against the label beneath it, not layout rhythm.
+    --nav-footer-mark-size: 15px;
     // --nav-float-inset is global (see _variables.scss) — `main` reserves it
     // as well, so it cannot live on this component.
 
@@ -147,12 +149,10 @@
   }
 
   .cta {
-    // 4px tighter than the base scale on every side — $space-1 block (8-4) and
-    // $space-3 inline (16-4). Not tokens off the scale by accident: the CTA is
-    // deliberately one notch denser than the rhythm so it reads as a control
-    // rather than a panel.
-    padding-block: $space-1;
-    padding-inline: $space-3;
+    // 6px all round — off the 4/8 scale on purpose. The CTA is a control, so
+    // it is sized optically against its own label rather than to the layout
+    // rhythm the rest of the bar follows.
+    padding: 6px;
     font-size: var(--nav-cta-size);
     font-weight: var(--nav-cta-weight);
     line-height: $line-height-normal;
@@ -342,9 +342,9 @@
 
   @include bp-max($bp-lg) {
     .nav {
-      // 12px here, not on the token at :root — the desktop band reads
+      // 8px here, not on the token at :root — the desktop band reads
       // --nav-padding too, and this override must not reach it.
-      --nav-padding: #{$space-3};
+      --nav-padding: #{$space-2};
 
       position: fixed;
       // Floats clear of all three edges rather than spanning the screen. The
@@ -372,7 +372,12 @@
 
     .bar {
       // Brand and toggle and CTA; the wordmark is dropped for the mark.
-      grid-template-columns: auto 1fr auto;
+      // Symmetric outer tracks, not `auto 1fr auto`. The mark (23px) and the
+      // toggle (40px) are different widths, so with auto tracks the centre
+      // column is not the bar's centre and the CTA sits ~8px off. Equal 1fr
+      // edges put the middle track dead centre whatever the two controls
+      // measure; `auto` on the middle lets the CTA keep its own width.
+      grid-template-columns: 1fr auto 1fr;
       padding: var(--nav-padding);
     }
 
@@ -380,8 +385,31 @@
       display: none;
     }
 
+    // Swap the two controls: the CTA takes the centre column, the hamburger
+    // moves to the end. Explicit columns rather than reordering the DOM — the
+    // toggle must stay before the CTA in source so Tab reaches the menu
+    // control before the call to action, and below lg the source order of
+    // .panel and .bar is already load-bearing for the layout.
+    //
+    // The ROW is pinned as well, and has to be: source order is toggle then
+    // CTA, so once the toggle claims column 3 the auto-placement cursor has
+    // passed column 2, and the CTA wraps to a second row instead of sitting
+    // beside it. Naming the row keeps all three on one line.
+    .brandMark {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
     .toggle {
       display: flex;
+      grid-column: 3;
+      grid-row: 1;
+      justify-self: end;
+    }
+
+    .ctaSlot {
+      grid-column: 2;
+      grid-row: 1;
       justify-self: center;
     }
 
@@ -389,7 +417,10 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding-inline: var(--nav-padding);
+      // Its own value, not --nav-padding: the bar is now 8px so the collapsed
+      // capsule stays tight, but the open panel's content still wants room to
+      // breathe against the glass edge.
+      padding-inline: $space-3;
       // MUST stay 0. This is the element the 0fr track sizes, and a 0fr track
       // zeroes only the FREE space — padding is part of the box and survives,
       // so 24px here left the collapsed panel permanently 24px tall. Any top
