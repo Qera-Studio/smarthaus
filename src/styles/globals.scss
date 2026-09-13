@@ -61,12 +61,15 @@
     );
   }
 
-  // Below lg the nav is a fixed bottom bar, which is out of flow and would
-  // otherwise cover the end of every page. Reserve its height plus the home
-  // indicator so the last element stays reachable.
+  // Below lg the nav is a fixed bar floating above the bottom edge, which is
+  // out of flow and would otherwise cover the end of every page. Reserve its
+  // height, the gap it floats by, and the home indicator, so the last element
+  // stays reachable.
   main {
     @include bp-max($bp-lg) {
-      padding-block-end: calc(var(--nav-bar-block-size) + env(safe-area-inset-bottom));
+      padding-block-end: calc(
+        var(--nav-bar-block-size) + var(--nav-float-inset) + env(safe-area-inset-bottom)
+      );
     }
   }
 

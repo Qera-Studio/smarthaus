@@ -53,13 +53,24 @@
 }
 
 // --- Glass surface ----------------------------------------------------------
-// Brown-tinted frosted panel. Text on it uses --glass-text / --glass-text-muted,
-// which the mixin sets as the inherited colour.
+// Dark brown-tinted frosted panel with a fine grain. Text on it uses
+// --glass-text / --glass-text-muted, which the mixin sets as the inherited
+// colour.
 //
-// Degrades to an opaque brown-100 panel where backdrop-filter is unsupported:
+// Degrades to an opaque brown-800 panel where backdrop-filter is unsupported:
 // the tint and every contrast ratio are identical, only the see-through is
-// lost. See _variables.scss for why the tint is light rather than dark.
+// lost. See _variables.scss for the alpha derivation.
+//
+// Applies `isolation: isolate` and a ::before grain layer, so the caller must
+// not rely on its own ::before. z-index on the grain is scoped by that
+// isolation and cannot escape to fight anything on the page.
+//
+// The caller MUST establish a containing block (position other than static) —
+// the grain is absolutely positioned against it. This mixin deliberately does
+// not set `position` itself: it would silently override a caller's `fixed` or
+// `sticky`, which is exactly the bug that shipped the first time.
 @mixin glass($radius: var(--glass-radius)) {
+  isolation: isolate;
   background-color: var(--glass-bg-opaque);
   // Longhands: var() inside the `border` shorthand is substituted before the
   // shorthand is parsed, so one missing token would silently void the lot.
@@ -74,6 +85,23 @@
     background-color: var(--glass-bg);
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+
+  // The grain. Its own layer rather than a second background on the element,
+  // because the element's background-color animates on the desktop scroll
+  // transition and a layered `background` shorthand cannot be tweened.
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: var(--glass-noise);
+    // The tile is authored at 140px; repeating it at that size keeps the grain
+    // a fixed physical size regardless of how large the panel grows.
+    background-size: 140px 140px;
+    opacity: var(--glass-noise-opacity);
+    border-radius: inherit;
+    pointer-events: none;
   }
 }
 

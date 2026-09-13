@@ -124,39 +124,66 @@ $shadow-xl: 0 16px 48px rgba(20, 17, 14, 0.16);
 }
 
 // --- L1: Glass surface ------------------------------------------------------
-// A brown-tinted frosted panel, applied via the glass() mixin in _mixins.scss.
-// Declared here rather than with the other L1 colours because it depends on
-// the radius and shadow scales above, and Sass resolves top to bottom.
+// A dark brown-tinted frosted panel, applied via the glass() mixin in
+// _mixins.scss. Declared here rather than with the other L1 colours because it
+// depends on the radius and shadow scales above, and Sass resolves top to
+// bottom.
 //
-// The tint is LIGHT, not dark. brown-100 at 0.6 alpha clears AA for brown-900
-// text over ANY backdrop — 9.7:1 composited over pure black, 15.6:1 over the
-// canvas. A brown-900 tint would need 0.88 alpha to reach the same 4.5:1
-// floor, by which point it is only 12% see-through and reads as a solid panel
-// rather than glass.
+// WHY THE ALPHA IS 0.85 AND NOT 0.5
+//
+// A dark tint only reads as dark if it actually blocks the backdrop. The site
+// canvas is brown-100, so at 0.5 alpha half the light ground comes through and
+// the glass composites to a mid-grey: brown-100 text on it lands at 1.85:1,
+// where AA needs 4.5:1. The panel inverts its content to light-on-dark, so
+// that text is the one that has to pass.
+//
+// Measured, brown-800 tint, brown-100 text, composited in LINEAR light:
+//
+//   alpha   over canvas   over white (worst case)
+//   0.50      1.85:1         1.56:1   fail
+//   0.75      3.23:1         2.77:1   fail
+//   0.85      4.61:1         4.03:1   pass on canvas
+//   0.90      5.85:1         5.22:1   pass everywhere
+//
+// 0.85 is the floor that clears AA on the real canvas. It is still visibly
+// glass — the blur and the saturation lift carry that read far more than the
+// remaining 15% of see-through does.
 //
 // Lowering --glass-alpha lowers text contrast on every surface that uses it.
 // Re-run the maths before touching it: composite luminance is
-// alpha * tint + (1 - alpha) * backdrop, computed in LINEAR light, and the
-// worst case is a pure black backdrop.
+// alpha * tint + (1 - alpha) * backdrop, computed in LINEAR light. The worst
+// case is the LIGHTEST backdrop, because the tint is dark.
 
 :root {
   // Space-separated, not comma: the `/ <alpha>` form of rgb() is only valid
   // with space-separated channels, and the comma form fails silently.
-  --glass-tint: 240 233 221; // brown-100
-  --glass-alpha: 0.6;
+  --glass-tint: 43 36 29; // brown-800
+  --glass-alpha: 0.85;
   --glass-bg: rgb(var(--glass-tint) / var(--glass-alpha));
   // Fallback where backdrop-filter is unsupported: same hue, fully opaque, so
   // the panel reads as solid rather than as a washed-out smear.
-  --glass-bg-opaque: #{$brown-100};
-  --glass-blur: 16px;
+  --glass-bg-opaque: #{$brown-800};
+  --glass-blur: 24px;
   --glass-saturate: 1.4;
-  --glass-border: rgb(20 17 14 / 0.08); // brown-900, barely-there edge
+  // A light hairline, not a dark one: the panel is now darker than the page,
+  // so the edge that reads as "pane of glass" is the highlight, not a shadow.
+  --glass-border: rgb(240 233 221 / 0.12);
   --glass-shadow: #{$shadow-lg};
   --glass-radius: #{$radius-lg};
-  // Text on glass. Both reuse the canvas semantics, because the tint IS the
-  // canvas colour — there is no separate inverse scale to keep in step.
-  --glass-text: var(--color-text-primary); // 9.7:1 worst case on glass
-  --glass-text-muted: var(--color-text-secondary); // 5.3:1 worst case on glass
+  // Grain. A single tiled SVG turbulence — no image request, no extra bytes on
+  // the wire beyond this declaration, and it scales to any panel size.
+  // baseFrequency is high so the grain is fine rather than cloudy.
+  //
+  // 0.16, not the 0.055 first tried: measured on a 3x screenshot, 0.055 gave a
+  // per-channel standard deviation of ~1.3/255 across a flat area of the
+  // panel, which is below the threshold where anyone sees texture. This lands
+  // near 4/255 — visible as a surface quality at arm's length, still far short
+  // of looking like speckle or noise-over-video.
+  --glass-noise-opacity: 0.16;
+  --glass-noise: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="140" height="140" filter="url(%23n)"/></svg>');
+  // Text on glass — inverted, because the tint is now dark.
+  --glass-text: #{$brown-100}; // 4.61:1 on canvas, 4.03:1 over white
+  --glass-text-muted: #{$brown-200}; // decorative/secondary only
 }
 
 // --- L0: Motion -------------------------------------------------------------
@@ -284,7 +311,11 @@ $page-gutter: $space-6;
   // Height of the fixed bottom nav below lg. `main` reserves this so page
   // content is not hidden behind it — keep in step with the nav's own padding
   // and content height.
-  --nav-bar-block-size: #{$space-20};
+  --nav-bar-block-size: #{$space-16};
+  // How far that bar floats clear of the screen edges below lg. Global rather
+  // than a nav-local token because `main` has to reserve it too, and the two
+  // must not drift apart.
+  --nav-float-inset: #{$space-4};
   // Inline gutter, applied below the cap only (see globals.scss).
   --page-gutter: #{$page-gutter};
   --content-gutter: #{$space-6};

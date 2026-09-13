@@ -15,8 +15,28 @@
     --nav-gap: #{$space-6};
     --nav-link-size: #{$font-size-sm};
     --nav-link-weight: #{$font-weight-medium};
+    // 2px under the links (14 -> 12). Its own token because the CTA and the
+    // links no longer share a size and a future tweak to one must not move the
+    // other.
+    --nav-cta-size: 12px;
+    // --- Inversion surface ---------------------------------------------------
+    // Every colour in the nav resolves through these four, so opening the menu
+    // flips the whole component by reassigning them in ONE place rather than
+    // restating a colour on each descendant. Closed = dark ink on the light
+    // page; open = light ink on the dark glass.
+    --nav-ink: var(--color-text-primary); // brand mark, burger
+    --nav-cta-bg: var(--color-bg-inverse-strong);
+    --nav-cta-ink: var(--color-text-inverse);
+    --nav-link-ink: var(--color-text-primary);
     // How long the panel takes to open. The link stagger is derived from it.
-    --nav-expand-duration: #{$duration-slow};
+    --nav-expand-duration: #{$duration-slower};
+    // The expansion has its OWN ease, not the global --ease-out. $ease-out is
+    // cubic-bezier(0.22, 1, ...), which covers ~90% of its distance in the
+    // first third — fine for a 160ms colour fade, but on a panel travelling
+    // 300px+ it reads as a snap followed by a crawl. This is a gentler curve
+    // with no overshoot: it leaves slowly, moves through the middle, and
+    // settles without bouncing the glass edge.
+    --nav-expand-ease: cubic-bezier(0.32, 0.72, 0, 1);
     // Gap between consecutive links fading in.
     --nav-stagger-step: #{$duration-instant};
     // How far each link travels as it fades in.
@@ -26,8 +46,20 @@
     --nav-capsule-inset: 32%;
     // Height of the wordmark in the open panel's footer.
     --nav-footer-mark-size: #{$space-5};
+    // --nav-float-inset is global (see _variables.scss) — `main` reserves it
+    // as well, so it cannot live on this component.
 
-    color: var(--color-text-primary);
+    color: var(--nav-ink);
+  }
+
+  // Open: the whole component inverts. One rule, four tokens — every
+  // descendant already reads its colour from these, so nothing else changes.
+  // Specificity 0,2,0, well inside the 0,3,0 ceiling.
+  .nav[data-open] {
+    --nav-ink: #{$brown-100};
+    --nav-cta-bg: #{$brown-100};
+    --nav-cta-ink: #{$brown-900};
+    --nav-link-ink: #{$brown-100};
   }
 
   // --- The persistent row: brand, toggle, CTA -------------------------------
@@ -44,7 +76,10 @@
   .logo {
     display: flex;
     align-items: center;
-    color: var(--color-text-primary);
+    color: var(--nav-ink);
+    transition-property: color;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-out);
 
     @include focus-ring;
 
@@ -81,7 +116,7 @@
     grid-template-rows: 0fr;
     transition-property: grid-template-rows;
     transition-duration: var(--nav-expand-duration);
-    transition-timing-function: var(--ease-out);
+    transition-timing-function: var(--nav-expand-ease);
   }
 
   .panelInner {
@@ -110,27 +145,35 @@
     font-size: var(--nav-link-size);
     font-weight: var(--nav-link-weight);
     line-height: $line-height-normal;
-    color: inherit;
+    color: var(--nav-link-ink);
     text-decoration: none;
+    transition-property: color;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-out);
 
     // Hover feedback is the character roll (see RollingText), not a fade.
     @include focus-ring;
   }
 
   .cta {
-    padding-block: $space-2;
-    padding-inline: $space-4;
-    font-size: var(--nav-link-size);
+    // 4px tighter than the base scale on every side — $space-1 block (8-4) and
+    // $space-3 inline (16-4). Not tokens off the scale by accident: the CTA is
+    // deliberately one notch denser than the rhythm so it reads as a control
+    // rather than a panel.
+    padding-block: $space-1;
+    padding-inline: $space-3;
+    font-size: var(--nav-cta-size);
     font-weight: var(--nav-link-weight);
     line-height: $line-height-normal;
-    // brown-950 ground with brown-100 text — 17.9:1, well clear of AA.
-    background-color: var(--color-bg-inverse-strong);
-    color: var(--color-text-inverse);
+    // Closed: brown-950 ground, brown-100 text (16.6:1). Open: inverted to a
+    // brown-100 ground with brown-900 text (15.6:1). Both clear AA by miles.
+    background-color: var(--nav-cta-bg);
+    color: var(--nav-cta-ink);
     border-radius: $radius-sm;
     text-decoration: none;
     white-space: nowrap;
-    transition-property: opacity;
-    transition-duration: var(--duration-fast);
+    transition-property: opacity, background-color, color;
+    transition-duration: var(--duration-fast), var(--duration-normal), var(--duration-normal);
     transition-timing-function: var(--ease-out);
 
     @include focus-ring;
@@ -149,9 +192,10 @@
     padding: $space-2;
     background: none;
     border: 0;
-    // brown-950, 10.3:1 on the glass at --glass-alpha 0.6 (worst case, over a
-    // black backdrop) — comfortably past the 3:1 floor for UI components.
-    color: var(--color-bg-inverse-strong);
+    color: var(--nav-ink);
+    transition-property: color;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-out);
 
     @include focus-ring;
   }
@@ -168,12 +212,31 @@
   .burgerTop,
   .burgerMid,
   .burgerBot {
-    // Rotate about the icon's centre, not each line's own box.
+    // `view-box` is what makes the morph work. Without it transform-origin on
+    // an SVG child resolves against that child's own bounding box — and a
+    // <line> has a ZERO-HEIGHT box, so "12px 12px" lands far outside it and
+    // each line swings through a wide arc instead of pivoting on the icon's
+    // centre. view-box resolves the origin against the 24x24 viewBox, which is
+    // the coordinate space the 12,12 was written in.
+    transform-box: view-box;
     transform-origin: 12px 12px;
     transition-property: transform, opacity;
     transition-duration: var(--duration-normal);
     // Slight overshoot — this is the spring the brief asked for.
     transition-timing-function: var(--ease-spring);
+  }
+
+  // The middle line leaves before the outer two rotate, so they cross a clear
+  // field rather than through it; on the way back it waits for them to level.
+  .burgerMid {
+    transition-property: opacity;
+    transition-duration: var(--duration-fast);
+    transition-delay: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .nav[data-open] .burgerMid {
+    transition-delay: 0ms;
   }
 
   .nav[data-open] .burgerTop {
@@ -193,9 +256,9 @@
   .panelFooter {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: $space-2;
-    color: var(--glass-text);
+    color: var(--nav-ink);
   }
 
   // The reset gives every svg `max-inline-size: 100%; block-size: auto`, which
@@ -271,9 +334,16 @@
     }
 
     // Once the sentinel at the top of the page scrolls away, the nav picks up
-    // the glass so it stays legible over whatever is passing beneath it.
+    // the glass so it stays legible over whatever is passing beneath it. The
+    // glass is dark, so the contents invert with it — same four tokens the
+    // mobile open state uses, so the two states cannot drift apart.
     .nav[data-stuck] {
       @include glass(0);
+
+      --nav-ink: #{$brown-100};
+      --nav-cta-bg: #{$brown-100};
+      --nav-cta-ink: #{$brown-900};
+      --nav-link-ink: #{$brown-100};
     }
   }
 
@@ -282,8 +352,11 @@
   @include bp-max($bp-lg) {
     .nav {
       position: fixed;
-      inset-block-end: 0;
-      inset-inline: 0;
+      // Floats clear of all three edges rather than spanning the screen. The
+      // bottom inset stacks on top of the home-indicator inset so the glass
+      // never sits under the gesture bar.
+      inset-block-end: calc(var(--nav-float-inset) + env(safe-area-inset-bottom));
+      inset-inline: var(--nav-float-inset);
       z-index: var(--z-sticky);
       // Keep paint and layout local — the panel animates margin and rows, and
       // nothing outside the nav should be asked to re-layout for it.
@@ -295,9 +368,10 @@
     .bar {
       // Brand and toggle and CTA; the wordmark is dropped for the mark.
       grid-template-columns: auto 1fr auto;
-      padding-inline: var(--nav-padding);
-      // Clear the iOS home indicator and Android gesture bar.
-      padding-block-end: max(var(--nav-padding), env(safe-area-inset-bottom));
+      padding: var(--nav-padding);
+      // The bar is the row that stays put; the panel grows above it. Its own
+      // padding is symmetric now that the glass no longer touches the screen
+      // edge, so the home-indicator allowance moved to the nav's inset above.
     }
 
     .brandFull {
@@ -318,14 +392,17 @@
     .panelInner {
       display: flex;
       flex-direction: column;
+      align-items: center;
       padding-inline: var(--nav-padding);
-      padding-block-start: var(--nav-padding);
+      padding-block-start: $space-6;
     }
 
     .list {
       flex-direction: column;
-      align-items: flex-start;
-      gap: $space-4;
+      align-items: center;
+      // Tighter than the old $space-4 — the links read as one block rather
+      // than a loose list.
+      gap: $space-2;
     }
 
     .link {
@@ -334,7 +411,8 @@
 
     // Pinned close to the bar, after a deliberate gap from the links.
     .panelFooter {
-      margin-block-start: $space-16;
+      margin-block-start: $space-12;
+      margin-block-end: $space-2;
     }
 
     // Each link fades and rises, starting once the panel is nearly open.
@@ -371,7 +449,7 @@
         margin-inline: var(--nav-capsule-inset);
         transition-property: margin-inline;
         transition-duration: var(--nav-expand-duration);
-        transition-timing-function: var(--ease-out);
+        transition-timing-function: var(--nav-expand-ease);
       }
 
       .nav[data-open] {
@@ -409,6 +487,13 @@
   @media (prefers-reduced-motion: reduce) {
     .nav[data-open] .item,
     .nav[data-open] .panelFooter {
+      transition-delay: 0s;
+    }
+
+    // The burger's middle line holds back so the outer two cross a clear
+    // field. With durations zeroed that delay would strand it visible for
+    // 160ms after the X had already formed.
+    .burgerMid {
       transition-delay: 0s;
     }
 
