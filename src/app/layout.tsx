@@ -20,6 +20,39 @@ const manrope = Manrope({
 const OG_IMAGE_ALT =
   "Smarthaus — smarter living for a brighter tomorrow. Home automation by Maple Technologies Security Systems LLC, Dubai, U.A.E.";
 
+/**
+ * The origin every relative metadata URL is resolved against.
+ *
+ * smarthaus.ae in production, because that is the canonical host and what must
+ * appear in og:url and the canonical link once the domain is live.
+ *
+ * Anywhere else, the deployment's own host. Hardcoding the production domain
+ * made og:image absolute to smarthaus.ae on EVERY deployment, including preview
+ * builds and the vercel.app URL — so a shared link carried an image URL that
+ * does not resolve while the domain is unconfigured, and WhatsApp, Slack and
+ * iMessage all rendered a text-only card. The tags were correct; the image
+ * behind them 404'd.
+ *
+ * VERCEL_ENV is "production" only for production deploys, so previews resolve
+ * to themselves and their cards work too. VERCEL_PROJECT_PRODUCTION_URL is the
+ * production domain as Vercel knows it, which is the vercel.app host until a
+ * custom domain is attached and the real domain afterwards.
+ */
+function metadataOrigin(): URL {
+  const site = process.env.NEXT_PUBLIC_SITE_URL;
+  if (site) return new URL(site);
+
+  if (process.env.VERCEL_ENV !== "production") {
+    const preview = process.env.VERCEL_URL;
+    if (preview) return new URL(`https://${preview}`);
+  }
+
+  const production = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (production) return new URL(`https://${production}`);
+
+  return new URL("https://smarthaus.ae");
+}
+
 export const metadata: Metadata = {
   title: {
     template: "%s | Smarthaus",
@@ -27,7 +60,7 @@ export const metadata: Metadata = {
   },
   description:
     "Smarthaus delivers premium smart home automation solutions in Dubai. Seamless control of lighting, climate, security, and entertainment.",
-  metadataBase: new URL("https://smarthaus.ae"),
+  metadataBase: metadataOrigin(),
   alternates: {
     canonical: "/",
   },
