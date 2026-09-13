@@ -3,6 +3,12 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import styles from "./Nav.module.scss";
 
+/**
+ * How much of the viewport the footer must cover before the nav hides. The
+ * footer carries the same links, so the bar has nothing to offer at that point.
+ */
+const FOOTER_HIDE_RATIO = 0.7;
+
 type NavShellProps = {
   /** Mark-only lockup, shown below lg where there is no room for the wordmark. */
   brandMark: ReactNode;
@@ -30,6 +36,8 @@ type NavShellProps = {
 export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellProps) {
   const [open, setOpen] = useState(false);
   const [stuck, setStuck] = useState(false);
+  // True once the footer covers FOOTER_HIDE_RATIO of the viewport.
+  const [atFooter, setAtFooter] = useState(false);
   // From lg up the links are always on show in the bar, so the panel is never
   // a disclosure and must never be inert. Below lg it starts closed.
   const [isDesktop, setIsDesktop] = useState(false);
@@ -46,6 +54,57 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
     const io = new IntersectionObserver(([entry]) => {
       setStuck(!entry?.isIntersecting);
     });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // Hide the nav once the footer covers most of the screen. The footer carries
+  // its own navigation, so a floating bar over it is redundant — and on mobile
+  // it physically covers the links underneath it.
+  //
+  // The trigger is how much of the VIEWPORT the footer fills, not how much of
+  // the footer is visible. intersectionRatio is the latter and is useless
+  // here: the footer is min-block-size 100svh at lg and taller than the
+  // viewport on mobile, so its ratio never approaches 0.7. The observer's root
+  // is shrunk instead, turning "covers 70% of the screen" into a plain
+  // intersection — see the options below. No scroll listener, which AGENTS.md
+  // rules out, and no measuring of our own.
+  //
+  // The footer is a sibling of this component's tree, so it is found by
+  // selector rather than a ref. The effect runs after paint, so it is mounted.
+  useEffect(() => {
+    const el = document.querySelector("footer");
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) return;
+        // Intersecting the shortened root means the footer's top has passed
+        // the trigger line — i.e. it now covers at least FOOTER_HIDE_RATIO of
+        // the real viewport.
+        const hide = entry.isIntersecting;
+        setAtFooter(hide);
+        // A menu left open would be stranded off-screen with the bar.
+        if (hide) setOpen(false);
+      },
+      // rootMargin, not thresholds.
+      //
+      // Thresholds are fractions of the TARGET, and the footer is far taller
+      // than the viewport — 3211px against 664px on a phone — so its ratio
+      // tops out near 0.2 and crosses almost none of them. WebKit fired twice
+      // across the whole scroll and never again while coverage climbed from
+      // 0.2 to 0.99, leaving the bar visible over a footer that filled the
+      // screen. Chromium happened to fire often enough to hide the bug.
+      //
+      // Shrinking the root from the bottom by (1 - ratio) of the viewport
+      // makes the intersection itself the event: the footer enters this
+      // shortened root exactly when its top passes FOOTER_HIDE_RATIO of the
+      // real viewport. That is a boolean crossing, so a 0 threshold is enough
+      // and it does not depend on the target's size at all.
+      {
+        rootMargin: `0px 0px -${Math.round(FOOTER_HIDE_RATIO * 100)}% 0px`,
+        threshold: 0,
+      },
+    );
     io.observe(el);
     return () => io.disconnect();
   }, []);
@@ -83,7 +142,18 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
       {/* Marks the top of the page. Once it scrolls out, the nav is "stuck". */}
       <div ref={sentinelRef} className={styles.sentinel} aria-hidden="true" />
 
-      <header className={styles.nav} data-open={open || undefined} data-stuck={stuck || undefined}>
+      <header
+        className={styles.nav}
+        data-open={open || undefined}
+        data-stuck={stuck || undefined}
+        data-at-footer={atFooter || undefined}
+        // A faded-out bar is still focusable and still in the accessibility
+        // tree, so Tab would stop on controls nobody can see. `visibility:
+        // hidden` in the CSS handles that too, but only after the fade — this
+        // flips with the state, and covers the reduced-motion path where there
+        // is no transition to wait for.
+        inert={atFooter || undefined}
+      >
         {/*
           The panel comes FIRST so that below lg — where <header> is a flex
           column pinned to the bottom of the screen — it grows upward while the

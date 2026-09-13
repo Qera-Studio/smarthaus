@@ -4,7 +4,14 @@ import { defineConfig, devices } from "@playwright/test";
 // would silently be tested instead of this one. Use a project-specific port and
 // never adopt a foreign server that happens to be listening.
 const PORT = Number(process.env["PLAYWRIGHT_PORT"] ?? 3210);
-const BASE_URL = `http://localhost:${PORT}`;
+
+// 127.0.0.1, not localhost. WebKit — which is what the iPhone project runs —
+// upgrades http://localhost to https and then fails the handshake, so every
+// script and stylesheet aborts with a TLS error and the page never hydrates.
+// Server Components still render, so page-level assertions pass and the gap is
+// invisible: any test of client behaviour silently checks a dead page. The
+// loopback IP is not subject to that upgrade.
+const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -32,7 +39,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `pnpm build && pnpm start --port ${PORT}`,
+    // PLAYWRIGHT drops HSTS and upgrade-insecure-requests for this server only
+    // — see next.config.ts. Both are correct in production and unchanged there;
+    // on plain-HTTP loopback they make WebKit abort every asset, leaving a page
+    // that renders but never hydrates.
+    command: `PLAYWRIGHT=1 pnpm build && PLAYWRIGHT=1 pnpm start --port ${PORT}`,
     port: PORT,
     reuseExistingServer: false,
   },
