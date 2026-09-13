@@ -22,6 +22,31 @@
   html {
     background-color: var(--color-bg-canvas);
 
+    // No rubber-band at the top or bottom of the page.
+    //
+    // Overscrolling past either end dragged the whole document and exposed
+    // html's own ground behind it — brown-100 above the dark footer, and the
+    // same gap under the nav at the top. It reads as the page coming unstuck
+    // from its own background, and a finger drag on a phone pulls much further
+    // than a trackpad's two-finger swipe, so it is worse there.
+    //
+    // `-block`, not the `overscroll-behavior` shorthand: the inline axis must
+    // stay `auto`. `none` on both axes would also kill horizontal
+    // overscroll-chaining, and the legal pages rely on their own
+    // `overscroll-behavior-x: contain` for the ToC rail and wide tables.
+    //
+    // `none` rather than `contain`: `contain` only stops the scroll
+    // PROPAGATING to a parent, which is already moot on the root element — it
+    // leaves the bounce itself intact. `none` is what suppresses the effect.
+    //
+    // This is set on <html> because that is the scrolling element (same reason
+    // as the scroll-behavior rule below). Browsers read overscroll-behavior
+    // from the viewport's propagating element, so `body` would be ignored here.
+    // Pull-to-refresh on Android is suppressed as a side effect; that is
+    // acceptable on a marketing site with no feed to refresh, and the page is
+    // still reloadable from browser chrome.
+    overscroll-behavior-block: none;
+
     // Brown-900 dot at 75% opacity, 8px radius (16px across), drawn in a 40px
     // canvas so the circle is not clipped at the image edge, with the hotspot
     // at its centre. `auto` is the fallback if the SVG cursor is unsupported.
