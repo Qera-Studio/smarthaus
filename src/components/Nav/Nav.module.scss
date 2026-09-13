@@ -163,8 +163,36 @@
     @include focus-ring;
 
     svg {
-      max-inline-size: 100%;
-      block-size: auto;
+      // WebKit rendered the lockup at 0×0 — the logo was simply missing from
+      // the nav on iOS while Chromium showed it correctly. Measured on both
+      // engines at iPhone width, the only computed difference was the block
+      // axis: `block-size: 0px` in WebKit against `23.97px` in Chromium, from
+      // identical `max-inline-size: 100%`.
+      //
+      // The artwork carries a `height` ATTRIBUTE and no `width`. The rule here
+      // used to be `max-inline-size: 100%` + `block-size: auto`, which:
+      //
+      //   - discards the height attribute (the CSS `auto` wins), so the height
+      //     has to come from the width via the viewBox ratio, and
+      //   - caps that width against a parent chain — <a> then <span>, both
+      //     shrink-to-fit flex boxes — that is itself sizing to this child.
+      //
+      // Nothing in that chain establishes a definite size, and the engines
+      // disagree on how to break the cycle: Chromium falls back to the
+      // attribute, WebKit resolves it to zero. WebKit is not obviously wrong.
+      //
+      // The fix is to stop depending on the parent at all. --logo-ratio comes
+      // from the component's own viewBox, so `aspect-ratio` makes the inline
+      // axis definite from the block axis, and the block axis is pinned to the
+      // requested size rather than left as `auto`. Both axes are then resolved
+      // without consulting an ancestor, which is why it holds in both engines.
+      //
+      // Do NOT reintroduce a percentage max-inline-size here: that is the
+      // declaration that reopens the cycle. If a lockup ever has to shrink to
+      // fit a narrow bar, cap --logo-size instead — it drives the block axis,
+      // and the width follows the ratio down with it.
+      block-size: var(--logo-size);
+      aspect-ratio: var(--logo-ratio);
     }
   }
 
@@ -359,11 +387,15 @@
   // makes an unconstrained lockup stretch to its container and recompute its
   // height from that width, ignoring the `height` attribute. Pin the height
   // and derive the width from the artwork's own ratio so it cannot stretch.
+  //
+  // --logo-ratio comes from the Logo component's own viewBox, so the ratio is
+  // not restated here — this used to carry a literal `865.5 / 155`, which is
+  // the wordmark's viewBox copied by hand and silently wrong the moment the
+  // artwork changes.
   .footerMark {
     block-size: var(--nav-footer-mark-size);
     inline-size: auto;
-    // wordmark viewBox is 865.5 x 155.
-    aspect-ratio: 865.5 / 155;
+    aspect-ratio: var(--logo-ratio);
     color: currentColor;
   }
 

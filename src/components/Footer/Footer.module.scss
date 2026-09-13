@@ -216,11 +216,14 @@
   .brandMark {
     // The reset gives every svg `block-size: auto`, which overrides the height
     // attribute the Logo component sets. Size it from the block axis and let
-    // the aspect ratio carry the inline axis — the mark's own viewBox is
-    // 149.5 x 155. Same fix as Nav's .footerMark.
+    // the aspect ratio carry the inline axis. Same fix as Nav's .footerMark.
+    //
+    // --logo-ratio comes from the Logo component's own viewBox, so the ratio is
+    // not restated here — this used to carry a literal `149.5 / 155`, a hand
+    // copy of the mark's viewBox that would not track a change to the artwork.
     block-size: var(--space-10);
     inline-size: auto;
-    aspect-ratio: 149.5 / 155;
+    aspect-ratio: var(--logo-ratio);
     color: var(--footer-ink);
   }
 

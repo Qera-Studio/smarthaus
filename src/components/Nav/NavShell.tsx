@@ -44,6 +44,10 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // Bounds the "outside" of an outside-tap. The whole <header>, not just the
+  // panel: the bar is part of the open nav, and a tap on the hamburger must
+  // reach its own onClick rather than being closed out from under it.
+  const headerRef = useRef<HTMLElement>(null);
 
   // Desktop capsule trigger. A sentinel plus IntersectionObserver rather than a
   // scroll listener, which AGENTS.md rules out — this fires twice per crossing
@@ -137,12 +141,35 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
+  // A tap anywhere outside the nav closes it, which is what every other
+  // disclosure on a phone does — requiring a second, accurate tap on the
+  // hamburger is the thing that feels broken.
+  //
+  // `pointerdown` rather than `click`: it fires before focus moves and before
+  // any link underneath activates, so the panel is already closing as the
+  // finger lands. Focus is NOT returned to the toggle here — unlike Escape,
+  // the user is pointing at something else, and stealing focus back would
+  // scroll the page to the bar.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return;
+      if (headerRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
+    // Capture phase, so this still runs if something inside the page stops
+    // propagation on its own pointer handlers.
+    document.addEventListener("pointerdown", onPointerDown, { capture: true });
+    return () => document.removeEventListener("pointerdown", onPointerDown, { capture: true });
+  }, [open]);
+
   return (
     <>
       {/* Marks the top of the page. Once it scrolls out, the nav is "stuck". */}
       <div ref={sentinelRef} className={styles.sentinel} aria-hidden="true" />
 
       <header
+        ref={headerRef}
         className={styles.nav}
         data-open={open || undefined}
         data-stuck={stuck || undefined}

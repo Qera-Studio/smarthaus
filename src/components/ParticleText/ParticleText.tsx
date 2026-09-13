@@ -111,6 +111,21 @@ const GAP = 3;
  * entirely. Momentum bleeds off through friction, and the field returns to its
  * idle wander — nothing keeps circling, because nothing is driving it.
  *
+ * ## Touch
+ *
+ * A finger drag is the cursor. Pointer events already unify the two, so the
+ * force model is shared verbatim — a swipe injects energy exactly as a mouse
+ * sweep does, and a fast flick blooms the field harder than a slow drag.
+ *
+ * Two things differ, and both come from touch having no hover state:
+ *
+ *   - The field is only driven **while a finger is down**. A lifted finger is
+ *     not hovering anywhere, so its last position is parked rather than held;
+ *     otherwise the glyphs keep a permanent dent wherever the last tap landed.
+ *   - Nothing is ever `preventDefault`ed. The glyphs cover most of a phone
+ *     viewport, so swallowing the gesture would trap the user on the page. The
+ *     bloom happens *along with* the scroll, not instead of it.
+ *
  * ## Reduced motion
  *
  * The `_reset.scss` reduced-motion block zeroes CSS animation and transition
@@ -129,21 +144,21 @@ export function ParticleText({ text, label, as: Tag = "span" }: ParticleTextProp
 
   useEffect(() => {
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    // Coarse pointers have no hovering cursor to orbit, so the interaction is
-    // meaningless on touch — and running a full-field rAF loop on a mid-range
-    // phone spends battery for an effect nobody can trigger.
-    const hoverQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
 
-    const allowed = () => !motionQuery.matches && hoverQuery.matches;
-
-    const sync = () => setAnimated(allowed());
+    // Reduced motion is the only gate left.
+    //
+    // This used to also require `(hover: hover) and (pointer: fine)`, on the
+    // reasoning that a coarse pointer has no hovering cursor to orbit. That is
+    // true of *hover*, but a touch drag reports the same pointermove stream a
+    // mouse does — so the field is drivable on a phone, just only while a
+    // finger is down. The loop now idles (see `active` below) whenever no
+    // pointer is engaged, which is the battery concern the old gate was really
+    // protecting against: a backgrounded or untouched canvas costs nothing
+    // because there is no rAF running at all.
+    const sync = () => setAnimated(!motionQuery.matches);
     sync();
     motionQuery.addEventListener("change", sync);
-    hoverQuery.addEventListener("change", sync);
-    return () => {
-      motionQuery.removeEventListener("change", sync);
-      hoverQuery.removeEventListener("change", sync);
-    };
+    return () => motionQuery.removeEventListener("change", sync);
   }, []);
 
   // One string or many, normalised once. Joined for the dep array so the effect
@@ -385,21 +400,54 @@ export function ParticleText({ text, label, as: Tag = "span" }: ParticleTextProp
       frame = requestAnimationFrame(tick);
     };
 
-    const onPointerMove = (event: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      pointer.x = event.clientX - rect.left;
-      pointer.y = event.clientY - rect.top;
-    };
-    // Park the pointer far away on leave so the field settles home instead of
-    // freezing around a stale position. prevX is reset too, so the jump to
-    // -9999 is not measured as an enormous pointer velocity on the next frame —
-    // that would fling the entire field on every mouse-out.
-    const onPointerLeave = () => {
+    // Park the pointer far away so the field settles home instead of freezing
+    // around a stale position. prevX is reset too, so the jump to -9999 is not
+    // measured as an enormous pointer velocity on the next frame — that would
+    // fling the entire field on every mouse-out or finger-up.
+    const park = () => {
       pointer.x = -9999;
       pointer.y = -9999;
       prevX = -9999;
       prevY = -9999;
       speed = 0;
+    };
+
+    // A mouse drives the field whenever it moves. A finger only drives it while
+    // it is down: there is no hover, so a touch's last position is not "where
+    // the user is pointing" once they lift, and treating it that way leaves a
+    // permanent dent in the glyphs wherever the last tap landed.
+    //
+    // `event.pointerType` rather than a media query, because a hybrid device
+    // (an iPad with a trackpad, a touchscreen laptop) has both, and the right
+    // behaviour is per-event, not per-device.
+    let dragging = false;
+    const isTouch = (event: PointerEvent) => event.pointerType !== "mouse";
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (isTouch(event) && !dragging) return;
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = event.clientX - rect.left;
+      pointer.y = event.clientY - rect.top;
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!isTouch(event)) return;
+      dragging = true;
+      // Seed the position on touchdown so the first frame of a drag pushes from
+      // where the finger actually landed. prevX stays parked for one frame, so
+      // the initial jump is not read as velocity — the touch begins at rest and
+      // builds speed as it moves, which is the same contract the mouse has.
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = event.clientX - rect.left;
+      pointer.y = event.clientY - rect.top;
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      if (!isTouch(event)) return;
+      dragging = false;
+      // The field keeps whatever momentum the drag gave it and coasts home
+      // through friction, rather than stopping dead under the lifted finger.
+      park();
     };
 
     build();
@@ -412,14 +460,29 @@ export function ParticleText({ text, label, as: Tag = "span" }: ParticleTextProp
     // Listening on window rather than the canvas: the canvas is
     // pointer-events:none so it never steals the cursor from links beneath it,
     // which means it also never receives its own pointer events.
+    //
+    // All passive. The canvas never calls preventDefault — a drag across the
+    // "404" must still scroll the page, because on a phone the glyphs cover
+    // most of the viewport and swallowing the gesture would trap the user on
+    // the page. The effect is something that happens *along with* the scroll,
+    // not instead of it.
     window.addEventListener("pointermove", onPointerMove, { passive: true });
-    window.addEventListener("pointerleave", onPointerLeave);
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
+    window.addEventListener("pointerup", onPointerUp, { passive: true });
+    // A touch interrupted by the browser (scroll takeover, gesture, a call
+    // arriving) fires cancel and never up, so without this the field would stay
+    // stuck to the abandoned finger position.
+    window.addEventListener("pointercancel", onPointerUp, { passive: true });
+    window.addEventListener("pointerleave", park);
 
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
       window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerleave", onPointerLeave);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("pointerleave", park);
     };
   }, [animated, lineKey]);
 

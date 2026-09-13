@@ -37,8 +37,8 @@
   }
 
   // The static lockup. Always rendered: it is the accessible name, the
-  // crawlable text, and the whole experience under reduced motion, on touch,
-  // and with no JS. The canvas is layered on top of it, never instead of it.
+  // crawlable text, and the whole experience under reduced motion and with no
+  // JS. The canvas is layered on top of it, never instead of it.
   .fallback {
     // Scaled by the LONGEST LINE, not a fixed vw ramp. One ramp tuned for the
     // three glyphs of "404" made "Coming soon" overflow on a phone and collide
@@ -46,7 +46,9 @@
     // visitor ever sees — so this is the sizing that matters most.
     //
     // --particle-fallback-ch is the longest line's character count, set by the
-    // component. Two budgets, whichever is smaller:
+    // component. It still matters on a phone even though the canvas now runs
+    // there: this is what a reduced-motion or no-JS visitor sees at that width.
+    // Two budgets, whichever is smaller:
     //   - width:  fit that many characters across the container
     //   - height: fit every line inside the stage box, which is a fixed height
     //             and would otherwise be overflowed by the type
