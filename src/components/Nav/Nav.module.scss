@@ -489,6 +489,17 @@
       transition-timing-function: var(--nav-stuck-ease);
     }
 
+    // The hidden lockup is absolutely positioned so it leaves the track's
+    // sizing. Sharing the cell in flow made the track size to the WIDER of the
+    // two — a 133px column around a 23px mark once stuck, which is the empty
+    // gap to the mark's right. Only the visible one is in flow, so the track
+    // measures what is actually shown; the other still paints in the same
+    // place and cross-fades.
+    .nav[data-stuck] .brandFull,
+    .nav:not([data-stuck]) .brandMark {
+      position: absolute;
+    }
+
     .brandFull {
       opacity: 1;
       visibility: visible;
