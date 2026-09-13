@@ -18,7 +18,9 @@ import styles from "./Footer.module.scss";
  */
 export function Footer() {
   return (
-    <footer className={styles.footer}>
+    // data-ground: the footer paints brown-950, where the default brown-900
+    // cursor dot is 1.06:1 and invisible. See globals.scss.
+    <footer className={styles.footer} data-ground="dark">
       <div className={styles.top}>
         <div className={styles.left}>
           <div className={styles.brand}>
@@ -68,8 +70,7 @@ export function Footer() {
               </button>
             </div>
             <p id="footer-email-note" className={styles.newsletterNote}>
-              Newsletter opens soon. Reach us at{" "}
-              <a href="mailto:contact@mapletech.ae">contact@mapletech.ae</a> meanwhile.
+              Newsletter opens soon.
             </p>
           </div>
 
@@ -159,7 +160,13 @@ export function Footer() {
           <svg className={styles.gradientDefs} aria-hidden="true" focusable="false">
             <defs>
               <linearGradient id="footer-wordmark-gradient" x1="0" y1="0" x2="0" y2="1">
+                {/* Solid to the halfway mark, then the fade. Two stops from 0%
+                    started dimming the letterforms immediately, so the
+                    wordmark never read at full strength anywhere; holding
+                    brown-100 to 50% gives it a solid top half and puts the
+                    whole fade in the bottom half. */}
                 <stop offset="0%" stopColor="#f0e9dd" />
+                <stop offset="50%" stopColor="#f0e9dd" />
                 <stop offset="100%" stopColor="#0a0807" stopOpacity="0.8" />
               </linearGradient>
             </defs>

@@ -50,8 +50,22 @@
     // The floor for the flexible gap, never its fixed value — .spacer grows
     // past this to fill a tall viewport and collapses back to it on a short
     // one. See .spacer below.
-    gap: var(--space-16);
-    padding: var(--space-6);
+    //
+    // Two gaps of --space-16 are 128px that no longer fit once the two halves
+    // are tall: at 1440x900 the content measured 800px, which with 48px of
+    // padding and those gaps came to 976px against a 900px viewport — the
+    // footer overflowed by 76px despite the spacer already sitting at 0.
+    //
+    // The gap is now the floor only, and the SPACER carries the separation
+    // (see its min-block-size below). A gap cannot shrink — it is not a flex
+    // item — so any gap large enough to look right when the viewport is tall
+    // is dead height that overflows when it is short. A spacer can do both.
+    gap: var(--space-4);
+    // Longhands, not the `padding` shorthand: the top is its own value and a
+    // shorthand would hide that behind a four-value list.
+    padding-block-start: var(--space-12); // 48px
+    padding-block-end: var(--space-6);
+    padding-inline: var(--space-6);
     color: var(--footer-ink);
 
     // --- Full-bleed ground -------------------------------------------------
@@ -98,6 +112,23 @@
       // budget of < 0.05. svh is the small viewport: stable, and the footer is
       // free to exceed it when content demands.
       min-block-size: 100svh;
+
+      // The cap is what makes the spacer work. min-block-size is a MINIMUM, so
+      // flex saw no deficit and never asked the spacer to give anything back —
+      // it sat at its 64px basis while the footer overflowed by roughly that
+      // amount (962px in a 900px window). Matching max turns the overflow into
+      // a real deficit, and the spacer is the only shrinkable item, so it
+      // absorbs exactly what is needed and the footer lands on 100svh.
+      //
+      // Gated on height, not applied everywhere. The two halves plus the
+      // padding measured 866px at their tallest, so below roughly 880px of
+      // viewport there is no dead space left to reclaim and the cap starts
+      // cutting into the content instead: at 1366x768 it clipped 92px off the
+      // bottom of the wordmark. Above that floor the cap only ever removes
+      // slack the spacer was holding.
+      @media (min-height: 880px) {
+        max-block-size: 100svh;
+      }
     }
 
     // FOLLOW-UP, once feature/navbar lands: below lg that branch turns the nav
@@ -125,11 +156,16 @@
   // third child lands between them. A named spacer says what it is and cannot
   // be broken by a sibling.
   //
-  // Grow only, never shrink — on a short viewport it holds at the parent's gap
-  // floor and the footer grows past 100svh, rather than crushing the space
-  // between the two halves to fit.
+  // Grows to fill a tall viewport, and collapses to nothing on a short one.
+  //
+  // `flex: 1 1 auto` with a basis, not `1 0 0`: the separation between the two
+  // halves lives here rather than in the parent's gap, because a gap cannot
+  // shrink and so becomes dead height that pushes the footer past the viewport
+  // (measured: 976px in a 900px window). As a flex item this gives the space
+  // back when the content already fills the screen.
   .spacer {
-    flex: 1 0 0;
+    flex: 1 1 auto;
+    flex-basis: var(--space-16);
     min-block-size: 0;
   }
 
@@ -156,7 +192,7 @@
   .left {
     display: flex;
     flex-direction: column;
-    gap: var(--space-10);
+    gap: var(--space-16);
   }
 
   // --- Top group 1: brand --------------------------------------------------
@@ -164,7 +200,7 @@
   .brand {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-1);
   }
 
   .brandMark {
@@ -196,7 +232,7 @@
   .newsletter {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-1);
     max-inline-size: 320px;
   }
 
@@ -223,7 +259,7 @@
     // the shorthand is parsed, so one missing token silently voids the lot.
     border-style: solid;
     border-width: var(--footer-field-border-size);
-    border-color: var(--footer-field-border);
+    border-color: var(--footer-field-bg);
     border-radius: var(--radius-sm);
     // The control's own height plus the padding and border that sit outside
     // it, so the inner input lands at exactly --footer-field-size.
@@ -240,8 +276,16 @@
       border-color: var(--footer-focus);
     }
 
+    // Dim the field itself, not its children. A blanket `opacity` here also
+    // multiplied through the submit button, so a brown-100 face rendered at
+    // 0.6 over brown-950 and read as a dull grey — the button looked broken
+    // rather than disabled. Muting the ground and letting each control state
+    // its own disabled colour keeps the button legible as a button.
+    // The border keeps its brown-300 so the field's boundary still clears the
+    // 3:1 of WCAG 1.4.11 — brown-900 against the brown-950 footer is 1.06:1
+    // and would make the field vanish rather than read as disabled.
     &[data-disabled] {
-      opacity: 0.6;
+      --footer-field-bg: #{$brown-900};
     }
   }
 
@@ -279,6 +323,16 @@
     color: #{$brown-900}; // 15.59:1 on brown-100
 
     @include focus-ring(var(--footer-focus), 2px);
+
+    // Disabled reads through the ground, not through opacity: brown-700 on
+    // brown-200 measures 6.22:1, so the label stays legible while the button
+    // is clearly not live. 1.4.3 exempts disabled controls from the contrast
+    // minimum, but a label nobody can read is a usability problem whether or
+    // not it is a conformance one.
+    &:disabled {
+      background-color: #{$brown-200};
+      color: #{$brown-700};
+    }
   }
 
   .newsletterNote {
@@ -311,7 +365,7 @@
   .contactList {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
+    // gap: var(--space-1);
     // The reset only strips markers from ul[role="list"], and an explicit
     // role on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip
     // them here instead. Same trade-off Nav already makes.
@@ -351,7 +405,7 @@
     inline-size: var(--footer-chip-size);
     block-size: var(--footer-chip-size);
     background-color: #{$brown-100};
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-sm);
     // brown-900 at 75% on the brown-100 chip — 7.64:1, rising to 15.59:1 on
     // hover. Colour-only, so the reduced-motion reset covers it for free.
     color: rgb(20 17 14 / 0.75);
