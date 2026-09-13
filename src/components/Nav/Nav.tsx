@@ -32,7 +32,7 @@ export function Nav() {
       </nav>
 
       <Link href="/contact" className={styles.cta}>
-        Book a free site visit
+        Book a site visit
       </Link>
     </header>
   );
