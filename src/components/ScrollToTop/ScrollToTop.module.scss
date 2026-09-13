@@ -1,0 +1,122 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  // Sits at the very top of the page, out of flow, purely as an observer
+  // target. Zero height so it never affects layout.
+  .sentinel {
+    position: absolute;
+    inset-block-start: 0;
+    block-size: 1px;
+    inline-size: 1px;
+    pointer-events: none;
+  }
+
+  .button {
+    position: fixed;
+    inset-inline-end: $space-6;
+    // Above the fixed bottom nav below lg: its height, the gap it floats by,
+    // and the home indicator. Same reservation main uses in globals.scss, and
+    // the same composition the consent card uses for its own clearance.
+    inset-block-end: calc(
+      var(--nav-bar-block-size) + var(--nav-float-inset) * 2 + env(safe-area-inset-bottom)
+    );
+    z-index: var(--z-sticky);
+
+    display: flex;
+    align-items: center;
+    padding-block: $space-3;
+    padding-inline: $space-4;
+
+    // Square, no shadow, no border — the brand's architectural edges. Matches
+    // every other control on the site; see the commit that took the radius off
+    // all of them.
+    border: 0;
+    border-radius: 0;
+    background-color: var(--color-bg-canvas);
+    color: var(--color-text-primary);
+    cursor: pointer;
+
+    // Hidden by default, faded and nudged down. `visibility` rather than
+    // `display` so the transition has something to run on; the JS `inert`
+    // keeps it out of the tab order either way.
+    visibility: hidden;
+    opacity: 0;
+    translate: 0 $space-2;
+    // Colours transition too, so crossing into a dark section is a fade rather
+    // than a snap.
+    transition-property: opacity, translate, visibility, background-color, color;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-out);
+
+    &[data-visible] {
+      visibility: visible;
+      opacity: 1;
+      translate: 0 0;
+    }
+
+    // Over a dark band the light chip would vanish into it, so the two colours
+    // swap. Driven by JS, which reports whether a [data-ground="dark"] section
+    // is under the button — see ScrollToTop.tsx.
+    &[data-on-dark] {
+      background-color: var(--color-bg-inverse-strong);
+      color: var(--color-text-inverse);
+    }
+
+    @include bp-lg {
+      // Desktop nav is at the top, so only the float inset applies.
+      inset-block-end: $space-6;
+    }
+  }
+
+  // Stand clear of the cookie banner while it is up.
+  //
+  // Below lg the banner spans the full width between the nav insets and is
+  // anchored to the same inset-block-end calc as this button, so the two land
+  // on the same line: measured on a Pixel 7, both ended at 747 and the banner's
+  // "Choose what to share" sat directly over the button. The banner is
+  // --z-overlay (300) against this button's --z-sticky (200), so the banner won
+  // and the button could not be clicked at all — e2e/scroll-to-top.spec.ts
+  // failed on both phone projects with the banner's button named as the
+  // intercepting element.
+  //
+  // Moved rather than hidden. Both controls are useful and neither is modal:
+  // the visitor may want to get back to the top whether or not they have dealt
+  // with cookies yet, and hiding this one would make returning to the top
+  // impossible until they answered — which is a small cookie wall.
+  //
+  // `:has()` on the banner's own region, so this needs no shared state and no
+  // JS coupling. The selector matches only while the banner is actually
+  // mounted, so the button returns to its normal position the moment a choice
+  // is made. Not applied at lg and above: there the banner is 560px on the
+  // start edge and this button is on the end edge, so they never meet.
+  @include bp-max($bp-lg) {
+    :global(body):has([aria-label="Cookie preferences"]) .button {
+      // Sits on top of the banner's own measured height plus one float inset.
+      //
+      // --consent-block-size is measured and published onto <html> by
+      // ConsentShell.tsx, NOT guessed here. The banner's height is content-driven
+      // — the body wraps to a different number of lines per viewport, the
+      // action row wraps below md, and the re-ask line adds a paragraph when
+      // present — so any literal reserved here is a number that is right on the
+      // device it was measured on and silently wrong elsewhere. anchor() is the
+      // correct tool for this and WebKit does not ship it.
+      //
+      // The fallback covers the one frame between the banner mounting and the
+      // observer reporting. 22rem is above every height measured across the
+      // three device projects (313px / 19.6rem was the tallest), so that frame
+      // errs toward too much clearance rather than an overlap — and it is only
+      // ever a fallback, not the value in steady state.
+      inset-block-end: calc(
+        var(--nav-bar-block-size) + var(--nav-float-inset) * 2 + env(safe-area-inset-bottom) +
+          var(--consent-block-size, 22rem) + var(--nav-float-inset)
+      );
+    }
+  }
+
+  .label {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    line-height: 1;
+  }
+}

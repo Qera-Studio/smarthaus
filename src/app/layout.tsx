@@ -9,6 +9,7 @@ import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
 import { Splash } from "../components/Loader/Splash";
 import { Consent } from "../components/Consent";
+import { ScrollToTop } from "../components/ScrollToTop";
 
 const manrope = Manrope({
   variable: "--font-sans",
@@ -145,6 +146,23 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             direct child of body. The footer reserves the mobile nav's height
             itself, since the reservation on main does not reach it. */}
         <Footer />
+        {/*
+          After the footer, so it is last in the tab order rather than standing
+          between a keyboard visitor and the page.
+
+          Anchored bottom-inline-END, and the consent banner is
+          bottom-inline-start — but that does NOT keep them apart. Below lg the
+          banner spans the full width between the nav insets and both are
+          anchored to the same inset-block-end calc, so they land on the same
+          line: measured on a Pixel 7, both ended at 747 with the banner's
+          "Choose what to share" directly over this button. The banner is
+          --z-overlay against this button's --z-sticky, so it swallowed every
+          click and e2e/scroll-to-top.spec.ts failed on both phone projects.
+
+          ScrollToTop.module.scss moves the button above the banner while it is
+          up, keyed off a height the banner publishes as --consent-block-size.
+        */}
+        <ScrollToTop />
         {/*
           Last in the body, after the footer.
 
