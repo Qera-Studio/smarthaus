@@ -9,10 +9,14 @@ import AxeBuilder from "@axe-core/playwright";
  * taking a screenshot. The rules, from consent-content-deck.md and Legal
  * System §6:
  *
- *   - the three banner buttons carry IDENTICAL visual weight. A ghosted or
- *     shrunken Decline is interface interference, a named dark pattern, and a
- *     [Base] non-negotiable. This is measured, not eyeballed;
+ *   - the two DECISIONS carry IDENTICAL visual weight. A ghosted or shrunken
+ *     Decline is interface interference, a named dark pattern, and a [Base]
+ *     non-negotiable. This is measured, not eyeballed. "Choose what to share"
+ *     is deliberately quieter and has its own test: it answers nothing and
+ *     stores nothing, so it is navigation rather than a third choice;
  *   - it is not a modal: no scrim, no focus trap, the page stays scrollable;
+ *   - opening preferences must be escapable WITHOUT deciding, in both
+ *     directions and with a pointer as well as a key;
  *   - a decline is honoured with no re-prompt. Nagging is prohibited;
  *   - dismissing (Escape) is NOT a decision and stores nothing;
  *   - withdrawal is as easy as consent, via a footer link on every page.
@@ -26,11 +30,10 @@ const region = (page: Page) => page.getByRole("region", { name: "Cookie preferen
 /**
  * A banner button, scoped to the banner's own action row.
  *
- * "Accept analytics" appears twice by design — once in the banner and once in
- * the panel as the shortcut — and the panel is in the DOM even when collapsed
- * (it is `inert`, not removed, so the collapse can animate). So an unscoped
- * role query is ambiguous, and `.first()` would silently pick whichever
- * rendered first rather than the one under test.
+ * Scoped to the action row rather than the whole region, which is what makes
+ * `toHaveCount(0)` mean "the banner stage is gone" rather than "no such button
+ * exists anywhere on the page". The stage-switch tests rest on that
+ * distinction.
  */
 const bannerButton = (page: Page, name: string) =>
   region(page).locator('[class*="actions"]').getByRole("button", { name, exact: true });
@@ -70,23 +73,34 @@ test.describe("the consent banner", () => {
     await expect(banner.getByRole("button", { name: /close|dismiss|✕|×/i })).toHaveCount(0);
   });
 
-  test("the three buttons carry identical visual weight", async ({ page }) => {
+  test("Accept and Decline carry identical visual weight", async ({ page }) => {
     await page.goto("/");
     await waitForBanner(page);
 
     // THE hardest constraint in the brief, and the one most likely to be
     // broken by a later "let us make Accept stand out" tweak. Measured rather
     // than trusted: they share a single CSS class precisely so this holds.
+    //
+    // The two DECISIONS only. "Choose what to share" is deliberately quieter
+    // and is covered by its own test below — it answers nothing and stores
+    // nothing, so equal weight does not apply to it.
     const metrics = await page.evaluate(() => {
-      const labels = ["Accept analytics", "Decline", "Choose what to share"];
+      const labels = ["Accept analytics", "Decline"];
       return labels.map((label) => {
         const el = [...document.querySelectorAll("button")].find(
           (b) => b.textContent?.trim() === label,
         )!;
+        const r = el.getBoundingClientRect();
         const c = getComputedStyle(el);
         return {
           label,
-          height: Math.round(el.getBoundingClientRect().height),
+          height: Math.round(r.height),
+          // Width is now asserted too. The buttons are `flex: 1 1 0`, so they
+          // divide the row equally rather than being sized by their labels —
+          // without that, "Accept analytics" is more than twice the length of
+          // "Decline" and would take twice the target area. That is the same
+          // dark pattern arriving through the layout instead of the colour.
+          width: Math.round(r.width),
           fontSize: c.fontSize,
           fontWeight: c.fontWeight,
           background: c.backgroundColor,
@@ -98,10 +112,11 @@ test.describe("the consent banner", () => {
       });
     });
 
-    const [accept, decline, customise] = metrics;
+    const [accept, decline] = metrics;
     // Every property that could be used to de-emphasise a refusal.
     for (const key of [
       "height",
+      "width",
       "fontSize",
       "fontWeight",
       "background",
@@ -111,10 +126,73 @@ test.describe("the consent banner", () => {
       "padding",
     ] as const) {
       expect(decline![key], `Decline differs from Accept on ${key}`).toBe(accept![key]);
-      expect(customise![key], `Choose what to share differs from Accept on ${key}`).toBe(
-        accept![key],
-      );
     }
+  });
+
+  test("both decisions are filled, and neither is an outline", async ({ page }) => {
+    await page.goto("/");
+    await waitForBanner(page);
+
+    // Guards the specific regression of one decision becoming a ghost button.
+    // The equal-weight test above would still pass if BOTH were outlines, and
+    // an outlined pair against a filled "Choose what to share" would promote
+    // the longer path over refusing.
+    for (const label of ["Accept analytics", "Decline"]) {
+      const filled = await bannerButton(page, label).evaluate((el) => {
+        const c = getComputedStyle(el);
+        return {
+          transparent: c.backgroundColor === "rgba(0, 0, 0, 0)",
+          borderWidth: c.borderTopWidth,
+        };
+      });
+      expect(filled.transparent, `${label} has no fill`).toBe(false);
+      expect(filled.borderWidth, `${label} has a border`).toBe("0px");
+    }
+  });
+
+  test("Choose what to share is quieter than the decisions but still reachable", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await waitForBanner(page);
+
+    // It is allowed to be quieter — it is not an answer to the question. What
+    // it may NOT do is drop below the touch target or the contrast floor,
+    // because "de-emphasised" must not become "hard to find or hard to hit".
+    const customise = await bannerButton(page, "Choose what to share").evaluate((el) => {
+      const c = getComputedStyle(el);
+      return {
+        height: Math.round(el.getBoundingClientRect().height),
+        fontSize: c.fontSize,
+        opacity: c.opacity,
+      };
+    });
+    const accept = await bannerButton(page, "Accept analytics").evaluate((el) => ({
+      fontSize: getComputedStyle(el).fontSize,
+    }));
+
+    // WCAG 2.2 · 2.5.8.
+    expect(customise.height).toBeGreaterThanOrEqual(44);
+    // Same type size as the decisions, and not faded out. The difference is
+    // fill and ink, never scale or opacity — shrinking it would be the
+    // interface interference this is trying to avoid.
+    expect(customise.fontSize).toBe(accept.fontSize);
+    expect(customise.opacity).toBe("1");
+  });
+
+  test("sits on the start edge of the viewport", async ({ page }) => {
+    await page.goto("/");
+    await waitForBanner(page);
+
+    // Left on an LTR page. Asserted against the viewport's own midpoint rather
+    // than a pixel value, because the card's width differs per device project.
+    // `inset-inline-start` rather than `left`, so this flips with dir="rtl"
+    // when Arabic ships — the assertion is deliberately about the START edge.
+    const placement = await region(page).evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return { start: r.left, end: r.right, viewport: window.innerWidth };
+    });
+    expect(placement.start).toBeLessThan(placement.viewport / 2);
   });
 
   test("is not a modal: the page stays reachable behind it", async ({ page }) => {
@@ -275,18 +353,136 @@ test.describe("the choice", () => {
 });
 
 test.describe("the preferences panel", () => {
-  test("opens from the banner and stores nothing until saved", async ({ page }) => {
+  test("replaces the banner rather than expanding beneath it", async ({ page }) => {
     await page.goto("/");
     await waitForBanner(page);
 
     const customise = bannerButton(page, "Choose what to share");
     await expect(customise).toHaveAttribute("aria-expanded", "false");
     await customise.click();
-    await expect(customise).toHaveAttribute("aria-expanded", "true");
+
+    // The panel is a second STAGE, not a drawer. The banner's heading, body and
+    // both decision buttons are gone from the DOM entirely — not merely hidden,
+    // which is what the old animated expansion did and why it needed `inert` to
+    // keep the collapsed panel out of the tab order.
+    await expect(region(page).getByRole("heading", { name: "Cookies", exact: true })).toHaveCount(
+      0,
+    );
+    await expect(customise).toHaveCount(0);
+    await expect(bannerButton(page, "Decline")).toHaveCount(0);
+
+    // And the panel is the only thing in the region now.
+    await expect(region(page).getByRole("heading", { name: "Cookie preferences" })).toBeVisible();
+    await expect(page.getByRole("switch", { name: "Analytics" })).toBeVisible();
 
     // Opening the panel is not a decision.
     expect(await readCookie(page)).toBeNull();
-    await expect(region(page).getByRole("heading", { name: "Cookie preferences" })).toBeVisible();
+  });
+
+  test("the panel overlaps the banner's own footprint", async ({ page }) => {
+    await page.goto("/");
+    await waitForBanner(page);
+
+    // Both stages are anchored to the same two edges, so the panel unfolds from
+    // where the banner was instead of the card jumping to a different corner.
+    // Measured on the anchored edges, which must not move.
+    const before = await region(page).evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return { start: Math.round(r.left), bottom: Math.round(r.bottom) };
+    });
+
+    await bannerButton(page, "Choose what to share").click();
+    await expect(page.getByRole("switch", { name: "Analytics" })).toBeVisible();
+
+    const after = await region(page).evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return { start: Math.round(r.left), bottom: Math.round(r.bottom) };
+    });
+
+    // 1px of tolerance for subpixel layout, not for a repositioned card.
+    expect(Math.abs(after.start - before.start)).toBeLessThanOrEqual(1);
+    expect(Math.abs(after.bottom - before.bottom)).toBeLessThanOrEqual(1);
+  });
+
+  test("Back returns to the banner without storing a choice", async ({ page }) => {
+    await page.goto("/");
+    await waitForBanner(page);
+
+    // The banner's own toggle is unmounted while the panel is open, so without
+    // this control a pointer user who opened preferences to read them could
+    // only leave by deciding. That is a cookie wall in miniature.
+    await bannerButton(page, "Choose what to share").click();
+    await expect(page.getByRole("switch", { name: "Analytics" })).toBeVisible();
+
+    await region(page).getByRole("button", { name: "Back", exact: true }).click();
+
+    await expect(bannerButton(page, "Accept analytics")).toBeVisible();
+    await expect(bannerButton(page, "Decline")).toBeVisible();
+    // Looking is not deciding, in either direction.
+    expect(await readCookie(page)).toBeNull();
+  });
+
+  test("focus follows the stage change", async ({ page, browserName }) => {
+    // WebKit's Tab sequence omits links but `focus()` and programmatic focus
+    // work the same everywhere, so this holds in every engine.
+    await page.goto("/");
+    await waitForBanner(page);
+
+    await bannerButton(page, "Choose what to share").click();
+    // The control that had focus was just unmounted. Without the handoff, focus
+    // falls back to <body> and a keyboard visitor is silently returned to the
+    // top of the document with the panel they asked for somewhere below.
+    const landedInPanel = await page.evaluate(() => {
+      const active = document.activeElement;
+      if (!active || active === document.body) return false;
+      return active.closest('[aria-label="Cookie preferences"]') !== null;
+    });
+    expect(landedInPanel, `focus left the panel on ${browserName}`).toBe(true);
+
+    // And back again, onto the control that opened it.
+    await region(page).getByRole("button", { name: "Back", exact: true }).click();
+    await expect(bannerButton(page, "Choose what to share")).toBeFocused();
+  });
+
+  test("keeps the Clarity disclosure above the fold on open", async ({ page }) => {
+    await page.goto("/");
+    await waitForBanner(page);
+    await bannerButton(page, "Choose what to share").click();
+    await expect(page.getByRole("switch", { name: "Analytics" })).toBeVisible();
+
+    // The brief's hardest CONTENT constraint, and the reason Analytics comes
+    // before Essential and the panel has no Accept shortcut.
+    //
+    // The panel's copy scrolls on a phone, so "is in the DOM" and even "is
+    // visible" are both too weak: an element inside a scroll container counts
+    // as visible while sitting below the fold. This asserts the masking promise
+    // is within the scrolled viewport WITHOUT scrolling — that is what "not
+    // buried" has to mean for a disclosure nobody knows to look for.
+    const visible = await page.evaluate(() => {
+      const region = document.querySelector('[aria-label="Cookie preferences"]')!;
+      const rows = region.querySelector('[class*="rows"]')!;
+      const disclosure = region.querySelector('[class*="disclosure"]')!;
+      const rr = rows.getBoundingClientRect();
+      const dr = disclosure.getBoundingClientRect();
+      // The first line at minimum: enough of the paragraph is on screen to be
+      // read and to signal there is more, rather than starting below the fold.
+      return dr.top >= rr.top - 1 && dr.top < rr.bottom - 16;
+    });
+    expect(visible, "the Clarity disclosure starts below the scroll fold").toBe(true);
+  });
+
+  test("the panel offers Save and a way back, and no Accept shortcut", async ({ page }) => {
+    await page.goto("/");
+    await waitForBanner(page);
+    await bannerButton(page, "Choose what to share").click();
+
+    const panel = region(page);
+    await expect(panel.getByRole("button", { name: "Save preferences" })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Back", exact: true })).toBeVisible();
+    // Removed deliberately: with the switch on, Save does the same thing, and
+    // the third button's height pushed the Clarity disclosure below the fold.
+    // Accept now appears once, on the banner, as one of two equal answers.
+    await expect(panel.getByRole("button", { name: "Accept analytics" })).toHaveCount(0);
   });
 
   test("Essential reads as information, not a choice", async ({ page }) => {

@@ -13,13 +13,24 @@
     // what ClosingCta and the contact CTA already use.
     --consent-bg: var(--color-bg-inverse-strong);
     --consent-ink: var(--color-text-inverse);
-    // Body copy one step down from the heading ink. Still on a near-black
-    // ground, so it clears 4.5:1 comfortably.
-    --consent-ink-muted: var(--brown-300);
+    // Body copy one step down from the heading ink.
+    //
+    // brown-100 at 70%, NOT brown-300. Both land at roughly the same contrast
+    // over brown-950 (8.25:1 against 8.45:1, so the accessibility floor is
+    // untouched either way), but brown-300 is a saturated tan and read as a
+    // gold accent colour rather than as quiet body copy. A transparent white
+    // is achromatic: it reads as the same ink, dimmed.
+    --consent-ink-muted: #{rgba($brown-100, 0.7)};
     --consent-border: #{rgba($brown-100, 0.16)};
-    // Desktop width. The brief's guidance is that the body reads on one or two
-    // lines at roughly this measure.
-    --consent-size: 460px;
+    // Desktop width of the BANNER. The brief's guidance is that the body reads
+    // on one or two lines at roughly this measure; widened from 460px so the
+    // three controls fit on a single row (see .actions).
+    --consent-size: 560px;
+    // The panel is wider than the banner rather than taller. It carries two
+    // category rows whose copy runs to three paragraphs, and at the banner's
+    // measure that stacked up into a column tall enough to need scrolling on a
+    // laptop. Extra inline size spends the viewport's cheapest axis.
+    --consent-panel-size: 720px;
     // How far the card floats from the viewport edges.
     --consent-inset: #{$space-6};
     // Clearance above the mobile bottom nav. Composed from the nav's OWN
@@ -32,8 +43,9 @@
     );
 
     position: fixed;
-    // Logical, not `right`: Arabic ships in V2 and this must mirror with it.
-    inset-inline-end: var(--consent-inset);
+    // Logical, not `left`: Arabic ships in V2 and this must mirror with it, so
+    // in RTL the card moves to the right edge along with the reading order.
+    inset-inline-start: var(--consent-inset);
     inset-block-end: var(--consent-inset);
     // Above the nav (--z-sticky, 200) but below a true modal. It overlaps the
     // page; it does not own it.
@@ -44,9 +56,22 @@
     // paragraphs and on a short landscape phone the panel would otherwise
     // overflow off-screen with no way to reach the buttons.
     max-block-size: calc(100svh - var(--consent-inset) * 2);
-    overflow-y: auto;
-    // Momentum scrolling inside the card must not chain to the page behind it.
-    overscroll-behavior: contain;
+
+    // Flex, not block, and that is load-bearing rather than cosmetic.
+    //
+    // The card caps its height with max-block-size. A BLOCK child cannot
+    // resolve a percentage or a flex share against that cap, so .inner simply
+    // grew past it (measured: 871px of content in a 731px card) and the card
+    // itself scrolled — which put "Save preferences" below its own fold, with
+    // nothing to suggest it was there.
+    //
+    // Making the card a flex column gives .inner a definite share to resolve
+    // against, so the min-block-size: 0 chain down to .rows works and only the
+    // copy scrolls. The card must NOT scroll itself, or both scroll and the
+    // inner one is unreachable.
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 
     background-color: var(--consent-bg);
     color: var(--consent-ink);
@@ -54,6 +79,15 @@
     border-width: 1px;
     border-color: var(--consent-border);
     box-shadow: $shadow-xl;
+
+    // Only the width animates. The stage switch swaps the contents outright, so
+    // there is no height to interpolate between and animating block-size would
+    // need a measured target — the reason the old expansion used a 0fr/1fr
+    // grid. Carrying the inline size across makes the two stages read as one
+    // surface resizing.
+    transition-property: inline-size;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-out);
 
     // Below lg the nav is a fixed bottom bar, so a bottom-anchored card
     // collides with it. Stacked above it, which is the brief's own preferred
@@ -64,6 +98,26 @@
       inset-block-end: var(--consent-nav-clearance);
       inline-size: auto;
       max-block-size: calc(100svh - var(--consent-nav-clearance) - #{$space-4});
+    }
+
+    // Tighter padding on a phone, so the scroll region gets the space instead.
+    //
+    // Not cosmetic: the Clarity session-recording disclosure is the one
+    // paragraph the brief says must not be buried, and on a phone the card has
+    // only ~330px of scroll area to put it in. $space-6 on all four sides
+    // spends ~48px of that on whitespace. This, plus putting Analytics first
+    // (see ConsentShell), is what brings the disclosure above the fold on open
+    // without shortening a word of it.
+    @include bp-max($bp-md) {
+      .inner {
+        padding: $space-4;
+      }
+
+      // The switch's own hit area already reaches 44px via the ::before
+      // outset, so the row needs no extra block padding on touch.
+      .rows {
+        gap: $space-4;
+      }
     }
   }
 
@@ -104,6 +158,20 @@
     }
   }
 
+  // Expanded, the card grows along the inline axis and stays pinned to the same
+  // corner.
+  //
+  // Anchored at inset-inline-start and inset-block-end, so those two edges do
+  // not move when the width and height change: the panel unfolds up and across
+  // from where the banner was, rather than the card jumping to a new position.
+  // That is what makes the stage switch read as the same surface changing state
+  // instead of one element being replaced by another — and it is why no
+  // separate overlay layer is needed for the panel to sit over the banner's
+  // footprint. It occupies it.
+  .consent[data-expanded]:not([data-standalone]) {
+    inline-size: min(var(--consent-panel-size), calc(100vw - var(--consent-inset) * 2));
+  }
+
   // The preferences page renders the same component in flow rather than
   // floating: there is nothing to dismiss and nothing to overlap.
   .consent[data-standalone] {
@@ -111,11 +179,22 @@
     z-index: auto;
     inline-size: 100%;
     max-block-size: none;
-    overflow-y: visible;
+    // Unbounded here, so nothing needs clipping and nothing needs to shrink:
+    // the card extends the page like any other content block.
+    overflow: visible;
 
     @include bp-max($bp-lg) {
       inset: auto;
       max-block-size: none;
+    }
+
+    // No inner scroll on the preferences page. The card is unbounded there, so
+    // the copy should extend the page like any other content — a scroll region
+    // inside a document that already scrolls is two scrollbars for one axis,
+    // and it would hide the second category behind a fold on a page whose whole
+    // purpose is to show both.
+    .rows {
+      overflow-y: visible;
     }
   }
 
@@ -124,6 +203,12 @@
     flex-direction: column;
     padding: $space-6;
     gap: $space-4;
+    // Shrink to the card's capped height rather than to content, and pass that
+    // constraint down so .rows can resolve a scrollable height against it.
+    // Without the `min-block-size: 0` the chain breaks here — a flex item's
+    // automatic minimum is its content size — and .rows grows the card instead.
+    flex: 1 1 auto;
+    min-block-size: 0;
   }
 
   .banner {
@@ -163,15 +248,25 @@
     color: var(--consent-ink);
   }
 
+  // "How we use cookies".
+  //
+  // No underline. Normally I would argue the other way — an unstyled link
+  // inside body copy relies on colour alone to signal it is a link, which is a
+  // 1.4.1 problem. It is fine here because this link is not inside a sentence:
+  // it sits on its own line as the last element of the banner, with nothing
+  // around it to be confused with, so its position is the affordance. The
+  // underline returns on hover and the focus ring is unaffected, so neither
+  // pointer nor keyboard users lose the cue.
   .link {
     align-self: flex-start;
     font-size: var(--font-size-sm);
     color: var(--consent-ink-muted);
-    text-decoration-line: underline;
+    text-decoration-line: none;
     text-underline-offset: 3px;
 
     &:hover {
       color: var(--consent-ink);
+      text-decoration-line: underline;
     }
 
     // The default focus ring is brown-600, which is nearly invisible on this
@@ -181,97 +276,172 @@
 
   // --- The three banner buttons ---------------------------------------------
 
+  // All three controls on one row.
+  //
+  // `nowrap`, which is why --consent-size went to 560px: the point of putting
+  // "Choose what to share" on the same line as the two decisions is that it
+  // cannot wrap to a line of its own, where a control on its own row reads as
+  // a heavier, more deliberate step than the two above it.
   .actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: stretch;
     gap: $space-2;
     margin-block-start: $space-2;
   }
 
-  // ONE class for all three, and that is the point.
+  // Accept and Decline. ONE class for both, and that is the point.
   //
-  // Accept, Decline and "Choose what to share" must carry identical visual
-  // weight — same size, contrast and treatment. A ghosted or shrunken Decline
-  // is interface interference: a named dark pattern, and a [Base]
-  // non-negotiable in the Design System.
+  // These are the two answers to the question, and they must carry identical
+  // visual weight — same size, fill, contrast and treatment. A ghosted or
+  // shrunken Decline is interface interference: a named dark pattern, and a
+  // [Base] non-negotiable in the Design System.
   //
-  // Sharing a single class rather than three variants makes that structural:
-  // you cannot restyle one without restyling all three, so the rule cannot be
+  // Sharing a single class rather than two variants makes that structural: you
+  // cannot restyle one without restyling the other, so the rule cannot be
   // broken by a later well-meaning tweak. If they ever must differ, reduce
   // Accept — never promote Decline.
+  //
+  // Filled: brown-100 ground, brown-950 ink, no border. 16.6:1.
   .action {
-    flex: 1 1 auto;
+    // Equal shares of the row, and `0` basis so the two stay the same width as
+    // each other regardless of label length. "Accept analytics" is more than
+    // twice the length of "Decline", and `auto` would size them by their text —
+    // handing Accept twice the target area, which is the dark pattern arriving
+    // through the layout instead of through the colour.
+    flex: 1 1 0;
     // 44px on coarse pointers is handled by the block padding plus the line
     // box; stated as a floor so a font-size change cannot shrink it below the
     // WCAG 2.2 target size.
     min-block-size: 44px;
     padding-block: $space-3;
-    padding-inline: $space-4;
+    padding-inline: $space-3;
     border-radius: 0;
-    border-style: solid;
-    border-width: 1px;
-    border-color: #{rgba($brown-100, 0.4)};
-    background-color: transparent;
-    color: var(--consent-ink);
+    border-style: none;
+    background-color: #{$brown-100};
+    color: #{$brown-950};
     font-size: var(--font-size-sm);
-    font-weight: $font-weight-medium;
+    font-weight: $font-weight-semibold;
     text-align: center;
+    text-wrap: balance;
     cursor: pointer;
 
-    transition-property: background-color, border-color;
+    transition-property: background-color;
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out);
 
     &:hover {
-      background-color: #{rgba($brown-100, 0.12)};
-      border-color: var(--consent-ink);
+      background-color: #{$brown-200};
     }
 
     @include focus-ring(var(--consent-ink));
   }
 
-  // --- The expanding panel --------------------------------------------------
+  // "Choose what to share".
+  //
+  // No border and no fill, and permitted to be quieter than the two above for
+  // a specific reason: it is not a third answer. Accept and Decline both end
+  // the interaction and write a record; this one opens more detail and writes
+  // nothing. The dark-pattern rule governs equally-weighted CHOICES — and
+  // making "more options" as loud as "Decline" is itself a mild steer, because
+  // it presents the longer path as equivalent to refusing outright.
+  //
+  // What it does NOT do is shrink below the touch target or drop below the
+  // contrast floor: same min-block-size as the other two, and brown-100 at 70%
+  // is 8.25:1. It is quieter, not weaker.
+  .customise {
+    flex: 0 1 auto;
+    min-block-size: 44px;
+    padding-block: $space-3;
+    padding-inline: $space-3;
+    border-style: none;
+    border-radius: 0;
+    background-color: transparent;
+    color: var(--consent-ink-muted);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
 
-  // 0fr -> 1fr, the same technique the nav uses: max-block-size needs a guessed
-  // target and snaps against the wrong distance, scaleY distorts the border,
-  // and clip-path reserves the full height in layout.
-  .panel {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition-property: grid-template-rows;
-    transition-duration: var(--duration-slow);
+    transition-property: color;
+    transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out);
+
+    &:hover {
+      color: var(--consent-ink);
+    }
+
+    @include focus-ring(var(--consent-ink));
   }
 
-  .panelInner {
-    // A grid item's automatic minimum size is its content height, which would
-    // refuse to shrink and defeat the 0fr row.
-    min-block-size: 0;
-    // `clip`, not `hidden`: no scroll container, so no scroll anchoring and no
-    // jump when something inside takes focus.
-    overflow: clip;
+  // Below the banner's own measure there is not room for three controls side
+  // by side, so they wrap. "Choose what to share" is given the full row rather
+  // than being left to trail after one of the decisions: a half-width third
+  // control next to a full-width one is the visual hierarchy this was trying to
+  // avoid, and on a wrapped layout it would also be the widest target on the
+  // row. Order is preserved, so it still comes last.
+  // $bp-md, not $bp-sm: below lg the card spans the viewport between the nav's
+  // insets, so on a 390px phone the row has about 326px for three controls.
+  // "Accept analytics" alone needs most of a third of that, and measured on the
+  // iPhone project the three-across row broke the labels onto three lines each.
+  @include bp-max($bp-md) {
+    .actions {
+      flex-wrap: wrap;
+    }
+
+    .customise {
+      flex: 1 0 100%;
+    }
+  }
+
+  // --- The preferences panel ------------------------------------------------
+
+  // A plain flex column. It replaces the banner rather than expanding beneath
+  // it, so there is no height to interpolate: the 0fr -> 1fr grid this used to
+  // need (and the `min-block-size: 0` / `overflow: clip` that went with it) is
+  // gone along with the expansion. The card's width transition carries the
+  // change instead.
+  .panel {
     display: flex;
     flex-direction: column;
     gap: $space-4;
-  }
+    // Bounded so .rows below can be the only thing that scrolls. `min-block-size: 0`
+    // because a flex item's automatic minimum is its content height, which
+    // would otherwise refuse to shrink and push the action row off the card.
+    min-block-size: 0;
 
-  .consent[data-expanded] .panel,
-  .consent[data-standalone] .panel {
-    grid-template-rows: 1fr;
-  }
-
-  // The panel is in flow on the preferences page, so it must not be clipped
-  // there — and with no transition there is nothing to clip for.
-  .consent[data-standalone] .panel {
-    transition-property: none;
+    // Focused programmatically when it replaces the banner, so that a keyboard
+    // visitor is not dropped back to <body>. No visible ring on the container
+    // itself: the ring belongs on the control the visitor moves to next, and
+    // outlining the whole panel would read as an error state.
+    &:focus {
+      outline: none;
+    }
   }
 
   // --- Category rows --------------------------------------------------------
 
+  // The category rows, and the ONLY thing in the panel that scrolls.
+  //
+  // The two rows run to five paragraphs between them, which on a phone is
+  // taller than the space the card has. When the whole card scrolled instead,
+  // "Save preferences" started below the card's own fold: measured on a Pixel 7
+  // the card was 731px with 871px of content, so the primary action was off
+  // screen until the visitor scrolled — a control they had no reason to know
+  // was there.
+  //
+  // Confining the scroll here keeps the intro and the action row pinned, so
+  // every way out of the panel is visible from the moment it opens and only the
+  // explanatory copy moves.
   .rows {
     display: flex;
     flex-direction: column;
     gap: $space-5;
+    min-block-size: 0;
+    overflow-y: auto;
+    // Momentum inside the rows must not chain to the page behind the card.
+    overscroll-behavior: contain;
     padding-block-start: $space-4;
     border-block-start-style: solid;
     border-block-start-width: 1px;
@@ -316,19 +486,20 @@
 
   // The Clarity session-recording disclosure.
   //
-  // Given its own treatment deliberately. The design brief singles this
-  // paragraph out: it is the one a careful reader would object to if they found
-  // it undisclosed, and a designer's instinct is to merge it into the body
-  // above. The start border and inset keep it visually separate without making
-  // it look like a warning.
+  // Still its own paragraph and still visually distinct, which is what the
+  // brief requires — it singles this one out as the disclosure a careful reader
+  // would object to if they found it buried, and a designer's instinct is to
+  // merge it into the body above.
+  //
+  // The start rule is gone. It made a legal disclosure look like a pull quote,
+  // which is decoration on the one paragraph that should read as plain fact.
+  // Separation now comes from ink and spacing: full-strength ink against the
+  // muted body above and below it, so it is the most legible line in the row
+  // rather than the most decorated.
   .disclosure {
-    padding-inline-start: $space-3;
-    border-inline-start-style: solid;
-    border-inline-start-width: 2px;
-    border-inline-start-color: #{rgba($brown-100, 0.28)};
     font-size: var(--font-size-sm);
     line-height: $line-height-relaxed;
-    color: var(--consent-ink-muted);
+    color: var(--consent-ink);
     text-wrap: pretty;
   }
 
@@ -345,20 +516,28 @@
   // accessibility tree, form semantics, find-in-page. :checked and :disabled
   // reach CSS for free, which is why there is no aria-checked bookkeeping in
   // the component.
+  //
+  // A squared box with a travelling square knob, not a rounded pill. The mark
+  // is a dome over converging strands and the brand's geometry is architectural
+  // — every other control on the site has square corners, and a pill switch
+  // here was the one rounded object in the interface.
+  //
+  // The 2px inner gap is on purpose: the knob reads as a block that slides
+  // within a frame rather than a dot floating in a capsule.
   .switch {
     appearance: none;
-    // 44px hit area on coarse pointers (WCAG 2.2 · 2.5.8), from a 28px visual
-    // track. The padding is what carries the target size, so the control can
-    // look like a switch and still be tappable.
-    inline-size: 48px;
-    block-size: 28px;
+    // 52x30 visual, with a 44px hit area added below on coarse pointers. The
+    // track is wider than it is tall by enough that the travel is legible at a
+    // glance — a near-square switch reads as a checkbox mid-animation.
+    inline-size: 52px;
+    block-size: 30px;
     flex: 0 0 auto;
     margin: 0;
-    border-radius: $radius-full;
+    border-radius: 0;
     border-style: solid;
     border-width: 1px;
     border-color: #{rgba($brown-100, 0.45)};
-    background-color: #{rgba($brown-100, 0.1)};
+    background-color: #{rgba($brown-100, 0.08)};
     position: relative;
     cursor: pointer;
 
@@ -366,29 +545,38 @@
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out);
 
-    // The knob.
+    // The knob. Square, inset 3px from the frame on every edge.
+    //
+    // Muted when off, full-strength when on. A bright knob in the off position
+    // reads as an active control — the eye takes the brightest thing in the
+    // widget as the "on" signal and the position as secondary, so a light knob
+    // on the left says "on, and something else is off". Position AND value both
+    // have to change, or the state is ambiguous at a glance. This also means
+    // the control is not relying on position alone, which matters for anyone
+    // reading it at low vision or on a small screen.
     &::after {
       content: "";
       position: absolute;
       inset-block-start: 3px;
       inset-inline-start: 3px;
-      inline-size: 20px;
-      block-size: 20px;
-      border-radius: $radius-full;
-      background-color: var(--consent-ink);
-      transition-property: translate;
+      inline-size: 22px;
+      block-size: 22px;
+      border-radius: 0;
+      background-color: #{rgba($brown-100, 0.45)};
+      transition-property: translate, background-color;
       transition-duration: var(--duration-fast);
       transition-timing-function: var(--ease-out);
     }
 
     &:checked {
-      background-color: #{rgba($brown-100, 0.9)};
-      border-color: #{rgba($brown-100, 0.9)};
+      background-color: #{$brown-100};
+      border-color: #{$brown-100};
     }
 
     // Logical translate, so the knob travels toward the end edge in RTL too.
+    // 52 - 22 - 3 - 3 = 24, less the two 1px borders.
     &:checked::after {
-      translate: 20px 0;
+      translate: 22px 0;
       background-color: var(--color-bg-inverse-strong);
     }
 
@@ -399,6 +587,19 @@
     &:disabled {
       cursor: default;
       opacity: 0.55;
+    }
+
+    // WCAG 2.2 · 2.5.8. The visual control is 52x30, so on a touch device the
+    // target is grown to 44px in the block axis without changing how it looks.
+    // `outline-offset` from the focus ring is unaffected by the outset.
+    @media (pointer: coarse) {
+      &::before {
+        content: "";
+        position: absolute;
+        // -7px each side takes 30px to 44px. Inline is already over 44.
+        inset-block: -7px;
+        inset-inline: 0;
+      }
     }
 
     @include focus-ring(var(--consent-ink));
@@ -425,8 +626,7 @@
     border-block-start-color: var(--consent-border);
   }
 
-  .primary,
-  .secondary {
+  .primary {
     flex: 1 1 auto;
     min-block-size: 44px;
     padding-block: $space-3;
@@ -457,17 +657,6 @@
     }
   }
 
-  .secondary {
-    background-color: transparent;
-    border-color: #{rgba($brown-100, 0.4)};
-    color: var(--consent-ink);
-
-    &:hover {
-      background-color: #{rgba($brown-100, 0.12)};
-      border-color: var(--consent-ink);
-    }
-  }
-
   // Current state, announced politely after a save. Empty until there is
   // something to say, so a screen reader is not handed a blank live region.
   .status {
@@ -486,6 +675,36 @@
     text-wrap: pretty;
   }
 
+  // Back to the banner. Styled like .customise, which is the control it
+  // reverses: both are navigation between the two stages rather than answers to
+  // the question, and a filled button here would outrank Save.
+  .back {
+    // `0 1 auto`, so it takes only the width of its label and leaves the two
+    // decisions to share the rest of the row — the same relationship
+    // .customise has to the banner's pair.
+    flex: 0 1 auto;
+    min-block-size: 44px;
+    padding-block: $space-3;
+    padding-inline: $space-3;
+    border-style: none;
+    border-radius: 0;
+    background-color: transparent;
+    color: var(--consent-ink-muted);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      color: var(--consent-ink);
+    }
+
+    @include focus-ring(var(--consent-ink));
+  }
+
   // --- Reduced motion -------------------------------------------------------
   //
   // No entrance animation, and no expand transition. The banner is simply
@@ -493,12 +712,13 @@
   // transitions above; this is here so the intent is stated at the component
   // rather than inherited silently.
   @media (prefers-reduced-motion: reduce) {
-    .panel,
+    .consent,
     .switch,
     .switch::after,
     .action,
-    .primary,
-    .secondary {
+    .customise,
+    .back,
+    .primary {
       transition-property: none;
     }
   }

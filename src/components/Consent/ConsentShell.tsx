@@ -87,6 +87,25 @@ type ConsentShellProps = {
  * real state resolves in an effect. Reading the cookie during render would
  * produce server/client markup that disagrees — the same discipline
  * ParticleText uses for its motion query.
+ *
+ * ## Two stages, not one growing card
+ *
+ * `expanded` switches BETWEEN the banner and the panel rather than revealing
+ * the panel beneath the banner. Only one is mounted at a time, so the panel is
+ * a second state of the same region rather than a taller version of the first.
+ *
+ * That is why there is no `inert` bookkeeping any more: the collapsed panel
+ * used to stay in the DOM so its height could animate, which meant its switch
+ * and buttons had to be explicitly removed from the tab order. Unmounting is
+ * the simpler correctness story — a control that is not rendered cannot be
+ * focused, cannot be read by a screen reader, and cannot be found by
+ * find-in-page.
+ *
+ * Focus is moved into the panel on open and back to the control that opened it
+ * on close. With the banner unmounted, the element that had focus disappears,
+ * and focus would otherwise fall back to <body> — which strands a keyboard
+ * visitor at the top of the document. This is the one place the stage switch
+ * costs something the expansion did not.
  */
 export function ConsentShell({
   intro,
@@ -118,6 +137,10 @@ export function ConsentShell({
     analyticsBody: `${idPrefix}-analytics-body`,
   };
   const customiseRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  // False until the first stage change, so the focus effect below does not fire
+  // on mount. See the effect for why that distinction matters.
+  const stageSwitched = useRef(false);
   const pathname = usePathname();
 
   // Resolve the stored choice after mount, and keep it resolved.
@@ -168,6 +191,41 @@ export function ConsentShell({
     [standalone],
   );
 
+  /**
+   * Move focus into the panel when it replaces the banner.
+   *
+   * Required by the stage switch rather than by taste. The button that was
+   * focused ("Choose what to share") is unmounted the moment the panel opens,
+   * and the browser's fallback for a focused element disappearing is <body> —
+   * so a keyboard visitor who opens preferences would be silently returned to
+   * the top of the document, with the panel they just asked for somewhere below
+   * and no indication of where.
+   *
+   * The panel container takes focus, not the first switch: landing on a control
+   * skips the intro sentence that says analytics is off by default, and a
+   * screen reader would announce the toggle without the sentence that qualifies
+   * it. `tabIndex={-1}` makes the container programmatically focusable without
+   * adding a tab stop.
+   *
+   * Not wired when standalone: /cookie-preferences has no banner to replace, so
+   * there is no lost focus to recover and stealing focus on page load would be
+   * a 3.2.5 violation.
+   */
+  useEffect(() => {
+    if (standalone) return;
+    // Only when a stage actually replaced another one. On the very first
+    // render `expanded` is false and nothing has been unmounted, so focusing
+    // the banner's button here would steal focus from whatever the visitor was
+    // doing when the banner appeared — a 3.2.5 change-on-request failure, and
+    // far more disruptive than the problem being solved.
+    if (!stageSwitched.current) {
+      stageSwitched.current = true;
+      return;
+    }
+    if (expanded) panelRef.current?.focus();
+    else customiseRef.current?.focus();
+  }, [standalone, expanded]);
+
   // Escape dismisses the banner without storing anything, and hands focus back
   // to the control that opened the panel. Not wired when standalone: there is
   // no banner to dismiss on the preferences page.
@@ -176,8 +234,16 @@ export function ConsentShell({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (expanded) {
+        // Back to the banner, one stage at a time: Escape in the panel does
+        // not also dismiss, because a visitor reading the detail has not
+        // refused anything yet.
+        //
+        // The focus call is deliberately NOT on customiseRef here. That button
+        // is unmounted while the panel is open, so the ref is null and the
+        // focus would be lost to <body>. The effect below re-runs when
+        // `expanded` goes false and restores focus once the banner is mounted
+        // again.
         setExpanded(false);
-        customiseRef.current?.focus();
         return;
       }
       // Dismiss only. No record: dismissal is not a decision.
@@ -228,23 +294,38 @@ export function ConsentShell({
       aria-live={standalone ? undefined : "polite"}
     >
       <div className={styles.inner}>
-        {/* The banner stage. Hidden on the preferences page, where the panel
-            is the whole point. */}
-        {!standalone && (
+        {/*
+          The banner stage.
+
+          Rendered only while the panel is closed: opening preferences SWITCHES
+          to it rather than growing the card, so the two never appear together.
+          Also absent on the preferences page, where the panel is the point.
+        */}
+        {!standalone && !expanded && (
           <div className={styles.banner}>
             {reAsk && <p className={styles.reAsk}>{reAsk}</p>}
             {intro}
 
             <div className={styles.actions}>
               {/*
-                All three controls carry identical weight — same element, same
-                class, same padding and contrast. This is the single hardest
+                Accept and Decline carry identical weight — same class, same
+                fill, same padding and contrast. This is the single hardest
                 constraint in the brief: a ghosted or shrunken Decline is
                 interface interference, a named dark pattern, and a [Base]
                 non-negotiable in the Design System.
 
-                They are deliberately NOT differentiated by variant. If these
-                ever need to differ, reduce Accept; never promote Decline.
+                They are deliberately NOT differentiated. If these ever need to
+                differ, reduce Accept; never promote Decline.
+
+                "Choose what to share" sits in the same row but is styled as a
+                quieter control, and that is permitted for a specific reason:
+                it is not a third answer to the question. Accept and Decline
+                both END the interaction and write a record; this one opens more
+                detail and writes nothing. The dark-pattern rule governs
+                equally-weighted CHOICES, and de-emphasising a navigation
+                control alongside two decisions does not steer the decision —
+                whereas making "more options" as loud as "Decline" pushes a
+                visitor who wants to refuse toward a longer path.
               */}
               <button type="button" className={styles.action} onClick={() => commit(true)}>
                 {CONSENT_COPY.banner.accept}
@@ -255,10 +336,10 @@ export function ConsentShell({
               <button
                 ref={customiseRef}
                 type="button"
-                className={styles.action}
+                className={styles.customise}
                 aria-expanded={expanded}
                 aria-controls={panelId}
-                onClick={() => setExpanded((open) => !open)}
+                onClick={() => setExpanded(true)}
               >
                 {CONSENT_COPY.banner.customise}
               </button>
@@ -267,19 +348,50 @@ export function ConsentShell({
         )}
 
         {/*
-          The preferences panel.
+          The preferences panel: the banner's second stage, not a drawer under
+          it. Mounted only when open, which is why there is no `inert` here any
+          more — an unrendered control cannot be tabbed to, announced, or found
+          by find-in-page, so unmounting replaces the attribute bookkeeping the
+          animated collapse used to need.
 
-          `inert` when collapsed rather than merely clipped: overflow alone
-          leaves the switch and buttons tabbable and in the accessibility tree,
-          which gives keyboard and screen-reader users phantom stops inside a
-          panel nobody can see. React needs `undefined` rather than `false` to
-          drop the attribute.
+          `tabIndex={-1}` so the focus effect above can move focus here when the
+          banner it replaced is unmounted. It adds no tab stop.
         */}
-        <div id={panelId} className={styles.panel} inert={(!standalone && !expanded) || undefined}>
-          <div className={styles.panelInner}>
+        {(standalone || expanded) && (
+          <div id={panelId} ref={panelRef} tabIndex={-1} className={styles.panel}>
             {panelIntro}
 
+            {/*
+              Analytics FIRST, Essential second.
+
+              The screenshots and the deck both put Essential first, and that is
+              the conventional order — but it buries the one paragraph the brief
+              says must not be buried. Measured on a Pixel 7: Essential's body
+              runs to six lines at this measure, which pushed the Clarity
+              session-recording disclosure 374px into a 389px scroll area, so it
+              was below the fold on open and only found by scrolling.
+
+              Analytics is also the row that matters: it is the only one with a
+              choice in it, and the only one whose copy a visitor needs before
+              deciding. Essential is informational and loses nothing by coming
+              second — a row whose switch cannot be operated has nothing urgent
+              to say.
+            */}
             <div className={styles.rows}>
+              <Row
+                control={
+                  <Switch
+                    id={ids.analytics}
+                    labelId={ids.analyticsLabel}
+                    describedBy={ids.analyticsBody}
+                    checked={analyticsOn}
+                    onChange={setAnalyticsOn}
+                  />
+                }
+              >
+                {analytics}
+              </Row>
+
               <Row
                 control={
                   // Visibly on, genuinely disabled, and labelled so it reads as
@@ -298,34 +410,52 @@ export function ConsentShell({
               >
                 {essential}
               </Row>
-
-              <Row
-                control={
-                  <Switch
-                    id={ids.analytics}
-                    labelId={ids.analyticsLabel}
-                    describedBy={ids.analyticsBody}
-                    checked={analyticsOn}
-                    onChange={setAnalyticsOn}
-                  />
-                }
-              >
-                {analytics}
-              </Row>
             </div>
 
             {/*
-              Two buttons, and here the hierarchy MAY differ: neither is a
-              decline, so the interface-interference rule does not bite. Save is
-              the panel's primary action; Accept is a shortcut.
+              Save, and a way back. No "Accept analytics" shortcut here.
+
+              It was a third button, and it was redundant: with the switch on,
+              Save does exactly what it did, and the switch is directly above
+              it. Its real cost was height — five paragraphs plus three buttons
+              does not fit a phone card, and the paragraph that lost the
+              argument was the Clarity session-recording disclosure, which is
+              the one the brief says must not be buried. A convenience shortcut
+              is not worth pushing a disclosure below the fold.
+
+              Removing it also removes the only asymmetry between the two
+              stages: Accept now appears once, on the banner, where it is one of
+              two equally-weighted answers.
             */}
             <div className={styles.panelActions}>
               <button type="button" className={styles.primary} onClick={() => commit(analyticsOn)}>
                 {CONSENT_COPY.prefs.save}
               </button>
-              <button type="button" className={styles.secondary} onClick={() => commit(true)}>
-                {CONSENT_COPY.banner.accept}
-              </button>
+              {/*
+                Back to the banner.
+
+                Needed because the panel REPLACES the banner instead of
+                expanding below it. Previously the banner's own "Choose what to
+                share" stayed on screen with aria-expanded="true" and clicking
+                it again collapsed the panel; now that control is unmounted, so
+                without this a pointer user who opened preferences to look has
+                no way out except making a choice. That is a cookie wall in
+                miniature: the visitor asked for information and got a dead end.
+                Escape already does this for keyboard users.
+
+                Inside the action row rather than below it, so it reads as one
+                of the ways out of this panel. Styled quiet, because it is the
+                only one of the three that decides nothing.
+
+                Not rendered standalone: on /cookie-preferences there is no
+                banner to go back to, and it would be a control that does
+                nothing.
+              */}
+              {!standalone && (
+                <button type="button" className={styles.back} onClick={() => setExpanded(false)}>
+                  {CONSENT_COPY.prefs.back}
+                </button>
+              )}
             </div>
 
             {/*
@@ -343,7 +473,7 @@ export function ConsentShell({
 
             {withdraw}
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

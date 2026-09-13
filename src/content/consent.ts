@@ -84,12 +84,30 @@ export const CONSENT_COPY = {
        */
       // Deck em dash ("give up — so we can fix") reworked to a comma.
       body: "Google Analytics and Microsoft Clarity. These tell us which pages people read, where they scroll, and where they give up, so we can fix the parts that are not working.",
+      /**
+       * Still its own paragraph, and still visually distinct from the body
+       * above it. What changed is only HOW: it was set off by a start border
+       * (a pull-quote rule), which read as decoration on a legal disclosure.
+       * It is now separated by ink weight and spacing instead. The brief's
+       * requirement is that it not be buried, not that it carry a rule.
+       */
       clarity:
         "Clarity records how a page is used, including clicks and scrolling. Anything typed into a form is masked and never recorded.",
       retention: "Stored for up to 14 months. Neither tool is used to advertise to you.",
     },
 
     save: "Save preferences",
+    /**
+     * Not from the deck, and the only string here that is not.
+     *
+     * The deck's panel had no back control because it specified the panel as an
+     * expansion of the banner, where the banner's own toggle stayed visible and
+     * closed it again. The panel now replaces the banner, so that control is
+     * gone and without this a visitor who opened preferences to read them can
+     * only leave by deciding. Adding the control is the fix; the label is as
+     * plain as it can be, and it claims nothing about cookies or consent.
+     */
+    back: "Back",
     withdraw:
       "Changed your mind? Open cookie preferences from the footer of any page. Turning analytics off stops it immediately.",
   },
