@@ -1,0 +1,438 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  .page {
+    // L2 component tokens — the override surface for the legal pages.
+    --legal-rail-size: 240px;
+    // Gap between the rail and the prose column.
+    --legal-rail-gap: #{$space-16};
+    // Measure of the prose column. Narrower than --measure-prose: legal text is
+    // read in short bursts by someone looking for one clause, and a tighter
+    // measure makes clause boundaries easier to scan.
+    --legal-measure: 62ch;
+    --legal-section-gap: #{$space-16};
+    // Clearance above an anchored heading, so the fixed nav capsule never
+    // covers the heading a reader just jumped to.
+    --legal-anchor-offset: #{$space-24};
+
+    padding-block: $space-16 $space-24;
+    padding-inline: var(--content-gutter);
+
+    @include bp-lg {
+      padding-block-start: $space-24;
+    }
+  }
+
+  // --- Header ---------------------------------------------------------------
+
+  .header {
+    max-inline-size: var(--legal-measure);
+    margin-block-end: $space-16;
+
+    @include bp-lg {
+      // Align the header with the prose column rather than the page edge, so
+      // the title sits directly above the text it introduces.
+      margin-inline-start: calc(var(--legal-rail-size) + var(--legal-rail-gap));
+      margin-block-end: $space-20;
+    }
+  }
+
+  .title {
+    font-size: var(--type-h1);
+    font-weight: $font-weight-extrabold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+  }
+
+  .standfirst {
+    margin-block-start: $space-5;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  // --- Metadata strip -------------------------------------------------------
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-3 $space-8;
+    margin-block-start: $space-8;
+    padding-block-start: $space-5;
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  .metaPair {
+    display: flex;
+    align-items: baseline;
+    gap: $space-2;
+  }
+
+  .metaLabel {
+    font-size: var(--type-small);
+    font-weight: $font-weight-medium;
+    color: var(--color-text-muted);
+  }
+
+  .metaValue {
+    font-size: var(--type-small);
+    font-weight: $font-weight-semibold;
+    color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  // --- Layout ---------------------------------------------------------------
+
+  .layout {
+    @include bp-lg {
+      display: grid;
+      grid-template-columns: var(--legal-rail-size) minmax(0, 1fr);
+      column-gap: var(--legal-rail-gap);
+      align-items: start;
+    }
+  }
+
+  // --- The rail -------------------------------------------------------------
+  // Below lg the ToC is not rendered at all (see .toc): on a phone a fixed rail
+  // would eat the screen, and the document's own headings are the better
+  // navigation. From lg up this column reserves the space and the nav inside it
+  // is fixed to the viewport's vertical centre.
+
+  .rail {
+    display: none;
+
+    @include bp-lg {
+      display: block;
+      // The column is a grid item of known width; the fixed child is taken out
+      // of flow, so the item itself collapses to nothing and the grid gap would
+      // vanish with it. A zero-height block keeps the column's width.
+      block-size: 0;
+    }
+  }
+
+  .toc {
+    display: none;
+
+    @include bp-lg {
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      // Centred on the viewport height, as specified: pinned at 50% and pulled
+      // back by half its own height. translate (not transform) so a future
+      // transform on this element cannot silently cancel the centring.
+      inset-block-start: 50%;
+      translate: 0 -50%;
+      // Width is inherited from the reserved column rather than restated, so
+      // the rail and its column cannot drift apart.
+      inline-size: var(--legal-rail-size);
+      // Never taller than the viewport: on a short window the list scrolls
+      // inside the rail instead of overflowing off-screen. The 2 * $space-16
+      // leaves breathing room top and bottom.
+      max-block-size: calc(100vh - #{$space-16 * 2});
+    }
+  }
+
+  .tocHeading {
+    flex: none;
+    margin-block-end: $space-4;
+    font-size: var(--type-small);
+    font-weight: $font-weight-semibold;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .tocList {
+    // The rail is the scroll container when the list is taller than the
+    // viewport; the page keeps scrolling independently either way.
+    overflow-y: auto;
+    // Momentum scrolling inside the rail must not chain to the page once the
+    // list hits its end — otherwise reaching the bottom of the ToC starts
+    // scrolling the document underneath it.
+    overscroll-behavior: contain;
+    // Counteract the negative inline margin on the links, so the active
+    // background can extend past the text without the list overflowing.
+    padding-inline: $space-3;
+    margin-inline: -$space-3;
+    list-style: none;
+    counter-reset: legal-toc;
+  }
+
+  .tocItem {
+    counter-increment: legal-toc;
+
+    & + & {
+      margin-block-start: $space-1;
+    }
+  }
+
+  .tocLink {
+    display: flex;
+    gap: $space-3;
+    padding-block: $space-2;
+    padding-inline: $space-3;
+    border-radius: var(--radius-sm);
+    font-size: var(--type-small);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    // Muted is the resting state and clears AA at 5.5:1 — the rail is
+    // secondary navigation, so it recedes until it is the section you are in.
+    color: var(--color-text-muted);
+    text-decoration: none;
+    text-wrap: pretty;
+
+    // Longhands, never the `transition` shorthand: var() is substituted before
+    // the shorthand is parsed, so one missing token voids the whole thing.
+    transition-property: color, background-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    // The section number. A counter rather than markup, so the ToC and the
+    // page body cannot disagree about numbering.
+    &::before {
+      content: counter(legal-toc);
+      flex: none;
+      font-variant-numeric: tabular-nums;
+      // Never the emphasis in the row — the label is what is read.
+      color: var(--color-text-muted);
+      opacity: 0.65;
+    }
+
+    &:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-surface);
+    }
+
+    @include focus-ring;
+
+    // --- The active section ------------------------------------------------
+    // "A subtle bg", as specified: the warm surface tint, one step off the
+    // canvas. No border, no accent bar — the shift in weight and colour is
+    // enough to locate yourself, and the rail stays quiet while reading.
+    &[data-active] {
+      background-color: var(--color-bg-surface);
+      color: var(--color-text-primary);
+      font-weight: $font-weight-semibold;
+
+      &::before {
+        color: var(--color-accent-text);
+        opacity: 1;
+      }
+    }
+  }
+
+  // --- Prose ----------------------------------------------------------------
+
+  .prose {
+    max-inline-size: var(--legal-measure);
+    // Not display:grid — the prose is a flow of text, and normal block layout
+    // is what margin collapsing and text-wrap expect.
+    color: var(--color-text-secondary);
+    // Drives the heading numbers in .sectionTitle::before.
+    counter-reset: legal-body;
+  }
+
+  .section {
+    & + & {
+      margin-block-start: var(--legal-section-gap);
+    }
+  }
+
+  .sectionTitle {
+    // Clears the fixed nav when a #hash anchor or a ToC link lands here.
+    scroll-margin-block-start: var(--legal-anchor-offset);
+    font-size: var(--type-h3);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+    counter-increment: legal-body;
+
+    // Numbered to match the rail. Same counter approach, so a reader following
+    // the ToC sees the same number on the heading they arrive at.
+    &::before {
+      content: counter(legal-body) ".";
+      margin-inline-end: $space-3;
+      font-weight: $font-weight-semibold;
+      color: var(--color-accent-text);
+    }
+  }
+
+  // Element styles for the prose flow. Scoped under .prose rather than applied
+  // as classes on every node: legal copy is long-form text, and a class on each
+  // paragraph would be noise in the JSX for no gain.
+  .prose {
+    p {
+      margin-block-start: $space-4;
+      line-height: $line-height-relaxed;
+      text-wrap: pretty;
+    }
+
+    // Tightens the gap between a heading and its first paragraph, which the
+    // heading's own margin would otherwise double.
+    .sectionTitle + p {
+      margin-block-start: $space-5;
+    }
+
+    strong {
+      font-weight: $font-weight-semibold;
+      color: var(--color-text-primary);
+    }
+
+    a:not(.tocLink) {
+      color: var(--color-accent-text);
+      text-decoration-line: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.2em;
+
+      &:hover {
+        color: var(--color-text-primary);
+      }
+    }
+
+    ul,
+    ol {
+      margin-block-start: $space-5;
+      // Logical property: padding-left would break under RTL, which V1 is
+      // preparing for even though Arabic ships in V2.
+      padding-inline-start: $space-6;
+      line-height: $line-height-relaxed;
+    }
+
+    li + li {
+      margin-block-start: $space-3;
+    }
+
+    li::marker {
+      color: var(--color-text-muted);
+    }
+
+    h3 {
+      margin-block-start: $space-10;
+      font-size: var(--type-h4);
+      font-weight: $font-weight-semibold;
+      line-height: $line-height-snug;
+      color: var(--color-text-primary);
+      scroll-margin-block-start: var(--legal-anchor-offset);
+    }
+  }
+
+  // --- Definition tables ----------------------------------------------------
+  // The entity-details and retention tables. Wrapped in a scroll container
+  // because a table is one of the three things AGENTS.md allows to exceed the
+  // prose measure, and it must scroll itself rather than the page body.
+
+  .tableWrap {
+    overflow-x: auto;
+    margin-block-start: $space-6;
+    // Contains momentum scroll so swiping a table's end does not pan the page.
+    overscroll-behavior-x: contain;
+
+    // The wrapper is focusable so the scroll region is keyboard-operable (see
+    // LegalTable.tsx), which makes a visible ring mandatory rather than
+    // optional — a tab stop a sighted keyboard user cannot see is its own
+    // failure. Offset sits outside the table's own edge.
+    @include focus-ring($offset: 3px);
+  }
+
+  .table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--type-small);
+    text-align: start;
+
+    th,
+    td {
+      padding-block: $space-3;
+      padding-inline: 0 $space-6;
+      border-block-end: 1px solid var(--color-border);
+      vertical-align: baseline;
+      line-height: $line-height-normal;
+    }
+
+    th {
+      font-weight: $font-weight-semibold;
+      color: var(--color-text-primary);
+      white-space: nowrap;
+    }
+
+    td {
+      color: var(--color-text-secondary);
+    }
+
+    // Header row of a multi-column table.
+    thead th {
+      border-block-end-color: var(--color-text-muted);
+      font-size: var(--type-small);
+    }
+
+    tbody tr:last-child :is(th, td) {
+      border-block-end: none;
+    }
+  }
+
+  // Two-column key/value tables only (no thead). The row header is a label, not
+  // a column in its own right, so it shrinks to its content and the value sits
+  // beside it — without this the browser splits the width evenly and strands
+  // the pair at opposite edges of the measure. Scoped by :not(:has(thead)) so
+  // the three-column tables, where even columns are correct, keep theirs.
+  .table:not(:has(thead)) {
+    tbody th {
+      inline-size: 1%;
+    }
+  }
+
+  // --- Callout --------------------------------------------------------------
+
+  .note {
+    margin-block-start: $space-6;
+    padding: $space-5 $space-6;
+    // Logical property, so the accent edge flips side under RTL.
+    border-inline-start: 2px solid var(--color-accent);
+    border-start-end-radius: var(--radius-sm);
+    border-end-end-radius: var(--radius-sm);
+    background-color: var(--color-bg-surface);
+
+    // The callout supplies the top spacing; its first paragraph must not add
+    // more.
+    :first-child {
+      margin-block-start: 0;
+    }
+  }
+
+  // --- Placeholder marker ---------------------------------------------------
+  // Deliberately conspicuous. An unresolved legal fact reading as though it
+  // were real is the failure this is here to prevent — see the note in
+  // LegalPage.tsx. Every instance must be gone before publication.
+
+  .placeholder {
+    padding-block: 1px;
+    padding-inline: $space-2;
+    border-radius: var(--radius-sm);
+    // Not a token: this is a review affordance that must not blend into the
+    // brand palette, and it is removed before launch along with the markers.
+    // ponytail: hardcoded amber, intentionally outside the token system so it
+    // cannot be mistaken for a supported surface. Delete with the placeholders.
+    background-color: #fde9c8;
+    box-shadow: inset 0 0 0 1px #e0a95f;
+    color: #6b4410;
+    font-size: 0.9em;
+    font-weight: $font-weight-semibold;
+    font-style: normal;
+  }
+
+  // --- Reduced motion -------------------------------------------------------
+  // The rail's colour transition is the only motion here, and it is a colour
+  // fade rather than movement — but honouring the preference is a floor, so it
+  // is zeroed rather than argued about.
+
+  @media (prefers-reduced-motion: reduce) {
+    .tocLink {
+      transition-duration: 0s;
+    }
+  }
+}

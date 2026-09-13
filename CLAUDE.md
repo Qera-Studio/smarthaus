@@ -230,6 +230,8 @@ Server Components first. `'use client'` limited to:
 - Wireframe/scene reveal (Web Animations API)
 - Contact form (form state, Turnstile widget)
 - Mobile navigation (toggle state)
+- Legal page table of contents (active-section tracking via IntersectionObserver)
+- 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
 
 Everything else is a Server Component. If you're reaching for `'use client'`, a Server Component with a small client island probably works instead.
 
@@ -240,6 +242,24 @@ Everything else is a Server Component. If you're reaching for `'use client'`, a 
 CSS transitions + IntersectionObserver + Web Animations API. Nothing else.
 
 No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget can't afford them, and the `prefers-reduced-motion` path is simpler when animations are CSS-driven.
+
+### The one exception: canvas on `/404`
+
+`src/components/ParticleText/` runs a hand-written `requestAnimationFrame` loop on a `<canvas>`. It is the only place in the codebase that animates outside the stack above, and it is deliberate — recorded here so the next person does not read it as precedent.
+
+**Why it was allowed:**
+
+- **Zero dependencies.** No animation library; the whole effect is one file and adds ~1KB gzipped to a route nobody lands on deliberately.
+- **Cheaper than the compliant alternative.** The same effect in DOM needs 400+ nodes animating transforms — worse for main-thread time and CLS than a single canvas element.
+- **Contained.** It ships only on `not-found`, which is outside the conversion path, so it cannot regress the homepage's JS budget, LCP, or the Lighthouse gate.
+
+**What it must always do** (and what to check if it is ever touched):
+
+- **Gate `prefers-reduced-motion` in JS.** The `_reset.scss` reduced-motion block zeroes CSS durations and has **no effect on a rAF loop**. The component checks the media query itself and never starts the loop when it is set.
+- **Gate coarse pointers.** No hover means no cursor to orbit, so touch devices get the static fallback rather than a loop that spends battery on an effect that cannot be triggered.
+- **Keep the real text in the DOM.** The `<h1>` is always rendered and only faded with `opacity`, never `display:none` or `visibility:hidden` — both would drop it from the accessibility tree, and the canvas is `aria-hidden`.
+
+**This does not license a second one.** Any further canvas or rAF work needs the same justification made explicitly, or it belongs in the documented stack.
 
 ---
 
