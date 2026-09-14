@@ -1,3 +1,4 @@
+@use "sass:math";
 @use "../../styles/variables" as *;
 @use "../../styles/mixins" as *;
 
@@ -41,10 +42,14 @@
     --process-scroll-block: calc(
       var(--process-stage-block) * (var(--process-pages) - 1) * var(--process-scroll-ratio)
     );
-    // The image is 116% of its frame and sits at -8%, so it has 8% of the FRAME
-    // of slack at each edge. As a percentage of the image's own height that is
-    // 8/116, and 6% stays comfortably inside it: the edge is never exposed.
-    --process-parallax-shift: 6%;
+    // The image is 124% of its frame and sits at -12%, so it has 12% of the
+    // FRAME of slack at each edge. As a fraction of the image's own height that
+    // is 12/124, just under 10%, so a 9% shift never exposes an edge.
+    //
+    // Larger than it first shipped because the range is now one page rather
+    // than the whole section: the same 6% spread over 11 viewports moved an
+    // image 99px in total and was invisible.
+    --process-parallax-shift: 9%;
     // L2 ink ramp. Colour tokens rather than `opacity`, which would inherit to
     // every descendant. Same approach as the footer's --footer-ink-* set.
     --process-ink: #{$brown-100};
@@ -307,9 +312,9 @@
   .image {
     position: absolute;
     inset-inline: 0;
-    inset-block-start: -8%;
+    inset-block-start: -12%;
     inline-size: 100%;
-    block-size: 116%;
+    block-size: 124%;
     object-fit: cover;
   }
 
@@ -483,9 +488,13 @@
   .progressFill,
   .image {
     animation-timeline: --process-scroll;
-    animation-range: contain 0% contain 100%;
     animation-fill-mode: both;
     animation-timing-function: linear;
+  }
+
+  .track,
+  .progressFill {
+    animation-range: contain 0% contain 100%;
   }
 
   .track {
@@ -496,8 +505,38 @@
     animation-name: process-progress;
   }
 
+  // Parallax runs over ONE PAGE's slice of the section, not the whole thing.
+  //
+  // It shared the track's full-section range at first, and that is why the
+  // effect was invisible: the drift was spread across all 11 viewports of
+  // scrolling, so an image moved 99px in total — about 9px per viewport.
+  // Measured, not guessed. The computed `translate` was animating correctly the
+  // whole time, which is what made it look like the CSS was working.
+  //
+  // Each page occupies 1/pages of the pin window, so page N's slice runs from
+  // (N-1)/pages to N/pages. The drift now happens while that page is actually
+  // the one on screen, which is roughly six times faster and visible.
+  //
+  // The per-page ranges are written out rather than generated: `animation-range`
+  // takes no custom property in a percentage position, so a loop would need one
+  // literal per page anyway. Six pages, six lines, and the unit suite asserts
+  // the page count so a seventh cannot land unnoticed.
   .image {
     animation-name: process-parallax;
+  }
+
+  // $process-page-count must match PROCESS_PAGES.length in src/content/process.ts.
+  // The stylesheet cannot read that array, and `animation-range` cannot take the
+  // --process-pages custom property in a percentage position, so this is the one
+  // place the count is duplicated. src/content/__tests__/process.test.ts pins the
+  // array at six, so a seventh page fails the unit suite before it reaches here.
+  $process-page-count: 6;
+
+  @for $i from 1 through $process-page-count {
+    .page:nth-child(#{$i}) .image {
+      $slice: math.div(100%, $process-page-count);
+      animation-range: contain #{($i - 1) * $slice} contain #{$i * $slice};
+    }
   }
 
   // Alternate the drift so adjacent images move against each other. That

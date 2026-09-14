@@ -41,12 +41,22 @@ jurisdiction-specific advice.
 
 ACCURACY DISCIPLINE (Legal System §5, Anti-Patterns table):
 A policy describing data flows the site does not have is a MISREPRESENTATION —
-worse than no policy. As of this draft the installed dependencies are next, react,
-react-dom and zod ONLY. There is no Resend, no Sanity, no Vercel Analytics, no
-Turnstile in package.json. Accordingly §4 below is split into CURRENT and NOT YET
-ACTIVE. Each "not yet active" processor must be moved into the live table IN THE
-SAME PR THAT ADDS THE DEPENDENCY — same discipline AGENTS.md applies to the CSP.
-An unactivated entry left in the live table is an inaccurate policy.
+worse than no policy. §4 below is split into CURRENT and NOT YET ACTIVE. Each
+"not yet active" processor must be moved into the live table IN THE SAME PR THAT
+ADDS THE DEPENDENCY — same discipline AGENTS.md applies to the CSP. An
+unactivated entry left in the live table is an inaccurate policy, and so is an
+installed one left in the planned table.
+
+INSTALLED AND LIVE: next, react, react-dom, zod, @vercel/analytics,
+@vercel/speed-insights.
+
+STILL PLANNED: Sanity, Turnstile.
+
+NEEDS ATTENTION: `resend` is in package.json and src/app/contact/actions.ts
+sends through it, but its row is still in §4.2. That is this gate failing in the
+direction it was written to prevent. Move it in the change that confirms the
+lead mailbox — it belongs to that work, not to the analytics change that
+noticed it.
 
 PLACEHOLDERS: every [PLACEHOLDER: …] is collated in the final section. The policy
 is not valid without a real controller identity and a monitored rights channel —
@@ -158,6 +168,8 @@ We use this for security, fraud and abuse prevention, and to diagnose faults. Th
 
 **Analytics cookies are off until you turn them on.** We are preparing to use Google Analytics and Microsoft Clarity to understand which pages are read and where people get stuck. Neither is installed yet, and neither will load unless you accept it.
 
+**We do measure how the site performs, without cookies.** Vercel Web Analytics and Speed Insights count page views and record how quickly pages load. They set no cookies, store nothing in your browser, and create no identifier that survives your visit, so there is nothing here for you to switch off. You are counted; you are not followed.
+
 Microsoft Clarity records how pages are used, including scrolling, clicks and pointer movement, and can replay a session. **Anything you type into a form will be masked and never recorded.** We will verify that before it processes anything.
 
 We do not use advertising or remarketing cookies. There is no Meta Pixel, no ad-network tag, and no third-party chat widget on this site.
@@ -186,9 +198,10 @@ We use a small number of service providers who process information on our instru
 
 ### 4.1 Currently in use
 
-| Provider    | What it does                  | What it sees                   | Where                                    |
-| ----------- | ----------------------------- | ------------------------------ | ---------------------------------------- |
-| Vercel Inc. | Hosts and serves this website | Server log data in section 3.2 | [PLACEHOLDER: confirm deployment region] |
+| Provider                                | What it does                                | What it sees                                                                                | Where                                    |
+| --------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Vercel Inc.                             | Hosts and serves this website               | Server log data in section 3.2                                                              | [PLACEHOLDER: confirm deployment region] |
+| Vercel Web Analytics and Speed Insights | Aggregate page performance and visit counts | Aggregated, non-identifying usage data. No cookies, and no identifier that survives a visit | [PLACEHOLDER: confirm deployment region] |
 
 <!-- ACCURACY GATE — Legal System §5 requires the policy to name every third party
      that receives data, and to describe only what the build actually does. The
@@ -203,12 +216,11 @@ We use a small number of service providers who process information on our instru
 
 The following are planned but **not currently operating on this site**. We list them for transparency about our direction. Each will move into the table above, and this policy will be updated and re-dated, before it begins processing anything.
 
-| Provider                                | Planned purpose                                                 | What it would see                                  |
-| --------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------- |
-| Resend                                  | Delivering enquiry emails to our team                           | Everything you submit in an enquiry form           |
-| Sanity                                  | Managing website content                                        | Nothing you submit — content only, no enquiry data |
-| Vercel Web Analytics and Speed Insights | Aggregate page performance and visit counts                     | Aggregated, non-identifying usage data             |
-| Cloudflare Turnstile                    | Spam protection on the enquiry form, if spam volume requires it | Technical signals about your browser session       |
+| Provider             | Planned purpose                                                 | What it would see                                  |
+| -------------------- | --------------------------------------------------------------- | -------------------------------------------------- |
+| Resend               | Delivering enquiry emails to our team                           | Everything you submit in an enquiry form           |
+| Sanity               | Managing website content                                        | Nothing you submit — content only, no enquiry data |
+| Cloudflare Turnstile | Spam protection on the enquiry form, if spam volume requires it | Technical signals about your browser session       |
 
 ### 4.3 Others who may receive information
 

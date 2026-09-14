@@ -111,6 +111,19 @@ The build must fail if:
 
 ### Phase 1 — Landing
 
+> **SUPERSEDED — this section describes an image-parallax landing that is not
+> what shipped.** Phase 1 is now real-time WebGL: `src/components/Hero/`
+> renders `public/hero/villa.glb` with three.js and orbits the camera on
+> pointer move. The still-image parallax below, and the 45-frame cursor grid
+> that briefly replaced it, are both gone. See the three.js section under
+> "Dependency policy" for why, and `scripts/export-villa.py` for the Blender
+> export. Phases 2 and 3 below are unbuilt and their spec still stands.
+>
+> What carried over unchanged: the two CTAs, the camera range (azimuth ±4°,
+> elevation 0–5°, one-sided so the camera never looks up from below ground),
+> the server-rendered still as the LCP element, and every adaptive-loading and
+> reduced-motion gate.
+
 Front-view villa on warm background with **mouse-driven parallax**. Heading, subtitle, two CTAs: "Book a site visit" (primary) and "Explore Villa" (secondary).
 
 **Parallax effect:** The villa render is 110% of the display container. Container has `overflow: hidden`. On `mousemove`, a client component updates `--parallax-x` and `--parallax-y` custom properties (normalized -0.5 to 0.5). The image transforms: `translate(calc(var(--parallax-x) * -25px), calc(var(--parallax-y) * -15px))`. Subtle — enough to feel 3D, nothing more.
@@ -311,12 +324,14 @@ The current CSP in `next.config.ts` is `default-src 'self'` everywhere. As third
 
 ### Planned CSP changes (update when implementing)
 
-| Service               | CSP directive               | Domain(s)                      |
-| --------------------- | --------------------------- | ------------------------------ |
-| Sanity Studio         | `connect-src`, `img-src`    | `*.sanity.io`, `cdn.sanity.io` |
-| Sanity image CDN      | `img-src`                   | `cdn.sanity.io`                |
-| Vercel Analytics      | `connect-src`               | `vitals.vercel-insights.com`   |
-| Vercel Speed Insights | `script-src`, `connect-src` | `va.vercel-scripts.com`        |
+| Service          | CSP directive            | Domain(s)                      |
+| ---------------- | ------------------------ | ------------------------------ |
+| Sanity Studio    | `connect-src`, `img-src` | `*.sanity.io`, `cdn.sanity.io` |
+| Sanity image CDN | `img-src`                | `cdn.sanity.io`                |
+
+**Vercel Analytics and Speed Insights needed no CSP change, and the rows that said otherwise are gone.** They listed `vitals.vercel-insights.com` and `va.vercel-scripts.com`, which were the v1 external domains. Version 2 of both packages serves from first-party paths — `/_vercel/insights/script.js` and `/_vercel/speed-insights/script.js` — which `default-src 'self'` already allows. Verified by loading the page with the CSP live and watching for violations: none.
+
+The corollary is that those paths are served by the **platform**, not by this app, so they 404 anywhere but a Vercel deployment. See the note in `src/app/layout.tsx` for why both components are mounted behind `process.env.VERCEL`.
 
 **Each addition must be checked against:**
 
@@ -380,7 +395,11 @@ Embedded at `/studio` via `next-sanity`. Authenticated route — not public, not
 
 ## Analytics
 
-**Vercel Web Analytics + Speed Insights.** Nothing else loading today.
+**Vercel Web Analytics + Speed Insights, installed and live.** Nothing else loading today.
+
+Both are mounted in `src/app/layout.tsx` behind `process.env.VERCEL`, and both are **deliberately not consent-gated**. The banner exists for GA4 and Clarity, which set cookies and build a cross-session profile. These set no cookies at all: Vercel's privacy documentation states there is no cross-site identifier and that a visitor is a hash of the incoming request, discarded after 24 hours. There is nothing to consent to or withdraw. If that ever changes they move behind the banner and the privacy policy is rewritten in the same change.
+
+Their privacy-policy row moved from §4.2 to §4.1 in the same commit that added the dependency, per the accuracy gate in `src/content/legal/privacy-policy.md`.
 
 No Meta Pixel. No ad-network tag. No chat widget SDK. No third-party tracking script on initial load, ever — these are the largest sources of JS bloat and CLS on marketing sites.
 
@@ -470,7 +489,56 @@ Before adding any dependency, answer:
 4. **Does it need a CSP change?** If yes, the CSP update ships in the same PR
 5. **Is it maintained?** Last publish > 12 months with open security issues = no
 
-**Explicitly banned:** GSAP, Framer Motion, Lenis, three.js, React Three Fiber, any scroll-hijacking library, GA4 on load, Meta Pixel on load, any chat widget SDK, any CMS page builder plugin.
+**Explicitly banned:** GSAP, Framer Motion, Lenis, React Three Fiber, any scroll-hijacking library, GA4 on load, Meta Pixel on load, any chat widget SDK, any CMS page builder plugin.
+
+### three.js — the ban, and why it was lifted for the hero only
+
+three.js was on the list above and is not any more. It is now a dependency, used
+by exactly one component, `src/components/Hero/VillaCanvas.tsx`. Everything else
+in the motion stack is unchanged, and **React Three Fiber and drei remain
+banned** — they are a second React reconciler and a grab-bag, for no capability
+the hero needs.
+
+**Why the original reasoning did not hold.** CLAUDE.md's Blender-hero section
+rejects runtime 3D on the grounds that "a 10MB WebGL bundle would blow the JS
+budget on page one and exclude every mid-range phone in Dubai". That is a sound
+argument about a large textured scene. It is not the scene we have. Measured
+from the `.blend`:
+
+|                   | Assumed           | Actual                             |
+| ----------------- | ----------------- | ---------------------------------- |
+| Triangles         | (a full 3D scene) | **30,528**                         |
+| Textures          | (implied many)    | **zero**                           |
+| Lights            | (implied a rig)   | **zero** — world background only   |
+| Model on the wire | ~10MB             | **304KB** gzipped (1.6MB raw glTF) |
+
+**Why pre-rendered frames actually failed.** The 45-frame grid this replaced
+cross-faded between adjacent viewpoints on pointer move. A cross-fade between
+two _different_ camera angles is a double exposure: at 50% opacity every
+vertical edge appears twice. The camera moved ~8px per step, far above the ~2px
+where a dissolve reads as blur rather than as a ghost. No frame count and no
+encoding fixes that — opacity is simply the wrong operator for rotation. The
+choice was never "pre-rendered vs. real-time quality"; it was "visible ghosting
+vs. no ghosting".
+
+**What the exception is conditional on.** If any of these stops being true, this
+decision should be reopened rather than extended:
+
+- **Dynamic import, always.** three.js is in no initial chunk. It loads after
+  the page is interactive, and only on a device that will use it.
+- **The poster is never removed.** The server-rendered still is the LCP element
+  and the first paint; the canvas fades in over it. Touch, `prefers-reduced-
+motion`, `Save-Data`, 2g/3g and any WebGL failure keep the poster and load
+  **no three.js at all**.
+- **No Draco, no CSP change.** Plain glTF over gzip is 304KB. Draco reaches
+  164KB but needs a 752KB wasm decoder _and_ `wasm-unsafe-eval` in `script-src`.
+  Smaller file, larger transfer, widened script policy: refused.
+- **One consumer.** If a second component wants three.js, that is a new
+  decision, not a precedent.
+
+The JS budget in `lighthouserc.json` covers the initial load, which the dynamic
+import keeps clear. If the hero's chunk ever starts counting against it,
+re-baseline deliberately and record why — see the budget note in CLAUDE.md.
 
 ---
 
