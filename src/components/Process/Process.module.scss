@@ -35,7 +35,7 @@
     // real dwell time rather than flicking past. Raising it makes the section
     // taller in exact proportion, so it is the one number to turn if the pacing
     // is wrong. ponytail: one token, change it and nothing else moves.
-    --process-scroll-ratio: 2;
+    --process-scroll-ratio: 3;
     // The spacer's height: one stage to pin against, plus `ratio` stages of
     // scroll for every page of travel.
     --process-scroll-block: calc(
@@ -118,7 +118,9 @@
     // it, and the reader lost the middle third of the only progress indicator
     // on the page. The nav publishes its own height, so this tracks it rather
     // than hard-coding the measurement.
-    padding-block-start: calc(var(--nav-bar-block-size) + #{$space-5});
+    // 24px below the rule before the rail begins, so the bar reads as the
+    // section's own header rather than as the top edge of the first image.
+    padding-block: calc(var(--nav-bar-block-size) + #{$space-5}) $space-6;
 
     @include bp-max($bp-lg) {
       // Below lg the nav is a bottom bar, so there is nothing to clear here.
@@ -202,7 +204,13 @@
     align-content: center;
     gap: $space-4;
     padding-block: $space-6;
-    padding-inline-end: $space-6;
+    // 64px between one step and the next. Carried as TRAILING padding on every
+    // page rather than a gap on the track: the track is a grid whose columns
+    // are exactly one stage each, and a column-gap there would push every page
+    // past its stage and break the 1:1 relationship the translate depends on.
+    // Padding keeps each page one stage wide and takes the separation out of
+    // its own width.
+    padding-inline-end: $space-16;
     // Each page clips its own contents. Layouts below use negative margins to
     // bleed an image to the edge of the stage, and without this those images
     // paint straight over the NEXT page: step 2's image covered step 3's copy,
@@ -304,11 +312,25 @@
     // The intro carries no image, so its content is the whole page and sits in
     // the middle of the stage rather than hard against the leading edge, where
     // it read as a column that had lost its picture.
+    // The intro carries no image, so its content is the whole page: centred in
+    // the stage, and the text centred within itself.
+    //
+    // `justify-items` alone was not enough. It centres the BOX, but the copy
+    // inside stayed ragged-left against a left edge, which still read as
+    // off-centre.
+    //
+    // The trailing 64px that separates every page from the next would also pull
+    // the block off true centre, so it is balanced by the same amount on the
+    // leading side rather than removed: the gap survives and the content is
+    // centred in what is left.
     .intro {
       justify-items: center;
+      padding-inline-start: $space-16;
 
       .content {
         max-inline-size: 52ch;
+        align-items: center;
+        text-align: center;
       }
     }
 
@@ -351,10 +373,12 @@
       .slot1 {
         grid-column: 2;
         // Cancels the page's own trailing padding so the image reaches the very
-        // edge of the stage. A negative margin rather than a wider column,
-        // because the column has to stay inside the grid for the text to keep
-        // its share. The page clips it, so it cannot paint over the next one.
-        margin-inline-end: calc(-1 * #{$space-10});
+        // edge of the stage. Must track that padding exactly, or the image
+        // stops short of the edge or overshoots it. A negative margin rather
+        // than a wider column, because the column has to stay inside the grid
+        // for the text to keep its share. The page clips it, so it cannot paint
+        // over the next one.
+        margin-inline-end: calc(-1 * #{$space-16});
       }
     }
 
