@@ -78,18 +78,40 @@ test("the ground bleeds past the content cap without horizontal overflow", async
 
   // The footer box itself stops at the 1440px cap — that is expected. What
   // must be true is that its painted ground still reaches both edges.
+  //
+  // Scrolled into view first, and the box read AFTER the scroll. The clip below
+  // is viewport-relative while boundingBox is viewport-relative too, so the two
+  // only agree once the footer is actually on screen. Before the homepage had
+  // content, it always was; the moment the page grew past one viewport the
+  // midpoint landed outside the capture and the screenshot threw "clipped area
+  // is empty" rather than failing an assertion.
+  await page.getByRole("contentinfo").scrollIntoViewIfNeeded();
   const footer = (await page.getByRole("contentinfo").boundingBox())!;
   expect(Math.round(footer.width)).toBe(1440);
 
-  // elementFromPoint cannot verify this: a box-shadow is painted but not
-  // hit-testable, so a hit test at the edge returns the element behind it.
-  // Compare the rendered pixels instead — a 1x1 capture at each viewport edge
-  // and one inside the footer, all of which must be byte-identical because
-  // all three are flat brown-950.
-  const y = Math.round(Math.max(footer.y + footer.height / 2, 1));
+  // Compare the rendered pixels — a 1x1 capture at each viewport edge and one
+  // inside the footer, all of which must be byte-identical because all three
+  // are flat brown-950.
+  // Clamped to the viewport at both ends: the midpoint is the ideal sample, but
+  // a footer taller than the viewport would put it past the bottom edge and the
+  // capture would throw again.
+  const y = Math.round(Math.min(Math.max(footer.y + footer.height / 2, 1), 898));
   const px = (x: number) => page.screenshot({ clip: { x, y, width: 1, height: 1 } });
   const [left, right, inside] = await Promise.all([px(1), px(1798), px(900)]);
 
   expect(left.equals(inside)).toBe(true);
   expect(right.equals(inside)).toBe(true);
+
+  // And the ground is the FOOTER for hit testing, not just paint. It used to
+  // be a box-shadow, which paints but is not hit-testable, so the pointer in
+  // the gutter was over <html> and kept the dark cursor dot on the dark
+  // ground. The bleed is a pseudo-element now, so a hit test at the edge
+  // resolves to the footer and inherits its light dot.
+  const edge = await page.evaluate((y) => {
+    const el = document.elementFromPoint(1, y);
+    const footer = el?.closest("footer");
+    return { isFooter: Boolean(footer), cursor: footer ? getComputedStyle(footer).cursor : "" };
+  }, y);
+  expect(edge.isFooter).toBe(true);
+  expect(edge.cursor).toContain("F8F5F0");
 });

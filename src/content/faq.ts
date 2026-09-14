@@ -307,7 +307,7 @@ export const FAQ_CATEGORIES: readonly FaqCategory[] = [
         id: "support-response",
         question: "What if something stops working?",
         answer: [
-          "You call one number. On Standard Care we respond the next business day. On Premium Care, within {6} hours, seven days a week.",
+          "You call one number. On Standard Care we respond the next business day. On Premium Care, within {4} hours, seven days a week.",
         ],
         pending: "Premium Care response window to be confirmed with Sunil.",
       },

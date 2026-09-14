@@ -111,6 +111,19 @@ The build must fail if:
 
 ### Phase 1 — Landing
 
+> **SUPERSEDED — this section describes an image-parallax landing that is not
+> what shipped.** Phase 1 is now real-time WebGL: `src/components/Hero/`
+> renders `public/hero/villa.glb` with three.js and orbits the camera on
+> pointer move. The still-image parallax below, and the 45-frame cursor grid
+> that briefly replaced it, are both gone. See the three.js section under
+> "Dependency policy" for why, and `scripts/export-villa.py` for the Blender
+> export. Phases 2 and 3 below are unbuilt and their spec still stands.
+>
+> What carried over unchanged: the two CTAs, the camera range (azimuth ±4°,
+> elevation 0–5°, one-sided so the camera never looks up from below ground),
+> the server-rendered still as the LCP element, and every adaptive-loading and
+> reduced-motion gate.
+
 Front-view villa on warm background with **mouse-driven parallax**. Heading, subtitle, two CTAs: "Book a site visit" (primary) and "Explore Villa" (secondary).
 
 **Parallax effect:** The villa render is 110% of the display container. Container has `overflow: hidden`. On `mousemove`, a client component updates `--parallax-x` and `--parallax-y` custom properties (normalized -0.5 to 0.5). The image transforms: `translate(calc(var(--parallax-x) * -25px), calc(var(--parallax-y) * -15px))`. Subtle — enough to feel 3D, nothing more.
@@ -171,6 +184,51 @@ All clips: `muted playsinline preload="none"` with a poster. Clips load on deman
 - Service info panels contain indexable, screen-reader-accessible text
 - Poster frame `<img>` has descriptive `alt` text (visible to screen readers, used as reduced-motion fallback)
 - `prefers-reduced-motion` path: landing still → static dusk isometric still → service poster stills. No clips play. All content still accessible via tabs
+
+---
+
+## The Process rail — horizontal scroll
+
+`src/components/Process/` is a full-viewport brown-950 section on the homepage whose six pages scroll **sideways**, driven by the page's own vertical scroll. Content lives in `src/content/process.ts`.
+
+### The mechanism
+
+Pure CSS. No scroll listener, no wheel interception, no library.
+
+- The `<section>` is a **tall spacer** carrying `view-timeline-name: --process-scroll`.
+- Inside it, `.pin` is `position: sticky` and holds still while the spacer scrolls past.
+- `.track` consumes that timeline and translates horizontally. `animation-range: contain 0% contain 100%` is exactly the pin window: for a subject taller than the viewport, `contain` runs from "top aligns" to "bottom aligns", which is precisely the span over which the sticky child is stationary. No offsets, no `calc` in the range, and it stays correct if the page count changes.
+- The spacer's height is one stage plus one stage per page of travel, which makes the gesture **1:1** — a pixel of vertical scroll is a pixel sideways.
+
+Three things that are load-bearing and easy to break:
+
+- **The track needs an explicit `inline-size`.** With `grid-auto-flow: column` and no width it stays at its container's size, the columns overflow invisibly, and the translate percentage is then computed against one stage instead of six. Measured: the rail moved a sixth of the distance it should have.
+- **`translate`, not `transform: translateX()`.** Composites the same and leaves `transform` free for the images, so the track and the parallax never contend for one property.
+- **`--process-pages` is set inline by the component.** The page count is the one number the stylesheet cannot know, and both the track width and the spacer height derive from it.
+
+### Parallax
+
+Images are 112% of their clipped frame and drift ±4% on the same timeline, alternating direction per page. The counter-motion against the track is what reads as depth. Same shape as the hero's mouse parallax above: an oversized image, a clipped box, a subtle shift.
+
+### prefers-reduced-motion
+
+The section drops the spacer and the pin, the rail becomes a real `overflow-x: auto` scroll container, the progress bar is hidden, and every animation is removed with **`animation-name: none`** — not `animation-timeline: none`, which only converts the animation back to a time-based one that then holds its first keyframe and keeps overriding the `translate`. That was a real failure on all three device profiles; the comment in the stylesheet records it.
+
+### Accessibility — 1.4.10 is knowingly not met
+
+A pinned horizontal rail is two-dimensional scrolling for reading content, which the Accessibility System marks `[Floor]` at 320px / 400% zoom. This is a **signed-off design decision, not an oversight.**
+
+Mitigations, all of which must survive any change to this section:
+
+- The scroll container is focusable with `role="group"` and an `aria-label` — axe's `scrollable-region-focusable`, the same treatment `LegalTable.tsx` documents.
+- Six `<h3>` headings inside a real `<ol>`, all in the accessibility tree at all times, so the content reads linearly without sideways scrolling at all.
+- `prefers-reduced-motion` removes the pin entirely.
+
+What it does not give is a single-axis reading path for a sighted user at 400% zoom. Record that when the accessibility log is compiled.
+
+### Photography
+
+Every image in `public/hero/process/` is **placeholder stock** and every row in `process.ts` carries `pendingImage`. They do not meet the photography constraint below. `src/content/__tests__/process.test.ts` fails once the last marker is cleared, so replacing them is a deliberate act rather than a silent one.
 
 ---
 
@@ -266,12 +324,20 @@ The current CSP in `next.config.ts` is `default-src 'self'` everywhere. As third
 
 ### Planned CSP changes (update when implementing)
 
-| Service               | CSP directive               | Domain(s)                      |
-| --------------------- | --------------------------- | ------------------------------ |
-| Sanity Studio         | `connect-src`, `img-src`    | `*.sanity.io`, `cdn.sanity.io` |
-| Sanity image CDN      | `img-src`                   | `cdn.sanity.io`                |
-| Vercel Analytics      | `connect-src`               | `vitals.vercel-insights.com`   |
-| Vercel Speed Insights | `script-src`, `connect-src` | `va.vercel-scripts.com`        |
+| Service          | CSP directive            | Domain(s)                      |
+| ---------------- | ------------------------ | ------------------------------ |
+| Sanity Studio    | `connect-src`, `img-src` | `*.sanity.io`, `cdn.sanity.io` |
+| Sanity image CDN | `img-src`                | `cdn.sanity.io`                |
+
+**The hero's Draco decoder is the one CSP widening that has shipped.** It adds
+`'wasm-unsafe-eval'` to `script-src` and `worker-src 'self' blob:`, and adds no
+new origin — the decoder is served from `public/draco/` under
+`default-src 'self'`. Both directives are stated with their reasoning inline in
+`next.config.ts`, and the decision is recorded under the three.js section below.
+
+**Vercel Analytics and Speed Insights needed no CSP change, and the rows that said otherwise are gone.** They listed `vitals.vercel-insights.com` and `va.vercel-scripts.com`, which were the v1 external domains. Version 2 of both packages serves from first-party paths — `/_vercel/insights/script.js` and `/_vercel/speed-insights/script.js` — which `default-src 'self'` already allows. Verified by loading the page with the CSP live and watching for violations: none.
+
+The corollary is that those paths are served by the **platform**, not by this app, so they 404 anywhere but a Vercel deployment. See the note in `src/app/layout.tsx` for why both components are mounted behind `process.env.VERCEL`.
 
 **Each addition must be checked against:**
 
@@ -335,7 +401,11 @@ Embedded at `/studio` via `next-sanity`. Authenticated route — not public, not
 
 ## Analytics
 
-**Vercel Web Analytics + Speed Insights.** Nothing else loading today.
+**Vercel Web Analytics + Speed Insights, installed and live.** Nothing else loading today.
+
+Both are mounted in `src/app/layout.tsx` behind `process.env.VERCEL`, and both are **deliberately not consent-gated**. The banner exists for GA4 and Clarity, which set cookies and build a cross-session profile. These set no cookies at all: Vercel's privacy documentation states there is no cross-site identifier and that a visitor is a hash of the incoming request, discarded after 24 hours. There is nothing to consent to or withdraw. If that ever changes they move behind the banner and the privacy policy is rewritten in the same change.
+
+Their privacy-policy row moved from §4.2 to §4.1 in the same commit that added the dependency, per the accuracy gate in `src/content/legal/privacy-policy.md`.
 
 No Meta Pixel. No ad-network tag. No chat widget SDK. No third-party tracking script on initial load, ever — these are the largest sources of JS bloat and CLS on marketing sites.
 
@@ -425,7 +495,86 @@ Before adding any dependency, answer:
 4. **Does it need a CSP change?** If yes, the CSP update ships in the same PR
 5. **Is it maintained?** Last publish > 12 months with open security issues = no
 
-**Explicitly banned:** GSAP, Framer Motion, Lenis, three.js, React Three Fiber, any scroll-hijacking library, GA4 on load, Meta Pixel on load, any chat widget SDK, any CMS page builder plugin.
+**Explicitly banned:** GSAP, Framer Motion, Lenis, React Three Fiber, any scroll-hijacking library, GA4 on load, Meta Pixel on load, any chat widget SDK, any CMS page builder plugin.
+
+### three.js — the ban, and why it was lifted for the hero only
+
+three.js was on the list above and is not any more. It is now a dependency, used
+by exactly one component, `src/components/Hero/VillaCanvas.tsx`. Everything else
+in the motion stack is unchanged, and **React Three Fiber and drei remain
+banned** — they are a second React reconciler and a grab-bag, for no capability
+the hero needs.
+
+**Why the original reasoning did not hold.** CLAUDE.md's Blender-hero section
+rejects runtime 3D on the grounds that "a 10MB WebGL bundle would blow the JS
+budget on page one and exclude every mid-range phone in Dubai". That is a sound
+argument about a large textured scene. It is not the scene we have. Measured
+from the `.blend`:
+
+|                   | Assumed           | Actual                             |
+| ----------------- | ----------------- | ---------------------------------- |
+| Triangles         | (a full 3D scene) | **30,528**                         |
+| Textures          | (implied many)    | **zero**                           |
+| Lights            | (implied a rig)   | **zero** — world background only   |
+| Model on the wire | ~10MB             | **716KB** gzipped (3.1MB raw glTF) |
+
+The model has since grown past the 304KB this table first recorded: the shipped
+export is a richer scene than the one that was measured, and it is Draco-
+compressed — see the Draco bullet below, which reverses the decision the earlier
+revision of this file recorded.
+
+**Why pre-rendered frames actually failed.** The 45-frame grid this replaced
+cross-faded between adjacent viewpoints on pointer move. A cross-fade between
+two _different_ camera angles is a double exposure: at 50% opacity every
+vertical edge appears twice. The camera moved ~8px per step, far above the ~2px
+where a dissolve reads as blur rather than as a ghost. No frame count and no
+encoding fixes that — opacity is simply the wrong operator for rotation. The
+choice was never "pre-rendered vs. real-time quality"; it was "visible ghosting
+vs. no ghosting".
+
+**What the exception is conditional on.** If any of these stops being true, this
+decision should be reopened rather than extended:
+
+- **Dynamic import, always.** three.js is in no initial chunk. It loads after
+  the page is interactive, and only on a device that will use it.
+- **The poster is never removed.** The server-rendered still is the LCP element
+  and the first paint; the canvas fades in over it. Touch, `prefers-reduced-
+motion`, `Save-Data`, 2g/3g and any WebGL failure keep the poster and load
+  **no three.js at all**.
+- **Draco, and the CSP change it needs — this reverses an earlier refusal.**
+  A previous revision of this file refused Draco on the grounds that it saved
+  140KB but cost a "752KB wasm decoder _and_ `wasm-unsafe-eval`". Both figures
+  were wrong for what actually shipped. The decoder is **192KB** of wasm plus a
+  58KB wrapper, not 752KB, and it is cached independently of the model. The
+  model itself is no longer the 1.6MB scene that was measured — the shipped
+  export is richer, and uncompressed it is far past the point where gzip alone
+  is acceptable on a Dubai mobile connection.
+
+  `public/hero/villa.glb` declares `KHR_draco_mesh_compression` in
+  `extensionsRequired`, so this is not a tuning knob: without the decoder the
+  model cannot be parsed at all.
+
+  **What it costs in policy, stated plainly.** Two directives in
+  `next.config.ts`:
+  - `'wasm-unsafe-eval'` in `script-src` — permits WebAssembly compilation
+    **only**, and still forbids JavaScript string evaluation. It is not a step
+    toward `'unsafe-eval'`.
+  - `worker-src 'self' blob:` — DRACOLoader assembles its decoder worker from a
+    Blob, so the worker URL is `blob:`. Scoped to workers alone; it does not
+    allow `blob:` as a script or frame source.
+
+  Both are reviewed against Security System §5. The decoder is **self-hosted**
+  under `public/draco/`, never a public CDN, so the only wasm module that can be
+  compiled is one this repo ships. That self-hosting is the condition the
+  exception rests on — if the decoder ever moves to a CDN, this decision is
+  reopened.
+
+- **One consumer.** If a second component wants three.js, that is a new
+  decision, not a precedent.
+
+The JS budget in `lighthouserc.json` covers the initial load, which the dynamic
+import keeps clear. If the hero's chunk ever starts counting against it,
+re-baseline deliberately and record why — see the budget note in CLAUDE.md.
 
 ---
 

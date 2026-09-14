@@ -83,36 +83,36 @@
     // plain background-color stops at the cap and leaves bare canvas at the
     // viewport edges on wider screens.
     //
-    // border-image-outset rather than a 100vw pseudo-element: 100vw includes
-    // the classic scrollbar on desktop Windows/Linux and this codebase has no
-    // overflow-x guard, so that route forces a horizontal scrollbar whose fix
-    // would have to live in globals.scss. Per CSS Backgrounds §6.5 an outset
-    // never creates scrollable overflow, so this escapes the cap for free.
+    // A pseudo-element, not a box-shadow. The shadow this used to be painted
+    // the ground to both edges, but a shadow is not hit-testable: outside the
+    // 1440px box the pointer was over <html>, so the cursor kept its dark dot
+    // on the dark ground and vanished. A pseudo-element IS part of this
+    // element for hit testing, so [data-ground="dark"] (globals.scss) now
+    // covers the gutters too — and so does anything else that keys off this
+    // box being under the pointer.
     //
-    // A box-shadow with a large spread and no blur: it paints a solid field
-    // well past the element on every side, and a shadow NEVER contributes to
-    // scrollable overflow — so this escapes the cap without the horizontal
-    // scrollbar that a 100vw pseudo-element or a negative-margin border causes,
-    // and without an overflow-x guard in globals.scss (the navbar branch's
-    // file). Measured at 390-1800px: both viewport edges paint brown-950 and
-    // documentElement.scrollWidth never exceeds the viewport.
+    // inset-inline: calc(50% - 50vw), not -9999px. The footer is centred, so
+    // half the difference between its own width and the viewport is exactly
+    // the gutter on each side: the pseudo lands on the viewport edges with no
+    // scrollable overflow. 100vw includes the classic scrollbar on Windows,
+    // which would leave ~8px poking out on the right; html carries
+    // `overflow-x: clip` (globals.scss) so that cannot become a scrollbar.
     //
-    // border-image-outset was tried first and paints nothing: with
-    // border-image-width 0 there is no border area to draw into. A real border
-    // width plus a negative margin does paint, but reintroduces the overflow.
-    //
-    // A fixed 9999px rather than 100vmax: vmax resolves against the viewport's
-    // larger axis, which is too small to reach the edges on a short, wide
-    // window.
-    //
-    // The shadow spreads in EVERY direction, so it must be clipped back on the
-    // block axis or it paints over the whole page above the footer (measured:
-    // it did). clip-path keeps the inline axis open — a large negative inset
-    // on the sides, zero top and bottom — so the ground reaches both viewport
-    // edges and stops exactly at the footer's own edges vertically.
+    // z-index: -1 puts it under the footer's content, and `isolation` keeps
+    // that -1 inside this box rather than dropping it under the page ground.
+    // background-color on the footer itself stays for the no-pseudo case.
+    position: relative;
+    isolation: isolate;
     background-color: var(--color-bg-inverse-strong);
-    box-shadow: 0 0 0 9999px var(--color-bg-inverse-strong);
-    clip-path: inset(0 -9999px);
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset-block: 0;
+      inset-inline: calc(50% - 50vw);
+      z-index: -1;
+      background-color: var(--color-bg-inverse-strong);
+    }
 
     @include bp-lg {
       // svh, not vh or dvh. 100vh on iOS Safari is the LARGE viewport, so the

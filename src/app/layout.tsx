@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
-// Must precede every component import. CSS Module styles are emitted in import
-// order, and the first file to name a cascade layer fixes that layer's
-// position — so if a component loads first, @layer components is registered
-// before @layer reset and the reset wins. globals.scss declares the order.
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+// First, so the reset and base styles are in the first chunk. The cascade
+// layer ORDER no longer depends on this: every module's chunk opens with the
+// order statement via _variables.scss, because on a notFound() route the
+// browser sees the page's chunk before this one.
 import "../styles/globals.scss";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
@@ -186,6 +188,49 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           (it loads no analytics).
         */}
         <Consent />
+        {/*
+          Vercel Web Analytics and Speed Insights.
+
+          NOT consent-gated, and that is a decision rather than an oversight.
+          The consent banner above exists for GA4 and Microsoft Clarity, which
+          set cookies and build a cross-session profile. These two do neither:
+          Vercel's own privacy documentation states there are no cookies of any
+          kind, no cross-site identifier, and that a visitor is a hash of the
+          incoming request which is discarded after 24 hours. There is nothing
+          for a visitor to consent to or withdraw, and a banner entry offering
+          to turn off something that stores nothing would be noise.
+
+          If that ever changes — a cookie, a persistent id, anything that
+          survives the session — they move behind the banner with the other two
+          and the privacy policy is rewritten in the same change.
+
+          Last in the body, after Consent, so nothing analytics-related stands
+          between a keyboard visitor and the page.
+
+          ON VERCEL ONLY. Both scripts load from /_vercel/insights/script.js and
+          /_vercel/speed-insights/script.js — first-party paths served by the
+          PLATFORM, not by this app, which is why no CSP change was needed:
+          `default-src 'self'` already covers them.
+
+          Off-platform those paths do not exist. `next start` falls through to
+          the 404 handler and returns text/plain, the browser refuses to execute
+          it, and Lighthouse's errors-in-console audit fails: best-practices
+          dropped 0.96 to 0.93 and failed the >= 0.95 gate on a build that would
+          have been perfectly healthy in production. A gate that is red locally
+          and green in production is the failure mode CLAUDE.md already
+          describes for the JS budget — a real regression would look identical
+          to the standing noise.
+
+          So they mount only where they work. VERCEL is set on every Vercel
+          build and on no other, which also keeps two dead script tags out of
+          local and CI HTML.
+        */}
+        {process.env.VERCEL ? (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        ) : null}
       </body>
     </html>
   );

@@ -51,3 +51,7 @@ next-env.d.ts
 
 # Lighthouse CI
 /.lighthouseci/
+
+# Blender source frames for the hero grid: 1.9MB PNGs, 82MB the set. The
+# committed output is public/hero/grid/*.webp — see scripts/hero-grid.sh.
+/public/hero/hero_grid/*.png

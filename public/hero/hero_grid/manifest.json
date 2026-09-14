@@ -1,0 +1,328 @@
+{
+  "cols": 9,
+  "rows": 5,
+  "resolution": [2112, 1320],
+  "background": "transparent \u2014 place on #F0E9DD via CSS",
+  "mapping": "cursor x in [0,1] -> col = round(x*(cols-1)); cursor y in [0,1] (0 = top) -> row = round(y*(rows-1))",
+  "resting_frame": "r4_c4.png",
+  "azimuth_range_deg": [-4.0, 4.0],
+  "elevation_lift_deg": [0.0, 5.0],
+  "note": "vertical range is one-sided: bottom row is the resting view, rows above it lift the camera. No frame looks up from below ground.",
+  "frames": [
+    {
+      "row": 0,
+      "col": 0,
+      "file": "r0_c0.png",
+      "azimuth_deg": -4.0,
+      "elevation_deg": 5.0
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "file": "r0_c1.png",
+      "azimuth_deg": -3.0,
+      "elevation_deg": 5.0
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "file": "r0_c2.png",
+      "azimuth_deg": -2.0,
+      "elevation_deg": 5.0
+    },
+    {
+      "row": 0,
+      "col": 3,
+      "file": "r0_c3.png",
+      "azimuth_deg": -1.0,
+      "elevation_deg": 5.0
+    },
+    {
+      "row": 0,
+      "col": 4,
+      "file": "r0_c4.png",
+      "azimuth_deg": 0.0,
+      "elevation_deg": 5.0
+    },
+    {
+      "row": 0,
+      "col": 5,
+      "file": "r0_c5.png",
+      "azimuth_deg": 1.0,
+      "elevation_deg": 5.0
+    },
+    {
+      "row": 0,
+      "col": 6,
+      "file": "r0_c6.png",
+      "azimuth_deg": 2.0,
+      "elevation_deg": 5.0
+    },
+    {
+      "row": 0,
+      "col": 7,
+      "file": "r0_c7.png",
+      "azimuth_deg": 3.0,
+      "elevation_deg": 5.0
+    },
+    {
+      "row": 0,
+      "col": 8,
+      "file": "r0_c8.png",
+      "azimuth_deg": 4.0,
+      "elevation_deg": 5.0
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "file": "r1_c0.png",
+      "azimuth_deg": -4.0,
+      "elevation_deg": 3.75
+    },
+    {
+      "row": 1,
+      "col": 1,
+      "file": "r1_c1.png",
+      "azimuth_deg": -3.0,
+      "elevation_deg": 3.75
+    },
+    {
+      "row": 1,
+      "col": 2,
+      "file": "r1_c2.png",
+      "azimuth_deg": -2.0,
+      "elevation_deg": 3.75
+    },
+    {
+      "row": 1,
+      "col": 3,
+      "file": "r1_c3.png",
+      "azimuth_deg": -1.0,
+      "elevation_deg": 3.75
+    },
+    {
+      "row": 1,
+      "col": 4,
+      "file": "r1_c4.png",
+      "azimuth_deg": 0.0,
+      "elevation_deg": 3.75
+    },
+    {
+      "row": 1,
+      "col": 5,
+      "file": "r1_c5.png",
+      "azimuth_deg": 1.0,
+      "elevation_deg": 3.75
+    },
+    {
+      "row": 1,
+      "col": 6,
+      "file": "r1_c6.png",
+      "azimuth_deg": 2.0,
+      "elevation_deg": 3.75
+    },
+    {
+      "row": 1,
+      "col": 7,
+      "file": "r1_c7.png",
+      "azimuth_deg": 3.0,
+      "elevation_deg": 3.75
+    },
+    {
+      "row": 1,
+      "col": 8,
+      "file": "r1_c8.png",
+      "azimuth_deg": 4.0,
+      "elevation_deg": 3.75
+    },
+    {
+      "row": 2,
+      "col": 0,
+      "file": "r2_c0.png",
+      "azimuth_deg": -4.0,
+      "elevation_deg": 2.5
+    },
+    {
+      "row": 2,
+      "col": 1,
+      "file": "r2_c1.png",
+      "azimuth_deg": -3.0,
+      "elevation_deg": 2.5
+    },
+    {
+      "row": 2,
+      "col": 2,
+      "file": "r2_c2.png",
+      "azimuth_deg": -2.0,
+      "elevation_deg": 2.5
+    },
+    {
+      "row": 2,
+      "col": 3,
+      "file": "r2_c3.png",
+      "azimuth_deg": -1.0,
+      "elevation_deg": 2.5
+    },
+    {
+      "row": 2,
+      "col": 4,
+      "file": "r2_c4.png",
+      "azimuth_deg": 0.0,
+      "elevation_deg": 2.5
+    },
+    {
+      "row": 2,
+      "col": 5,
+      "file": "r2_c5.png",
+      "azimuth_deg": 1.0,
+      "elevation_deg": 2.5
+    },
+    {
+      "row": 2,
+      "col": 6,
+      "file": "r2_c6.png",
+      "azimuth_deg": 2.0,
+      "elevation_deg": 2.5
+    },
+    {
+      "row": 2,
+      "col": 7,
+      "file": "r2_c7.png",
+      "azimuth_deg": 3.0,
+      "elevation_deg": 2.5
+    },
+    {
+      "row": 2,
+      "col": 8,
+      "file": "r2_c8.png",
+      "azimuth_deg": 4.0,
+      "elevation_deg": 2.5
+    },
+    {
+      "row": 3,
+      "col": 0,
+      "file": "r3_c0.png",
+      "azimuth_deg": -4.0,
+      "elevation_deg": 1.25
+    },
+    {
+      "row": 3,
+      "col": 1,
+      "file": "r3_c1.png",
+      "azimuth_deg": -3.0,
+      "elevation_deg": 1.25
+    },
+    {
+      "row": 3,
+      "col": 2,
+      "file": "r3_c2.png",
+      "azimuth_deg": -2.0,
+      "elevation_deg": 1.25
+    },
+    {
+      "row": 3,
+      "col": 3,
+      "file": "r3_c3.png",
+      "azimuth_deg": -1.0,
+      "elevation_deg": 1.25
+    },
+    {
+      "row": 3,
+      "col": 4,
+      "file": "r3_c4.png",
+      "azimuth_deg": 0.0,
+      "elevation_deg": 1.25
+    },
+    {
+      "row": 3,
+      "col": 5,
+      "file": "r3_c5.png",
+      "azimuth_deg": 1.0,
+      "elevation_deg": 1.25
+    },
+    {
+      "row": 3,
+      "col": 6,
+      "file": "r3_c6.png",
+      "azimuth_deg": 2.0,
+      "elevation_deg": 1.25
+    },
+    {
+      "row": 3,
+      "col": 7,
+      "file": "r3_c7.png",
+      "azimuth_deg": 3.0,
+      "elevation_deg": 1.25
+    },
+    {
+      "row": 3,
+      "col": 8,
+      "file": "r3_c8.png",
+      "azimuth_deg": 4.0,
+      "elevation_deg": 1.25
+    },
+    {
+      "row": 4,
+      "col": 0,
+      "file": "r4_c0.png",
+      "azimuth_deg": -4.0,
+      "elevation_deg": 0.0
+    },
+    {
+      "row": 4,
+      "col": 1,
+      "file": "r4_c1.png",
+      "azimuth_deg": -3.0,
+      "elevation_deg": 0.0
+    },
+    {
+      "row": 4,
+      "col": 2,
+      "file": "r4_c2.png",
+      "azimuth_deg": -2.0,
+      "elevation_deg": 0.0
+    },
+    {
+      "row": 4,
+      "col": 3,
+      "file": "r4_c3.png",
+      "azimuth_deg": -1.0,
+      "elevation_deg": 0.0
+    },
+    {
+      "row": 4,
+      "col": 4,
+      "file": "r4_c4.png",
+      "azimuth_deg": 0.0,
+      "elevation_deg": 0.0
+    },
+    {
+      "row": 4,
+      "col": 5,
+      "file": "r4_c5.png",
+      "azimuth_deg": 1.0,
+      "elevation_deg": 0.0
+    },
+    {
+      "row": 4,
+      "col": 6,
+      "file": "r4_c6.png",
+      "azimuth_deg": 2.0,
+      "elevation_deg": 0.0
+    },
+    {
+      "row": 4,
+      "col": 7,
+      "file": "r4_c7.png",
+      "azimuth_deg": 3.0,
+      "elevation_deg": 0.0
+    },
+    {
+      "row": 4,
+      "col": 8,
+      "file": "r4_c8.png",
+      "azimuth_deg": 4.0,
+      "elevation_deg": 0.0
+    }
+  ]
+}

@@ -1,3 +1,8 @@
+// Not for any token: this is the only module that used none. It is imported so
+// the compiled chunk opens with the cascade layer order statement, like every
+// other module — see the note at the top of _variables.scss.
+@use "../../styles/variables" as *;
+
 @layer components {
   .loader {
     // L2 component tokens.

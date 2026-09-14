@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { CONSENT_COPY } from "../../content/consent";
 import {
+  OPEN_PREFERENCES_EVENT,
+  PREFERENCES_ROUTE,
   buildConsentRecord,
   hasOptOutSignal,
   readConsentCookie,
@@ -13,12 +15,6 @@ import {
 } from "../../lib/consent";
 import { Switch } from "./Switch";
 import styles from "./Consent.module.scss";
-
-/**
- * The route that renders the panel itself, where the banner is suppressed.
- * Matches the href in src/lib/nav-links.ts.
- */
-const PREFERENCES_ROUTE = "/cookie-preferences";
 
 type ConsentShellProps = {
   /** The banner's heading, body and policy link, server-rendered. */
@@ -138,6 +134,11 @@ export function ConsentShell({
   };
   const customiseRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // Whatever had focus when the panel was opened from OUTSIDE the banner (the
+  // footer link), so closing can hand focus back to it. The banner's own
+  // button is covered by customiseRef; this is for the case where there is no
+  // banner — a choice is already on file and the footer is the way back in.
+  const openerRef = useRef<HTMLElement | null>(null);
   // The card itself, measured so ScrollToTop can sit above it. See the
   // ResizeObserver effect below.
   const cardRef = useRef<HTMLElement>(null);
@@ -228,6 +229,31 @@ export function ConsentShell({
   );
 
   /**
+   * Open the panel from the footer's "Cookie Preferences" link.
+   *
+   * The banner is a one-shot surface: once a choice is on file it is gone for
+   * twelve months, and this is the way back in that does not leave the page.
+   * The link dispatches a window event (see PreferencesLink) and this opens
+   * the same panel the banner expands into — the render gate below lets it
+   * show even with no `ask` outstanding.
+   *
+   * Ignored on /cookie-preferences itself: the standalone panel is already on
+   * screen there, and setting `expanded` on this suppressed instance would
+   * make it pop open on the next client-side navigation away from the page.
+   */
+  useEffect(() => {
+    if (standalone) return;
+    const open = () => {
+      if (pathname === PREFERENCES_ROUTE) return;
+      openerRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setExpanded(true);
+    };
+    window.addEventListener(OPEN_PREFERENCES_EVENT, open);
+    return () => window.removeEventListener(OPEN_PREFERENCES_EVENT, open);
+  }, [standalone, pathname]);
+
+  /**
    * Publish the card's height as `--consent-block-size` on <html>.
    *
    * ScrollToTop reads it to sit above the banner. Below lg the banner spans the
@@ -302,15 +328,24 @@ export function ConsentShell({
       stageSwitched.current = true;
       return;
     }
-    if (expanded) panelRef.current?.focus();
-    else customiseRef.current?.focus();
+    if (expanded) {
+      panelRef.current?.focus();
+      return;
+    }
+    // Back to whatever opened it. The footer link when that was the opener
+    // (there may be no banner to return to at all); otherwise the banner's own
+    // button, freshly mounted by the same state change.
+    (openerRef.current ?? customiseRef.current)?.focus();
+    openerRef.current = null;
   }, [standalone, expanded]);
 
   // Escape dismisses the banner without storing anything, and hands focus back
   // to the control that opened the panel. Not wired when standalone: there is
-  // no banner to dismiss on the preferences page.
+  // no banner to dismiss on the preferences page. Also wired while the panel
+  // is open with no `ask` outstanding — opened from the footer after a choice
+  // — where the first branch below simply closes it.
   useEffect(() => {
-    if (standalone || state?.ask !== true) return;
+    if (standalone || (state?.ask !== true && !expanded)) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (expanded) {
@@ -334,8 +369,9 @@ export function ConsentShell({
   }, [standalone, state?.ask, expanded]);
 
   // Nothing to show until the cookie has been read, and nothing to show once a
-  // choice is on file. The preferences page always renders.
-  if (!standalone && (state === null || !state.ask)) return null;
+  // choice is on file — unless the panel was opened from the footer, which is
+  // the way back in after a choice. The preferences page always renders.
+  if (!standalone && (state === null || (!state.ask && !expanded))) return null;
 
   // The banner does not appear on the preferences page.
   //

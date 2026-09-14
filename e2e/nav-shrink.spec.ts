@@ -1,0 +1,142 @@
+import { test, expect, type Page } from "@playwright/test";
+
+/**
+ * The desktop nav shrinks into its capsule without moving its contents.
+ *
+ * The contract, measured per frame on a scroll that outruns the observer:
+ *
+ *   - the box holds its top edge (the sticky inset is the same in both
+ *     states, so the observer landing a frame late cannot drop it);
+ *   - the links do not move on either axis. Their offset from the box's
+ *     centre is a constant, because the edge tracks are half the leftover
+ *     space shifted by half the difference between the two end pieces, which
+ *     is the same shift at any width;
+ *   - the two gaps around the link row stay equal on every frame of the
+ *     shrink. That is what the shifted tracks buy: with symmetric edges, all
+ *     106px of the capsule's slack pooled beside the 23px mark while the
+ *     129px CTA had none;
+ *   - the mark and the CTA keep a constant inset from the frame and only
+ *     slide inward with it;
+ *   - the two brand lockups cross-fade on one centre line (both in flow).
+ *
+ * Each was a measured defect before it was fixed: a 24px drop of the whole
+ * bar, a 55px sideways drift of the links, an 8px drop of every item, an 11px
+ * offset between the fading lockups, and a 106px imbalance between the gaps.
+ * Desktop only: below lg the nav is a fixed bottom bar and none of this holds.
+ */
+
+test.skip(({ isMobile }) => Boolean(isMobile), "the capsule is a desktop-only behaviour");
+test.use({ viewport: { width: 1512, height: 900 } });
+
+type Frame = {
+  top: number;
+  stuck: boolean;
+  leftGap: number;
+  rightGap: number;
+  linksX: number;
+  linksY: number;
+  ctaTop: number;
+  leftInset: number;
+  rightInset: number;
+  markMid: number;
+  fullMid: number;
+};
+
+/** Scroll, then read the bar and its contents on every frame for 600ms. */
+function sample(page: Page, scrollTo: number): Promise<Frame[]> {
+  return page.evaluate(
+    (y) =>
+      new Promise<Frame[]>((resolve) => {
+        const header = document.querySelector("header")!;
+        const [mark, full] = Array.from(
+          header.querySelectorAll<HTMLElement>('span > a[aria-label="Smarthaus — home"]'),
+        );
+        const links = header.querySelector<HTMLElement>("nav ul")!;
+        const cta = header.querySelector<HTMLElement>('a[href="/contact"]')!;
+        const mid = (el: HTMLElement) => {
+          const r = el.getBoundingClientRect();
+          return r.top + r.height / 2;
+        };
+        const frames: Frame[] = [];
+        const snap = () => {
+          const stuck = header.hasAttribute("data-stuck");
+          const box = header.getBoundingClientRect();
+          const l = links.getBoundingClientRect();
+          const c = cta.getBoundingClientRect();
+          // Whichever lockup is the visible one in this state.
+          const brand = (stuck ? mark! : full!).getBoundingClientRect();
+          frames.push({
+            top: box.top,
+            stuck,
+            leftGap: l.left - brand.right,
+            rightGap: c.left - l.right,
+            linksX: l.left + l.width / 2,
+            linksY: l.top + l.height / 2,
+            ctaTop: c.top,
+            leftInset: brand.left - box.left,
+            rightInset: box.right - c.right,
+            markMid: mid(mark!),
+            fullMid: mid(full!),
+          });
+        };
+        const t0 = performance.now();
+        window.scrollTo(0, y);
+        const loop = () => {
+          snap();
+          if (performance.now() - t0 < 600) requestAnimationFrame(loop);
+          else resolve(frames);
+        };
+        requestAnimationFrame(loop);
+      }),
+    scrollTo,
+  );
+}
+
+test("the capsule closes around a fixed row with the gaps held equal", async ({ page }) => {
+  // /about rather than the homepage: it has content to scroll.
+  await page.goto("/about");
+
+  const shrink = await sample(page, 80);
+
+  // Settled capsule: it hugs its content, 8px of padding and a 1px border on
+  // each side. The widths it is built from are measurements of the real
+  // artwork and copy (see --nav-stuck-size), so this is what catches them
+  // drifting — as a gap beside the mark, or the CTA poking out.
+  const settled = shrink.at(-1)!;
+  expect(settled.stuck, "settled in the capsule").toBe(true);
+  const width = await page.evaluate(
+    () => document.querySelector("header")!.getBoundingClientRect().width,
+  );
+  expect(Math.round(width)).toBe(639);
+  expect(Math.round(settled.leftGap)).toBe(77);
+  expect(Math.round(settled.rightGap)).toBe(77);
+
+  for (const [label, frames] of [
+    ["shrink", shrink],
+    ["expand back", await sample(page, 0)],
+  ] as const) {
+    expect(frames.length, `${label}: sampled frames`).toBeGreaterThan(10);
+    const first = frames[0]!;
+    for (const f of frames) {
+      // The box top is the shared inset on every frame — never 0.
+      expect(Math.round(f.top), `${label}: bar top`).toBe(16);
+      // Nothing in the row moves: the links on either axis, or the CTA's row.
+      expect(Math.abs(f.linksX - first.linksX), `${label}: links moved on x`).toBeLessThan(1);
+      expect(Math.abs(f.linksY - first.linksY), `${label}: links moved on y`).toBeLessThan(1);
+      expect(Math.abs(f.ctaTop - first.ctaTop), `${label}: CTA moved on y`).toBeLessThan(1);
+      // Both ends keep their distance from the frame while it travels.
+      expect(Math.round(f.leftInset), `${label}: mark inset`).toBe(9);
+      expect(Math.round(f.rightInset), `${label}: CTA inset`).toBe(9);
+      // The two lockups cross-fade on one centre line. Their heights differ by
+      // ~5px so the tops never match; the centres must.
+      expect(Math.abs(f.markMid - f.fullMid), `${label}: lockup centres`).toBeLessThan(3);
+      // Equal gaps, but only once the capsule owns the row. In the tall bar
+      // the visible lockup is the 133px wordmark rather than the 23px mark, so
+      // the two gaps around it genuinely differ by the lockup's extra width —
+      // the cross-fade is what resolves it, on the first stuck frame.
+      if (f.stuck) {
+        expect(Math.abs(f.leftGap - f.rightGap), `${label}: gaps unequal`).toBeLessThan(1);
+      }
+    }
+  }
+});

@@ -1,16 +1,9 @@
+// The cascade layer order statement is emitted by _variables.scss, which every
+// module (this one included) `@use`s first — see the note there for why it
+// cannot live in this file alone.
 @use "variables" as *;
 @use "mixins" as *;
 @use "reset";
-
-// Cascade layer order. Later layers win; unlayered CSS beats every layer, so
-// keep styles in one.
-//
-// This must be emitted before any CSS Module, because a layer's precedence is
-// fixed by where its name FIRST appears. Next emits CSS Module styles in import
-// order, so a component imported ahead of this file would register
-// @layer components before @layer reset and silently invert the order — which
-// is why layout.tsx imports globals.scss before any component.
-@layer reset, base, components, blocks, utilities;
 
 // ============================================================================
 // Global base styles — Smarthaus
@@ -46,6 +39,15 @@
     // acceptable on a marketing site with no feed to refresh, and the page is
     // still reloadable from browser chrome.
     overscroll-behavior-block: none;
+
+    // No horizontal scroll, ever. The footer's ground is a pseudo-element
+    // sized with 100vw, which on a classic-scrollbar OS (Windows) is wider
+    // than the viewport by the scrollbar; without this that is an 8px
+    // horizontal scrollbar. `clip` rather than `hidden`: on the root the two
+    // behave the same for the viewport, and `clip` says what is meant. The
+    // block axis stays `visible` so the viewport scrolls as normal, and the
+    // sticky nav is unaffected — no new scroll container is created.
+    overflow-x: clip;
 
     // Brown-900 dot at 75% opacity, 8px radius (16px across), drawn in a 40px
     // canvas so the circle is not clipped at the image edge, with the hotspot

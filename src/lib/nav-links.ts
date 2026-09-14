@@ -12,6 +12,8 @@
  * becomes the single source and the two cannot drift.
  */
 
+import { PREFERENCES_ROUTE } from "./consent";
+
 export type NavLink = {
   readonly href: string;
   readonly label: string;
@@ -54,6 +56,6 @@ export const INSTALL_LINKS: readonly NavLink[] = [
 export const LEGAL_LINKS: readonly NavLink[] = [
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
-  { href: "/cookie-preferences", label: "Cookie Preferences" },
+  { href: PREFERENCES_ROUTE, label: "Cookie Preferences" },
   { href: "/sitemap.xml", label: "Sitemap" },
 ] as const;

@@ -238,6 +238,13 @@ export default function PrivacyPolicy() {
           get stuck. Neither is installed yet, and neither will load unless you accept it.
         </p>
         <p>
+          <strong>We do measure how the site performs, without cookies.</strong> Vercel Web
+          Analytics and Speed Insights count page views and record how quickly pages load. They set
+          no cookies, store nothing in your browser, and create no identifier that survives your
+          visit, so there is nothing here for you to switch off. You are counted; you are not
+          followed.
+        </p>
+        <p>
           Microsoft Clarity records how pages are used, including scrolling, clicks and pointer
           movement, and can replay a session.{" "}
           <strong>Anything you type into a form will be masked and never recorded.</strong> We will
@@ -285,6 +292,14 @@ export default function PrivacyPolicy() {
               <td>Hosts and serves this website</td>
               <td>Server log data described in section 3</td>
             </tr>
+            <tr>
+              <th scope="row">Vercel Web Analytics and Speed Insights</th>
+              <td>Aggregate page performance and visit counts</td>
+              <td>
+                Aggregated, non-identifying usage data. No cookies, and no identifier that survives
+                your visit
+              </td>
+            </tr>
           </tbody>
         </LegalTable>
 
@@ -312,11 +327,6 @@ export default function PrivacyPolicy() {
               <th scope="row">Sanity</th>
               <td>Managing website content</td>
               <td>Nothing you submit: content only, no enquiry data</td>
-            </tr>
-            <tr>
-              <th scope="row">Vercel Web Analytics and Speed Insights</th>
-              <td>Aggregate page performance and visit counts</td>
-              <td>Aggregated, non-identifying usage data</td>
             </tr>
             <tr>
               <th scope="row">Cloudflare Turnstile</th>

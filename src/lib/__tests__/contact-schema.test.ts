@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { contactSchema, INTERESTS } from "@/lib/contact-schema";
+import { contactSchema, shortContactSchema, INTERESTS } from "@/lib/contact-schema";
 
 /**
  * The error strings are asserted verbatim, not by shape. They are the copy the
@@ -68,7 +68,7 @@ describe("contact schema", () => {
 
   it.each([
     ["+445551234567", "non-UAE country code"],
-    ["543755150", "no leading 0 or +971"],
+    ["43755150", "landline, not a mobile 5x prefix"],
     ["+97154375515", "one digit short"],
     ["+9715437551500", "one digit long"],
     ["not a phone", "letters"],
@@ -90,6 +90,10 @@ describe("contact schema", () => {
     "054 375 5150",
     "00971543755150",
     "971543755150",
+    // Bare subscriber number. The form prints "+971" beside the input, so this
+    // is the form the UI invites — it must not be a trap.
+    "543755150",
+    "54 375 5150",
   ])("canonicalises %s to one E.164 value", (written) => {
     const input = valid();
     input.phone = written;
@@ -170,5 +174,70 @@ describe("contact schema", () => {
       expect(result.data?.contactConsent).toBe(true);
       expect(result.data?.marketingConsent).toBe(false);
     });
+  });
+});
+
+/**
+ * The short form at the foot of the homepage. Four fields, no consent tick: it
+ * carries the notice-only variant from consent deck §6.4 instead, resting on
+ * the "steps toward a contract" basis the privacy policy already states.
+ */
+describe("short contact schema", () => {
+  const short = () => ({
+    name: "James",
+    phone: "0543755150",
+    email: "james@example.com",
+    message: "Palm Jumeirah villa.",
+  });
+
+  it("accepts the four fields the homepage form posts", () => {
+    const result = shortContactSchema.safeParse(short());
+    expect(result.success).toBe(true);
+  });
+
+  it("still requires name and phone", () => {
+    expect(shortContactSchema.safeParse({ ...short(), name: "" }).success).toBe(false);
+    expect(shortContactSchema.safeParse({ ...short(), phone: "" }).success).toBe(false);
+  });
+
+  it("normalises the phone the same way the full form does", () => {
+    const result = shortContactSchema.safeParse(short());
+    expect(result.data?.phone).toBe("+971543755150");
+  });
+
+  it("validates a given email and treats an empty one as absent", () => {
+    expect(shortContactSchema.safeParse({ ...short(), email: "nope" }).success).toBe(false);
+
+    const blank = shortContactSchema.safeParse({ ...short(), email: "" });
+    expect(blank.success).toBe(true);
+    expect(blank.data?.email).toBeUndefined();
+  });
+
+  /**
+   * The load-bearing one. The short form omits the consent fields rather than
+   * making them optional, so this schema must not be usable as a way around the
+   * full form's required tick — if these keys ever start parsing here, someone
+   * has merged the two schemas and the contact page's consent has gone soft.
+   */
+  it("strips consent and the fields the short form does not ask for", () => {
+    const result = shortContactSchema.safeParse({
+      ...short(),
+      community: "Dubai Hills",
+      interest: INTERESTS[0],
+      contactConsent: "on",
+      marketingConsent: "on",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).not.toHaveProperty("contactConsent");
+    expect(result.data).not.toHaveProperty("marketingConsent");
+    expect(result.data).not.toHaveProperty("community");
+    expect(result.data).not.toHaveProperty("interest");
+  });
+
+  it("leaves the full form's consent requirement untouched", () => {
+    const withoutConsent = valid();
+    delete withoutConsent.contactConsent;
+    expect(contactSchema.safeParse(withoutConsent).success).toBe(false);
   });
 });

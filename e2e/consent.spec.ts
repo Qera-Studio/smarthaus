@@ -567,15 +567,53 @@ test.describe("/cookie-preferences", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("is reachable from the footer of any page", async ({ page }) => {
+  test("the footer link opens the panel in place once a choice is on file", async ({
+    page,
+    browserName,
+  }) => {
     // Withdrawal must be as easy as consent (Legal §6), and the banner is gone
     // once a choice exists — so this link is the only way back in. If it
     // disappears, the panel's own withdrawal copy becomes false.
     await page.goto("/terms");
+    await waitForBanner(page);
+    await bannerButton(page, "Decline").click();
+    await expect(region(page)).toHaveCount(0);
+
     const link = page.locator("footer").getByRole("link", { name: /cookie preferences/i });
     await expect(link).toBeVisible();
+    // Still a real link to the page: that is the no-JS path and the target of
+    // a modified click. See the no-JS test below.
+    await expect(link).toHaveAttribute("href", "/cookie-preferences");
+
+    // A plain click opens the panel here rather than leaving the page.
     await link.click();
+    await expect(page).toHaveURL(/\/terms$/);
+    await expect(region(page)).toBeVisible();
+    await expect(region(page).getByRole("button", { name: "Save preferences" })).toBeVisible();
+    await expect(region(page).getByRole("button", { name: "Back" })).toBeVisible();
+
+    // Escape closes it without deciding anything, and hands focus back to the
+    // link that opened it — there is no banner to return to.
+    await page.keyboard.press("Escape");
+    await expect(region(page)).toHaveCount(0);
+    // Same WebKit caveat as "focus follows the stage change": Safari does not
+    // put links in the focus sequence, so the assertion is Chromium-only.
+    if (browserName !== "webkit") await expect(link).toBeFocused();
+  });
+
+  test("without JavaScript the footer link is a plain link to the page", async ({ browser }) => {
+    // The panel-in-place behaviour is an enhancement; the route is the
+    // guarantee. A visitor with scripts off must still reach the controls.
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+    await page.goto("/terms");
+    await page
+      .locator("footer")
+      .getByRole("link", { name: /cookie preferences/i })
+      .click();
     await expect(page).toHaveURL(/\/cookie-preferences$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Cookie preferences" })).toBeVisible();
+    await context.close();
   });
 
   test("stays noindex while the copy is counsel-pending", async ({ page }) => {
