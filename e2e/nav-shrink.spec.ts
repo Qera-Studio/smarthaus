@@ -7,9 +7,11 @@ import { test, expect, type Page } from "@playwright/test";
  *
  *   - the bar's box holds its top edge (the sticky inset is the same in both
  *     states, so the observer landing a frame late cannot drop it);
- *   - the links do not move on either axis (symmetric fr edge tracks keep
- *     them on the bar's centre, and the content row is at the same y in both
- *     states because the box top and the top padding are both shared);
+ *   - the links do not move on either axis. On x because the edge tracks are
+ *     `50% minus a length` in both states, so the box's start edge plus the
+ *     first track is constant while the box itself shrinks and shifts to hug
+ *     a 23px mark on one side and a 129px CTA on the other; on y because the
+ *     box top and the top padding are the same in both states;
  *   - the CTA and the logo keep their vertical position and only slide
  *     inward with the edges;
  *   - the two brand lockups cross-fade on one centre line (both in flow).
@@ -76,8 +78,36 @@ test("the links hold still and nothing hops, shrinking or growing back", async (
   // /about rather than the homepage: it has content to scroll.
   await page.goto("/about");
 
+  const shrink = await sample(page, 80);
+
+  // Settled capsule: it hugs its content. The edge tracks are built from
+  // measured widths (--nav-mark-track, --nav-cta-track, --nav-links-track in
+  // Nav.module.scss), so this is what catches those numbers drifting from the
+  // real artwork or copy — as a gap beside the mark, or the CTA poking out.
+  const fit = await page.evaluate(() => {
+    const header = document.querySelector("header")!;
+    const box = header.getBoundingClientRect();
+    const [mark] = Array.from(header.querySelectorAll('span > a[aria-label="Smarthaus — home"]'));
+    const links = header.querySelector("nav ul")!.getBoundingClientRect();
+    const cta = header.querySelector('a[href="/contact"]')!.getBoundingClientRect();
+    const m = mark!.getBoundingClientRect();
+    return {
+      width: box.width,
+      markInset: m.left - box.left,
+      markToLinks: links.left - m.right,
+      linksToCta: cta.left - links.right,
+      ctaInset: box.right - cta.right,
+    };
+  });
+  // 1px border + 8px padding on each side; 24px gaps; 23 + 315 + 129 inside.
+  expect(Math.round(fit.width)).toBe(533);
+  expect(Math.round(fit.markInset)).toBe(9);
+  expect(Math.round(fit.markToLinks)).toBe(24);
+  expect(Math.round(fit.linksToCta)).toBe(24);
+  expect(Math.round(fit.ctaInset)).toBe(9);
+
   for (const [label, frames] of [
-    ["shrink", await sample(page, 80)],
+    ["shrink", shrink],
     ["expand back", await sample(page, 0)],
   ] as const) {
     expect(frames.length, `${label}: sampled frames`).toBeGreaterThan(10);
