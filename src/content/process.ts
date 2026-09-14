@@ -141,7 +141,10 @@ export const PROCESS_PAGES: readonly ProcessPage[] = [
       "At handover we set the system up with you and train everyone who will use it, then leave a full record of what went in and where. After that you have one number to call.",
       "You see the price before the work starts and the documentation before we leave. Nothing in this process arrives as a surprise.",
     ],
-    duration: "[5 steps]",
+    // How long the WHOLE process takes, not a step count: this is the figure a
+    // reader weighing up the commitment is looking for. Site visit through to
+    // handover. The per-step brackets below break it down.
+    duration: "[3 days]",
     layout: "intro",
     images: [],
   },

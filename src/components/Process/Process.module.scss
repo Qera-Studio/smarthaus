@@ -30,14 +30,29 @@
     // overflow their slot on a wide screen and every page after the first would
     // land short of where it should.
     --process-travel: calc(100% * (var(--process-pages) - 1) / var(--process-pages));
-    // The same distance in viewport heights, which is what the spacer needs:
-    // one stage of pin, plus one stage of scroll per page of travel. 1:1.
-    --process-scroll-block: calc(var(--process-stage-block) * (var(--process-pages) - 1));
-    --process-parallax-shift: 4%;
+    // How much vertical scroll buys one stage of sideways travel. 1 would be
+    // 1:1 and is what this shipped with; 2 is half speed, which gives each page
+    // real dwell time rather than flicking past. Raising it makes the section
+    // taller in exact proportion, so it is the one number to turn if the pacing
+    // is wrong. ponytail: one token, change it and nothing else moves.
+    --process-scroll-ratio: 2;
+    // The spacer's height: one stage to pin against, plus `ratio` stages of
+    // scroll for every page of travel.
+    --process-scroll-block: calc(
+      var(--process-stage-block) * (var(--process-pages) - 1) * var(--process-scroll-ratio)
+    );
+    // The image is 116% of its frame and sits at -8%, so it has 8% of the FRAME
+    // of slack at each edge. As a percentage of the image's own height that is
+    // 8/116, and 6% stays comfortably inside it: the edge is never exposed.
+    --process-parallax-shift: 6%;
     // L2 ink ramp. Colour tokens rather than `opacity`, which would inherit to
     // every descendant. Same approach as the footer's --footer-ink-* set.
     --process-ink: #{$brown-100};
-    --process-ink-dim: #{$brown-300};
+    // brown-100 at 70%, not brown-300. brown-300 is a warm mid-tone that reads
+    // gold against this ground rather than as quiet body text, which is not the
+    // palette's intent. A colour token rather than an `opacity`, which would
+    // inherit to every descendant. Same approach as the footer's ink ramp.
+    --process-ink-dim: #{rgba($brown-100, 0.7)};
     --process-rule: #{$brown-800};
 
     // svh, never vh or dvh. 100vh on iOS Safari is the LARGE viewport, and
@@ -86,27 +101,42 @@
 
   // --- Title bar ------------------------------------------------------------
 
+  // Title on its own line, the progress bar as the full-width rule BENEATH it.
+  //
+  // Not side by side: the floating nav capsule is centred over the top of the
+  // page, so a bar running beside the title passes straight under it and the
+  // reader loses the middle third of the only progress indicator there is.
+  // Below the title it clears the capsule entirely.
   .titleBar {
     display: flex;
-    align-items: center;
-    gap: $space-6;
+    flex-direction: column;
+    gap: $space-4;
     flex: 0 0 auto;
-    padding-block: $space-5;
-    border-block-end-style: solid;
-    border-block-end-width: 1px;
-    border-block-end-color: var(--process-rule);
+    // Clears the floating nav capsule, which is fixed over the top of the page
+    // and centred. Measured: the capsule runs to y67 at lg, so a title bar
+    // starting at $space-5 put the progress rule at y57, straight underneath
+    // it, and the reader lost the middle third of the only progress indicator
+    // on the page. The nav publishes its own height, so this tracks it rather
+    // than hard-coding the measurement.
+    padding-block-start: calc(var(--nav-bar-block-size) + #{$space-5});
+
+    @include bp-max($bp-lg) {
+      // Below lg the nav is a bottom bar, so there is nothing to clear here.
+      padding-block-start: $space-5;
+    }
   }
 
   .sectionTitle {
-    flex: 0 0 auto;
     font-size: var(--font-size-sm);
     font-weight: $font-weight-medium;
     color: var(--process-ink);
   }
 
+  // The bar IS the rule under the title. One element doing both jobs, rather
+  // than a border plus a bar sitting on top of it.
   .progress {
-    flex: 1 1 auto;
     block-size: 1px;
+    inline-size: 100%;
     background-color: var(--process-rule);
   }
 
@@ -173,6 +203,11 @@
     gap: $space-4;
     padding-block: $space-6;
     padding-inline-end: $space-6;
+    // Each page clips its own contents. Layouts below use negative margins to
+    // bleed an image to the edge of the stage, and without this those images
+    // paint straight over the NEXT page: step 2's image covered step 3's copy,
+    // which read as text clipped at the left edge even on an exact boundary.
+    overflow: hidden;
   }
 
   // --- Page content ---------------------------------------------------------
@@ -237,16 +272,23 @@
     }
   }
 
+  // Absolute so the intrinsic width/height next/image writes as attributes
+  // cannot stretch the frame. The oversize is the parallax travel budget: same
+  // shape as the hero's mouse parallax in AGENTS.md, an oversized image in a
+  // clipped box with a subtle shift.
+  //
+  // Oversized on the BLOCK axis, and the drift is vertical.
+  //
+  // It was horizontal first, and that was the bug: the track is already sliding
+  // the whole page sideways by a full viewport, so a 4% shift in the same axis
+  // is swamped by it and reads as nothing at all. Against a horizontal track,
+  // vertical is the axis where relative motion is actually visible.
   .image {
-    // Absolute so the intrinsic width/height next/image writes as attributes
-    // cannot stretch the frame. The oversize is the parallax travel budget:
-    // same shape as the hero's mouse parallax in AGENTS.md, an oversized image
-    // in a clipped box with a subtle shift. 4% against 12% never exposes an edge.
     position: absolute;
-    inset-block: 0;
-    inset-inline-start: -6%;
-    inline-size: 112%;
-    block-size: 100%;
+    inset-inline: 0;
+    inset-block-start: -8%;
+    inline-size: 100%;
+    block-size: 116%;
     object-fit: cover;
   }
 
@@ -259,7 +301,12 @@
   // width sets the copy one word per line.
 
   @include bp-lg {
+    // The intro carries no image, so its content is the whole page and sits in
+    // the middle of the stage rather than hard against the leading edge, where
+    // it read as a column that had lost its picture.
     .intro {
+      justify-items: center;
+
       .content {
         max-inline-size: 52ch;
       }
@@ -284,19 +331,34 @@
       }
     }
 
-    // p3: text in column 1, one image across the remaining three.
+    // Step 2 (Proposal): text in a narrow leading column, the image taking
+    // everything else.
+    //
+    // The image is the point of this page, so it runs the FULL height of the
+    // stage and bleeds off the trailing edge rather than sitting inside the
+    // page's padding. `4fr` against the text's `1fr` is a wider split than the
+    // 4-column grid gave it, and the negative trailing margin cancels the
+    // page's own padding so nothing stops the image at the edge.
     .wideRight {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
+      grid-template-rows: minmax(0, 1fr);
+      padding-block: 0;
 
       .content {
         grid-column: 1;
+        padding-block: $space-8;
       }
       .slot1 {
-        grid-column: 2 / span 3;
+        grid-column: 2;
+        // Cancels the page's own trailing padding so the image reaches the very
+        // edge of the stage. A negative margin rather than a wider column,
+        // because the column has to stay inside the grid for the text to keep
+        // its share. The page clips it, so it cannot paint over the next one.
+        margin-inline-end: calc(-1 * #{$space-10});
       }
     }
 
-    // p4: a full-width banner, then text beside a wide image.
+    // Step 3 (Installation): a full-width banner, then text beside a wide image.
     .bannerSplit {
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-rows: repeat(2, minmax(0, 1fr));
@@ -308,6 +370,10 @@
       .content {
         grid-column: 1;
         grid-row: 2;
+        // 24px of air between the copy and the image beside it. The grid's own
+        // column gap closes the distance between TRACKS, and the text is
+        // shorter than its track, so without this the two read as touching.
+        padding-inline-end: $space-6;
       }
       .slot2 {
         grid-column: 2 / span 3;
@@ -321,10 +387,17 @@
       align-content: stretch;
     }
 
-    // p6: a wide image with text beside it, then an offset wide image.
+    // Step 5 (Care): a wide image with text beside it, then an offset wide
+    // image that runs out to the trailing edge.
+    //
+    // The page's own padding-inline-end is cancelled here and re-applied to the
+    // content instead, so the two images finish exactly where the row does
+    // rather than stopping short of it. slot1 also loses the leading padding,
+    // which is what pulls it further out and closes the gap to the copy.
     .offsetPair {
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-rows: repeat(2, minmax(0, 1fr));
+      padding-inline-end: 0;
 
       .slot1 {
         grid-column: 1 / span 3;
@@ -333,6 +406,9 @@
       .content {
         grid-column: 4;
         grid-row: 1;
+        // The padding the page no longer carries, kept on the text so the copy
+        // still clears the edge.
+        padding-inline: $space-6;
       }
       .slot2 {
         grid-column: 2 / span 3;
@@ -365,12 +441,13 @@
     }
   }
 
+  // Vertical, against the horizontal track. See the .image note above.
   @keyframes process-parallax {
     from {
-      translate: calc(-1 * var(--process-parallax-shift)) 0;
+      translate: 0 calc(-1 * var(--process-parallax-shift));
     }
     to {
-      translate: var(--process-parallax-shift) 0;
+      translate: 0 var(--process-parallax-shift);
     }
   }
 
@@ -422,7 +499,7 @@
     }
 
     .image {
-      translate: calc((var(--process-progress, 0) * 2 - 1) * var(--process-parallax-shift)) 0;
+      translate: 0 calc((var(--process-progress, 0) * 2 - 1) * var(--process-parallax-shift));
     }
   }
 

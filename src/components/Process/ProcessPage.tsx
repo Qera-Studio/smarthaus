@@ -18,16 +18,9 @@ export function ProcessPage({ page }: { page: ProcessPageData }) {
   return (
     <li className={`${styles.page} ${styles[page.layout]}`}>
       <div className={styles.content}>
-        {page.step && (
-          <p className={styles.step}>
-            {/* "Step" is read out but not drawn: the number alone is the visual,
-                and a screen reader announcing a bare "01" says nothing. The
-                global utility, not a module class, since globals.scss already
-                has it. */}
-            <span className="visually-hidden">Step </span>
-            {page.step}
-          </p>
-        )}
+        {/* "Step 01", drawn as well as read. A bare number is ambiguous to
+            everyone, not only to a screen reader. */}
+        {page.step && <p className={styles.step}>Step {page.step}</p>}
         <h3 className={styles.title}>{page.title}</h3>
         {page.body.map((paragraph) => (
           <p key={paragraph} className={styles.body}>
