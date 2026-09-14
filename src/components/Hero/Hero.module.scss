@@ -1,0 +1,607 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer blocks {
+  .hero {
+    // L2 component tokens. Every value this block departs from the system on
+    // is declared here so it is readable in one place.
+    //
+    // The desktop nav is in flow above this section, 67px tall (the tall bar;
+    // Nav.module.scss:515 records the arithmetic). Subtracting it is what
+    // lands the byline on the fold rather than 67px below it. There is no
+    // token for the in-flow height because nothing else needs it.
+    --hero-nav-block: 67px;
+    // One frame into the next. Off the duration scale on purpose: 160ms
+    // (--duration-fast) reads as a dissolve, 80ms as a cut. FADE_MS in
+    // HeroStage.tsx is the same number and waits on it.
+    --hero-fade: 120ms;
+    // Where the bottom edge starts to go.
+    //
+    // Long ramps, deliberately. The villa stands on a real ground-floor slab
+    // (gf_slab) that cannot be deleted without the house floating, so its cut
+    // edge has to be DISSOLVED rather than hidden. A short ramp leaves a
+    // visible horizon line where the slab ends; starting at 62% gives the
+    // gradient enough distance to take the slab to nothing before the box
+    // ends. The camera is aimed to put that edge inside this band — see the
+    // target in villa.ts.
+    --hero-fade-from: 62%;
+    --hero-blur-from: 70%;
+    --hero-blur: 12px;
+    // How far the sides dissolve. The frames run edge to edge; the outer
+    // palms sit in this band and go with it, the villa never reaches it.
+    --hero-side-fade: 12%;
+
+    display: flex;
+    flex-direction: column;
+    // svh, never vh or dvh — Footer.module.scss:118 has the long version.
+    min-block-size: calc(
+      100svh - var(--nav-bar-block-size) - var(--nav-float-inset) - env(safe-area-inset-bottom)
+    );
+
+    @include bp-lg {
+      min-block-size: calc(100svh - var(--hero-nav-block));
+    }
+  }
+
+  // Everything, so the scroll-out animation below has one subject.
+  .inner {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-block: clamp(#{$space-8}, 6vh, #{$space-16}) $space-6;
+  }
+
+  // --- Entering the tour ----------------------------------------------------
+  //
+  // On [data-touring] the page furniture is LEFT BEHIND and the villa takes
+  // the whole hero: the heading, the lede, the CTAs and the byline fade and
+  // drift back, while the stage grows from its band to fill the section. The
+  // effect is that the camera flies INTO the scene and the flat page it was
+  // sitting on recedes.
+  //
+  // Everything animated here is `opacity` and `translate` — both composited,
+  // neither reflowing — and the stage's own growth is a `scale` for the same
+  // reason. The one exception is the stage's inset, which is a layout
+  // property; it is on an absolutely-positioned element inside an isolated
+  // parent, so the reflow is bounded to the stage itself.
+  //
+  // Reduced motion gets none of it (see the block at the foot of this file):
+  // the furniture simply stays, and the tour still works.
+  .hero[data-touring] {
+    .copy,
+    .ctas,
+    .byline {
+      opacity: 0;
+      // Backwards, not upwards: the page is being left behind by a camera
+      // moving forward, so the parallax reads as depth rather than as a
+      // slide-away.
+      translate: 0 -2rem;
+      scale: 0.96;
+      pointer-events: none;
+    }
+  }
+
+  .copy,
+  .ctas,
+  .byline {
+    transition-property: opacity, translate, scale;
+    // Slower than the UI scale: this is a camera move, not a control
+    // responding. It runs against the first half of the flight, so the
+    // furniture is gone before the drone arrives.
+    transition-duration: var(--duration-slower);
+    transition-timing-function: var(--ease-out);
+  }
+
+  // --- Copy -----------------------------------------------------------------
+
+  .copy {
+    // Pushes the group down so it sits centred in the space above the byline,
+    // together with the auto margin on .byline.
+    margin-block-start: auto;
+    // No measure here: a ch cap on this box is measured at body size and would
+    // fold the 60px headline. The lede sets its own.
+    inline-size: 100%;
+  }
+
+  .title {
+    font-size: var(--type-display);
+    // Lighter than the site's other headings on purpose: at display size a
+    // 700 Manrope reads as a poster, and this is meant to read as a statement.
+    font-weight: $font-weight-medium;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin-block-start: $space-4;
+    margin-inline: auto;
+    // Wider than --measure-prose on purpose: two lines under a one-line
+    // headline, as designed, rather than a four-line paragraph. This is a
+    // proposition to take in at a glance, not prose to read.
+    max-inline-size: 54rem;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-normal;
+    // Primary, not secondary: this is the proposition, not a caption.
+    color: var(--color-text-primary);
+    text-wrap: pretty;
+  }
+
+  // --- The villa ------------------------------------------------------------
+
+  .stageClip {
+    inline-size: 100%;
+    margin-block-start: clamp(#{$space-8}, 6vh, #{$space-16});
+    // Below md the frame is wider than its slot (see .stage) and this is what
+    // trims it — `clip`, not `hidden`, so no scroll container is created.
+    overflow: clip;
+    // Sides dissolve. Composed with the vertical fade on .stage by nesting:
+    // each element masks its own box and the two multiply.
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black var(--hero-side-fade),
+      black calc(100% - var(--hero-side-fade)),
+      transparent
+    );
+
+    transition-property: margin-block-start;
+    transition-duration: var(--duration-slower);
+    transition-timing-function: var(--ease-out);
+  }
+
+  // On tour the villa takes the whole hero.
+  //
+  // The clip is promoted out of the column flow and stretched over the
+  // section, which is what lets the render fill the screen while the copy
+  // above and the CTAs below fade out in place rather than reflowing.
+  //
+  // BOTH MASKS ARE LIFTED HERE. They exist to dissolve the villa's cut-off
+  // base and edges into the page, which is exactly right for a band sitting
+  // in a column of text and exactly wrong for a full-bleed scene: at full
+  // size they would eat the tab rail on the right and the panel copy at the
+  // bottom left. The tour composition has no page showing around the render
+  // for them to blend into.
+  .hero[data-touring] {
+    .stageClip {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      margin-block-start: 0;
+      overflow: visible;
+      mask-image: none;
+    }
+
+    .stage {
+      position: absolute;
+      inset: 0;
+      inline-size: 100%;
+      margin-inline: 0;
+      // The band's 16:4 would letterbox a full-height section.
+      aspect-ratio: auto;
+      mask-image: none;
+      // The canvas is resized by a ResizeObserver on the host, so the drawing
+      // buffer follows this box rather than being stretched to it.
+    }
+
+    .blur {
+      transition-property: opacity;
+      transition-duration: var(--duration-normal);
+      transition-timing-function: var(--ease-out);
+    }
+
+    // The bottom-edge blur goes with the mask, and for the same reason.
+    .blur {
+      opacity: 0;
+    }
+  }
+
+  .stage {
+    position: relative;
+    // The crop, so the box is reserved before the first byte: 2112 x 544.
+    aspect-ratio: 2112 / 544;
+    // Below md the whole 16:4 frame at the slot's width is a 90px villa. Scale
+    // it so the villa — the middle 55% of the frame — fills the slot, and let
+    // .stageClip trim the palms either side. Not a CSS crop of the desktop
+    // composition in the sense AGENTS.md rules out: that rule is about a
+    // portrait re-composition, which does not exist for this scene yet. When
+    // a portrait render lands, this becomes a second source, not a scale.
+    inline-size: 175%;
+    margin-inline: -37.5%;
+    // The bottom edge dissolves into the page.
+    mask-image: linear-gradient(to bottom, black var(--hero-fade-from), transparent);
+    // The two frames and the blur layer stack here, sealed off from the page.
+    isolation: isolate;
+
+    @include bp-md {
+      inline-size: 100%;
+      margin-inline: 0;
+    }
+  }
+
+  // The canvas and the poster share one box; the canvas fades in over the
+  // poster once the model is up, so the hand-off is never a blank frame.
+  .canvasHost {
+    position: absolute;
+    inset: 0;
+
+    // The <canvas> three.js appends. Sized by the renderer, not by CSS — a CSS
+    // size here would stretch the drawing buffer instead of resizing it.
+    canvas {
+      position: absolute;
+      inset: 0;
+      inline-size: 100%;
+      block-size: 100%;
+      opacity: 0;
+
+      transition-property: opacity;
+      transition-duration: var(--duration-slow);
+      transition-timing-function: var(--ease-out);
+    }
+
+    &[data-ready] canvas {
+      opacity: 1;
+    }
+
+    // Held underneath rather than removed: it is the LCP element, and dropping
+    // it on canvas-ready would be a paint of nothing if WebGL is later lost.
+    &[data-ready] .poster {
+      opacity: 0;
+    }
+  }
+
+  .poster {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    user-select: none;
+    -webkit-user-drag: none;
+
+    transition-property: opacity;
+    transition-duration: var(--duration-slow);
+    transition-timing-function: var(--ease-out);
+  }
+
+  // --- The explorer ---------------------------------------------------------
+  //
+  // The tab rail, the two controls and the info panels. All of it sits over
+  // the canvas, inside the stage, and none of it is in the document flow: the
+  // hero's height must not change when the tour opens.
+
+  // The villa itself, as a hit area.
+  //
+  // Invisible by design: the render is the affordance, and the hero's own
+  // "Explore Villa" CTA already names the action in words. A second visible
+  // button floating under the villa said the same thing twice.
+  //
+  // Still a real <button> with a visually-hidden label, so it is focusable,
+  // announced, and operable by keyboard — the canvas underneath is
+  // aria-hidden and can be none of those things.
+  //
+  // Covers the middle band where the building actually sits, not the whole
+  // stage: the stage is 16:4 and the villa occupies its centre, so a
+  // full-bleed hit area would swallow clicks in empty page either side.
+  .enter {
+    position: absolute;
+    inset-block: 18% 12%;
+    inset-inline: 22%;
+    z-index: 2;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+    cursor: pointer;
+    // No hover treatment: the cursor change is the affordance, and tinting the
+    // villa on hover would fight the render.
+
+    @include focus-ring;
+  }
+
+  .explorer {
+    position: absolute;
+    inset: 0;
+    // Above the blur (2), which is above the canvas (1). See the z-order note
+    // on .blur below.
+    z-index: 3;
+    // The rail and the exit are the only things that take a pointer; the rest
+    // of the layer must let the villa through.
+    pointer-events: none;
+
+    // `hidden` is honoured by the reset, but state it here too: this element
+    // is positioned, and a positioned box with display:none still needs the
+    // rule to win over the position.
+    &[hidden] {
+      display: none;
+    }
+
+    > * {
+      pointer-events: auto;
+    }
+  }
+
+  // Vertical tab rail on the right, as specified in AGENTS.md.
+  .tabs {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: $space-4;
+    translate: 0 -50%;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    // A hairline column rather than six separate boxes: at this size six
+    // bordered buttons read as clutter over the render.
+    background-color: var(--color-border);
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--color-border);
+
+    @include bp-lg {
+      inset-inline-end: $space-8;
+    }
+  }
+
+  .tab {
+    padding-block: $space-2;
+    padding-inline: $space-4;
+    border: 0;
+    border-radius: 0;
+    background-color: color-mix(in srgb, #{$brown-100} 88%, transparent);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    text-align: start;
+    white-space: nowrap;
+    cursor: pointer;
+
+    transition-property: background-color, color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      background-color: #{$brown-200};
+    }
+
+    // Selection is marked by fill AND weight, never by colour alone.
+    &[aria-selected="true"] {
+      background-color: var(--color-bg-inverse-strong);
+      color: var(--color-text-inverse);
+      font-weight: $font-weight-semibold;
+    }
+
+    @include focus-ring(var(--color-border-focus), -2px);
+  }
+
+  .exit {
+    position: absolute;
+    inset-block-start: $space-4;
+    inset-inline-start: $space-4;
+    padding-block: $space-2;
+    padding-inline: $space-4;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--color-text-primary);
+    border-radius: 0;
+    background-color: color-mix(in srgb, #{$brown-100} 82%, transparent);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+
+    transition-property: background-color, color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    &:hover {
+      background-color: var(--color-bg-inverse-strong);
+      border-color: var(--color-bg-inverse-strong);
+      color: var(--color-text-inverse);
+    }
+
+    @include focus-ring;
+  }
+
+  // The info panels.
+  //
+  // EVERY panel is in the DOM at all times and none is ever display:none —
+  // the copy has to be indexable and reachable on the no-canvas path, which is
+  // the whole reason it is server-rendered. Visually, the active one is shown
+  // and the rest are clipped to nothing; `visibility` is deliberately NOT used
+  // either, since it removes them from the accessibility tree.
+  .panels {
+    position: absolute;
+    inset-block-end: 18%;
+    inset-inline-start: $space-4;
+    // Above the blur, like the rest of the explorer UI.
+    z-index: 3;
+    max-inline-size: 34ch;
+    pointer-events: none;
+
+    @include bp-lg {
+      inset-inline-start: $space-8;
+    }
+  }
+
+  .panel {
+    // Stacked in one place so switching shots does not move the block.
+    grid-area: 1 / 1;
+    opacity: 0;
+    // Clipped rather than hidden: still in the tree, still crawlable, takes no
+    // space and catches no clicks.
+    block-size: 0;
+    overflow: hidden;
+
+    transition-property: opacity;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-out);
+
+    @include focus-ring;
+  }
+
+  // Only the canvas knows which shot is live, so it writes the id onto the
+  // host and the panel matches on it.
+  .canvasHost[data-touring] .panels {
+    display: grid;
+  }
+
+  .panel[data-active] {
+    opacity: 1;
+    block-size: auto;
+    overflow: visible;
+  }
+
+  .panelHeading {
+    font-size: var(--font-size-md);
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-snug;
+    color: var(--color-text-primary);
+  }
+
+  .panelBody {
+    margin-block-start: $space-2;
+    font-size: var(--font-size-sm);
+    line-height: $line-height-normal;
+    color: var(--color-text-primary);
+    text-wrap: pretty;
+  }
+
+  // On the no-canvas path there is no tour and no rail, so the panels are the
+  // only place this copy appears. They stack under the villa as plain prose
+  // rather than sitting invisibly over it.
+  .canvasHost:not([data-ready]) .panels {
+    @include visually-hidden;
+  }
+
+  // Progressive blur. A backdrop-filter over the stage, masked so it is fully
+  // transparent until --hero-blur-from and fully in by the bottom edge; the
+  // mask's own ramp is what makes the blur read as progressive rather than as
+  // a band. It filters whatever is behind it INSIDE the stage — the stage is
+  // isolated and masked, both of which make it a backdrop root — so it tracks
+  // the cross-fade for free and never touches the page behind the villa.
+  //
+  // One layer rather than the three-or-four-stacked-layers version of this
+  // technique: the ground under the villa is a flat plane, so there is
+  // nothing in the band for a finer ramp to reveal.
+  // Z-ORDER INSIDE THE STAGE, stated in one place because three things
+  // overlap here and the default order is wrong for all of them:
+  //
+  //   1  .canvasHost  the render and the poster
+  //   2  .blur        the bottom-edge dissolve, over the render
+  //   3  the explorer UI: tab rail, controls, info panels
+  //
+  // The blur MUST sit above the canvas — softening the villa's cut-off base
+  // into the page is its entire job — but it must not touch the UI. It was a
+  // later sibling of the host with a lower z-index than the controls inside
+  // it, which does not help: z-index only orders elements within the same
+  // stacking context, so the blur painted over the tab rail and the panel
+  // copy regardless of their higher numbers. Hoisting the UI OUT of the host
+  // and giving it the top layer here is what actually settles it.
+  .blur {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(var(--hero-blur));
+    backdrop-filter: blur(var(--hero-blur));
+    mask-image: linear-gradient(to bottom, transparent var(--hero-blur-from), black);
+  }
+
+  // --- CTAs -----------------------------------------------------------------
+
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $space-4;
+    margin-block-start: clamp(#{$space-8}, 5vh, #{$space-12});
+  }
+
+  // The same control as the nav's CTA and ClosingCta's: square, small, dark.
+  // Restated because a CSS Module's class names are local to its file — the
+  // third copy the ClosingCta comment predicted. A Button component is now the
+  // right call; it is not this change's job.
+  .primary,
+  .secondary {
+    display: inline-flex;
+    align-items: center;
+    padding-block: $space-2;
+    padding-inline: $space-4;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 0;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-normal;
+    text-decoration: none;
+    white-space: nowrap;
+
+    transition-property: background-color, color, border-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    @include focus-ring;
+  }
+
+  .primary {
+    background-color: var(--color-bg-inverse-strong);
+    border-color: var(--color-bg-inverse-strong);
+    color: var(--color-text-inverse);
+
+    &:hover {
+      background-color: var(--color-hover);
+      border-color: var(--color-hover);
+    }
+  }
+
+  .secondary {
+    background-color: transparent;
+    border-color: var(--color-text-primary);
+    color: var(--color-text-primary);
+
+    &:hover {
+      background-color: var(--color-bg-inverse-strong);
+      border-color: var(--color-bg-inverse-strong);
+      color: var(--color-text-inverse);
+    }
+  }
+
+  .byline {
+    margin-block-start: auto;
+    padding-block-start: clamp(#{$space-8}, 6vh, #{$space-16});
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+  }
+
+  // --- Leaving --------------------------------------------------------------
+  //
+  // As the hero scrolls out, it fades and lifts a little faster than the page,
+  // so the dark Process rail behind it reads as arriving rather than as the
+  // next thing in a list. Pure CSS on the section's own view timeline: `exit`
+  // runs from the moment its top edge reaches the viewport top to the moment
+  // it has fully left. No fallback — a browser without scroll timelines just
+  // scrolls it away, which is fine. Not applied under reduced motion, and the
+  // @supports guard keeps the keyframes from being applied as a time-based
+  // animation where `animation-timeline` is unknown.
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .inner {
+        animation-name: hero-leave;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: view();
+        animation-range: exit 0% exit 100%;
+      }
+    }
+  }
+
+  @keyframes hero-leave {
+    to {
+      opacity: 0;
+      translate: 0 -6%;
+    }
+  }
+}

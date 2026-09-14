@@ -329,6 +329,12 @@ The current CSP in `next.config.ts` is `default-src 'self'` everywhere. As third
 | Sanity Studio    | `connect-src`, `img-src` | `*.sanity.io`, `cdn.sanity.io` |
 | Sanity image CDN | `img-src`                | `cdn.sanity.io`                |
 
+**The hero's Draco decoder is the one CSP widening that has shipped.** It adds
+`'wasm-unsafe-eval'` to `script-src` and `worker-src 'self' blob:`, and adds no
+new origin — the decoder is served from `public/draco/` under
+`default-src 'self'`. Both directives are stated with their reasoning inline in
+`next.config.ts`, and the decision is recorded under the three.js section below.
+
 **Vercel Analytics and Speed Insights needed no CSP change, and the rows that said otherwise are gone.** They listed `vitals.vercel-insights.com` and `va.vercel-scripts.com`, which were the v1 external domains. Version 2 of both packages serves from first-party paths — `/_vercel/insights/script.js` and `/_vercel/speed-insights/script.js` — which `default-src 'self'` already allows. Verified by loading the page with the CSP live and watching for violations: none.
 
 The corollary is that those paths are served by the **platform**, not by this app, so they 404 anywhere but a Vercel deployment. See the note in `src/app/layout.tsx` for why both components are mounted behind `process.env.VERCEL`.
@@ -510,7 +516,12 @@ from the `.blend`:
 | Triangles         | (a full 3D scene) | **30,528**                         |
 | Textures          | (implied many)    | **zero**                           |
 | Lights            | (implied a rig)   | **zero** — world background only   |
-| Model on the wire | ~10MB             | **304KB** gzipped (1.6MB raw glTF) |
+| Model on the wire | ~10MB             | **716KB** gzipped (3.1MB raw glTF) |
+
+The model has since grown past the 304KB this table first recorded: the shipped
+export is a richer scene than the one that was measured, and it is Draco-
+compressed — see the Draco bullet below, which reverses the decision the earlier
+revision of this file recorded.
 
 **Why pre-rendered frames actually failed.** The 45-frame grid this replaced
 cross-faded between adjacent viewpoints on pointer move. A cross-fade between
@@ -530,9 +541,34 @@ decision should be reopened rather than extended:
   and the first paint; the canvas fades in over it. Touch, `prefers-reduced-
 motion`, `Save-Data`, 2g/3g and any WebGL failure keep the poster and load
   **no three.js at all**.
-- **No Draco, no CSP change.** Plain glTF over gzip is 304KB. Draco reaches
-  164KB but needs a 752KB wasm decoder _and_ `wasm-unsafe-eval` in `script-src`.
-  Smaller file, larger transfer, widened script policy: refused.
+- **Draco, and the CSP change it needs — this reverses an earlier refusal.**
+  A previous revision of this file refused Draco on the grounds that it saved
+  140KB but cost a "752KB wasm decoder _and_ `wasm-unsafe-eval`". Both figures
+  were wrong for what actually shipped. The decoder is **192KB** of wasm plus a
+  58KB wrapper, not 752KB, and it is cached independently of the model. The
+  model itself is no longer the 1.6MB scene that was measured — the shipped
+  export is richer, and uncompressed it is far past the point where gzip alone
+  is acceptable on a Dubai mobile connection.
+
+  `public/hero/villa.glb` declares `KHR_draco_mesh_compression` in
+  `extensionsRequired`, so this is not a tuning knob: without the decoder the
+  model cannot be parsed at all.
+
+  **What it costs in policy, stated plainly.** Two directives in
+  `next.config.ts`:
+  - `'wasm-unsafe-eval'` in `script-src` — permits WebAssembly compilation
+    **only**, and still forbids JavaScript string evaluation. It is not a step
+    toward `'unsafe-eval'`.
+  - `worker-src 'self' blob:` — DRACOLoader assembles its decoder worker from a
+    Blob, so the worker URL is `blob:`. Scoped to workers alone; it does not
+    allow `blob:` as a script or frame source.
+
+  Both are reviewed against Security System §5. The decoder is **self-hosted**
+  under `public/draco/`, never a public CDN, so the only wasm module that can be
+  compiled is one this repo ships. That self-hosting is the condition the
+  exception rests on — if the decoder ever moves to a CDN, this decision is
+  reopened.
+
 - **One consumer.** If a second component wants three.js, that is a new
   decision, not a precedent.
 

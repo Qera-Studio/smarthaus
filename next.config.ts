@@ -118,7 +118,37 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               // React's dev-only debugging (callstack reconstruction) requires
               // 'unsafe-eval'. Dev server only — never emitted in production.
-              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+              // 'wasm-unsafe-eval' is for the hero's Draco decoder
+              // (public/draco/draco_decoder.wasm), which decompresses the
+              // villa model's geometry. The villa glTF declares
+              // KHR_draco_mesh_compression in `extensionsRequired`, so the
+              // model cannot be read at all without it.
+              //
+              // NARROWER than it sounds, and not a step toward 'unsafe-eval':
+              // it permits WebAssembly compilation ONLY, and still forbids
+              // JavaScript string evaluation. The wasm is served from our own
+              // origin under default-src 'self' — no CDN, no third-party
+              // origin — so the only module that can be compiled is one we
+              // ship.
+              //
+              // Reviewed against Security System §5 (headers): the directive
+              // widens script execution, which is why it is stated here with
+              // its reason rather than added quietly, and why the decoder is
+              // self-hosted rather than pulled from a public CDN.
+              //
+              // React's dev-only debugging (callstack reconstruction) needs
+              // full 'unsafe-eval'. Dev server only — never in production.
+              `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+              // DRACOLoader builds its decoder worker from a Blob, so the
+              // worker's URL is blob: rather than a file on our origin.
+              // Without this directive workers fall back to script-src, which
+              // has no blob: source, and every decode fails.
+              //
+              // Scoped to workers alone: it does NOT allow blob: as a script
+              // or frame source. The blob is assembled in our own code from
+              // the decoder we ship, not from anything a user or third party
+              // can influence.
+              "worker-src 'self' blob:",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data:",
               "font-src 'self'",
