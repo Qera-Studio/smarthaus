@@ -27,8 +27,9 @@
     // untweenable and the whole row would snap.
     --nav-brand-track: 133px;
     --nav-brand-track-stuck: 23px;
-    // How far the scrolled capsule floats below the top edge. Only applies once
-    // stuck — the tall top-of-page bar sits flush against the viewport top.
+    // How far the bar sits below the viewport top, in BOTH states: it is the
+    // tall bar's reserved top margin and the capsule's sticky inset, so
+    // sticking never moves the bar — see the inset-block-start note below.
     --nav-stuck-inset: #{$space-6};
     // How long the capsule takes to shrink and to come back.
     //
@@ -191,8 +192,16 @@
       // declaration that reopens the cycle. If a lockup ever has to shrink to
       // fit a narrow bar, cap --logo-size instead — it drives the block axis,
       // and the width follows the ratio down with it.
+      //
+      // `none` overrides the reset's `max-inline-size: 100%`, which otherwise
+      // still applies. On desktop the two lockups share one grid cell, and
+      // the 133px full lockup sits in a 23px track once stuck: at 100% the
+      // artwork was squeezed to the cell and drawn tiny in its middle, then
+      // grew back as the track widened. With no cap both axes come from
+      // --logo-size and the ratio alone, so the lockup is always its own size.
       block-size: var(--logo-size);
       aspect-ratio: var(--logo-ratio);
+      max-inline-size: none;
     }
   }
 
@@ -417,7 +426,17 @@
     // three columns without duplicating the links into a second element.
     .nav {
       position: sticky;
-      inset-block-start: 0;
+      // The SAME inset in both states, so sticking does not move the bar.
+      //
+      // This used to be 0 here and --nav-stuck-inset once stuck. The observer
+      // that sets [data-stuck] fires a frame after the sentinel leaves, and a
+      // wheel or trackpad flick scrolls well past 24px inside that frame — so
+      // the bar stuck to the viewport top at 0, then hopped down 24px when the
+      // stuck inset landed. Logo, links and CTA all jumped together at the
+      // exact moment the shrink began. At rest nothing changes: the reserved
+      // margin-block-start below already puts the tall bar 24px from the top,
+      // so an inset of the same value only ever holds it there.
+      inset-block-start: var(--nav-stuck-inset);
       z-index: var(--z-sticky);
       display: grid;
       // Both states share this track STRUCTURE, and differ only in the value of
@@ -541,27 +560,22 @@
       display: none;
     }
 
-    // The two lockups share one grid cell and cross-fade between them. Both are
-    // laid out at all times so the cell never re-measures mid-transition; only
-    // opacity changes. pointer-events follows opacity so the hidden one cannot
-    // take the click, and the link inside it is what carries the tab stop —
-    // see the aria-hidden note below.
+    // The two lockups share one grid cell and cross-fade between them. Both
+    // are IN FLOW at all times, in both states. The hidden one used to be
+    // absolutely positioned "so it leaves the track's sizing", from when the
+    // brand track was `auto` and sized to the wider lockup; the track has
+    // been a fixed length since (--nav-brand-track), so a hidden 133px lockup
+    // in a 23px track simply overflows it, invisibly. The absolute position
+    // itself was the remaining glitch: an absolutely-positioned grid child is
+    // aligned against a different box than an in-flow one, and with the tall
+    // bar's asymmetric padding that put the fading-out lockup 11px below the
+    // fading-in mark for the whole cross-fade — the logo visibly dropped the
+    // moment the shrink began. In flow, both centre on the same line.
     .brandFull,
     .brandMark {
       grid-column: 1;
       grid-row: 1;
       transition-timing-function: var(--nav-stuck-ease);
-    }
-
-    // The hidden lockup is absolutely positioned so it leaves the track's
-    // sizing. Sharing the cell in flow made the track size to the WIDER of the
-    // two — a 133px column around a 23px mark once stuck, which is the empty
-    // gap to the mark's right. Only the visible one is in flow, so the track
-    // measures what is actually shown; the other still paints in the same
-    // place and cross-fades.
-    .nav[data-stuck] .brandFull,
-    .nav:not([data-stuck]) .brandMark {
-      position: absolute;
     }
 
     .brandFull {
@@ -633,13 +647,13 @@
       margin-inline: max(0px, calc((100% - var(--nav-stuck-size)) / 2));
       // The collapse is the slower of the two — see --nav-stuck-duration.
       transition-duration: var(--nav-stuck-duration);
-      // The gap above the floating capsule. Only the sticky inset moves here —
-      // the margin that creates the gap is reserved on the UNSTUCK nav (see
-      // below), because adding it on stick would grow the document by 26px and
-      // push every following element down mid-scroll. Measured before the
-      // split: main moved 81 -> 107 and the page grew 8911 -> 8937, which is
-      // exactly the layout shift the project's CLS budget exists to prevent.
-      inset-block-start: var(--nav-stuck-inset);
+      // No inset change here: the sticky inset is --nav-stuck-inset in both
+      // states (see the base rule), and the margin that creates the gap is
+      // reserved on the unstuck nav too. Adding either on stick would grow the
+      // document by 26px and push every following element down mid-scroll.
+      // Measured before the split: main moved 81 -> 107 and the page grew
+      // 8911 -> 8937, which is exactly the layout shift the project's CLS
+      // budget exists to prevent.
       // 8px on every side, replacing the 24px block padding of the tall bar.
       // The shorthand is safe here — a single token, no var() composition.
       padding: var(--nav-padding-stuck);
