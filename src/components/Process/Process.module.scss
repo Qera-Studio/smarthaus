@@ -43,13 +43,15 @@
       var(--process-stage-block) * (var(--process-pages) - 1) * var(--process-scroll-ratio)
     );
     // The image is 124% of its frame and sits at -12%, so it has 12% of the
-    // FRAME of slack at each edge. As a fraction of the image's own height that
-    // is 12/124, just under 10%, so a 9% shift never exposes an edge.
+    // FRAME of slack at each edge — just under 10% as a fraction of the image's
+    // own height. 4.5% therefore sits at roughly half the available travel and
+    // cannot expose an edge.
     //
-    // Larger than it first shipped because the range is now one page rather
-    // than the whole section: the same 6% spread over 11 viewports moved an
-    // image 99px in total and was invisible.
-    --process-parallax-shift: 9%;
+    // Halved from 9% at the client's call: over one page's range that was
+    // moving an image 150px or so, which read as too much. The oversize is left
+    // at 124% rather than tightened to match, so the shift can be turned back up
+    // without also re-deriving the frame geometry.
+    --process-parallax-shift: 4.5%;
     // L2 ink ramp. Colour tokens rather than `opacity`, which would inherit to
     // every descendant. Same approach as the footer's --footer-ink-* set.
     --process-ink: #{$brown-100};
