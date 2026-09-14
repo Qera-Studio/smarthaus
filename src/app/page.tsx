@@ -1,15 +1,16 @@
+import { Care } from "../components/Care";
+import { Hero } from "../components/Hero";
 import { HomeEnquiry } from "../components/HomeEnquiry";
 import { Process } from "../components/Process";
 
 export default function Home() {
-  // The hero and the sections above Process are still to come. The heading is
-  // present but visually hidden so the document keeps a valid outline — axe and
-  // Lighthouse SEO both fail a page with no <h1>. Replace, don't add, when the
-  // hero ships.
+  // The hero carries the page's h1. The sections between it and Process are
+  // still to come.
   return (
     <>
-      <h1 className="visually-hidden">Smarthaus</h1>
+      <Hero />
       <Process />
+      <Care />
       {/* Last thing on the page, directly above the footer. */}
       <HomeEnquiry />
     </>
