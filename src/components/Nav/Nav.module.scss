@@ -17,32 +17,18 @@
     // the 24px of --nav-padding), so the content's distance from the frame is
     // identical in both states and the shrink moves the box, not the content.
     --nav-padding-stuck: #{$space-2};
-    // --- Measured widths of the three things in the bar ------------------------
-    // The capsule hugs its content, so its geometry is built from these. All
-    // three are measurements, not design values: the mark is Logo variant
-    // "mark" at size 24 (24 * 149.5 / 155), the CTA is "Book a site visit" at
-    // 14px bold plus 24px of padding, and the links are the four labels at
-    // 14px medium plus three 24px gaps. e2e/nav-shrink.spec.ts asserts the
-    // capsule fits them with nothing to spare, so a copy or size change that
-    // moves one of them fails there rather than leaving a gap or an overflow.
-    --nav-mark-track: 23px;
-    --nav-cta-track: 129px;
-    --nav-links-track: 315px;
-    // The scrolled capsule's width from lg up: exactly its content, gaps,
-    // padding and border. A max, not a fixed size: on a 1024px window the
-    // content column is already narrower than this, and the capsule should
-    // never grow past the gutters it sits inside.
-    --nav-stuck-size: calc(
-      var(--nav-mark-track) + var(--nav-links-track) + var(--nav-cta-track) + 2 * var(--nav-gap) +
-        2 * var(--nav-padding-stuck) + 2px
-    );
-    // How far the capsule's centre sits to the END of the page's centre: half
-    // the difference between the CTA and the mark. The links stay on the
-    // page's centre line, and the box is whatever fits around them — so with a
-    // 129px CTA on one side and a 23px mark on the other, the box itself is
-    // off-centre by this much. Deliberate: the alternative is an empty edge
-    // track beside the mark the width of the CTA.
-    --nav-stuck-shift: calc((var(--nav-cta-track) - var(--nav-mark-track)) / 2);
+    // The scrolled capsule's width from lg up. A max, not a fixed size: on a
+    // 1024px window the content column is already narrower than this, and the
+    // capsule should never grow past the gutters it sits inside.
+    // Half the link row plus one gap — the distance from the middle track's
+    // centre to an edge track's inner boundary. The 315px is the measured
+    // width of the four labels and their three gaps; there is no way to read
+    // it from CSS, so it is stated once here and everything else derives.
+    --nav-links-half: calc(315px / 2 + var(--nav-gap));
+    // The capsule hugs its content: mark, gap, links, gap, CTA, plus padding
+    // and border. Derived rather than a round number, so it cannot drift out
+    // of step with the tracks above.
+    --nav-stuck-size: calc(2 * (129px + var(--nav-gap) + var(--nav-padding-stuck) + 1px) + 315px);
     // How far the bar's BOX sits below the viewport top, in both states: the
     // tall bar's reserved top margin and the capsule's sticky inset, so
     // sticking never moves the box. 16, not 24: it is the tall bar's 24px of
@@ -459,32 +445,30 @@
       inset-block-start: var(--nav-stuck-inset);
       z-index: var(--z-sticky);
       display: grid;
-      // The edge tracks are `50% minus a length` in BOTH states, and that form
-      // is load-bearing. The links must hold the page's centre line while the
-      // box shrinks AND ends up hugging a 23px mark on one side and a 129px
-      // CTA on the other. A grid cannot say "centre the middle track on the
-      // page", so the links' position is the sum of the box's start edge and
-      // the first track — and that sum has to be constant on every frame.
+      // Edge tracks that keep the two GAPS equal at every width.
       //
-      // With the same 50% in both states, interpolation only tweens the
-      // length part, linearly, while the percentage always resolves against
-      // the box's current width. The box's centre moves linearly by
-      // --nav-stuck-shift (see the stuck margins) and the first track shortens
-      // by exactly the same amount relative to the box's centre, so the two
-      // cancel and the links do not move. Anything else measured a wobble:
-      // symmetric `1fr` edges would pin the CTA's track at its 129px minimum
-      // near the end and swing the links 53px; a plain `%` expression that
-      // differs between states re-resolves against the shrinking width and
-      // swung them 115px mid-shrink.
+      // The end pieces differ: a 23px mark on one side, a 129px CTA on the
+      // other. For the gap beside the mark to match the gap beside the CTA,
+      // the mark's track must stay exactly 106px narrower than the CTA's at
+      // any box width — so each track is half the leftover space, shifted by
+      // half that difference in opposite directions. `1fr` edges cannot do
+      // this: they are always equal, which puts all 106px of slack in one gap
+      // and none in the other.
       //
-      // Here, in the tall bar, both edges are equal, so the middle column is
-      // centred on the box and the box is centred on the page. Measured before
-      // any of this: the links were centred in whatever was left beside a 133px
-      // brand track and a 129px CTA track, then beside 23px and 129px — a 55px
-      // sideways drift on every shrink.
+      // The same list in both states, so there is nothing to tween and no
+      // frame where the pair could snap — the grid simply re-solves the two
+      // calc()s against the animating width. (The old pair of DIFFERENT lists,
+      // 1fr auto 1fr against auto 1fr auto, snapped the CTA 379px in one
+      // frame; it was the mismatch, not the fr edges.)
+      //
+      // The consequence, and it is deliberate: with equal gaps the link row
+      // cannot also sit on the page's centre line. It settles 53px to the
+      // start of it — half the difference between the two end pieces — and,
+      // because that offset is the SAME constant at every width, it is already
+      // there in the tall bar and never travels during the shrink.
       grid-template-columns:
-        calc(50% - var(--nav-links-track) / 2 - var(--nav-gap)) auto
-        calc(50% - var(--nav-links-track) / 2 - var(--nav-gap));
+        calc(50% - var(--nav-links-half) - 53px) auto
+        calc(50% - var(--nav-links-half) + 53px);
       align-items: center;
       // Each item is placed by its own justify-self below, in both states, so
       // nothing flips on stick. The old rule set justify-items only on
@@ -523,14 +507,17 @@
       // identical before and after, and the padding below is reduced so the
       // bar's overall height — and everything under it — is unchanged.
       margin-block-start: var(--nav-stuck-inset);
-      // The capsule's padding on top and on the sides, so the content row and
-      // the logo/CTA insets are the same in both states; only the bottom
-      // differs, holding the bar's original height (16 + 1 + 8 + 33 + 23 + 1 =
-      // 82px to its bottom edge, exactly the 24 + 58 it was). The bottom is
-      // reduced by the 1px border reserved below for the same reason.
-      padding-block-start: var(--nav-padding-stuck);
-      padding-inline: var(--nav-padding-stuck);
-      padding-block-end: calc(var(--nav-padding) - 1px);
+      // The capsule's padding on all four sides, so nothing about the box's
+      // inside changes on stick: the content row and the logo/CTA insets are
+      // identical in both states, and only the box's width moves.
+      //
+      // The bottom used to be --nav-padding (24px), which held the bar at its
+      // original 82px to the bottom edge. Evening it up shortens the bar to
+      // 67px, so the page below sits 15px higher than it did — a deliberate
+      // trade, taken over keeping the height by padding the top, which would
+      // have put the content row 15px lower in the tall bar than in the
+      // capsule and reintroduced the vertical hop this all exists to remove.
+      padding: var(--nav-padding-stuck);
       // A transparent border of the same width the glass will paint. Without
       // it the glass's 1px border appears on stick and grows the document by
       // 2px, shifting every element below. Reserving it here means the border
@@ -545,12 +532,9 @@
       // grid row here, so the reflow is bounded to its own three children.
       // border-color is listed so the glass frame fades in with the fill: left
       // out, it snapped on in the first frame as a crisp 1px box around the
-      // full-width bar while the tint was still fading in. grid-template-columns
-      // is listed because the edge tracks change on stick; it tweens because
-      // both states use the same `50% minus length` form (see the note there).
+      // full-width bar while the tint was still fading in.
       transition-property:
-        background-color, border-color, box-shadow, max-inline-size, margin, padding, border-radius,
-        grid-template-columns;
+        background-color, border-color, box-shadow, max-inline-size, margin, padding, border-radius;
       // This rule is the EXPANDED state, so these are the expand values — a
       // transition reads its duration from the state it is moving TO. The
       // collapse values live on [data-stuck] below.
@@ -608,10 +592,10 @@
     // The two lockups share one grid cell and cross-fade between them. Both
     // are IN FLOW at all times, in both states. The hidden one used to be
     // absolutely positioned "so it leaves the track's sizing", from when the
-    // brand track was `auto` and sized to the wider lockup. The edge tracks
-    // are explicit lengths now, and the spans' min-inline-size: 0 keeps either
-    // lockup from holding a track open: the hidden 133px lockup in the
-    // capsule's 23px edge simply overflows it, invisibly. The absolute position
+    // brand track was `auto` and sized to the wider lockup. The edges are fr
+    // tracks now, and the spans' min-inline-size: 0 keeps either lockup from
+    // holding a track open: the full lockup fits the capsule's 134px edge
+    // anyway, and would simply overflow it, invisibly. The absolute position
     // itself was the remaining glitch: an absolutely-positioned grid child is
     // aligned against a different box than an in-flow one, and with the tall
     // bar's asymmetric padding that put the fading-out lockup 11px below the
@@ -678,24 +662,13 @@
 
       // A MAX, not a fixed width: below --nav-stuck-size the capsule keeps the
       // content column's own width rather than growing past it, so it never
-      // exceeds the gutters it sits between.
+      // exceeds the gutters it sits between. The auto margins centre it above
+      // that width.
       max-inline-size: var(--nav-stuck-size);
-      // The edges hug the mark and the CTA: 23px on the start side, 129px on
-      // the end side, nothing spare. Same `50% minus length` form as the tall
-      // bar so the pair tweens; the length differs from the tall bar's by
-      // --nav-stuck-shift on each side, in opposite directions, which is what
-      // keeps the links on the page's centre line on every frame — see the
-      // note on the base rule.
-      grid-template-columns:
-        calc(50% - var(--nav-links-track) / 2 - var(--nav-gap) - var(--nav-stuck-shift)) auto
-        calc(50% - var(--nav-links-track) / 2 - var(--nav-gap) + var(--nav-stuck-shift));
-      // See the margin-inline note on the base rule: this is the positioning,
-      // as lengths that can interpolate. Centred on the page, then pushed by
-      // --nav-stuck-shift toward the end, so that the LINKS sit on the page's
-      // centre line rather than the box. `max(0px, ...)` so a viewport narrower
+      // See the margin-inline note on the base rule: this is the centring, as a
+      // length that can interpolate. `max(0px, ...)` so a viewport narrower
       // than the capsule gets 0 rather than a negative margin.
-      margin-inline: max(0px, calc((100% - var(--nav-stuck-size)) / 2 + var(--nav-stuck-shift)))
-        max(0px, calc((100% - var(--nav-stuck-size)) / 2 - var(--nav-stuck-shift)));
+      margin-inline: max(0px, calc((100% - var(--nav-stuck-size)) / 2));
       // The collapse is the slower of the two — see --nav-stuck-duration.
       transition-duration: var(--nav-stuck-duration);
       // No inset change here: the sticky inset is --nav-stuck-inset in both
