@@ -15,6 +15,25 @@
 export const CONSENT_COOKIE = "smarthaus_consent";
 
 /**
+ * The permanent home of the cookie controls (Legal §6: withdrawal must be as
+ * easy as consent, and must not depend on JavaScript or on the banner still
+ * being there). The footer links to it; with JS the link opens the panel in
+ * place instead, and this route is the fallback.
+ */
+export const PREFERENCES_ROUTE = "/cookie-preferences";
+
+/**
+ * Window event that opens the preferences panel in place.
+ *
+ * Dispatched by the footer's PreferencesLink, listened for by ConsentShell.
+ * An event rather than a context or an exported setter because the two live
+ * in unrelated trees — the footer is a Server Component and the shell is the
+ * layout's one consent island — and a window event is the smallest thing that
+ * crosses that gap without pulling either into the other's bundle.
+ */
+export const OPEN_PREFERENCES_EVENT = "smarthaus:consent:open";
+
+/**
  * Notice version the stored record was agreed against.
  *
  * Bumping this re-asks everyone, so it moves ONLY for a material change: a new

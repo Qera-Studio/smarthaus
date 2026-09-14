@@ -1,6 +1,8 @@
 import Link from "next/link";
 
+import { PREFERENCES_ROUTE } from "../../lib/consent";
 import { INSTALL_LINKS, LEGAL_LINKS, PAGE_LINKS, type NavLink } from "../../lib/nav-links";
+import { PreferencesLink } from "../Consent";
 import { RollingText } from "../RollingText";
 import { BrandArt } from "./BrandArt";
 import { SOCIALS } from "./socials";
@@ -155,9 +157,17 @@ export function Footer() {
             <ul className={styles.legalLinks}>
               {LEGAL_LINKS.map(({ href, label }) => (
                 <li key={href}>
-                  <Link className={styles.legalLink} href={href}>
-                    <RollingText>{label}</RollingText>
-                  </Link>
+                  {/* Cookie preferences opens the panel in place; the href is
+                      its no-JS fallback. Every other legal link is a page. */}
+                  {href === PREFERENCES_ROUTE ? (
+                    <PreferencesLink className={styles.legalLink}>
+                      <RollingText>{label}</RollingText>
+                    </PreferencesLink>
+                  ) : (
+                    <Link className={styles.legalLink} href={href}>
+                      <RollingText>{label}</RollingText>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
