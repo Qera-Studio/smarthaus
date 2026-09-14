@@ -40,6 +40,15 @@
     // still reloadable from browser chrome.
     overscroll-behavior-block: none;
 
+    // No horizontal scroll, ever. The footer's ground is a pseudo-element
+    // sized with 100vw, which on a classic-scrollbar OS (Windows) is wider
+    // than the viewport by the scrollbar; without this that is an 8px
+    // horizontal scrollbar. `clip` rather than `hidden`: on the root the two
+    // behave the same for the viewport, and `clip` says what is meant. The
+    // block axis stays `visible` so the viewport scrolls as normal, and the
+    // sticky nav is unaffected — no new scroll container is created.
+    overflow-x: clip;
+
     // Brown-900 dot at 75% opacity, 8px radius (16px across), drawn in a 40px
     // canvas so the circle is not clipped at the image edge, with the hotspot
     // at its centre. `auto` is the fallback if the SVG cursor is unsupported.
