@@ -12,25 +12,23 @@
   .nav {
     // L2 component tokens — the override surface for this component.
     --nav-padding: #{$space-6};
-    // The scrolled capsule's padding — 8px on all four sides, against the 24px
-    // block padding of the tall top-of-page bar. Its own token so the two
-    // states cannot drift into each other.
+    // The scrolled capsule's padding, 8px on all four sides. The tall bar
+    // carries the same 8px on top and on both sides too (only its bottom is
+    // the 24px of --nav-padding), so the content's distance from the frame is
+    // identical in both states and the shrink moves the box, not the content.
     --nav-padding-stuck: #{$space-2};
     // The scrolled capsule's width from lg up. A max, not a fixed size: on a
     // 1024px window the content column is already narrower than this, and the
     // capsule should never grow past the gutters it sits inside.
     --nav-stuck-size: 650px;
-    // Width of the grid's first column, which holds the brand. The tall bar
-    // shows the full lockup (133px) and the capsule shows the mark alone
-    // (23px); both are measured, and both are LENGTHS so the column can be
-    // animated between them. `auto` in either state would make the track list
-    // untweenable and the whole row would snap.
-    --nav-brand-track: 133px;
-    --nav-brand-track-stuck: 23px;
-    // How far the bar sits below the viewport top, in BOTH states: it is the
+    // How far the bar's BOX sits below the viewport top, in both states: the
     // tall bar's reserved top margin and the capsule's sticky inset, so
-    // sticking never moves the bar — see the inset-block-start note below.
-    --nav-stuck-inset: #{$space-6};
+    // sticking never moves the box. 16, not 24: it is the tall bar's 24px of
+    // top spacing minus the capsule's 8px padding, which puts the content row
+    // at the same y (25px) in both states. The box used to stay at 24 and grow
+    // 8px of top padding on stick, so every item dropped 8px as the shrink
+    // began. See the padding notes in the desktop band.
+    --nav-stuck-inset: #{$space-4};
     // How long the capsule takes to shrink and to come back.
     //
     // --duration-normal (240ms) was too short for the distance: the box travels
@@ -194,11 +192,11 @@
       // and the width follows the ratio down with it.
       //
       // `none` overrides the reset's `max-inline-size: 100%`, which otherwise
-      // still applies. On desktop the two lockups share one grid cell, and
-      // the 133px full lockup sits in a 23px track once stuck: at 100% the
-      // artwork was squeezed to the cell and drawn tiny in its middle, then
-      // grew back as the track widened. With no cap both axes come from
-      // --logo-size and the ratio alone, so the lockup is always its own size.
+      // still applies. On desktop the two lockups share one grid cell whose
+      // track can be narrower than the full lockup: at 100% the artwork was
+      // squeezed to the cell and drawn tiny in its middle, then grew back as
+      // the track widened. With no cap both axes come from --logo-size and
+      // the ratio alone, so the lockup is always its own size.
       block-size: var(--logo-size);
       aspect-ratio: var(--logo-ratio);
       max-inline-size: none;
@@ -439,18 +437,23 @@
       inset-block-start: var(--nav-stuck-inset);
       z-index: var(--z-sticky);
       display: grid;
-      // Both states share this track STRUCTURE, and differ only in the value of
-      // --nav-brand-track. Track lists interpolate only when the types line up
-      // position by position, so the old pair (1fr auto 1fr unstuck, auto 1fr
-      // auto stuck) could never tween: the columns snapped in one frame and
-      // took the CTA 379px and the links' baseline with them.
+      // The SAME track list in both states, and symmetric. Equal fr edges put
+      // the middle column's centre on the bar's centre whatever the brand and
+      // the CTA measure, so the links sit on the viewport's centre line in the
+      // tall bar AND in the capsule, and do not move on x while it shrinks.
       //
-      // The brand track is a length rather than `auto` for the same reason — it
-      // is the only one that actually changes size, from the 133px lockup to
-      // the 23px mark, and a length is what can be animated between them. The
-      // CTA track is `auto` in both states because its content never changes
-      // width, and the middle 1fr simply absorbs the remainder.
-      grid-template-columns: var(--nav-brand-track) 1fr auto;
+      // Measured before this: the links were centred in a middle column left
+      // over by a 133px brand track and a 129px CTA track (2px right of
+      // centre), then by a 23px track and the same 129px (53px LEFT of
+      // centre) — a 55px sideways drift on every shrink. An identical list in
+      // both states also has nothing to tween, so it cannot snap either; the
+      // grid re-solves against the animating width each frame. (The old pair
+      // of DIFFERENT lists, 1fr auto 1fr against auto 1fr auto, snapped the
+      // CTA 379px in one frame — it was the mismatch, not the fr edges.)
+      //
+      // The capsule has room for this: two 129px edges, the 315px link row and
+      // two gaps come to 621px inside a 632px content box.
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
       // Each item is placed by its own justify-self below, in both states, so
       // nothing flips on stick. The old rule set justify-items only on
@@ -462,30 +465,40 @@
       // the shrink jump in a single frame: `none` has no value to interpolate
       // from, and a percentage cannot interpolate against the stuck state's
       // length (measured: 1392 -> 1000 with two distinct widths, no frames
-      // between). --content-max is the width the body caps at, so this is the
-      // box the nav already occupied, expressed in the same unit the stuck
-      // state uses.
-      max-inline-size: var(--content-max);
+      // between). --content-max is the width the body caps at; the capsule's
+      // 8px padding is added on each side so that, with the negative margin
+      // below, the CONTENT still spans exactly the content column at rest.
+      max-inline-size: calc(var(--content-max) + 2 * var(--nav-padding-stuck));
       // Centring as an interpolable LENGTH, not `margin-inline: auto`. An auto
       // margin resolves discretely: the frame [data-stuck] dropped, centring
       // vanished and the capsule teleported 321px to the left gutter, then grew
       // its right edge alone — the box appeared to expand out of the top-left
       // corner instead of from its centre. Measured: left went 345 -> 24 in one
-      // frame while the width barely moved.
+      // frame while the width barely moved. The stuck rule sets the centring
+      // value; this and that interpolate as a pair of lengths.
       //
-      // Half the difference between the full width and the capsule's, clamped
-      // at 0 so it never goes negative on a viewport narrower than the capsule.
-      // Both edges now travel together, and both directions interpolate.
-      margin-inline: 0;
+      // Negative by the capsule's padding, so the tall bar's box reaches 8px
+      // past the content column on each side while its content stays flush
+      // with it. That is what lets this state carry the same 8px inline
+      // padding as the capsule: the logo and CTA used to sit 1px inside the
+      // box, so the glass frame appeared hugging them and they were pushed
+      // inward as the padding grew from 0. Now the content-to-frame distance
+      // is 9px in both states and the two simply ride the edges inward. The
+      // gutter outside the column is never under 24px, so the 8px never leaves
+      // the viewport.
+      margin-inline: calc(-1 * var(--nav-padding-stuck));
       // Reserved in BOTH states so sticking changes nothing in the document
-      // flow. The stuck capsule floats this far below the viewport top via its
-      // own inset-block-start; here the same value simply sits above the tall
-      // bar, and the padding below is reduced by it so the bar's overall height
-      // is unchanged.
+      // flow: the same value is the sticky inset, so the box's top edge is
+      // identical before and after, and the padding below is reduced so the
+      // bar's overall height — and everything under it — is unchanged.
       margin-block-start: var(--nav-stuck-inset);
-      // Both reduced by the 1px border reserved below, so the bar's overall
-      // height is exactly what it was before either reservation existed.
-      padding-block-start: calc(var(--nav-padding) - var(--nav-stuck-inset) - 1px);
+      // The capsule's padding on top and on the sides, so the content row and
+      // the logo/CTA insets are the same in both states; only the bottom
+      // differs, holding the bar's original height (16 + 1 + 8 + 33 + 23 + 1 =
+      // 82px to its bottom edge, exactly the 24 + 58 it was). The bottom is
+      // reduced by the 1px border reserved below for the same reason.
+      padding-block-start: var(--nav-padding-stuck);
+      padding-inline: var(--nav-padding-stuck);
       padding-block-end: calc(var(--nav-padding) - 1px);
       // A transparent border of the same width the glass will paint. Without
       // it the glass's 1px border appears on stick and grows the document by
@@ -499,13 +512,11 @@
       // glass faded in. They are layout properties rather than compositor ones,
       // but the nav is a sticky element with `contain` below lg and a single
       // grid row here, so the reflow is bounded to its own three children.
-      // grid-template-columns is in the list because the brand column resizes
-      // on stick. It only animates because both states now declare the same
-      // three track TYPES — a list whose types differ position-by-position is
-      // not interpolable and jumps regardless of being listed here.
+      // border-color is listed so the glass frame fades in with the fill: left
+      // out, it snapped on in the first frame as a crisp 1px box around the
+      // full-width bar while the tint was still fading in.
       transition-property:
-        background-color, box-shadow, max-inline-size, margin, padding, border-radius,
-        grid-template-columns;
+        background-color, border-color, box-shadow, max-inline-size, margin, padding, border-radius;
       // This rule is the EXPANDED state, so these are the expand values — a
       // transition reads its duration from the state it is moving TO. The
       // collapse values live on [data-stuck] below.
@@ -563,9 +574,10 @@
     // The two lockups share one grid cell and cross-fade between them. Both
     // are IN FLOW at all times, in both states. The hidden one used to be
     // absolutely positioned "so it leaves the track's sizing", from when the
-    // brand track was `auto` and sized to the wider lockup; the track has
-    // been a fixed length since (--nav-brand-track), so a hidden 133px lockup
-    // in a 23px track simply overflows it, invisibly. The absolute position
+    // brand track was `auto` and sized to the wider lockup. The edges are fr
+    // tracks now, and the spans' min-inline-size: 0 keeps either lockup from
+    // holding a track open: the full lockup fits the capsule's 134px edge
+    // anyway, and would simply overflow it, invisibly. The absolute position
     // itself was the remaining glitch: an absolutely-positioned grid child is
     // aligned against a different box than an in-flow one, and with the tall
     // bar's asymmetric padding that put the fading-out lockup 11px below the
@@ -629,12 +641,6 @@
       // overriding border-radius after the include would leave the mixin's own
       // value in the cascade for anything else that reads it.
       @include glass(0);
-
-      // Only the brand column's WIDTH changes; the track structure is shared
-      // with the expanded state above so the three columns can interpolate
-      // instead of snapping. The mark takes just the width it is, and the links
-      // centre in the remaining 1fr rather than being pushed by an empty track.
-      --nav-brand-track: var(--nav-brand-track-stuck);
 
       // A MAX, not a fixed width: below --nav-stuck-size the capsule keeps the
       // content column's own width rather than growing past it, so it never
