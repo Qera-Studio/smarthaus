@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
-// Must precede every component import. CSS Module styles are emitted in import
-// order, and the first file to name a cascade layer fixes that layer's
-// position — so if a component loads first, @layer components is registered
-// before @layer reset and the reset wins. globals.scss declares the order.
+// First, so the reset and base styles are in the first chunk. The cascade
+// layer ORDER no longer depends on this: every module's chunk opens with the
+// order statement via _variables.scss, because on a notFound() route the
+// browser sees the page's chunk before this one.
 import "../styles/globals.scss";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";

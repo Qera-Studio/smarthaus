@@ -1,3 +1,19 @@
+// Cascade layer order. Later layers win; unlayered CSS beats every layer, so
+// keep styles in one.
+//
+// It lives HERE, not in globals.scss, because a layer's precedence is fixed by
+// where its name FIRST appears across every stylesheet the browser has seen,
+// and that order is not always the layout's import order. A route that calls
+// notFound() ships an HTML document with no stylesheet links at all; React
+// then inserts the page's own CSS chunk before the globals chunk, and if this
+// statement were only in globals, that chunk's `@layer components {}` would
+// register components BEFORE reset and the reset would win everywhere
+// (measured on /loader-preview: ink-on-ink CTAs, a 1123px footer mark, the
+// capsule pinned to the left gutter). Every module `@use`s this file, so Sass
+// emits the statement at the top of every compiled chunk and whichever chunk
+// arrives first establishes the right order.
+@layer reset, base, components, blocks, utilities;
+
 // ============================================================================
 // Design Tokens — Smarthaus
 // L0 primitives (raw values) + L1 semantics (contextual meaning)
