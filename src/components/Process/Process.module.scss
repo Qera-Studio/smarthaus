@@ -35,7 +35,7 @@
     // real dwell time rather than flicking past. Raising it makes the section
     // taller in exact proportion, so it is the one number to turn if the pacing
     // is wrong. ponytail: one token, change it and nothing else moves.
-    --process-scroll-ratio: 3;
+    --process-scroll-ratio: 2;
     // The spacer's height: one stage to pin against, plus `ratio` stages of
     // scroll for every page of travel.
     --process-scroll-block: calc(
@@ -204,13 +204,26 @@
     align-content: center;
     gap: $space-4;
     padding-block: $space-6;
-    // 64px between one step and the next. Carried as TRAILING padding on every
-    // page rather than a gap on the track: the track is a grid whose columns
+    // 64px down BOTH sides of every page.
+    //
+    // Padding rather than a gap on the track: the track is a grid whose columns
     // are exactly one stage each, and a column-gap there would push every page
     // past its stage and break the 1:1 relationship the translate depends on.
-    // Padding keeps each page one stage wide and takes the separation out of
-    // its own width.
-    padding-inline-end: $space-16;
+    // Padding keeps each page one stage wide and takes the inset out of its own
+    // width.
+    //
+    // The two outer edges are the exception, below: the first page has no
+    // leading inset and the last no trailing one, so the rail starts and ends
+    // flush with the section rather than a gutter short of it.
+    padding-inline: $space-16;
+
+    &:first-child {
+      padding-inline-start: 0;
+    }
+
+    &:last-child {
+      padding-inline-end: 0;
+    }
     // Each page clips its own contents. Layouts below use negative margins to
     // bleed an image to the edge of the stage, and without this those images
     // paint straight over the NEXT page: step 2's image covered step 3's copy,
@@ -244,7 +257,7 @@
   }
 
   .body {
-    max-inline-size: 42ch;
+    max-inline-size: 70ch;
     font-size: var(--font-size-sm);
     line-height: $line-height-relaxed;
     color: var(--process-ink-dim);
@@ -319,18 +332,19 @@
     // inside stayed ragged-left against a left edge, which still read as
     // off-centre.
     //
-    // The trailing 64px that separates every page from the next would also pull
-    // the block off true centre, so it is balanced by the same amount on the
-    // leading side rather than removed: the gap survives and the content is
-    // centred in what is left.
+    // It is also the first page, so its padding is 0 leading and 64px trailing.
+    // Centring inside an asymmetric box lands the content 32px left of the
+    // stage's true centre, which is the whole complaint. The trailing inset is
+    // given back as a margin so the CONTENT BOX is symmetric again, while the
+    // page keeps its 64px of separation from step 1.
     .intro {
       justify-items: center;
-      padding-inline-start: $space-16;
 
       .content {
-        max-inline-size: 52ch;
+        max-inline-size: 80ch;
         align-items: center;
         text-align: center;
+        margin-inline-end: calc(-1 * #{$space-16});
       }
     }
 
@@ -357,10 +371,10 @@
     // everything else.
     //
     // The image is the point of this page, so it runs the FULL height of the
-    // stage and bleeds off the trailing edge rather than sitting inside the
-    // page's padding. `4fr` against the text's `1fr` is a wider split than the
-    // 4-column grid gave it, and the negative trailing margin cancels the
-    // page's own padding so nothing stops the image at the edge.
+    // stage. `4fr` against the text's `1fr` is a wider split than the 4-column
+    // grid gave it. It does NOT bleed past the page's trailing padding: every
+    // page carries 64px down both sides, and an image that cancelled it here
+    // would be the one page breaking the rule.
     .wideRight {
       grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
       grid-template-rows: minmax(0, 1fr);
@@ -372,13 +386,6 @@
       }
       .slot1 {
         grid-column: 2;
-        // Cancels the page's own trailing padding so the image reaches the very
-        // edge of the stage. Must track that padding exactly, or the image
-        // stops short of the edge or overshoots it. A negative margin rather
-        // than a wider column, because the column has to stay inside the grid
-        // for the text to keep its share. The page clips it, so it cannot paint
-        // over the next one.
-        margin-inline-end: calc(-1 * #{$space-16});
       }
     }
 
@@ -414,14 +421,12 @@
     // Step 5 (Care): a wide image with text beside it, then an offset wide
     // image that runs out to the trailing edge.
     //
-    // The page's own padding-inline-end is cancelled here and re-applied to the
-    // content instead, so the two images finish exactly where the row does
-    // rather than stopping short of it. slot1 also loses the leading padding,
-    // which is what pulls it further out and closes the gap to the copy.
+    // No padding override here. This is the LAST page, so the base rule already
+    // drops its trailing inset and both images finish exactly where the rail
+    // does rather than a gutter short of it.
     .offsetPair {
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-rows: repeat(2, minmax(0, 1fr));
-      padding-inline-end: 0;
 
       .slot1 {
         grid-column: 1 / span 3;
@@ -430,9 +435,8 @@
       .content {
         grid-column: 4;
         grid-row: 1;
-        // The padding the page no longer carries, kept on the text so the copy
-        // still clears the edge.
-        padding-inline: $space-6;
+        // Air between the copy and the image to its left.
+        padding-inline-start: $space-6;
       }
       .slot2 {
         grid-column: 2 / span 3;

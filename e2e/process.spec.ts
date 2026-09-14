@@ -50,6 +50,29 @@ test("exposes the rail as a focusable, labelled scroll region", async ({ page })
   await expect(region).toHaveAttribute("aria-label", /process/i);
 });
 
+test("insets every page by 64px, except the two outer edges", async ({ page }) => {
+  // This regressed twice. The inset is spread across a base rule plus several
+  // per-layout overrides, so a layout that sets its own padding silently drops
+  // it and nothing else notices. Asserted on the COMPUTED value of every page
+  // rather than on the stylesheet, which is the only way to catch an override.
+  const padding = await rail(page)
+    .locator("li")
+    .evaluateAll((pages) =>
+      pages.map((el) => {
+        const styles = getComputedStyle(el);
+        return { start: styles.paddingInlineStart, end: styles.paddingInlineEnd };
+      }),
+    );
+
+  expect(padding).toHaveLength(6);
+  padding.forEach(({ start, end }, index) => {
+    // The rail starts and ends flush with the section, so the first page has no
+    // leading inset and the last no trailing one.
+    expect(start).toBe(index === 0 ? "0px" : "64px");
+    expect(end).toBe(index === padding.length - 1 ? "0px" : "64px");
+  });
+});
+
 test("passes axe accessibility checks", async ({ page }) => {
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
