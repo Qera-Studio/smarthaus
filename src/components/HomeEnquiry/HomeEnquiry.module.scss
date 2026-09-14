@@ -1,0 +1,82 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  // The contact page's section pattern: a title on the left, content on the
+  // right, a rule across the top. Restated here rather than imported because a
+  // CSS Module's class names are local to its file, so reusing that page's
+  // classes would mean pulling its whole chunk into the homepage.
+  //
+  // The values are the ones page.module.scss uses, deliberately: this is meant
+  // to read as the same block in the same house style, not as a near-miss.
+  //
+  // No padding-inline. body already carries the site-wide cap and gutter
+  // (globals.scss), so a gutter here would be a second one on top of it.
+  .enquiry {
+    display: grid;
+    gap: $space-10;
+    // The rule sits at the top, so the top padding is the gap between it and
+    // the content while the bottom padding is the gap to the footer.
+    padding-block: $space-3 clamp(#{$space-16}, 10vw, #{$space-24});
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-block-start-color: var(--color-border);
+
+    @include bp-lg {
+      // Equal columns, as on the contact page. The content side is denser than
+      // the title side, so an asymmetric split reads as a mistake rather than
+      // as hierarchy.
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: $space-12;
+      padding-block-start: $space-4;
+    }
+  }
+
+  // The left column. Its own block so the heading and standfirst stay together
+  // as one grid item rather than becoming two.
+  .intro {
+    min-inline-size: 0;
+  }
+
+  .heading {
+    font-size: var(--type-h3);
+    // Heavier on small screens: at phone widths the title sits directly above
+    // the form rather than beside it, so weight is the only thing left
+    // separating the two.
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+
+    @include bp-lg {
+      font-weight: $font-weight-regular;
+    }
+  }
+
+  .standfirst {
+    max-inline-size: 46ch;
+    margin-block-start: $space-4;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  // The form's own classes (.form, .fields, .field, .input, .submit) are
+  // top-level siblings in page.module.scss rather than descendants of .page, so
+  // they apply wherever ContactForm renders and this component does not need
+  // that page's wrapper class at all.
+  //
+  // The single exception is --contact-field-gap, which .page declares and
+  // .fields consumes. Redeclared here so the short form is not left with an
+  // unresolved var and a collapsed grid gap.
+  //
+  // Tightened from $space-10 deliberately: four fields in a half-width column
+  // are closer together than six fields are on a page built around them.
+  .formScope {
+    --contact-field-gap: #{$space-8};
+
+    min-inline-size: 0;
+  }
+}

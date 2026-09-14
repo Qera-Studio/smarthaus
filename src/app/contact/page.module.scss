@@ -634,6 +634,24 @@
     margin-block-start: $space-6;
   }
 
+  // The short form's notice-only variant (deck §6.4). Styled as the full form's
+  // consent helper rather than as body copy: it does the same job in the same
+  // place, and the two should not read as different kinds of statement.
+  .shortNotice {
+    max-inline-size: 60ch;
+    margin-block-start: $space-6;
+    font-size: var(--font-size-sm);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+
+    a {
+      color: inherit;
+      text-decoration-line: underline;
+      text-underline-offset: 3px;
+      @include focus-ring;
+    }
+  }
+
   .consent {
     display: flex;
     flex-direction: column;

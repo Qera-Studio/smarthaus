@@ -7,7 +7,7 @@ import Link from "next/link";
 import { HONEYPOT_FIELD, INTERESTS } from "../../lib/contact-schema";
 import { CONSENT_FORM_COPY } from "../../content/consent";
 import { whatsappLink } from "../../lib/contact";
-import { submitEnquiry } from "./actions";
+import { submitEnquiry, submitShortEnquiry } from "./actions";
 import { INITIAL_STATE, type ContactState } from "./state";
 import styles from "./page.module.scss";
 
@@ -25,8 +25,23 @@ import styles from "./page.module.scss";
 // visitor there only happens when nothing above it also failed.
 const FOCUS_ORDER = ["name", "email", "phone", "interest", "contactConsent"] as const;
 
-export function ContactForm() {
-  const [state, formAction] = useActionState(submitEnquiry, INITIAL_STATE);
+/**
+ * `short` is the homepage form above the footer: name, email, phone, message.
+ *
+ * It is a variant of this component rather than a copy so the two cannot drift
+ * — the autofill handling, the focus-on-error behaviour, the honeypot and the
+ * confirmation are the parts most likely to rot in a duplicate.
+ *
+ * The variant picks the server action, and the action picks the schema. It is
+ * deliberately NOT a field in the payload: a variant read from FormData is
+ * attacker-controlled, and the full form's consent tick is what it would skip.
+ */
+export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }) {
+  const short = variant === "short";
+  const [state, formAction] = useActionState(
+    short ? submitShortEnquiry : submitEnquiry,
+    INITIAL_STATE,
+  );
   const formRef = useRef<HTMLFormElement>(null);
 
   // Move focus to the first field that failed. Without this a keyboard or
@@ -44,6 +59,17 @@ export function ContactForm() {
   }
 
   const errors = state.status === "invalid" ? state.fieldErrors : {};
+
+  /**
+   * What the visitor typed on the attempt that failed. An error must cost them
+   * a correction, never the whole form.
+   *
+   * Keyed on status so the fields reset properly on a fresh render. Passed as
+   * `defaultValue` rather than `value`: these stay uncontrolled inputs, so
+   * typing needs no state round-trip and the re-render only supplies the
+   * starting text.
+   */
+  const values = state.status === "invalid" || state.status === "failed" ? state.values : {};
 
   return (
     <form ref={formRef} action={formAction} className={styles.form} noValidate>
@@ -70,6 +96,7 @@ export function ContactForm() {
             name="name"
             type="text"
             autoComplete="name"
+            defaultValue={values.name}
             placeholder="enter full name"
             className={styles.input}
             aria-invalid={errors.name ? true : undefined}
@@ -83,6 +110,7 @@ export function ContactForm() {
             name="email"
             type="email"
             autoComplete="email"
+            defaultValue={values.email}
             placeholder="enter email"
             className={styles.input}
             aria-invalid={errors.email ? true : undefined}
@@ -102,6 +130,7 @@ export function ContactForm() {
             type="tel"
             inputMode="tel"
             autoComplete="tel"
+            defaultValue={values.phone}
             placeholder="enter phone number"
             className={styles.input}
             aria-invalid={errors.phone ? true : undefined}
@@ -109,39 +138,45 @@ export function ContactForm() {
           />
         </Field>
 
-        <Field id="community" label="Community">
-          <input
-            id="community"
-            name="community"
-            type="text"
-            autoComplete="address-level2"
-            placeholder="eg. Dubai Hills"
-            className={styles.input}
-          />
-        </Field>
+        {!short && (
+          <Field id="community" label="Community">
+            <input
+              id="community"
+              name="community"
+              type="text"
+              autoComplete="address-level2"
+              defaultValue={values.community}
+              placeholder="eg. Dubai Hills"
+              className={styles.input}
+            />
+          </Field>
+        )}
 
-        <Field id="interest" label="What are you looking?" error={errors.interest}>
-          <select
-            id="interest"
-            name="interest"
-            defaultValue={INTERESTS[1]}
-            className={styles.select}
-            aria-invalid={errors.interest ? true : undefined}
-            aria-describedby={errors.interest ? "interest-error" : undefined}
-          >
-            {INTERESTS.map((interest) => (
-              <option key={interest} value={interest}>
-                {interest}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {!short && (
+          <Field id="interest" label="What are you looking?" error={errors.interest}>
+            <select
+              id="interest"
+              name="interest"
+              defaultValue={values.interest ?? INTERESTS[1]}
+              className={styles.select}
+              aria-invalid={errors.interest ? true : undefined}
+              aria-describedby={errors.interest ? "interest-error" : undefined}
+            >
+              {INTERESTS.map((interest) => (
+                <option key={interest} value={interest}>
+                  {interest}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
 
         <Field id="message" label="Message">
           <input
             id="message"
             name="message"
             type="text"
+            defaultValue={values.message}
             placeholder="enter message"
             className={styles.input}
           />
@@ -176,31 +211,50 @@ export function ContactForm() {
         marketing consent to be distinct from service consent. Bundling them is
         exactly what that prohibits.
       */}
-      <div className={styles.consents}>
-        <Checkbox
-          id="contactConsent"
-          error={errors.contactConsent}
-          label={
-            <>
-              {CONSENT_FORM_COPY.required.label}{" "}
-              {/* Visible text, not colour alone — a required marker a
-                  colourblind visitor cannot see is not a marker. */}
-              <span className={styles.requiredMarker}>{CONSENT_FORM_COPY.required.marker}</span>
-            </>
-          }
-          helper={
-            <>
-              {CONSENT_FORM_COPY.required.helperLead}{" "}
-              <Link href={CONSENT_FORM_COPY.required.helperHref}>
-                {CONSENT_FORM_COPY.required.helperLinkText}
-              </Link>
-              .
-            </>
-          }
-        />
+      {short ? (
+        /*
+          The notice-only variant, consent deck §6.4, which the deck calls the
+          recommended alternative to the tick. No checkbox on the short form:
+          the basis for answering an enquiry is "steps toward a contract", which
+          the privacy policy already states and which needs no consent at all.
 
-        <Checkbox id="marketingConsent" label={CONSENT_FORM_COPY.marketing.label} />
-      </div>
+          The string is the same one the full form uses as its helper text, so
+          the two surfaces cannot state different purposes for the same data.
+        */
+        <p className={styles.shortNotice}>
+          {CONSENT_FORM_COPY.required.helperLead}{" "}
+          <Link href={CONSENT_FORM_COPY.required.helperHref}>
+            {CONSENT_FORM_COPY.required.helperLinkText}
+          </Link>
+          .
+        </p>
+      ) : (
+        <div className={styles.consents}>
+          <Checkbox
+            id="contactConsent"
+            error={errors.contactConsent}
+            label={
+              <>
+                {CONSENT_FORM_COPY.required.label}{" "}
+                {/* Visible text, not colour alone — a required marker a
+                    colourblind visitor cannot see is not a marker. */}
+                <span className={styles.requiredMarker}>{CONSENT_FORM_COPY.required.marker}</span>
+              </>
+            }
+            helper={
+              <>
+                {CONSENT_FORM_COPY.required.helperLead}{" "}
+                <Link href={CONSENT_FORM_COPY.required.helperHref}>
+                  {CONSENT_FORM_COPY.required.helperLinkText}
+                </Link>
+                .
+              </>
+            }
+          />
+
+          <Checkbox id="marketingConsent" label={CONSENT_FORM_COPY.marketing.label} />
+        </div>
+      )}
 
       <Submit />
     </form>
