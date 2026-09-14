@@ -1,0 +1,481 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+// The "Our Process" rail.
+//
+// ## The mechanism, in one paragraph
+//
+// `.process` is a TALL SPACER carrying a `view-timeline`. `.pin` inside it is
+// `position: sticky`, so it holds still against the viewport while the spacer
+// scrolls past. `.track` consumes that timeline and translates sideways. The
+// page's own vertical scroll is therefore what moves the rail horizontally, and
+// none of it involves a scroll listener, a wheel handler or a library.
+//
+// The spacer's height is one stage plus the track's travel, which makes the
+// gesture 1:1: a pixel of vertical scroll is a pixel of sideways motion.
+
+@layer blocks {
+  .process {
+    // L2 component tokens. Every value this block departs from the system on is
+    // declared here so it is readable in one place.
+    //
+    // --process-pages is set inline by the component: the page count is the one
+    // number the stylesheet cannot know, and both the track width and the
+    // spacer height derive from it.
+    --process-stage-block: calc(100svh - var(--nav-bar-block-size));
+    // How far the track slides, as a fraction of ITS OWN width. The track is
+    // `pages` stages wide, and the distance to cover is all but the last one, so
+    // `(pages - 1) / pages`. Expressed this way rather than in viewport units
+    // because the track sits inside body's 1440px cap: 100vw pages would
+    // overflow their slot on a wide screen and every page after the first would
+    // land short of where it should.
+    --process-travel: calc(100% * (var(--process-pages) - 1) / var(--process-pages));
+    // The same distance in viewport heights, which is what the spacer needs:
+    // one stage of pin, plus one stage of scroll per page of travel. 1:1.
+    --process-scroll-block: calc(var(--process-stage-block) * (var(--process-pages) - 1));
+    --process-parallax-shift: 4%;
+    // L2 ink ramp. Colour tokens rather than `opacity`, which would inherit to
+    // every descendant. Same approach as the footer's --footer-ink-* set.
+    --process-ink: #{$brown-100};
+    --process-ink-dim: #{$brown-300};
+    --process-rule: #{$brown-800};
+
+    // svh, never vh or dvh. 100vh on iOS Safari is the LARGE viewport, and
+    // 100dvh changes as the URL bar collapses, which would reflow the spacer
+    // mid-scroll: visible jank, and CLS against a budget of < 0.05. svh is the
+    // small viewport and is stable. Footer.module.scss:118 has the long version.
+    block-size: calc(var(--process-stage-block) + var(--process-scroll-block));
+
+    // The timeline lives on the spacer and is consumed by its descendants.
+    view-timeline-name: --process-scroll;
+    view-timeline-axis: block;
+
+    // Full-bleed ground. The body is capped at 1440px, and this pattern is the
+    // escape: half the difference between the box and the viewport is exactly
+    // the gutter on each side. A pseudo-element rather than a box-shadow,
+    // because a shadow is not hit-testable and the [data-ground="dark"] cursor
+    // would vanish in the gutters. Copied from Footer.module.scss:100.
+    position: relative;
+    isolation: isolate;
+    background-color: var(--color-bg-inverse-strong);
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset-block: 0;
+      inset-inline: calc(50% - 50vw);
+      z-index: -1;
+      background-color: var(--color-bg-inverse-strong);
+    }
+
+    @include bp-lg {
+      --process-stage-block: 100svh;
+    }
+  }
+
+  .pin {
+    position: sticky;
+    inset-block-start: 0;
+    block-size: var(--process-stage-block);
+    display: flex;
+    flex-direction: column;
+    // The ground again: .process's own background sits behind the sticky child,
+    // and without this the page beneath would show through as it scrolls past.
+    overflow: hidden;
+  }
+
+  // --- Title bar ------------------------------------------------------------
+
+  .titleBar {
+    display: flex;
+    align-items: center;
+    gap: $space-6;
+    flex: 0 0 auto;
+    padding-block: $space-5;
+    border-block-end-style: solid;
+    border-block-end-width: 1px;
+    border-block-end-color: var(--process-rule);
+  }
+
+  .sectionTitle {
+    flex: 0 0 auto;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    color: var(--process-ink);
+  }
+
+  .progress {
+    flex: 1 1 auto;
+    block-size: 1px;
+    background-color: var(--process-rule);
+  }
+
+  .progressFill {
+    display: block;
+    block-size: 100%;
+    background-color: var(--process-ink);
+    // No logical equivalent of transform-origin exists yet. Flagged as the RTL
+    // follow-up for V2, when `dir` can be rtl and this becomes `right center`.
+    transform-origin: left center;
+    scale: 0 1;
+  }
+
+  // --- The rail -------------------------------------------------------------
+
+  .viewport {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    // Clipped, not scrollable: above lg the timeline moves the track, and a
+    // real scroll container here would fight it. The reduced-motion and
+    // no-timeline paths below turn this back into `auto`, which is what makes
+    // the rail usable when nothing is driving it.
+    overflow: hidden;
+
+    @include focus-ring;
+  }
+
+  // A grid of `pages` equal columns, each one stage wide.
+  //
+  // The track's own width has to be stated: with `grid-auto-flow: column` and
+  // no width it stays at its container's size, the columns overflow invisibly,
+  // and the translate percentage below is then computed against one stage
+  // instead of six. Measured: trackW came back 1392 rather than 8352, so the
+  // rail moved a sixth of the distance it should have.
+  //
+  // `calc(100% * pages)` resolves against the viewport box, which is the stage,
+  // so the track is exactly `pages` stages wide at every breakpoint and needs no
+  // viewport units of its own.
+  .track {
+    display: grid;
+    // 1fr each, of a track that is `pages` stages wide, so every column is
+    // exactly one stage. Not `100%`, which inside the widened track would
+    // resolve against the track itself and make each page six stages wide.
+    grid-template-columns: repeat(var(--process-pages), minmax(0, 1fr));
+    inline-size: calc(100% * var(--process-pages));
+    block-size: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  // Below lg every page is the same shape: content, then its images stacked
+  // under it. The multi-column layouts are desktop-only and are applied inside
+  // the bp-lg block at the end of this file.
+  //
+  // A four-column grid at phone width gives the text column about 80px, which
+  // sets the copy one word per line. That is what this default prevents.
+  .page {
+    min-inline-size: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    align-content: center;
+    gap: $space-4;
+    padding-block: $space-6;
+    padding-inline-end: $space-6;
+  }
+
+  // --- Page content ---------------------------------------------------------
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: $space-3;
+    min-inline-size: 0;
+  }
+
+  .step {
+    font-size: var(--font-size-sm);
+    color: var(--process-ink-dim);
+  }
+
+  .title {
+    font-size: var(--type-h3);
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    color: var(--process-ink);
+    text-wrap: balance;
+  }
+
+  .body {
+    max-inline-size: 42ch;
+    font-size: var(--font-size-sm);
+    line-height: $line-height-relaxed;
+    color: var(--process-ink-dim);
+    text-wrap: pretty;
+  }
+
+  .duration {
+    margin-block-start: $space-2;
+    font-size: var(--font-size-sm);
+    color: var(--process-ink-dim);
+  }
+
+  // --- Image frames ---------------------------------------------------------
+
+  // The frame fills whatever grid area the layout gives it. It deliberately
+  // does NOT take an aspect-ratio from the image: the grid rows are already a
+  // definite size (the stage is a fixed height), so a ratio here would fight
+  // them and overflow. There is no CLS cost either, because the box is sized by
+  // the grid before the image loads rather than by the image itself.
+  .frame {
+    position: relative;
+    overflow: hidden;
+    min-inline-size: 0;
+    min-block-size: 0;
+    // Below lg the page rows are `auto`, so the frame has no height of its own
+    // to fill and would collapse to nothing (the image inside is absolute). A
+    // ratio gives it one. From lg the rows are definite and this is dropped, so
+    // the frame fills its grid area instead.
+    aspect-ratio: 4 / 3;
+
+    @include bp-lg {
+      aspect-ratio: auto;
+    }
+  }
+
+  .image {
+    // Absolute so the intrinsic width/height next/image writes as attributes
+    // cannot stretch the frame. The oversize is the parallax travel budget:
+    // same shape as the hero's mouse parallax in AGENTS.md, an oversized image
+    // in a clipped box with a subtle shift. 4% against 12% never exposes an edge.
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -6%;
+    inline-size: 112%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  // --- The six layouts ------------------------------------------------------
+  //
+  // Grid only, and desktop only. Which slot an image lands in is the layout's
+  // business, and the component just names them .slot1 and .slot2 in source
+  // order. Below lg every page keeps the single-column default above: these
+  // arrangements assume a landscape stage, and a four-column grid at phone
+  // width sets the copy one word per line.
+
+  @include bp-lg {
+    .intro {
+      .content {
+        max-inline-size: 52ch;
+      }
+    }
+
+    // p2: column 1 is the portrait across both rows, column 2 is text over image.
+    .portraitLead {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+
+      .slot1 {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+      }
+      .content {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .slot2 {
+        grid-column: 2;
+        grid-row: 2;
+      }
+    }
+
+    // p3: text in column 1, one image across the remaining three.
+    .wideRight {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+
+      .content {
+        grid-column: 1;
+      }
+      .slot1 {
+        grid-column: 2 / span 3;
+      }
+    }
+
+    // p4: a full-width banner, then text beside a wide image.
+    .bannerSplit {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+
+      .slot1 {
+        grid-column: 1 / span 4;
+        grid-row: 1;
+      }
+      .content {
+        grid-column: 1;
+        grid-row: 2;
+      }
+      .slot2 {
+        grid-column: 2 / span 3;
+        grid-row: 2;
+      }
+    }
+
+    // p5: text over a full-width image.
+    .stacked {
+      grid-template-rows: auto minmax(0, 1fr);
+      align-content: stretch;
+    }
+
+    // p6: a wide image with text beside it, then an offset wide image.
+    .offsetPair {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+
+      .slot1 {
+        grid-column: 1 / span 3;
+        grid-row: 1;
+      }
+      .content {
+        grid-column: 4;
+        grid-row: 1;
+      }
+      .slot2 {
+        grid-column: 2 / span 3;
+        grid-row: 2;
+      }
+    }
+  }
+
+  // --- Motion ---------------------------------------------------------------
+  //
+  // `contain 0% contain 100%` is exactly the pin window. For a subject taller
+  // than the viewport, the `contain` range runs from "the subject's top aligns
+  // with the scrollport's top" to "its bottom aligns with the bottom", which is
+  // precisely the span over which the sticky child is stationary. No offsets,
+  // no calc, and it stays correct if the page count changes.
+  //
+  // `translate` rather than `transform: translateX()`: it composites the same
+  // and leaves `transform` free for the images, so the track and the parallax
+  // never contend for one property.
+
+  @keyframes process-slide {
+    to {
+      translate: calc(-1 * var(--process-travel)) 0;
+    }
+  }
+
+  @keyframes process-progress {
+    to {
+      scale: 1 1;
+    }
+  }
+
+  @keyframes process-parallax {
+    from {
+      translate: calc(-1 * var(--process-parallax-shift)) 0;
+    }
+    to {
+      translate: var(--process-parallax-shift) 0;
+    }
+  }
+
+  .track,
+  .progressFill,
+  .image {
+    animation-timeline: --process-scroll;
+    animation-range: contain 0% contain 100%;
+    animation-fill-mode: both;
+    animation-timing-function: linear;
+  }
+
+  .track {
+    animation-name: process-slide;
+  }
+
+  .progressFill {
+    animation-name: process-progress;
+  }
+
+  .image {
+    animation-name: process-parallax;
+  }
+
+  // Alternate the drift so adjacent images move against each other. That
+  // counter-motion, not the shift itself, is what reads as depth.
+  .page:nth-child(even) .image {
+    animation-direction: reverse;
+  }
+
+  // --- No scroll-driven animations ------------------------------------------
+  //
+  // ProcessFallback writes --process-progress in a rAF loop. It starts only
+  // when this @supports block is the live one, so the two drivers can never
+  // both run. See that file and the CLAUDE.md exception it is conditional on.
+
+  @supports not (animation-timeline: view()) {
+    .track {
+      // calc() cannot multiply a percentage by a unitless var here, so the
+      // progress scales the page count instead and the percentage stays whole.
+      translate: calc(
+          -100% * var(--process-progress, 0) * (var(--process-pages) - 1) / var(--process-pages)
+        )
+        0;
+    }
+
+    .progressFill {
+      scale: var(--process-progress, 0) 1;
+    }
+
+    .image {
+      translate: calc((var(--process-progress, 0) * 2 - 1) * var(--process-parallax-shift)) 0;
+    }
+  }
+
+  // --- Reduced motion -------------------------------------------------------
+  //
+  // The global reset in _reset.scss sets `animation-duration: 0.01ms`, which
+  // does NOTHING to a scroll-driven animation: duration is ignored when
+  // animation-timeline is a progress timeline. The timeline has to be dropped
+  // explicitly, which is what this block does.
+  //
+  // With nothing driving the track, the section stops being a spacer and the
+  // rail becomes a plain horizontal scroller the reader moves themselves.
+
+  @media (prefers-reduced-motion: reduce) {
+    .process {
+      block-size: auto;
+    }
+
+    .pin {
+      position: static;
+      block-size: auto;
+    }
+
+    .viewport {
+      overflow-x: auto;
+      // The inline axis is left free on <html> precisely so a rail can contain
+      // its own overscroll. globals.scss:26 names the legal ToC as the
+      // precedent.
+      overscroll-behavior-x: contain;
+    }
+
+    // The stage no longer has a definite height, so pages need one of their own
+    // or the grid rows collapse to their content.
+    .page {
+      min-block-size: 70svh;
+    }
+
+    // `animation-name: none`, not `animation-timeline: none`. Dropping only the
+    // timeline turns the animation back into a TIME-based one, which with
+    // `animation-fill-mode: both` then holds its first keyframe and keeps
+    // overriding the `translate` below. Measured: the track reported "0%" from
+    // the keyframe rather than "none" from this rule, on all three device
+    // profiles. Removing the animation is what actually stops it.
+    .track,
+    .image,
+    .progressFill {
+      animation-name: none;
+      translate: none;
+    }
+
+    // A progress indicator for an animation that is not running is noise.
+    .progress {
+      display: none;
+    }
+  }
+}

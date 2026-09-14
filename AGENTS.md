@@ -174,6 +174,51 @@ All clips: `muted playsinline preload="none"` with a poster. Clips load on deman
 
 ---
 
+## The Process rail — horizontal scroll
+
+`src/components/Process/` is a full-viewport brown-950 section on the homepage whose six pages scroll **sideways**, driven by the page's own vertical scroll. Content lives in `src/content/process.ts`.
+
+### The mechanism
+
+Pure CSS. No scroll listener, no wheel interception, no library.
+
+- The `<section>` is a **tall spacer** carrying `view-timeline-name: --process-scroll`.
+- Inside it, `.pin` is `position: sticky` and holds still while the spacer scrolls past.
+- `.track` consumes that timeline and translates horizontally. `animation-range: contain 0% contain 100%` is exactly the pin window: for a subject taller than the viewport, `contain` runs from "top aligns" to "bottom aligns", which is precisely the span over which the sticky child is stationary. No offsets, no `calc` in the range, and it stays correct if the page count changes.
+- The spacer's height is one stage plus one stage per page of travel, which makes the gesture **1:1** — a pixel of vertical scroll is a pixel sideways.
+
+Three things that are load-bearing and easy to break:
+
+- **The track needs an explicit `inline-size`.** With `grid-auto-flow: column` and no width it stays at its container's size, the columns overflow invisibly, and the translate percentage is then computed against one stage instead of six. Measured: the rail moved a sixth of the distance it should have.
+- **`translate`, not `transform: translateX()`.** Composites the same and leaves `transform` free for the images, so the track and the parallax never contend for one property.
+- **`--process-pages` is set inline by the component.** The page count is the one number the stylesheet cannot know, and both the track width and the spacer height derive from it.
+
+### Parallax
+
+Images are 112% of their clipped frame and drift ±4% on the same timeline, alternating direction per page. The counter-motion against the track is what reads as depth. Same shape as the hero's mouse parallax above: an oversized image, a clipped box, a subtle shift.
+
+### prefers-reduced-motion
+
+The section drops the spacer and the pin, the rail becomes a real `overflow-x: auto` scroll container, the progress bar is hidden, and every animation is removed with **`animation-name: none`** — not `animation-timeline: none`, which only converts the animation back to a time-based one that then holds its first keyframe and keeps overriding the `translate`. That was a real failure on all three device profiles; the comment in the stylesheet records it.
+
+### Accessibility — 1.4.10 is knowingly not met
+
+A pinned horizontal rail is two-dimensional scrolling for reading content, which the Accessibility System marks `[Floor]` at 320px / 400% zoom. This is a **signed-off design decision, not an oversight.**
+
+Mitigations, all of which must survive any change to this section:
+
+- The scroll container is focusable with `role="group"` and an `aria-label` — axe's `scrollable-region-focusable`, the same treatment `LegalTable.tsx` documents.
+- Six `<h3>` headings inside a real `<ol>`, all in the accessibility tree at all times, so the content reads linearly without sideways scrolling at all.
+- `prefers-reduced-motion` removes the pin entirely.
+
+What it does not give is a single-axis reading path for a sighted user at 400% zoom. Record that when the accessibility log is compiled.
+
+### Photography
+
+Every image in `public/hero/process/` is **placeholder stock** and every row in `process.ts` carries `pendingImage`. They do not meet the photography constraint below. `src/content/__tests__/process.test.ts` fails once the last marker is cleared, so replacing them is a deliberate act rather than a silent one.
+
+---
+
 ## Nav behaviour
 
 | State                           | Desktop                                                 | Mobile                                       |
