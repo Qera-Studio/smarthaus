@@ -14,6 +14,23 @@
 //
 // The spacer's height is one stage plus the track's travel, which makes the
 // gesture 1:1: a pixel of vertical scroll is a pixel of sideways motion.
+//
+// ## The portal
+//
+// The section now opens with a ZOOM REVEAL before the rail moves at all. The
+// pinned stage starts as a small square sitting near the bottom of the viewport
+// and grows to fill it, rising as it grows. Only when it has filled the screen
+// does the track start sliding.
+//
+// Both run on ONE timeline, split into two slices. The pin window is one stage
+// longer than the rail needs, and that extra stage is the portal's. Everything
+// below is expressed against --process-portal-end, the boundary between them,
+// so the split is one number rather than a set of hand-matched percentages.
+//
+// A second view-timeline was the obvious alternative and is worse: the portal
+// and the rail would each need their own subject with its own range, the two
+// ranges would have to be kept in sync by hand, and the fallback would have to
+// compute two progress values instead of one.
 
 @layer blocks {
   .process {
@@ -37,11 +54,42 @@
     // taller in exact proportion, so it is the one number to turn if the pacing
     // is wrong. ponytail: one token, change it and nothing else moves.
     --process-scroll-ratio: 2;
-    // The spacer's height: one stage to pin against, plus `ratio` stages of
-    // scroll for every page of travel.
-    --process-scroll-block: calc(
+    // How many stages of scroll the portal gets before the rail starts. One
+    // stage, so the zoom has the same dwell as each of the six pages and the
+    // section keeps one rhythm throughout.
+    --process-portal-stages: 1;
+    // The rail's own scroll: `ratio` stages for every page of travel.
+    --process-rail-block: calc(
       var(--process-stage-block) * (var(--process-pages) - 1) * var(--process-scroll-ratio)
     );
+    // The portal's scroll, in the same units.
+    --process-portal-block: calc(
+      var(--process-stage-block) * var(--process-portal-stages) * var(--process-scroll-ratio)
+    );
+    // The spacer's height: one stage to pin against, plus the portal, plus the
+    // rail.
+    --process-scroll-block: calc(var(--process-portal-block) + var(--process-rail-block));
+    // WHERE THE PORTAL ENDS, as a fraction of the whole pin window. Every
+    // animation-range below is written against this, so the split between the
+    // two phases is one number.
+    //
+    // It is a plain ratio of the two block sizes, which reduces to a ratio of
+    // stage counts: the stage height and the scroll ratio appear in both terms
+    // and cancel. So it holds at every breakpoint and at any scroll ratio,
+    // without either value being named here.
+    --process-portal-end: calc(
+      100% * var(--process-portal-stages) /
+        (var(--process-portal-stages) + var(--process-pages) - 1)
+    );
+    // The square's size at the very start of the portal, as a fraction of the
+    // full stage. 0.1 is what the client asked for and is small enough to read
+    // as an object rather than as a shrunken page.
+    --process-portal-scale: 0.1;
+    // How far down the viewport the square sits when it is smallest. 90% puts
+    // its CENTRE at nine tenths of the stage, so it reads as sitting near the
+    // bottom edge and rises as it grows. transform-origin does the work: see
+    // .portal below.
+    --process-portal-anchor: 90%;
     // The image is 124% of its frame and sits at -12%, so it has 12% of the
     // FRAME of slack at each edge — just under 10% as a fraction of the image's
     // own height. 4.5% therefore sits at roughly half the available travel and
@@ -99,10 +147,54 @@
     position: sticky;
     inset-block-start: 0;
     block-size: var(--process-stage-block);
-    display: flex;
-    flex-direction: column;
     // The ground again: .process's own background sits behind the sticky child,
     // and without this the page beneath would show through as it scrolls past.
+    overflow: hidden;
+  }
+
+  // --- The portal -----------------------------------------------------------
+  //
+  // Everything the pin holds lives inside this box, and this box is what
+  // scales. The title bar and the rail therefore grow together as one unit,
+  // which is the point: the reader sees a small SLAB of the section rise and
+  // open out, not a picture that a header is later bolted onto.
+  //
+  // ## Why scaling about a low origin is the whole effect
+  //
+  // `transform-origin` at 50% 90% pins the point nine tenths down the stage and
+  // scales everything about it. At 0.1 the box is a tenth of the stage with its
+  // centre just above that point, which reads as a small square near the bottom
+  // edge. As the scale runs to 1 the box grows and its top edge climbs to the
+  // top of the stage: the RISE is a consequence of the origin, not a separate
+  // translate animated alongside it.
+  //
+  // That matters beyond tidiness. One animated property means the portal cannot
+  // drift out of sync with itself, and `scale` alone stays on the compositor.
+  // An accompanying `translate` would be a second property to keep in phase for
+  // no visual gain.
+  .portal {
+    block-size: 100%;
+    display: flex;
+    flex-direction: column;
+    transform-origin: 50% var(--process-portal-anchor);
+    // The starting state, so the square is correct on first paint and before
+    // any timeline attaches. `animation-fill-mode: both` holds the same value,
+    // but only once the animation exists; this covers the frame before that and
+    // the no-animation paths at the end of the file.
+    scale: var(--process-portal-scale);
+    // NO border-radius, and that is a decision rather than an omission.
+    //
+    // `scale` multiplies the rendered corner along with everything else, so a
+    // fixed radius is the wrong size at both ends: 16px here draws as 1.6px
+    // while the box is small (invisible, the thing it was for) and as a full
+    // 16px once it fills the viewport, where a rounded edge against the
+    // full-bleed ground reads as a mistake. Cancelling that needs a radius that
+    // counter-scales, which means interpolating a registered @property, which
+    // is a lot of machinery for a corner nobody asked for.
+    //
+    // The small state reads as an object on its own: it is a bright slab on a
+    // brown-950 ground with hard edges. ponytail: add the @property only if the
+    // square actually looks wrong in review.
     overflow: hidden;
   }
 
@@ -464,6 +556,24 @@
   // and leaves `transform` free for the images, so the track and the parallax
   // never contend for one property.
 
+  // The portal. SCALE ONLY: the rise comes from transform-origin, so there is
+  // exactly one animated property and it stays on the compositor.
+  //
+  // The corner radius deliberately does NOT animate here. An unregistered
+  // custom property is not interpolable — it would flip at the midpoint rather
+  // than ease — and registering one with @property to smooth a cosmetic detail
+  // buys a rounding artefact at full scale for no real gain. The radius is a
+  // static value on .portal instead, divided by the scale so it reads as a
+  // constant on-screen corner rather than growing with the box.
+  @keyframes process-portal {
+    from {
+      scale: var(--process-portal-scale);
+    }
+    to {
+      scale: 1;
+    }
+  }
+
   @keyframes process-slide {
     to {
       translate: calc(-1 * var(--process-travel)) 0;
@@ -486,6 +596,7 @@
     }
   }
 
+  .portal,
   .track,
   .progressFill,
   .image {
@@ -494,15 +605,28 @@
     animation-timing-function: linear;
   }
 
+  // The portal owns the FIRST slice of the pin window; the rail owns the rest.
+  // Both boundaries are --process-portal-end, so the handover is exact: the
+  // track is still at 0% at the instant the portal reaches full size, and it
+  // starts moving on the next pixel of scroll.
+  .portal {
+    animation-name: process-portal;
+    animation-range: contain 0% contain var(--process-portal-end);
+  }
+
   .track,
   .progressFill {
-    animation-range: contain 0% contain 100%;
+    animation-range: contain var(--process-portal-end) contain 100%;
   }
 
   .track {
     animation-name: process-slide;
   }
 
+  // The progress bar measures the RAIL, not the portal: it shares the track's
+  // range, so it sits at empty throughout the zoom and starts filling only when
+  // the pages actually begin to move. A bar that filled during the portal would
+  // be reporting progress through six steps while still showing the first.
   .progressFill {
     animation-name: process-progress;
   }
@@ -534,10 +658,22 @@
   // array at six, so a seventh page fails the unit suite before it reaches here.
   $process-page-count: 6;
 
+  // Each page's slice is now a fraction of the RAIL's portion of the window,
+  // offset past the portal — not a fraction of the whole thing. Sharing the old
+  // full-window sixths would have started page 1's drift during the zoom and
+  // left every page's parallax running a sixth of a portal early.
+  //
+  // calc() rather than Sass arithmetic, because --process-portal-end is a
+  // custom property the compiler cannot fold. The shape is:
+  //   start = portalEnd + (100% - portalEnd) * (i - 1) / pages
   @for $i from 1 through $process-page-count {
     .page:nth-child(#{$i}) .image {
-      $slice: math.div(100%, $process-page-count);
-      animation-range: contain #{($i - 1) * $slice} contain #{$i * $slice};
+      $from: math.div($i - 1, $process-page-count);
+      $to: math.div($i, $process-page-count);
+      animation-range: contain
+        calc(var(--process-portal-end) + (100% - var(--process-portal-end)) * #{$from})
+        contain
+        calc(var(--process-portal-end) + (100% - var(--process-portal-end)) * #{$to});
     }
   }
 
@@ -554,21 +690,55 @@
   // both run. See that file and the CLAUDE.md exception it is conditional on.
 
   @supports not (animation-timeline: view()) {
+    // --process-progress runs 0..1 across the WHOLE pin window, portal
+    // included, because the fallback measures the section and knows nothing
+    // about the split. These two re-map it onto the two phases, so the
+    // no-timeline path lands on the same boundary as the CSS path rather than
+    // running the rail through the zoom.
+    //
+    // Both are clamped: without the clamp the portal would keep scaling past 1
+    // for the rest of the section, and the rail would run backwards during it.
+    //
+    // --process-portal-end is a percentage, so it is divided by 100% to get the
+    // unitless fraction these need.
+    .portal {
+      --process-portal-progress: clamp(
+        0,
+        var(--process-progress, 0) / (var(--process-portal-end) / 100%),
+        1
+      );
+      scale: calc(
+        var(--process-portal-scale) + (1 - var(--process-portal-scale)) *
+          var(--process-portal-progress)
+      );
+    }
+
+    .track,
+    .progressFill,
+    .image {
+      --process-rail-progress: clamp(
+        0,
+        (var(--process-progress, 0) - var(--process-portal-end) / 100%) /
+          (1 - var(--process-portal-end) / 100%),
+        1
+      );
+    }
+
     .track {
       // calc() cannot multiply a percentage by a unitless var here, so the
       // progress scales the page count instead and the percentage stays whole.
       translate: calc(
-          -100% * var(--process-progress, 0) * (var(--process-pages) - 1) / var(--process-pages)
+          -100% * var(--process-rail-progress) * (var(--process-pages) - 1) / var(--process-pages)
         )
         0;
     }
 
     .progressFill {
-      scale: var(--process-progress, 0) 1;
+      scale: var(--process-rail-progress) 1;
     }
 
     .image {
-      translate: 0 calc((var(--process-progress, 0) * 2 - 1) * var(--process-parallax-shift));
+      translate: 0 calc((var(--process-rail-progress) * 2 - 1) * var(--process-parallax-shift));
     }
   }
 
@@ -614,9 +784,21 @@
     // profiles. Removing the animation is what actually stops it.
     .track,
     .image,
-    .progressFill {
+    .progressFill,
+    .portal {
       animation-name: none;
       translate: none;
+    }
+
+    // The portal has to be reset to full size EXPLICITLY. `.portal` carries
+    // `scale: 0.1` as a static declaration so the square is right before the
+    // animation attaches, and killing the animation does not undo it — without
+    // this the entire section renders as a tenth-size square in the corner and
+    // is unreadable. This is the same class of trap as the animation-name note
+    // above: removing the driver leaves the starting state behind.
+    .portal {
+      scale: none;
+      block-size: auto;
     }
 
     // A progress indicator for an animation that is not running is noise.

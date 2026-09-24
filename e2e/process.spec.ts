@@ -127,6 +127,93 @@ test("reaches the last page by the end of the pin window", async ({ page }) => {
   expect(percent).toBeLessThan(0);
 });
 
+/**
+ * The portal: the section opens as a small square near the bottom of the
+ * viewport and grows to fill it BEFORE the rail moves at all.
+ *
+ * The two phases share one timeline, split at --process-portal-end, so the
+ * thing worth guarding is the handover. If that boundary ever drifts, the rail
+ * starts sliding underneath a half-grown portal and the section reads as
+ * broken while every existing assertion still passes.
+ */
+test.describe("the portal", () => {
+  // Percentage of the pin window to scroll to, as a fraction of its travel.
+  const at = async (page: import("@playwright/test").Page, fraction: number) => {
+    const box = await rail(page).evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      return { top: rect.top + window.scrollY, height: rect.height };
+    });
+    await page.evaluate(
+      ({ top, height, fraction }) =>
+        window.scrollTo(0, top + (height - window.innerHeight) * fraction),
+      { ...box, fraction },
+    );
+    await page.waitForTimeout(300);
+  };
+
+  const portal = (page: import("@playwright/test").Page) =>
+    rail(page).locator("[class*='portal']").first();
+
+  const scaleOf = (page: import("@playwright/test").Page) =>
+    portal(page).evaluate((el) => parseFloat(getComputedStyle(el).scale) || 1);
+
+  test("starts small and low, then grows to fill the stage", async ({ page }) => {
+    await at(page, 0);
+
+    // Small: a tenth of the stage, so it reads as an object rather than as a
+    // page that happens to be slightly inset.
+    expect(await scaleOf(page)).toBeLessThan(0.2);
+
+    // And LOW. The square sits in the bottom portion of the viewport, which is
+    // what gives the grow somewhere to rise from. Asserted against the
+    // viewport's midpoint rather than an exact offset, so the anchor token can
+    // be retuned without rewriting the test.
+    const { top, height } = await portal(page).evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return { top: r.top, height: window.innerHeight };
+    });
+    expect(top).toBeGreaterThan(height / 2);
+
+    // By the end of the portal's slice it fills the stage.
+    await at(page, 0.25);
+    expect(await scaleOf(page)).toBeGreaterThan(0.99);
+  });
+
+  test("holds the rail still until the portal has finished growing", async ({ page }) => {
+    const track = rail(page).locator("ol");
+
+    // Mid-zoom: the portal is partly grown and the track has NOT started.
+    await at(page, 0.08);
+    const scale = await scaleOf(page);
+    expect(scale).toBeGreaterThan(0.1);
+    expect(scale).toBeLessThan(1);
+
+    // parseFloat("0%") is 0, and so is parseFloat("none") via the || 0 below.
+    const during = await track.evaluate((el) => parseFloat(getComputedStyle(el).translate) || 0);
+    expect(during).toBe(0);
+
+    // Past the boundary the rail is moving and the portal is done.
+    await at(page, 0.5);
+    expect(await scaleOf(page)).toBeGreaterThan(0.99);
+    const after = await track.evaluate((el) => parseFloat(getComputedStyle(el).translate) || 0);
+    expect(after).toBeLessThan(0);
+  });
+
+  test("the growing stage never makes the document scroll sideways", async ({ page }) => {
+    // scale() paints outside the border box, so a portal that scaled about the
+    // wrong origin, or a stage wider than its container, would push the
+    // document width out. The pin clips it; this asserts the clip holds
+    // throughout the grow rather than only at the two ends.
+    for (const f of [0, 0.05, 0.1, 0.16, 0.25]) {
+      await at(page, f);
+      const overflows = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      );
+      expect(overflows, `horizontal overflow at ${f * 100}% of the pin window`).toBe(false);
+    }
+  });
+});
+
 test.describe("reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
 
@@ -143,5 +230,26 @@ test.describe("reduced motion", () => {
     const track = rail(page).locator("ol");
     await expect(track).toHaveCSS("translate", "none");
     await expect(rail(page).getByRole("group")).toHaveCSS("overflow-x", "auto");
+  });
+
+  test("shows the section at full size rather than as a tenth-scale square", async ({ page }) => {
+    await page.goto("/");
+
+    // The portal carries `scale: 0.1` as a STATIC declaration so the square is
+    // correct before the animation attaches. Killing the animation does not
+    // undo that, so reduced motion has to reset it explicitly. Without that
+    // reset the entire section renders as an unreadable square in the corner
+    // and every other assertion here still passes.
+    const portal = rail(page).locator("[class*='portal']").first();
+    await expect(portal).toHaveCSS("scale", "none");
+
+    // And it actually occupies the section, rather than merely reporting no
+    // scale while collapsed by something else.
+    const ratio = await portal.evaluate((el) => {
+      const own = el.getBoundingClientRect().width;
+      const parent = (el.parentElement as HTMLElement).getBoundingClientRect().width;
+      return own / parent;
+    });
+    expect(ratio).toBeGreaterThan(0.9);
   });
 });

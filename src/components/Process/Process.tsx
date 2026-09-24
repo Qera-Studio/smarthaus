@@ -20,6 +20,14 @@ import styles from "./Process.module.scss";
  * The spacer's height is one viewport to pin plus one pixel per pixel of
  * horizontal travel, which makes the gesture feel 1:1.
  *
+ * ## The portal
+ *
+ * The section opens with a zoom reveal: the pinned stage starts as a small
+ * square near the bottom of the viewport and grows to fill it, rising as it
+ * grows, and only then does the track start sliding. Both phases run on the
+ * SAME timeline, split at `--process-portal-end`. The rise is not animated
+ * separately — it falls out of scaling about a low `transform-origin`.
+ *
  * ## Accessibility
  *
  * The track is a real `<ol>` of `<li>`s with `<h3>` headings, all present in
@@ -53,34 +61,42 @@ export function Process() {
       style={{ "--process-pages": PROCESS_PAGES.length } as React.CSSProperties}
     >
       <div className={styles.pin}>
-        <header className={styles.titleBar}>
-          <h2 className={styles.sectionTitle} id="our-process">
-            Our Process
-          </h2>
-          {/*
-            Decorative, deliberately. A `role="progressbar"` needs a truthful
-            aria-valuenow, and the value here lives in CSS where React cannot
-            see it — a progressbar that reports a stale number is worse than a
-            bar that reports nothing. The <ol> below already tells assistive
-            tech there are six steps.
-          */}
-          <div className={styles.progress} aria-hidden="true">
-            <span className={styles.progressFill} />
-          </div>
-        </header>
+        {/*
+          The portal. Everything the pinned stage holds sits inside this box,
+          and this box is what scales: the section opens as a small square near
+          the bottom of the viewport and grows to fill it before the rail moves
+          at all. Purely presentational, so it carries no role and no label.
+        */}
+        <div className={styles.portal}>
+          <header className={styles.titleBar}>
+            <h2 className={styles.sectionTitle} id="our-process">
+              Our Process
+            </h2>
+            {/*
+              Decorative, deliberately. A `role="progressbar"` needs a truthful
+              aria-valuenow, and the value here lives in CSS where React cannot
+              see it — a progressbar that reports a stale number is worse than a
+              bar that reports nothing. The <ol> below already tells assistive
+              tech there are six steps.
+            */}
+            <div className={styles.progress} aria-hidden="true">
+              <span className={styles.progressFill} />
+            </div>
+          </header>
 
-        <div
-          className={styles.viewport}
-          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- required by axe scrollable-region-focusable; same treatment as LegalTable.tsx
-          tabIndex={0}
-          role="group"
-          aria-label="Our process, six panels. Scroll or use the arrow keys."
-        >
-          <ol className={styles.track}>
-            {PROCESS_PAGES.map((page) => (
-              <ProcessPage key={page.id} page={page} />
-            ))}
-          </ol>
+          <div
+            className={styles.viewport}
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- required by axe scrollable-region-focusable; same treatment as LegalTable.tsx
+            tabIndex={0}
+            role="group"
+            aria-label="Our process, six panels. Scroll or use the arrow keys."
+          >
+            <ol className={styles.track}>
+              {PROCESS_PAGES.map((page) => (
+                <ProcessPage key={page.id} page={page} />
+              ))}
+            </ol>
+          </div>
         </div>
       </div>
 
