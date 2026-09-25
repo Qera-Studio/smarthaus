@@ -173,14 +173,6 @@
 }
 
 @layer utilities {
-  // The native cursor hides while CursorMorph's frame stands in for it. In
-  // utilities because Button.module.scss sets `cursor: pointer` in components,
-  // which would otherwise win.
-  [data-cursor-morphed],
-  [data-cursor-morphed] * {
-    cursor: none;
-  }
-
   .visually-hidden {
     @include visually-hidden;
   }

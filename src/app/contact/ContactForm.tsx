@@ -384,7 +384,7 @@ function Confirmation({ state }: { state: Extract<ContactState, { status: "ok" }
         >
           Message us on WhatsApp
         </Button>
-        <Link className={styles.secondaryCta} data-cursor-morph href="/solutions">
+        <Link className={styles.secondaryCta} href="/solutions">
           See what we install
         </Link>
       </div>
