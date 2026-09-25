@@ -199,6 +199,48 @@ test.describe("the portal", () => {
     expect(after).toBeLessThan(0);
   });
 
+  test("the dark ground grows with the slab instead of being there all along", async ({ page }) => {
+    // The whole point of the portal: the brown-950 panel is the THING that
+    // grows. It shipped first with the ground painted on the tall spacer, so
+    // the dark field was already full-bleed and stationary and the reader saw
+    // text scaling up on a background that never moved.
+    //
+    // Asserted on the painted page rather than on a class, because both
+    // versions look identical in the DOM.
+    const darkAt = (x: number, y: number) =>
+      page.evaluate(
+        ({ x, y }) => {
+          const el = document.elementFromPoint(x, y);
+          // Walk up for the first element that actually paints something.
+          let node: Element | null = el;
+          while (node) {
+            const bg = getComputedStyle(node).backgroundColor;
+            const m = bg.match(/\d+/g);
+            if (m && bg !== "rgba(0, 0, 0, 0)") return Number(m[0]) < 60;
+            node = node.parentElement;
+          }
+          return false;
+        },
+        { x, y },
+      );
+
+    const { width, height } = page.viewportSize()!;
+    const edge = { x: 2, y: Math.round(height / 2) };
+    const middle = { x: Math.round(width / 2), y: Math.round(height / 2) };
+
+    // While the slab is small the page shows around it: the viewport edge is
+    // still the light canvas.
+    await at(page, 0);
+    expect(await darkAt(edge.x, edge.y), "viewport edge should be light at the start").toBe(false);
+
+    // Once it has grown it covers the screen, edge included. A 24px light
+    // border down every side is what a clip at the wrong level looks like, and
+    // that is exactly what this catches.
+    await at(page, 0.3);
+    expect(await darkAt(middle.x, middle.y), "centre should be dark once grown").toBe(true);
+    expect(await darkAt(edge.x, edge.y), "viewport edge should be dark once grown").toBe(true);
+  });
+
   test("the growing stage never makes the document scroll sideways", async ({ page }) => {
     // scale() paints outside the border box, so a portal that scaled about the
     // wrong origin, or a stage wider than its container, would push the

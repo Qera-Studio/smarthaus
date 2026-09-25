@@ -12,8 +12,8 @@
 // page's own vertical scroll is therefore what moves the rail horizontally, and
 // none of it involves a scroll listener, a wheel handler or a library.
 //
-// The spacer's height is one stage plus the track's travel, which makes the
-// gesture 1:1: a pixel of vertical scroll is a pixel of sideways motion.
+// The spacer's height is the travel scaled by --process-scroll-ratio, which is
+// the one number that sets the pacing.
 //
 // ## The portal
 //
@@ -21,6 +21,23 @@
 // pinned stage starts as a small square sitting near the bottom of the viewport
 // and grows to fill it, rising as it grows. Only when it has filled the screen
 // does the track start sliding.
+//
+// ## Where the dark ground lives, and why it matters
+//
+// On `.portal`, NOT on `.process`. The brown-950 slab is the thing the reader
+// watches grow, so it has to be the element that scales. Painting it on the
+// spacer — which is what shipped first — leaves the dark field full-bleed and
+// stationary from the moment the section is reached, and the zoom then reads as
+// text scaling up on a background that was always there.
+//
+// The bleed past body's 1440px cap is on `.pin`, one level ABOVE the portal.
+// The pin has `overflow: hidden`, and a clip always beats a child's attempt to
+// escape it however that child is positioned: with the negative margins on the
+// portal instead, the grown slab carried a 24px light border down every edge.
+// Widening the clipper is the only fix that keeps the clip.
+//
+// `data-ground="dark"` sits on the portal for the same reason — it marks the
+// dark pixels, and those now move.
 //
 // Both run on ONE timeline, split into two slices. The pin window is one stage
 // longer than the rail needs, and that extra stage is the portal's. Everything
@@ -48,12 +65,22 @@
     // overflow their slot on a wide screen and every page after the first would
     // land short of where it should.
     --process-travel: calc(100% * (var(--process-pages) - 1) / var(--process-pages));
-    // How much vertical scroll buys one stage of sideways travel. 1 would be
-    // 1:1 and is what this shipped with; 2 is half speed, which gives each page
-    // real dwell time rather than flicking past. Raising it makes the section
-    // taller in exact proportion, so it is the one number to turn if the pacing
-    // is wrong. ponytail: one token, change it and nothing else moves.
-    --process-scroll-ratio: 2;
+    // How much vertical scroll buys one stage of sideways travel. 1 is 1:1 and
+    // is what this shipped with; 2 was half speed, to give each page real dwell
+    // time. Raising it makes the section taller in exact proportion, so it is
+    // the one number to turn if the pacing is wrong.
+    //
+    // 0.6 at the client's call: BELOW 1, so the rail now moves a stage sideways
+    // for every 0.6 of a viewport scrolled, which is faster than the gesture
+    // itself. The section is 4.9 viewports rather than 13, so the whole rail
+    // costs a third of the page height it used to.
+    //
+    // This also shortens the portal, which is measured in the same units: the
+    // zoom now resolves over 0.6 of a viewport instead of 2. The split between
+    // the two phases is unaffected, because --process-portal-end is a ratio of
+    // stage COUNTS and the scroll ratio cancels out of it.
+    // ponytail: one token, change it and nothing else moves.
+    --process-scroll-ratio: 0.6;
     // How many stages of scroll the portal gets before the rail starts. One
     // stage, so the zoom has the same dwell as each of the six pages and the
     // section keeps one rhythm throughout.
@@ -120,23 +147,20 @@
     view-timeline-name: --process-scroll;
     view-timeline-axis: block;
 
-    // Full-bleed ground. The body is capped at 1440px, and this pattern is the
-    // escape: half the difference between the box and the viewport is exactly
-    // the gutter on each side. A pseudo-element rather than a box-shadow,
-    // because a shadow is not hit-testable and the [data-ground="dark"] cursor
-    // would vanish in the gutters. Copied from Footer.module.scss:100.
+    // NO background of its own, deliberately.
+    //
+    // The dark ground belongs to .portal, not to this spacer, and that is the
+    // whole point of the zoom: the brown-950 slab is the THING that grows. If
+    // the spacer painted it, the dark field would already be full-bleed and
+    // stationary before the portal started, and the reader would see text
+    // scaling up on a background that was always there rather than a dark
+    // panel opening out of the page. That is exactly what shipped first and
+    // what this fixes.
+    //
+    // Leaving it transparent lets the page canvas (brown-100) show through for
+    // as long as the slab has not covered it.
     position: relative;
     isolation: isolate;
-    background-color: var(--color-bg-inverse-strong);
-
-    &::before {
-      content: "";
-      position: absolute;
-      inset-block: 0;
-      inset-inline: calc(50% - 50vw);
-      z-index: -1;
-      background-color: var(--color-bg-inverse-strong);
-    }
 
     @include bp-lg {
       --process-stage-block: 100svh;
@@ -147,8 +171,26 @@
     position: sticky;
     inset-block-start: 0;
     block-size: var(--process-stage-block);
-    // The ground again: .process's own background sits behind the sticky child,
-    // and without this the page beneath would show through as it scrolls past.
+
+    // THE PIN is what bleeds past body's gutter, not the portal inside it.
+    //
+    // This was the bug behind a 24px light border down every edge of the
+    // grown slab. The portal had negative insets of its own and its box did
+    // measure 0..1440, but `overflow: hidden` here clipped it back to the
+    // pin's own 24..1416: a clip always wins over a child's escape, however
+    // the child is positioned. Widening the clipper is the only fix that does
+    // not mean giving up the clip.
+    //
+    // Negative margins rather than the footer's `calc(50% - 50vw)`: that
+    // resolves 50% against a containing block which is itself inside body's
+    // padding, so it lands one gutter short on each side. The gutter is a
+    // token, so cancelling it by name is both exact and self-explaining.
+    margin-inline: calc(-1 * var(--page-gutter));
+
+    // Clips the portal to the stage on all four sides, so the slab never
+    // paints over the page above or below while it is smaller than the stage.
+    // The inline overhang cannot become a scrollbar: html carries
+    // `overflow-x: clip` (globals.scss:50).
     overflow: hidden;
   }
 
@@ -173,10 +215,24 @@
   // An accompanying `translate` would be a second property to keep in phase for
   // no visual gain.
   .portal {
-    block-size: 100%;
     display: flex;
     flex-direction: column;
     transform-origin: 50% var(--process-portal-anchor);
+
+    // THE DARK GROUND LIVES HERE, not on the spacer. This element is the slab
+    // the reader watches grow, so it is what has to be brown-950; the page
+    // behind stays on its own canvas until this covers it.
+    background-color: var(--color-bg-inverse-strong);
+
+    // Simply fills the pin, which has already been widened past body's gutter.
+    // Nothing clever here on purpose: the bleed is solved one level up, so
+    // this element only has to be the full size of its parent and carry the
+    // colour.
+    //
+    // The ground is on the ELEMENT rather than a ::before, and that part does
+    // matter: a pseudo-element would be a child of the thing being scaled and
+    // would scale with it, so there would be nothing to widen.
+    block-size: 100%;
     // The starting state, so the square is correct on first paint and before
     // any timeline attaches. `animation-fill-mode: both` holds the same value,
     // but only once the animation exists; this covers the frame before that and
@@ -792,10 +848,16 @@
 
     // The portal has to be reset to full size EXPLICITLY. `.portal` carries
     // `scale: 0.1` as a static declaration so the square is right before the
-    // animation attaches, and killing the animation does not undo it — without
-    // this the entire section renders as a tenth-size square in the corner and
-    // is unreadable. This is the same class of trap as the animation-name note
-    // above: removing the driver leaves the starting state behind.
+    // animation attaches, and killing the animation does not undo it: without
+    // this the whole section renders as an unreadable tenth-size square in the
+    // corner, and every other assertion in the e2e suite still passes.
+    //
+    // Its height goes back to `auto` because the pin is static here and has no
+    // definite height of its own to fill.
+    //
+    // The bleed is NOT undone. It lives on .pin, which keeps its negative
+    // margins in this mode, so the dark band still runs edge to edge while the
+    // rail is a plain horizontal scroller.
     .portal {
       scale: none;
       block-size: auto;

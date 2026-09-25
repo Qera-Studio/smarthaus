@@ -189,7 +189,7 @@ All clips: `muted playsinline preload="none"` with a poster. Clips load on deman
 
 ## The Process rail — horizontal scroll
 
-`src/components/Process/` is a full-viewport brown-950 section on the homepage whose six pages scroll **sideways**, driven by the page's own vertical scroll. Content lives in `src/content/process.ts`.
+`src/components/Process/` is a full-viewport brown-950 stage on the homepage that **grows out of the page** and then scrolls **sideways**, both driven by the page's own vertical scroll. Content lives in `src/content/process.ts`.
 
 ### The mechanism
 
@@ -197,22 +197,40 @@ Pure CSS. No scroll listener, no wheel interception, no library.
 
 - The `<section>` is a **tall spacer** carrying `view-timeline-name: --process-scroll`.
 - Inside it, `.pin` is `position: sticky` and holds still while the spacer scrolls past.
-- `.track` consumes that timeline and translates horizontally. `animation-range: contain 0% contain 100%` is exactly the pin window: for a subject taller than the viewport, `contain` runs from "top aligns" to "bottom aligns", which is precisely the span over which the sticky child is stationary. No offsets, no `calc` in the range, and it stays correct if the page count changes.
-- The spacer's height is one stage plus one stage per page of travel, which makes the gesture **1:1** — a pixel of vertical scroll is a pixel sideways.
+- `.track` consumes that timeline and translates horizontally. `contain 0% contain 100%` is exactly the pin window: for a subject taller than the viewport, `contain` runs from "top aligns" to "bottom aligns", which is precisely the span over which the sticky child is stationary.
+- The pin window is **split into two phases** at `--process-portal-end`: the portal owns the first slice and the rail the rest. See "The portal" below.
+- The spacer's height is the travel scaled by `--process-scroll-ratio`. That ratio is the single pacing knob — 1 is 1:1 (a pixel of scroll is a pixel sideways), above 1 is slower, below 1 faster. It currently ships at **0.6**, which puts the whole section at roughly 4.6 viewports.
 
-Three things that are load-bearing and easy to break:
+Four things that are load-bearing and easy to break:
 
 - **The track needs an explicit `inline-size`.** With `grid-auto-flow: column` and no width it stays at its container's size, the columns overflow invisibly, and the translate percentage is then computed against one stage instead of six. Measured: the rail moved a sixth of the distance it should have.
 - **`translate`, not `transform: translateX()`.** Composites the same and leaves `transform` free for the images, so the track and the parallax never contend for one property.
 - **`--process-pages` is set inline by the component.** The page count is the one number the stylesheet cannot know, and both the track width and the spacer height derive from it.
+- **The dark ground is on `.portal`, and the full-bleed escape is on `.pin`.** Neither is on the `<section>`, which paints nothing. Moving either one breaks the effect in a way every existing test still passes — see below.
+
+### The portal
+
+The section opens with a zoom reveal before the rail moves: the stage starts at a tenth of its size near the bottom of the viewport and grows to fill it, rising as it grows. Both phases run on **one timeline**, split at `--process-portal-end`, which is a ratio of stage counts and therefore survives any change to the scroll ratio or the breakpoint.
+
+- **The rise is not animated.** `transform-origin` sits low, so scaling about it carries the box upward. One property, which cannot drift out of phase with itself and stays on the compositor.
+- **The ground belongs to the slab.** `background-color` is on `.portal` because the brown-950 panel is the thing that grows. On the spacer — which is what shipped first — the dark field is already full-bleed and stationary, and the zoom reads as text scaling up on a background that never moved. `data-ground="dark"` is on the portal for the same reason: it marks the dark pixels, and those now move.
+- **The bleed is one level above the ground.** `.pin` carries the negative margins that escape body's 1440px cap, not `.portal`. The pin has `overflow: hidden`, and a clip beats a child's escape however that child is positioned: with the margins on the portal, the grown slab carried a 24px light border down every edge. Widening the clipper is the only fix that keeps the clip.
+- **Per-page parallax ranges are offset past the portal.** They divide the rail's share of the window, not the whole thing, or every page's drift runs a portal early.
+- **Reduced motion must reset the scale explicitly.** `.portal` carries `scale: 0.1` statically so the square is right before the animation attaches; removing the animation does not undo it, and the section then renders as an unreadable tenth-size square.
 
 ### Parallax
 
-Images are 112% of their clipped frame and drift ±4% on the same timeline, alternating direction per page. The counter-motion against the track is what reads as depth. Same shape as the hero's mouse parallax above: an oversized image, a clipped box, a subtle shift.
+Images are 124% of their clipped frame and drift ±4.5% **vertically**, alternating direction per page. The counter-motion against the track is what reads as depth. Same shape as the hero's mouse parallax above: an oversized image, a clipped box, a subtle shift.
+
+The axis is the part worth knowing. It was horizontal first, and that was invisible: the track is already sliding the whole page sideways by a full stage, so a few percent in the same axis is swamped by it. Against a horizontal track, vertical is the only axis where relative motion reads.
+
+Each image's range covers **one page's slice of the rail**, not the whole section. Sharing the full range spread the drift across every viewport of scrolling and moved an image about 9px per viewport — the computed `translate` animated correctly the whole time, which is what made it look like the CSS was working.
 
 ### prefers-reduced-motion
 
 The section drops the spacer and the pin, the rail becomes a real `overflow-x: auto` scroll container, the progress bar is hidden, and every animation is removed with **`animation-name: none`** — not `animation-timeline: none`, which only converts the animation back to a time-based one that then holds its first keyframe and keeps overriding the `translate`. That was a real failure on all three device profiles; the comment in the stylesheet records it.
+
+The portal needs a second, separate reset: **`scale: none`**. Removing an animation does not undo a static declaration, and `.portal` carries `scale: 0.1` in the base rule so the square is correct before the timeline attaches. Without the reset the whole section renders as an unreadable tenth-size square in the corner — and it is the one failure here that every pre-existing assertion still passes, which is why `e2e/process.spec.ts` asserts it directly.
 
 ### Accessibility — 1.4.10 is knowingly not met
 
