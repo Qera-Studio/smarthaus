@@ -12,6 +12,7 @@ import { Footer } from "../components/Footer";
 import { Splash } from "../components/Loader/Splash";
 import { Consent } from "../components/Consent";
 import { ScrollToTop } from "../components/ScrollToTop";
+import { CursorMorph } from "../components/CursorMorph";
 
 const manrope = Manrope({
   variable: "--font-sans",
@@ -165,6 +166,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           up, keyed off a height the banner publishes as --consent-block-size.
         */}
         <ScrollToTop />
+        {/* Renders one aria-hidden div; inert on touch and reduced motion. */}
+        <CursorMorph />
         {/*
           Last in the body, after the footer.
 

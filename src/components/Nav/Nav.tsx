@@ -49,7 +49,7 @@ export function Nav() {
         </ul>
       }
       cta={
-        <Link href="/contact" className={styles.cta}>
+        <Link href="/contact" className={styles.cta} data-cursor-morph>
           Book a site visit
         </Link>
       }
