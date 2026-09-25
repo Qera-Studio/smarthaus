@@ -99,6 +99,9 @@
     // The spacer's height: one stage to pin against, plus the portal, plus the
     // rail.
     --process-scroll-block: calc(var(--process-portal-block) + var(--process-rail-block));
+    // How much further the reader scrolls past the previous section's last
+    // screen before the slab starts rising. See the overlay margin below.
+    --process-portal-delay: #{$space-24};
     // The square's size at the very start of the portal, as a fraction of the
     // full stage. 0.1 is what the client asked for and is small enough to read
     // as an object rather than as a shrunken page.
@@ -198,7 +201,15 @@
     // the :has() rule below does it: this margin alone would let it scroll
     // out from under the growing slab. Measured on the hero: it moved from
     // y-293 to y-844 over the zoom.
-    margin-block-start: calc(-1 * var(--process-stage-block));
+    //
+    // Less --process-portal-delay: the pin engaged the instant the previous
+    // section's last screen filled the viewport, which put the rising slab
+    // over the carousel's controls before the reader had finished with them.
+    // The delay is that much more scroll before the slab starts, on the
+    // client's call; the previous section's bottom then sits that far above
+    // the viewport's during the zoom, and the slab covers the strip as it
+    // grows.
+    margin-block-start: calc(-1 * (var(--process-stage-block) - var(--process-portal-delay)));
 
     // The timeline lives on the spacer and is consumed by its descendants.
     view-timeline-name: --process-scroll;
