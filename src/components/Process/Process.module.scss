@@ -473,40 +473,6 @@
     transition-property: scale;
     transition-duration: var(--process-grow-duration, var(--duration-slow));
     transition-timing-function: cubic-bezier(0.5, 1, 0.89, 1);
-
-    // Hidden until the pin engages. The section overlaps the previous one by
-    // a whole stage (see the overlay), so for one screen of scroll before the
-    // pin sticks the tenth-size square would ride up the page over that
-    // section's copy. `entry` is exactly that screen: entry 100% is contain
-    // 0%, the moment the pin engages, so the square fades in over the last
-    // stretch of the approach and is fully there when the zoom starts.
-    // No fill mode: outside the range this does nothing and the base values
-    // are visible and opaque.
-    //
-    // `visibility` as well as opacity: an invisible box still takes the
-    // pointer, and the portal opts back in to pointer events on purpose, so
-    // without it the hidden square would intercept clicks on the copy it is
-    // passing over. Discrete, so it flips to visible as the fade begins.
-    animation-name: process-arrive;
-    animation-timeline: --process-scroll;
-    animation-range: entry 0% entry 100%;
-    animation-timing-function: linear;
-  }
-
-  // The fade is short and late: the previous section's last screen carries
-  // its own copy near the top, which is where the square lands, so it should
-  // be on the page for as little of the approach as reads as a fade at all.
-  @keyframes process-arrive {
-    0%,
-    85% {
-      opacity: 0;
-      visibility: hidden;
-    }
-
-    100% {
-      opacity: 1;
-      visibility: visible;
-    }
   }
 
   .process[data-portal-open] .grow {
@@ -1227,8 +1193,7 @@
     .track,
     .image,
     .progressFill,
-    .portal,
-    .grow {
+    .portal {
       animation-name: none;
       translate: none;
     }
