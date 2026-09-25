@@ -493,8 +493,9 @@ export function VillaCanvas({
         <button
           type="button"
           className={styles.enter}
-          // No cursor frame: this button is the whole render.
-          data-cursor-morph="none"
+          // Keeps the dot: this button is the whole render, not a control
+          // the reader is aiming at, and the hover rule below hides it.
+          data-cursor="keep"
           onClick={() => flyTo(SERVICE_SHOTS[0]!.id)}
         >
           <span className="visually-hidden">Explore the villa</span>

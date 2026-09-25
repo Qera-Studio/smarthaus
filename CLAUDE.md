@@ -234,7 +234,6 @@ Server Components first. `'use client'` limited to:
 - Mobile navigation (toggle state)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
-- Cursor morph (`CursorMorph/` — pointer events + CSS transitions; the dot becomes a frame around a button while the pointer is on it. Hit area is the control's own box both ways, never magnetic. Off on touch and reduced motion)
 - Process portal handoff (`Process/ProcessHandoff.tsx` — one IntersectionObserver that sets `data-portal-open` and the transition's duration from the measured scroll speed; a CSS transition finishes the zoom's second half)
 - Process rail fallback (requestAnimationFrame — see the second motion-stack exception below). Renders nothing, and never starts in a browser that supports scroll-driven animations
 

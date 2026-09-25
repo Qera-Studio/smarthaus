@@ -173,12 +173,23 @@
 }
 
 @layer utilities {
-  // The native cursor hides while CursorMorph's frame stands in for it. In
-  // utilities because Button.module.scss sets `cursor: pointer` in components,
-  // which would otherwise win.
-  [data-cursor-morphed],
-  [data-cursor-morphed] * {
-    cursor: none;
+  // Nothing over a button. The dot is the cursor everywhere else; over a
+  // control the control's own hover state does the signalling, so the cursor
+  // simply hides. Client decision, after a frame that morphed out of the dot
+  // was tried and rejected. In utilities because Button.module.scss sets
+  // `cursor: pointer` in components, which would otherwise win.
+  //
+  // `a[data-variant]` is the Button component as a link; the hero's CTAs and
+  // the nav's are links styled as buttons in their own modules and opt in
+  // with data-cursor="none". The hero's stage button is the whole render,
+  // not a control the reader aims at, so it keeps the dot with
+  // data-cursor="keep".
+  @media (hover: hover) and (pointer: fine) {
+    :is(button, [role="button"], a[data-variant], [data-cursor="none"]):not([data-cursor="keep"]),
+    :is(button, [role="button"], a[data-variant], [data-cursor="none"]):not([data-cursor="keep"])
+      * {
+      cursor: none;
+    }
   }
 
   .visually-hidden {
