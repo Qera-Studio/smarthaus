@@ -1,0 +1,277 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  .hardware {
+    --hardware-interval: 5s;
+    padding-block: clamp(#{$space-20}, 10vw, #{$space-32}) 0;
+  }
+
+  // --- Lead-in (Care's, same values) -----------------------------------------
+
+  .lead {
+    margin-inline: auto;
+    max-inline-size: 80ch;
+    text-align: center;
+    margin-block-end: clamp(#{$space-12}, 8vw, #{$space-20});
+  }
+
+  .leadHeading {
+    font-size: var(--type-h2);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+  }
+
+  .leadBody {
+    max-inline-size: 62ch;
+    margin-inline: auto;
+    margin-block-start: $space-4;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-snug;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  // --- Icon bar -------------------------------------------------------------
+
+  .stageRoot {
+    display: grid;
+    gap: clamp(#{$space-10}, 6vw, #{$space-20});
+  }
+
+  // Glass needs a containing block for its grain; `relative` also positions
+  // the progress line along the bottom edge.
+  .bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-self: center;
+    max-inline-size: 100%;
+    overflow: hidden;
+    @include glass(0);
+  }
+
+  .tabs {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tab,
+  .pause {
+    display: grid;
+    place-items: center;
+    // 48px tall, the client's number. Wider than tall so eight tabs still
+    // read as a row rather than a strip of squares.
+    inline-size: $space-16;
+    block-size: $space-12;
+    flex-shrink: 0;
+    background: none;
+    border: 0;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    // Inactive tabs fade rather than recolour: the icons are filled in the
+    // file, so opacity is the one knob that works on an <img>.
+    opacity: 0.45;
+    transition-property: opacity;
+    transition-duration: var(--duration-fast);
+    @include focus-ring($offset: -4px);
+
+    &:hover,
+    &[aria-selected="true"],
+    &[aria-pressed="true"] {
+      opacity: 1;
+    }
+  }
+
+  .pause {
+    border-inline-start-style: solid;
+    border-inline-start-width: 1px;
+    border-inline-start-color: var(--glass-border);
+  }
+
+  // The glyph names the state the carousel is actually in, not only the
+  // button's own toggle. Focus-within pauses it in .progress below, and
+  // without this the pause glyph sat there while nothing advanced and gave
+  // the reader no reason why. Same two conditions as the timer.
+  .glyphPlay,
+  .stageRoot:has(.tabs :focus-visible) .glyphPause,
+  .pause[aria-pressed="true"] .glyphPause {
+    display: none;
+  }
+
+  .stageRoot:has(.tabs :focus-visible) .glyphPlay,
+  .pause[aria-pressed="true"] .glyphPlay {
+    display: block;
+  }
+
+  // The timer. Bronze is decorative here (2.9:1 on canvas), which is fine:
+  // the pause button and the selected tab carry the state.
+  .progress {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    block-size: 2px;
+    inline-size: 100%;
+    background-color: var(--color-accent);
+    transform-origin: left center;
+    animation-name: hardware-progress;
+    animation-duration: var(--hardware-interval);
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+    animation-play-state: paused;
+
+    &[data-running="true"] {
+      animation-play-state: running;
+    }
+  }
+
+  // Keyboard focus on a tab pauses without a render, so a reader arrowing
+  // through the tabs is not raced by the timer.
+  //
+  // :focus-visible inside .tabs, not :focus-within on the section. A click
+  // leaves focus on the button it hit, and the wider rule kept the carousel
+  // held after that click until the reader clicked somewhere else: the pause
+  // button's second press looked as if it did nothing. A mouse click does
+  // not set :focus-visible, so this fires only for the keyboard, and only
+  // for the tabs, so the pause button is never in its own way.
+  //
+  // No hover pause: it was here and was removed at the client's request.
+  .stageRoot:has(.tabs :focus-visible) .progress {
+    animation-play-state: paused;
+  }
+
+  // --- Slides ---------------------------------------------------------------
+
+  // Every slide in one cell: the stage is as tall as the tallest slide, and
+  // slides stack with no absolute positioning. Clip hides the travel.
+  .stage {
+    display: grid;
+    overflow: hidden;
+  }
+
+  .slide {
+    grid-area: 1 / 1;
+    display: grid;
+    gap: $space-8;
+    // Hidden, not display:none: the copy stays in the HTML for crawlers, and
+    // visibility also drops it from the tab order and the a11y tree.
+    visibility: hidden;
+    background-color: var(--color-bg-canvas);
+
+    @include bp-lg {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: $space-12;
+    }
+
+    &[data-state="leaving"] {
+      visibility: visible;
+      z-index: 1;
+    }
+
+    &[data-state="active"] {
+      visibility: visible;
+      z-index: 2;
+      animation-duration: var(--duration-slower);
+      animation-timing-function: var(--ease-out);
+      animation-fill-mode: both;
+    }
+  }
+
+  // The direction picks the keyframe, and changing the name is what restarts
+  // the animation when a slide becomes active again.
+  .stageRoot[data-direction="next"] .slide[data-state="active"] {
+    animation-name: hardware-from-below;
+  }
+
+  .stageRoot[data-direction="prev"] .slide[data-state="active"] {
+    animation-name: hardware-from-above;
+  }
+
+  // Image first on small screens, so the picture is what a reader lands on.
+  .copy {
+    display: flex;
+    flex-direction: column;
+    order: 2;
+    min-inline-size: 0;
+
+    @include bp-lg {
+      order: 0;
+    }
+  }
+
+  .icon {
+    inline-size: $space-10;
+    block-size: $space-10;
+    margin-block-end: $space-8;
+  }
+
+  // Title and body pinned to the foot of the column.
+  .title {
+    margin-block-start: auto;
+    font-size: var(--type-h2);
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--brown-950);
+    text-wrap: balance;
+  }
+
+  .body {
+    max-inline-size: 48ch;
+    margin-block-start: $space-4;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-snug;
+    color: var(--brown-950);
+    // 70% of brown-950 on brown-100, well clear of 4.5:1.
+    opacity: 0.7;
+    text-wrap: pretty;
+  }
+
+  .frame {
+    aspect-ratio: 4 / 3;
+    min-inline-size: 0;
+    overflow: hidden;
+  }
+
+  .image {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  @keyframes hardware-progress {
+    from {
+      scale: 0 1;
+    }
+    to {
+      scale: 1 1;
+    }
+  }
+
+  @keyframes hardware-from-below {
+    from {
+      translate: 0 100%;
+    }
+    to {
+      translate: 0 0;
+    }
+  }
+
+  @keyframes hardware-from-above {
+    from {
+      translate: 0 -100%;
+    }
+    to {
+      translate: 0 0;
+    }
+  }
+
+  // No reduced-motion block here on purpose. _reset.scss collapses the slide
+  // animation to 0.01ms, which is a swap, and it still fires animationend,
+  // which is what releases the outgoing slide. `animation-name: none` would
+  // leave it painted underneath forever. The timer is withheld in JS.
+}

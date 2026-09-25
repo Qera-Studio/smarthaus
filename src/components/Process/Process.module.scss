@@ -85,6 +85,12 @@
     // overflow their slot on a wide screen and every page after the first would
     // land short of where it should.
     --process-travel: calc(100% * (var(--process-pages) - 1) / var(--process-pages));
+    // A little past the last page. At exactly (pages - 1) / pages the rail
+    // stopped with the last page's image a hair short of its slot and the pin
+    // let go the same instant, which read as the rail quitting early. The
+    // overrun keeps it moving past full for this much; the ground shows on
+    // the right for that last stretch, on the client's call.
+    --process-overrun: 8vw;
     // --process-portal-ratio, --process-rail-ratio, --process-portal-stages and
     // --process-portal-end are declared on <main>, not here: the hero is a
     // SIBLING of this section and needs them too. See that rule for why.
@@ -99,6 +105,12 @@
     // The spacer's height: one stage to pin against, plus the portal, plus the
     // rail.
     --process-scroll-block: calc(var(--process-portal-block) + var(--process-rail-block));
+    // How much further the reader scrolls past the previous section's last
+    // screen before the slab starts rising. See the overlay margin below.
+    // A share of the stage rather than a fixed length, so it scales with the
+    // screen. 96px was tried and the slab still arrived under the carousel's
+    // image; three tenths of a screen is the client's call.
+    --process-portal-delay: calc(var(--process-stage-block) * 0.3);
     // The square's size at the very start of the portal, as a fraction of the
     // full stage. 0.1 is what the client asked for and is small enough to read
     // as an object rather than as a shrunken page.
@@ -178,17 +190,35 @@
     // choice of origin removes it, because the space is reserved whether or not
     // anything is drawn in it.
     //
-    // Pulled up, that space is no longer reserved at all. The slab rises off
-    // the bottom of the screen over the hero, which stays put and visible until
-    // it is covered, and the page below starts immediately after the rail. The
-    // reader never sees an empty stage because there is never an empty stage.
+    // Pulled up, that space is no longer reserved at all. The slab opens over
+    // the previous section, which stays put and visible until it is covered,
+    // and the page below starts immediately after the rail. The reader never
+    // sees an empty stage because there is never an empty stage.
     //
-    // The section's own pin engages at its top, which is now one portal higher
+    // BY A WHOLE STAGE, not by the portal's scroll. The overlap was the
+    // portal's 270px first, which happened to work while the hero was the
+    // previous section: the hero is one screen tall, so its last 270px was
+    // also its last screen. With the hardware carousel in front, 1256px tall,
+    // the same overlap left only the carousel's foot on screen when the pin
+    // engaged and the slab grew over blank canvas below it. Measured: the
+    // previous section's bottom sat at y270 for the whole zoom. What the
+    // pin needs under it is the previous section's LAST SCREEN, and that is a
+    // stage of overlap whatever the section before this one is.
+    //
+    // The section's own pin engages at its top, which is now one stage higher
     // than it was. Holding the section BEFORE it still is a separate job, and
-    // the :has() rule below does it: this margin alone would let the hero
-    // scroll out from under the rising slab. Measured: it moved from y-293 to
-    // y-844 over the zoom.
-    margin-block-start: calc(-1 * var(--process-portal-block));
+    // the :has() rule below does it: this margin alone would let it scroll
+    // out from under the growing slab. Measured on the hero: it moved from
+    // y-293 to y-844 over the zoom.
+    //
+    // Less --process-portal-delay: the pin engaged the instant the previous
+    // section's last screen filled the viewport, which put the rising slab
+    // over the carousel's controls before the reader had finished with them.
+    // The delay is that much more scroll before the slab starts, on the
+    // client's call; the previous section's bottom then sits that far above
+    // the viewport's during the zoom, and the slab covers the strip as it
+    // grows.
+    margin-block-start: calc(-1 * (var(--process-stage-block) - var(--process-portal-delay)));
 
     // The timeline lives on the spacer and is consumed by its descendants.
     view-timeline-name: --process-scroll;
@@ -354,6 +384,11 @@
   }
 
   :global(main) > :has(+ .process) {
+    // No padding reserved for the overlap. It was 270px of empty canvas at
+    // this section's foot, added so the tenth-size square would not paint
+    // over the carousel's copy; with the overlap now a whole stage, that
+    // padding was exactly the blank band the slab grew over.
+
     // A stacking position BELOW the process section, which states z-index: 1.
     // `relative` is what makes z-index apply at all; without it the hero would
     // paint by document order and sit on top of the very slab meant to cover
@@ -960,7 +995,7 @@
 
   @keyframes process-slide {
     to {
-      translate: calc(-1 * var(--process-travel)) 0;
+      translate: calc(-1 * var(--process-travel) - var(--process-overrun)) 0;
     }
   }
 
@@ -1111,7 +1146,8 @@
       // calc() cannot multiply a percentage by a unitless var here, so the
       // progress scales the page count instead and the percentage stays whole.
       translate: calc(
-          -100% * var(--process-rail-progress) * (var(--process-pages) - 1) / var(--process-pages)
+          -100% * var(--process-rail-progress) * (var(--process-pages) - 1) /
+            var(--process-pages) - var(--process-overrun) * var(--process-rail-progress)
         )
         0;
     }
@@ -1138,6 +1174,16 @@
   @media (prefers-reduced-motion: reduce) {
     .process {
       block-size: auto;
+      // No overlay. There is no zoom to pay for, and the section is a static
+      // full-size slab here: pulled up a stage it simply covered the previous
+      // section's last screen, tabs included. Measured: the carousel's tabs
+      // reported this section as the hit target.
+      margin-block-start: 0;
+    }
+
+    // Nor a hold on the previous section, for the same reason.
+    :global(main) > :has(+ .process) {
+      animation-name: none;
     }
 
     .pin {

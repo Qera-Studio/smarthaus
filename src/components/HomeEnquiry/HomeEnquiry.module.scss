@@ -16,8 +16,12 @@
     display: grid;
     gap: $space-10;
     // The rule sits at the top, so the top padding is the gap between it and
-    // the content while the bottom padding is the gap to the footer.
-    padding-block: $space-3 clamp(#{$space-16}, 10vw, #{$space-24});
+    // the content while the bottom padding is the gap to the footer: 96px,
+    // fixed, on the client's call. The same 96px sits ABOVE the rule as a
+    // margin, since the rule is this box's own border and padding cannot go
+    // outside it.
+    margin-block-start: $space-24;
+    padding-block: $space-3 $space-24;
     border-block-start-style: solid;
     border-block-start-width: 1px;
     border-block-start-color: var(--color-border);

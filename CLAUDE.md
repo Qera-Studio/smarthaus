@@ -228,6 +228,7 @@ Server Components first. `'use client'` limited to:
 
 - Hero villa canvas (`Hero/VillaCanvas.tsx` — three.js, dynamically imported; falls back to the server-rendered poster and loads no three.js on touch, reduced motion, Save-Data, slow connections or any WebGL failure)
 - Hero service tabs (`Hero/ServiceTabs.tsx` — ARIA tablist, selection state)
+- Hardware carousel (`Hardware/HardwareStage.tsx` — ARIA tablist, active slide, one IntersectionObserver; the timer is a CSS animation whose `animationend` advances the slide, and it never starts under reduced motion)
 - Wireframe/scene reveal (Web Animations API)
 - Contact form (form state, Turnstile widget)
 - Mobile navigation (toggle state)

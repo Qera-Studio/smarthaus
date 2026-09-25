@@ -490,7 +490,14 @@ export function VillaCanvas({
         visually transparent, so only the render is seen.
       */}
       {ready && !touring ? (
-        <button type="button" className={styles.enter} onClick={() => flyTo(SERVICE_SHOTS[0]!.id)}>
+        <button
+          type="button"
+          className={styles.enter}
+          // Keeps the dot: this button is the whole render, not a control
+          // the reader is aiming at, and the hover rule below hides it.
+          data-cursor="keep"
+          onClick={() => flyTo(SERVICE_SHOTS[0]!.id)}
+        >
           <span className="visually-hidden">Explore the villa</span>
         </button>
       ) : null}
