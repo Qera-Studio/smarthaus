@@ -59,6 +59,17 @@ test("the pause button stops the timer", async ({ page }) => {
   await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
 });
 
+test("hovering shows the play glyph, since hover is what paused it", async ({ page }) => {
+  const s = section(page);
+  const pause = s.getByRole("button", { name: "Pause automatic advance" });
+  await page.mouse.move(0, 0);
+  await expect(pause.locator("svg").nth(0)).toBeVisible();
+  await expect(pause.locator("svg").nth(1)).toBeHidden();
+  await pause.hover();
+  await expect(pause.locator("svg").nth(0)).toBeHidden();
+  await expect(pause.locator("svg").nth(1)).toBeVisible();
+});
+
 test("passes axe", async ({ page }) => {
   const results = await new AxeBuilder({ page }).include("section:has(#hardware)").analyze();
   expect(results.violations).toEqual([]);

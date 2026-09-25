@@ -80,7 +80,7 @@
 
     &:hover,
     &[aria-selected="true"],
-    &[aria-pressed] {
+    &[aria-pressed="true"] {
       opacity: 1;
     }
   }
@@ -89,6 +89,23 @@
     border-inline-start-style: solid;
     border-inline-start-width: 1px;
     border-inline-start-color: var(--glass-border);
+  }
+
+  // The glyph names the state the carousel is actually in, not only the
+  // button's own toggle. Hover and focus-within pause it in .progress below,
+  // and without this the pause glyph sat there while nothing advanced and
+  // gave the reader no reason why. Same three conditions as the timer.
+  .glyphPlay,
+  .stageRoot:hover .glyphPause,
+  .stageRoot:focus-within .glyphPause,
+  .pause[aria-pressed="true"] .glyphPause {
+    display: none;
+  }
+
+  .stageRoot:hover .glyphPlay,
+  .stageRoot:focus-within .glyphPlay,
+  .pause[aria-pressed="true"] .glyphPlay {
+    display: block;
   }
 
   // The timer. Bronze is decorative here (2.9:1 on canvas), which is fine:

@@ -138,8 +138,29 @@ export function HardwareStage({ items }: Props) {
             aria-pressed={paused}
             onClick={() => setPaused((p) => !p)}
           >
-            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="currentColor">
-              {paused ? <path d="M8 5v14l11-7z" /> : <path d="M6 5h4v14H6zm8 0h4v14h-4z" />}
+            {/* Both glyphs ship; the stylesheet shows the one that names the
+                current state, which includes a hover or focus pause the
+                component never hears about. aria-pressed stays the reader's
+                own toggle: a screen reader does not hover. */}
+            <svg
+              className={styles.glyphPause}
+              viewBox="0 0 24 24"
+              width="24"
+              height="24"
+              aria-hidden="true"
+              fill="currentColor"
+            >
+              <path d="M6 5h4v14H6zm8 0h4v14h-4z" />
+            </svg>
+            <svg
+              className={styles.glyphPlay}
+              viewBox="0 0 24 24"
+              width="24"
+              height="24"
+              aria-hidden="true"
+              fill="currentColor"
+            >
+              <path d="M8 5v14l11-7z" />
             </svg>
           </button>
         ) : null}
