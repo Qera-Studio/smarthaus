@@ -53,21 +53,27 @@ test("the pause button stops the timer", async ({ page }) => {
   const pause = s.getByRole("button", { name: "Pause automatic advance" });
   await pause.click();
   await expect(pause).toHaveAttribute("aria-pressed", "true");
-  // Move the pointer off the section so hover is not what is pausing it.
-  await page.mouse.move(0, 0);
-  await page.waitForTimeout(5000);
+  // Clicking focused the button, and focus also pauses. Blur so the toggle is
+  // the only thing holding it.
+  await pause.blur();
+  await page.waitForTimeout(6000);
   await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
 });
 
-test("hovering shows the play glyph, since hover is what paused it", async ({ page }) => {
+test("the timer runs under a resting pointer and advances on its own", async ({ page }) => {
+  const s = section(page);
+  await s.getByRole("button", { name: "Pause automatic advance" }).hover();
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible({ timeout: 8000 });
+});
+
+test("focus inside the bar pauses it and shows the play glyph", async ({ page }) => {
   const s = section(page);
   const pause = s.getByRole("button", { name: "Pause automatic advance" });
-  await page.mouse.move(0, 0);
-  await expect(pause.locator("svg").nth(0)).toBeVisible();
-  await expect(pause.locator("svg").nth(1)).toBeHidden();
-  await pause.hover();
+  await s.getByRole("tab", { name: "Cameras" }).focus();
   await expect(pause.locator("svg").nth(0)).toBeHidden();
   await expect(pause.locator("svg").nth(1)).toBeVisible();
+  await page.waitForTimeout(6000);
+  await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
 });
 
 test("passes axe", async ({ page }) => {
@@ -81,8 +87,7 @@ test.describe("reduced motion", () => {
   test("never autoplays, and the tabs still switch", async ({ page }) => {
     const s = section(page);
     await expect(s.getByRole("button", { name: "Pause automatic advance" })).toHaveCount(0);
-    await page.mouse.move(0, 0);
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(6000);
     await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
     await s.getByRole("tab", { name: "Curtains" }).click();
     await expect(s.getByRole("tabpanel", { name: "Curtains" })).toBeVisible();

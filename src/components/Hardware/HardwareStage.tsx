@@ -19,8 +19,8 @@ type Props = { items: readonly HardwareItem[] };
  * The bronze line along the bar's bottom edge is the timer. It animates from
  * empty to full over `--hardware-interval`, and its `animationend` advances
  * the carousel. No setInterval: pausing is `animation-play-state: paused`,
- * set by hover and focus-within in the stylesheet and by the pause button or
- * an off-screen section here. The line is keyed on the active index so each
+ * set by focus-within in the stylesheet and by the pause button or an
+ * off-screen section here. The line is keyed on the active index so each
  * slide gets a fresh run.
  *
  * ## prefers-reduced-motion is gated in JS, not only in CSS
@@ -139,9 +139,9 @@ export function HardwareStage({ items }: Props) {
             onClick={() => setPaused((p) => !p)}
           >
             {/* Both glyphs ship; the stylesheet shows the one that names the
-                current state, which includes a hover or focus pause the
-                component never hears about. aria-pressed stays the reader's
-                own toggle: a screen reader does not hover. */}
+                current state, which includes a focus pause the component
+                never hears about. aria-pressed stays the reader's own
+                toggle. */}
             <svg
               className={styles.glyphPause}
               viewBox="0 0 24 24"

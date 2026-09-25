@@ -3,7 +3,7 @@
 
 @layer components {
   .hardware {
-    --hardware-interval: 4s;
+    --hardware-interval: 5s;
     padding-block: clamp(#{$space-20}, 10vw, #{$space-32}) 0;
   }
 
@@ -94,17 +94,15 @@
   }
 
   // The glyph names the state the carousel is actually in, not only the
-  // button's own toggle. Hover and focus-within pause it in .progress below,
-  // and without this the pause glyph sat there while nothing advanced and
-  // gave the reader no reason why. Same three conditions as the timer.
+  // button's own toggle. Focus-within pauses it in .progress below, and
+  // without this the pause glyph sat there while nothing advanced and gave
+  // the reader no reason why. Same two conditions as the timer.
   .glyphPlay,
-  .stageRoot:hover .glyphPause,
   .stageRoot:focus-within .glyphPause,
   .pause[aria-pressed="true"] .glyphPause {
     display: none;
   }
 
-  .stageRoot:hover .glyphPlay,
   .stageRoot:focus-within .glyphPlay,
   .pause[aria-pressed="true"] .glyphPlay {
     display: block;
@@ -131,9 +129,10 @@
     }
   }
 
-  // Hover and focus pause without a render. Either alone is not enough: a
-  // keyboard reader never hovers and a pointer never focuses.
-  .stageRoot:hover .progress,
+  // Focus pauses without a render, so a keyboard reader arrowing through the
+  // tabs is not raced by the timer. No hover pause: it was here and was
+  // removed at the client's request, so a pointer resting on the section
+  // leaves the carousel running.
   .stageRoot:focus-within .progress {
     animation-play-state: paused;
   }
