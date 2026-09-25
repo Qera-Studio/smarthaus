@@ -197,7 +197,7 @@ export function Pricing() {
               </Button>
             </div>
 
-            <p className={styles.includesLabel}>{tier.name} includes</p>
+            <p className={styles.includesLabel}>{tier.name} includes:</p>
             <ul className={styles.includes}>
               {tier.includes.map((item) => (
                 <li key={item}>{item}</li>

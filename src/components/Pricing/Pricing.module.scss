@@ -118,6 +118,13 @@
     padding: $space-5;
     min-inline-size: 0;
 
+    // Declared on every card even though only the Connected one draws it, so
+    // all four keep identical dimensions. A border on one alone would make it
+    // 2px taller than its neighbours and break the row.
+    border-style: solid;
+    border-width: 1px;
+    border-color: transparent;
+
     // Side by side: adopt the parent's six rows so the price and the button
     // line up across every card. The span must match the child count in
     // Pricing.tsx — too few and the card's last children share one row.
@@ -127,10 +134,16 @@
       grid-template-rows: subgrid;
     }
 
-    // One ramp above the page's brown-100 canvas. brown-200 is the smallest
-    // step that still reads as a panel rather than as the page.
+    // One ramp above the page's brown-100 canvas, and a light one: flat
+    // brown-200 was heavier than the two entry tiers should read against the
+    // Connected and Signature cards beside them.
+    //
+    // A color-mix rather than a new token, because the ramp has no step between
+    // 200 and 100 and this is the only place that wants one. Mixed with the
+    // canvas rather than set at an opacity, which would fade the text with it.
+    // Same technique as Care's light package card.
     &[data-tone="sand"] {
-      background-color: var(--color-bg-muted);
+      background-color: color-mix(in srgb, #{$brown-200} 62%, #{$brown-100});
       color: var(--color-text-primary);
     }
 
@@ -148,6 +161,14 @@
       background-position: center;
       background-size: cover;
       color: var(--color-text-primary);
+
+      // The card is nearly the page's own colour at its lightest corners, so
+      // without an edge it dissolves into the canvas between the two sand cards
+      // and the black one. brown-200 at 60% is a hairline: enough to close the
+      // shape, not enough to read as a framed box.
+      border-style: solid;
+      border-width: 1px;
+      border-color: color-mix(in srgb, #{$brown-200} 60%, transparent);
 
       &::before {
         content: "";
@@ -218,8 +239,11 @@
     margin-block-start: $space-2;
   }
 
+  // Extra space above: the CTA is the card's break between "what this tier is"
+  // and "what it contains", and at $space-3 the label sat close enough to the
+  // button to read as part of it.
   .includesLabel {
-    margin-block-start: $space-3;
+    margin-block-start: $space-6;
     font-size: var(--font-size-sm);
     font-weight: $font-weight-semibold;
     line-height: $line-height-snug;
@@ -228,22 +252,51 @@
 
   // No auto margin: the parent grid's last row is 1fr and already takes the
   // slack, so the list sits at the top of whatever space it is given.
+  //
+  // The marker is a tick rather than the default disc. `list-style: none` plus
+  // a pseudo-element, not `list-style-image`, because a tick has to sit on the
+  // first line's cap height and take the item's own ink on all three card
+  // tones — neither of which a list marker can be told to do.
   .includes {
     display: flex;
     flex-direction: column;
     gap: $space-2;
     align-content: start;
-    padding-inline-start: $space-4;
+    list-style: none;
     font-size: var(--font-size-sm);
     line-height: $line-height-snug;
     color: inherit;
 
     li {
+      // The tick sits in the first column, the text in the second, so a line
+      // that wraps aligns under itself rather than under the mark.
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: $space-2;
+      align-items: start;
       // 80%, not the 70% the description uses. These are short lines set at
-      // font-size-sm, and on the dark card 70% of brown-100 over brown-900 is
+      // font-size-sm, and on the dark card 70% of brown-100 over brown-950 is
       // legible but tiring to read eleven times.
       opacity: 0.8;
       text-wrap: pretty;
+
+      // An inline SVG in a data URI so the stroke can be `currentcolor` via
+      // mask rather than a fixed fill: the tick is brown-900 on the sand and
+      // image cards and brown-100 on the dark one, and one asset covers all
+      // three. A background-image could not, since the colour is baked in.
+      &::before {
+        content: "";
+        inline-size: 0.75em;
+        block-size: 0.75em;
+        // Nudged down to the cap height of the first line: a mask box is
+        // centred on the line box, which sits a touch high against the text.
+        margin-block-start: 0.28em;
+        background-color: currentcolor;
+        mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M2.5 8.5l3.5 3.5 7.5-8" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+        mask-repeat: no-repeat;
+        mask-size: contain;
+        mask-position: center;
+      }
     }
   }
 
