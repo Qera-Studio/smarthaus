@@ -387,8 +387,7 @@
   // Here the value IS the content — a number someone is about to dial — and the
   // label only says which channel it is. So the label takes the quiet treatment
   // and the value takes the weight. The label steps up 2px from the page's
-  // small-text default; the value sits on --font-size-md, which is as large as
-  // it can be without wrapping inside its third of the row.
+  // small-text default; the value sits one token above it.
   .channelLabel {
     font-size: calc(var(--font-size-sm) + 2px);
     font-weight: $font-weight-regular;
@@ -396,10 +395,9 @@
   }
 
   .channelValue {
-    // The token, not token + 2px. At 20px the email and the two numbers are
-    // wider than their grid column and wrap to a second line — "contact@maplet
-    // ech.ae" broke mid-domain and both phone numbers pushed past the column.
-    font-size: var(--font-size-md);
+    // One token under md. At md the email and both numbers were still wider
+    // than their third of the row on some screens and wrapped to a second line.
+    font-size: var(--font-size-base);
     font-weight: $font-weight-semibold;
     color: var(--color-text-primary);
     overflow-wrap: anywhere;
