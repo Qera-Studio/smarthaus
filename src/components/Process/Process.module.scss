@@ -443,13 +443,21 @@
   // until ProcessHandoff reports the scroll has passed that point, then
   // transitions to full size; and back again when it is scrolled above it.
   // Same origin as .portal, so the two scales compose about one point.
+  //
+  // The duration is set by ProcessHandoff from the speed the reader was
+  // scrolling, so the transition opens at the rate scroll had been growing
+  // the slab and eases out from there. --duration-slow is the fallback before
+  // it has measured anything. The easing is not the --ease-out token: that
+  // curve starts at four and a half times its average rate, which is the
+  // lurch this replaces. This one starts at twice, and ProcessHandoff's
+  // EASE_START is that number; change them together.
   .grow {
     block-size: 100%;
     transform-origin: 50% var(--process-portal-anchor);
     scale: var(--process-portal-handoff-x) var(--process-portal-handoff);
     transition-property: scale;
-    transition-duration: var(--duration-slow);
-    transition-timing-function: var(--ease-out);
+    transition-duration: var(--process-grow-duration, var(--duration-slow));
+    transition-timing-function: cubic-bezier(0.5, 1, 0.89, 1);
   }
 
   .process[data-portal-open] .grow {
