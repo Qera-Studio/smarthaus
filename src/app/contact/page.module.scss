@@ -361,6 +361,19 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: $space-4;
     }
+
+    // The one section body that spans both of .section's columns rather than
+    // sitting in the right one. Three values across half the page is 464px of
+    // room at lg for 484px of text, so the email wrapped mid-domain
+    // ("contact@mapletech.a / e") through the whole 1024-1220 band. Widening
+    // the row is the only fix that holds: at half width no font size fits, and
+    // the 50/50 split is deliberate for every other section here.
+    //
+    // The title keeps its own column, so the section still reads as a pair —
+    // the channels simply start under it instead of beside it.
+    @include bp-lg {
+      grid-column: 1 / -1;
+    }
   }
 
   .channel {
@@ -373,8 +386,9 @@
   // Inverted against the other label/value pairs on this page, deliberately.
   // Here the value IS the content — a number someone is about to dial — and the
   // label only says which channel it is. So the label takes the quiet treatment
-  // and the value takes the weight. Both sizes step up 2px from the page's
-  // small-text default.
+  // and the value takes the weight. The label steps up 2px from the page's
+  // small-text default; the value sits on --font-size-md, which is as large as
+  // it can be without wrapping inside its third of the row.
   .channelLabel {
     font-size: calc(var(--font-size-sm) + 2px);
     font-weight: $font-weight-regular;
@@ -382,9 +396,10 @@
   }
 
   .channelValue {
-    // Interpolated so Sass emits the calc() verbatim. Written plainly it folds
-    // the expression and silently drops the + 2px, leaving 18px.
-    font-size: #{"calc(var(--font-size-md) + 2px)"};
+    // The token, not token + 2px. At 20px the email and the two numbers are
+    // wider than their grid column and wrap to a second line — "contact@maplet
+    // ech.ae" broke mid-domain and both phone numbers pushed past the column.
+    font-size: var(--font-size-md);
     font-weight: $font-weight-semibold;
     color: var(--color-text-primary);
     overflow-wrap: anywhere;
