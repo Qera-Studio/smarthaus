@@ -4,10 +4,10 @@
 @layer components {
   // No padding-inline: body already carries the site-wide cap and gutter
   // (globals.scss), so a gutter here would be a second one on top of it.
-  // 128px above and below, fixed rather than fluid, on the client's call. The
+  // 96px above and below, fixed rather than fluid, on the client's call. The
   // row inside carries no bottom padding of its own so this is the whole gap.
   .care {
-    padding-block: $space-32;
+    padding-block: $space-24;
   }
 
   // --- Lead-in --------------------------------------------------------------
