@@ -177,17 +177,27 @@
     // choice of origin removes it, because the space is reserved whether or not
     // anything is drawn in it.
     //
-    // Pulled up, that space is no longer reserved at all. The slab rises off
-    // the bottom of the screen over the hero, which stays put and visible until
-    // it is covered, and the page below starts immediately after the rail. The
-    // reader never sees an empty stage because there is never an empty stage.
+    // Pulled up, that space is no longer reserved at all. The slab opens over
+    // the previous section, which stays put and visible until it is covered,
+    // and the page below starts immediately after the rail. The reader never
+    // sees an empty stage because there is never an empty stage.
     //
-    // The section's own pin engages at its top, which is now one portal higher
+    // BY A WHOLE STAGE, not by the portal's scroll. The overlap was the
+    // portal's 270px first, which happened to work while the hero was the
+    // previous section: the hero is one screen tall, so its last 270px was
+    // also its last screen. With the hardware carousel in front, 1256px tall,
+    // the same overlap left only the carousel's foot on screen when the pin
+    // engaged and the slab grew over blank canvas below it. Measured: the
+    // previous section's bottom sat at y270 for the whole zoom. What the
+    // pin needs under it is the previous section's LAST SCREEN, and that is a
+    // stage of overlap whatever the section before this one is.
+    //
+    // The section's own pin engages at its top, which is now one stage higher
     // than it was. Holding the section BEFORE it still is a separate job, and
-    // the :has() rule below does it: this margin alone would let the hero
-    // scroll out from under the rising slab. Measured: it moved from y-293 to
-    // y-844 over the zoom.
-    margin-block-start: calc(-1 * var(--process-portal-block));
+    // the :has() rule below does it: this margin alone would let it scroll
+    // out from under the growing slab. Measured on the hero: it moved from
+    // y-293 to y-844 over the zoom.
+    margin-block-start: calc(-1 * var(--process-stage-block));
 
     // The timeline lives on the spacer and is consumed by its descendants.
     view-timeline-name: --process-scroll;
@@ -353,17 +363,10 @@
   }
 
   :global(main) > :has(+ .process) {
-    // Room for the overlap. The section's negative margin pulls it up over
-    // this one by the portal's scroll, so that much of this section's foot is
-    // under the rising slab from the moment it appears. The hero had nothing
-    // there; the hardware carousel has its slide copy, and the tenth-size
-    // square painted over it. Reserving the same distance as padding puts the
-    // overlap on empty canvas. The expression is the hold keyframe's, for the
-    // same reason it is written out there: --process-portal-block is scoped
-    // to .process and computes to empty on a sibling.
-    padding-block-end: calc(
-      var(--process-hold-stage) * var(--process-portal-stages) * var(--process-portal-ratio)
-    );
+    // No padding reserved for the overlap. It was 270px of empty canvas at
+    // this section's foot, added so the tenth-size square would not paint
+    // over the carousel's copy; with the overlap now a whole stage, that
+    // padding was exactly the blank band the slab grew over.
 
     // A stacking position BELOW the process section, which states z-index: 1.
     // `relative` is what makes z-index apply at all; without it the hero would
@@ -469,6 +472,40 @@
     transition-property: scale;
     transition-duration: var(--process-grow-duration, var(--duration-slow));
     transition-timing-function: cubic-bezier(0.5, 1, 0.89, 1);
+
+    // Hidden until the pin engages. The section overlaps the previous one by
+    // a whole stage (see the overlay), so for one screen of scroll before the
+    // pin sticks the tenth-size square would ride up the page over that
+    // section's copy. `entry` is exactly that screen: entry 100% is contain
+    // 0%, the moment the pin engages, so the square fades in over the last
+    // stretch of the approach and is fully there when the zoom starts.
+    // No fill mode: outside the range this does nothing and the base values
+    // are visible and opaque.
+    //
+    // `visibility` as well as opacity: an invisible box still takes the
+    // pointer, and the portal opts back in to pointer events on purpose, so
+    // without it the hidden square would intercept clicks on the copy it is
+    // passing over. Discrete, so it flips to visible as the fade begins.
+    animation-name: process-arrive;
+    animation-timeline: --process-scroll;
+    animation-range: entry 0% entry 100%;
+    animation-timing-function: linear;
+  }
+
+  // The fade is short and late: the previous section's last screen carries
+  // its own copy near the top, which is where the square lands, so it should
+  // be on the page for as little of the approach as reads as a fade at all.
+  @keyframes process-arrive {
+    0%,
+    85% {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    100% {
+      opacity: 1;
+      visibility: visible;
+    }
   }
 
   .process[data-portal-open] .grow {
@@ -1149,6 +1186,16 @@
   @media (prefers-reduced-motion: reduce) {
     .process {
       block-size: auto;
+      // No overlay. There is no zoom to pay for, and the section is a static
+      // full-size slab here: pulled up a stage it simply covered the previous
+      // section's last screen, tabs included. Measured: the carousel's tabs
+      // reported this section as the hit target.
+      margin-block-start: 0;
+    }
+
+    // Nor a hold on the previous section, for the same reason.
+    :global(main) > :has(+ .process) {
+      animation-name: none;
     }
 
     .pin {
@@ -1179,7 +1226,8 @@
     .track,
     .image,
     .progressFill,
-    .portal {
+    .portal,
+    .grow {
       animation-name: none;
       translate: none;
     }
