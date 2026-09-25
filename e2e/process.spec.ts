@@ -173,17 +173,14 @@ test.describe("the portal", () => {
   const portal = (page: import("@playwright/test").Page) =>
     rail(page).locator("[class*='portal']").first();
 
-  // The BLOCK axis of the scale, which is the one the zoom animates at every
-  // width. `scale` computes to "x y", and below lg the x is pinned at 1 so the
-  // slab rises as a full-width band: parseFloat on the whole string reads the x
-  // and reported 1 throughout, which made the zoom look like it never ran.
+  // The RENDERED block-axis scale: painted height over layout height. Not the
+  // computed `scale`, because the zoom is now two scales composed — .grow's
+  // timed half around .portal's scroll-driven half — and neither alone is the
+  // size the reader sees. The block axis because below lg only it zooms.
   const scaleOf = (page: import("@playwright/test").Page) =>
-    portal(page).evaluate((el) => {
-      const parts = getComputedStyle(el).scale.split(/\s+/).map(parseFloat);
-      if (parts.length === 0 || Number.isNaN(parts[0])) return 1;
-      // One value means both axes share it; two means x then y.
-      return parts.length > 1 ? parts[1] : parts[0];
-    });
+    portal(page).evaluate(
+      (el) => el.getBoundingClientRect().height / (el as HTMLElement).offsetHeight,
+    );
 
   test("rises out of the bottom edge and grows upward to fill the stage", async ({ page }) => {
     await at(page, 0);
@@ -210,7 +207,7 @@ test.describe("the portal", () => {
     // By the end of the portal's slice it fills the stage, having grown upward
     // while its bottom stayed put.
     await at(page, 0.25);
-    expect(await scaleOf(page)).toBeGreaterThan(0.99);
+    await expect.poll(() => scaleOf(page)).toBeGreaterThan(0.99);
     const grown = await portal(page).evaluate((el) => el.getBoundingClientRect().top);
     expect(grown).toBeLessThan(small.top);
   });
@@ -292,9 +289,39 @@ test.describe("the portal", () => {
 
     // Past the boundary the rail is moving and the portal is done.
     await at(page, 0.5);
-    expect(await scaleOf(page)).toBeGreaterThan(0.99);
+    await expect.poll(() => scaleOf(page)).toBeGreaterThan(0.99);
     const after = await track.evaluate((el) => parseFloat(getComputedStyle(el).translate) || 0);
     expect(after).toBeLessThan(0);
+  });
+
+  test("finishes growing on its own past the handoff, and shrinks back above it", async ({
+    page,
+  }) => {
+    // Scroll drives the zoom only to --process-portal-handoff (0.5). Just past
+    // the end of that scroll the reader has stopped, and the slab must still
+    // reach full size without another pixel of scrolling.
+    //
+    // Save-Data keeps the hero's three.js canvas off. ProcessHandoff's observer
+    // runs on rendering frames, and headless Chrome draws that canvas in
+    // software: under parallel workers a frame took seconds, so the observer
+    // fired after the poll gave up. Measured, not guessed. It is the hero's
+    // cost, not this section's, and a GPU renders it in a few milliseconds.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "connection", { value: { saveData: true } });
+    });
+    await page.goto("/");
+    const end = await portalEnd(page);
+
+    await at(page, end / 2);
+    expect(await scaleOf(page), "scroll alone stops short of full size").toBeLessThan(0.5);
+
+    await at(page, end * 1.05);
+    await expect.poll(() => scaleOf(page)).toBeGreaterThan(0.99);
+
+    // Back above the handoff it runs back down to scroll's share, smoothly
+    // rather than holding at full size.
+    await at(page, end * 0.9);
+    await expect.poll(() => scaleOf(page)).toBeLessThan(0.5);
   });
 
   test("leaves the hero's buttons clickable while the slab is still small", async ({ page }) => {
@@ -383,9 +410,12 @@ test.describe("the portal", () => {
     // Once it has grown it covers the screen, edge included. A 24px light
     // border down every side is what a clip at the wrong level looks like, and
     // that is exactly what this catches.
+    // Polled: the last half of the grow is a timed transition, not scroll.
     await at(page, 0.3);
     expect(await darkAt(middle.x, middle.y), "centre should be dark once grown").toBe(true);
-    expect(await darkAt(edge.x, edge.y), "viewport edge should be dark once grown").toBe(true);
+    await expect
+      .poll(() => darkAt(edge.x, edge.y), { message: "viewport edge should be dark once grown" })
+      .toBe(true);
   });
 
   test("the growing stage never makes the document scroll sideways", async ({ page }) => {

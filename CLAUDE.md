@@ -233,6 +233,7 @@ Server Components first. `'use client'` limited to:
 - Mobile navigation (toggle state)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
+- Process portal handoff (`Process/ProcessHandoff.tsx` — one IntersectionObserver that sets `data-portal-open`; a CSS transition finishes the zoom's second half)
 - Process rail fallback (requestAnimationFrame — see the second motion-stack exception below). Renders nothing, and never starts in a browser that supports scroll-driven animations
 
 Everything else is a Server Component. If you're reaching for `'use client'`, a Server Component with a small client island probably works instead.

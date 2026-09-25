@@ -124,6 +124,23 @@
     // the right origin, because the slab then rises off the bottom edge of the
     // screen and climbs over what is already there.
     --process-portal-anchor: 100%;
+    // WHERE SCROLL LETS GO OF THE ZOOM. Scroll grows the slab from
+    // --process-portal-scale up to this, and a timed transition on .grow takes
+    // it the rest of the way, so the reader does not have to scroll the whole
+    // second half by hand. Scrolling back above the point runs it back down.
+    //
+    // It works by composition, not by handing one property between two
+    // drivers: .grow holds this scale and .portal inside it animates to 1, so
+    // the rendered size is the product. The scroll animation and the
+    // transition never write the same property, which is what an animation
+    // would otherwise win outright.
+    --process-portal-handoff: 0.5;
+    // Its inline axis, which follows the same rule as --process-portal-scale-x:
+    // 1 below lg where only the block axis zooms.
+    --process-portal-handoff-x: 1;
+    // What .portal starts at so the PRODUCT starts at --process-portal-scale.
+    --process-portal-from: calc(var(--process-portal-scale) / var(--process-portal-handoff));
+    --process-portal-from-x: calc(var(--process-portal-scale-x) / var(--process-portal-handoff-x));
     // The image is 124% of its frame and sits at -12%, so it has 12% of the
     // FRAME of slack at each edge — just under 10% as a fraction of the image's
     // own height. 4.5% therefore sits at roughly half the available travel and
@@ -224,6 +241,7 @@
       --process-stage-inset: 0px;
       // Enough width for the square to read as an object, so both axes scale.
       --process-portal-scale-x: var(--process-portal-scale);
+      --process-portal-handoff-x: var(--process-portal-handoff);
     }
   }
 
@@ -288,7 +306,12 @@
     // arrive rather than creep. The rail wants the opposite, because each page
     // carries a heading, a paragraph and photographs that have to be readable
     // as they pass, and at 0.6 they flicked by.
-    --process-portal-ratio: 0.6;
+    //
+    // The portal's is 0.3, half its original 0.6, because scroll now drives
+    // only the first half of the zoom (see --process-portal-handoff). The
+    // rate per pixel is unchanged; keeping 0.6 would have left the reader
+    // scrolling through a stretch where nothing moved.
+    --process-portal-ratio: 0.3;
     --process-rail-ratio: 2;
     // How many stages of scroll the portal gets before the rail starts.
     --process-portal-stages: 1;
@@ -415,6 +438,37 @@
   }
 
   // --- The portal -----------------------------------------------------------
+
+  // The timed half of the zoom. Holds the slab at --process-portal-handoff
+  // until ProcessHandoff reports the scroll has passed that point, then
+  // transitions to full size; and back again when it is scrolled above it.
+  // Same origin as .portal, so the two scales compose about one point.
+  .grow {
+    block-size: 100%;
+    transform-origin: 50% var(--process-portal-anchor);
+    scale: var(--process-portal-handoff-x) var(--process-portal-handoff);
+    transition-property: scale;
+    transition-duration: var(--duration-slow);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .process[data-portal-open] .grow {
+    scale: 1 1;
+  }
+
+  // ProcessHandoff's marker. Its BOTTOM edge is the handoff: one portal's
+  // scroll below the section's top, where the scroll-driven half ends. It is a
+  // viewport tall so "scrolled past" is simply "entirely above the viewport",
+  // and so a jump from anywhere past it back to the top of the page lands the
+  // marker on screen and fires the observer rather than skipping over it.
+  .handoff {
+    position: absolute;
+    inset-block-start: calc(var(--process-portal-block) - 100svh);
+    inset-inline-start: 0;
+    inline-size: 1px;
+    block-size: 100svh;
+    pointer-events: none;
+  }
   //
   // Everything the pin holds lives inside this box, and this box is what
   // scales. The title bar and the rail therefore grow together as one unit,
@@ -474,7 +528,8 @@
     // column. Scaling both axes on a phone left the hero's CTAs and the
     // back-to-top button showing down either side of the slab and overlapping
     // its copy: legible in a 1440 screenshot, unreadable on an iPhone.
-    scale: var(--process-portal-scale-x) var(--process-portal-scale);
+    // The FROM values, not the scale tokens: .grow multiplies them back down.
+    scale: var(--process-portal-from-x) var(--process-portal-from);
     // NO border-radius, and that is a decision rather than an omission.
     //
     // `scale` multiplies the rendered corner along with everything else, so a
@@ -888,7 +943,7 @@
     from {
       // Both axes, matching the base rule. Below lg the x is 1 throughout, so
       // only the block axis animates and the slab rises as a full-width band.
-      scale: var(--process-portal-scale-x) var(--process-portal-scale);
+      scale: var(--process-portal-from-x) var(--process-portal-from);
     }
     to {
       scale: 1 1;
@@ -1024,11 +1079,11 @@
       // Both axes, matching the animated path. Below lg the x term starts at 1
       // and stays there, so this reduces to a vertical-only grow.
       scale: calc(
-          var(--process-portal-scale-x) + (1 - var(--process-portal-scale-x)) *
+          var(--process-portal-from-x) + (1 - var(--process-portal-from-x)) *
             var(--process-portal-progress)
         )
         calc(
-          var(--process-portal-scale) + (1 - var(--process-portal-scale)) *
+          var(--process-portal-from) + (1 - var(--process-portal-from)) *
             var(--process-portal-progress)
         );
     }
@@ -1123,6 +1178,12 @@
     // margins in this mode, so the dark band still runs edge to edge while the
     // rail is a plain horizontal scroller.
     .portal {
+      scale: none;
+      block-size: auto;
+    }
+
+    // Same trap one level up: .grow's handoff scale is static too.
+    .grow {
       scale: none;
       block-size: auto;
     }
