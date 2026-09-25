@@ -353,6 +353,18 @@
   }
 
   :global(main) > :has(+ .process) {
+    // Room for the overlap. The section's negative margin pulls it up over
+    // this one by the portal's scroll, so that much of this section's foot is
+    // under the rising slab from the moment it appears. The hero had nothing
+    // there; the hardware carousel has its slide copy, and the tenth-size
+    // square painted over it. Reserving the same distance as padding puts the
+    // overlap on empty canvas. The expression is the hold keyframe's, for the
+    // same reason it is written out there: --process-portal-block is scoped
+    // to .process and computes to empty on a sibling.
+    padding-block-end: calc(
+      var(--process-hold-stage) * var(--process-portal-stages) * var(--process-portal-ratio)
+    );
+
     // A stacking position BELOW the process section, which states z-index: 1.
     // `relative` is what makes z-index apply at all; without it the hero would
     // paint by document order and sit on top of the very slab meant to cover
