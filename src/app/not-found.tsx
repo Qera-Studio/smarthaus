@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Button } from "../components/Button";
 import { ParticleText } from "../components/ParticleText";
 import styles from "./not-found.module.scss";
 
@@ -25,9 +25,10 @@ export default function NotFound() {
 
       <p className={styles.body}>Oops, looks like this page does not exist.</p>
 
-      <Link href="/" className={styles.cta}>
-        Back to home
-      </Link>
+      {/* The wrapper owns the spacing, not the button: see Button.tsx. */}
+      <div className={styles.ctaRow}>
+        <Button href="/">Back to home</Button>
+      </div>
     </section>
   );
 }

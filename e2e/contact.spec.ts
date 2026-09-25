@@ -167,6 +167,24 @@ test("the directions link opens safely off-site", async ({ page }) => {
   await expect(link).toHaveAttribute("target", "_blank");
 });
 
+// The email is the longest of the three and the one that broke: in a half-width
+// section it had 464px of row for 484px of text and wrapped mid-domain, so the
+// address read "contact@mapletech.a / e". Height against line-height rather than
+// a screenshot, because the failure is a second line and nothing else.
+test("every contact channel stays on one line", async ({ page }) => {
+  const values = page.locator("section[aria-labelledby='get-in-touch'] li a");
+  await expect(values).toHaveCount(3);
+
+  for (const value of await values.all()) {
+    const lines = await value.evaluate((el) => {
+      const style = getComputedStyle(el);
+      const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5;
+      return Math.round(el.getBoundingClientRect().height / lineHeight);
+    });
+    expect(lines, `${await value.textContent()} wrapped`).toBe(1);
+  }
+});
+
 test("the page does not overflow horizontally", async ({ page }) => {
   const overflows = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth + 1,

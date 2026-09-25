@@ -303,38 +303,12 @@
     @include focus-ring;
   }
 
-  .submit {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  // The band is the Button component. This places it: left-aligned rather than
+  // stretched, which is what `align-self` bought when the button was itself a
+  // flex item of the form.
+  .submitRow {
     align-self: flex-start;
     margin-block-start: $space-8;
-    padding-block: $space-3;
-    padding-inline: $space-6;
-    border: 0;
-    border-radius: 0;
-    background-color: var(--color-bg-inverse-strong);
-    color: var(--color-text-inverse);
-    font-family: inherit;
-    font-size: var(--font-size-sm);
-    font-weight: $font-weight-semibold;
-    text-decoration: none;
-    cursor: pointer;
-
-    transition-property: background-color, opacity;
-    transition-duration: var(--duration-fast);
-    transition-timing-function: var(--ease-out);
-
-    &:hover {
-      background-color: var(--color-hover);
-    }
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-
-    @include focus-ring;
   }
 
   // --- Confirmation ---------------------------------------------------------
@@ -387,6 +361,19 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: $space-4;
     }
+
+    // The one section body that spans both of .section's columns rather than
+    // sitting in the right one. Three values across half the page is 464px of
+    // room at lg for 484px of text, so the email wrapped mid-domain
+    // ("contact@mapletech.a / e") through the whole 1024-1220 band. Widening
+    // the row is the only fix that holds: at half width no font size fits, and
+    // the 50/50 split is deliberate for every other section here.
+    //
+    // The title keeps its own column, so the section still reads as a pair —
+    // the channels simply start under it instead of beside it.
+    @include bp-lg {
+      grid-column: 1 / -1;
+    }
   }
 
   .channel {
@@ -399,8 +386,8 @@
   // Inverted against the other label/value pairs on this page, deliberately.
   // Here the value IS the content — a number someone is about to dial — and the
   // label only says which channel it is. So the label takes the quiet treatment
-  // and the value takes the weight. Both sizes step up 2px from the page's
-  // small-text default.
+  // and the value takes the weight. The label steps up 2px from the page's
+  // small-text default; the value sits one token above it.
   .channelLabel {
     font-size: calc(var(--font-size-sm) + 2px);
     font-weight: $font-weight-regular;
@@ -408,9 +395,9 @@
   }
 
   .channelValue {
-    // Interpolated so Sass emits the calc() verbatim. Written plainly it folds
-    // the expression and silently drops the + 2px, leaving 18px.
-    font-size: #{"calc(var(--font-size-md) + 2px)"};
+    // One token under md. At md the email and both numbers were still wider
+    // than their third of the row on some screens and wrapped to a second line.
+    font-size: var(--font-size-base);
     font-weight: $font-weight-semibold;
     color: var(--color-text-primary);
     overflow-wrap: anywhere;

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Button } from "../Button";
 import styles from "./ClosingCta.module.scss";
 
 type ClosingCtaProps = {
@@ -35,9 +35,10 @@ export function ClosingCta({ heading, body, href, label }: ClosingCtaProps) {
     <section className={styles.closing}>
       <h2 className={styles.heading}>{heading}</h2>
       <p className={styles.body}>{body}</p>
-      <Link href={href} className={styles.cta}>
-        {label}
-      </Link>
+      {/* The wrapper owns the spacing, not the button: see Button.tsx. */}
+      <div className={styles.ctaRow}>
+        <Button href={href}>{label}</Button>
+      </div>
     </section>
   );
 }

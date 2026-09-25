@@ -1,6 +1,7 @@
 import { Care } from "../components/Care";
 import { Hero } from "../components/Hero";
 import { HomeEnquiry } from "../components/HomeEnquiry";
+import { Pricing } from "../components/Pricing";
 import { Process } from "../components/Process";
 
 export default function Home() {
@@ -10,6 +11,9 @@ export default function Home() {
     <>
       <Hero />
       <Process />
+      {/* Price before maintenance: what a system costs, then what keeping it
+          running costs, then the enquiry. */}
+      <Pricing />
       <Care />
       {/* Last thing on the page, directly above the footer. */}
       <HomeEnquiry />
