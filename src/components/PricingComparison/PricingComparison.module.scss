@@ -1,0 +1,325 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  .comparison {
+    // L2 tokens.
+    //
+    // The column minimums are named because they are read twice: as the grid
+    // tracks, and summed as the row's minimum width below. The chevron size is
+    // read as the mark and as the description's indent under it.
+    --compare-col-feature: 200px;
+    --compare-col-tier: 112px;
+    --compare-chevron: 1em;
+
+    margin-block-start: clamp(#{$space-16}, 8vw, #{$space-24});
+  }
+
+  .heading {
+    margin-block-end: $space-8;
+    font-size: var(--type-h2);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+  }
+
+  // --- The scroll region ------------------------------------------------------
+  // LegalTable's treatment. Below md the row is wider than the viewport by
+  // design (see the grid minimums) and this is what scrolls; the page does
+  // not. tabIndex, role and aria-label are in the markup: axe's
+  // scrollable-region-focusable needs a keyboard user to be able to reach it.
+  //
+  // position: relative is load-bearing. Every cell carries a visually-hidden
+  // label, and that mixin is `position: absolute`. With no positioned ancestor
+  // those spans are placed against the document, so the ones in the far
+  // columns sat at x=617 on a 390px viewport and the PAGE grew a horizontal
+  // scrollbar, while the region that clips their parents never saw them. Making
+  // this the containing block puts their boxes inside the region's own
+  // scrollable overflow, where they belong.
+  .scroll {
+    position: relative;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+
+    @include focus-ring($offset: 3px);
+  }
+
+  // --- One grid for every row -------------------------------------------------
+  // The header row and each feature row lay out on the same tracks, which is
+  // what keeps a tick under its column with no <table>. The fixed minimums are
+  // deliberate: they are what make the row wider than a phone so the region
+  // scrolls rather than the columns crushing to nothing. Above md it fits.
+  //
+  // The minimum width is load-bearing, not belt and braces. A block-level grid
+  // is its container's width whatever its tracks add up to, so at 390px the
+  // row was 342px wide with 648px of tracks overflowing it. The sticky feature
+  // column cannot leave its parent's box, which gave it 142px of travel
+  // against a 200px scroll: it drifted 58px. Sizing the row to its tracks
+  // gives the sticky cell the whole row to hold still in.
+  //
+  // Summed from the tokens rather than max-content: a grid's max-content
+  // width follows its longest cell, so every row would size itself to its own
+  // feature name and the columns would no longer line up.
+  //
+  // No column-gap. The first column is sticky and paints its own ground, and a
+  // gap beside it would be a transparent strip the scrolling cells show through.
+  .head,
+  .row {
+    display: grid;
+    grid-template-columns:
+      minmax(var(--compare-col-feature), 2fr)
+      repeat(4, minmax(var(--compare-col-tier), 1fr));
+    align-items: center;
+    min-inline-size: calc(var(--compare-col-feature) + 4 * var(--compare-col-tier));
+  }
+
+  // The feature column pins to the left edge while the tier columns scroll
+  // under it. Stretched to the row's full height and painted, because a cell
+  // that wraps to two lines would otherwise show above and below a
+  // content-height first column as it slides past.
+  .head > :first-child,
+  .row > :first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    padding-inline-end: $space-4;
+    background-color: var(--color-bg-canvas);
+  }
+
+  .head {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    padding-block: $space-3;
+    background-color: var(--color-bg-canvas);
+    border-block-end-style: solid;
+    border-block-end-width: 1px;
+    border-block-end-color: var(--color-text-muted);
+    font-size: var(--type-small);
+    font-weight: $font-weight-semibold;
+    color: var(--color-text-primary);
+  }
+
+  .headTier {
+    padding-inline: $space-2;
+    text-align: center;
+  }
+
+  // --- Sections ---------------------------------------------------------------
+  // Native <details>, open by default. The open/close animation is the FAQ
+  // accordion's, restated because a CSS Module's classes are local to its
+  // file, with one change: overflow is clipped on the block axis only.
+  //
+  // The FAQ hides both axes, which for it is harmless. Here the rows inside
+  // are wider than the section (that is what makes the region scroll), and
+  // `overflow: hidden` would both clip them at the section's edge and, being
+  // a scroll container, capture the sticky feature column so it pinned to the
+  // section rather than to the scroll region. `clip` on one axis does neither:
+  // it is not a scroll container, and the inline axis stays visible.
+  .section {
+    interpolate-size: allow-keywords;
+
+    &::details-content {
+      block-size: 0;
+      overflow-x: visible;
+      overflow-y: clip;
+      opacity: 0;
+      transition-property: block-size, opacity, content-visibility;
+      transition-duration: var(--duration-slow);
+      transition-timing-function: var(--ease-out);
+      transition-behavior: allow-discrete;
+    }
+
+    &[open]::details-content {
+      block-size: auto;
+      opacity: 1;
+    }
+  }
+
+  .sectionSummary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-5;
+    padding-block: $space-5;
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    @include focus-ring($offset: -2px);
+
+    &:hover .sectionTitle {
+      color: var(--color-accent-text);
+    }
+  }
+
+  .sectionTitle {
+    font-size: var(--type-h4);
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-snug;
+    color: var(--color-text-primary);
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .sectionChevron {
+    flex: none;
+    inline-size: 20px;
+    block-size: 20px;
+    color: var(--color-text-muted);
+    transition-property: rotate, color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .section[open] .sectionChevron {
+    rotate: 180deg;
+    color: var(--color-accent-text);
+  }
+
+  // --- Rows -------------------------------------------------------------------
+
+  .row {
+    padding-block: $space-3;
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-block-start-color: var(--color-border);
+  }
+
+  // Column one's <details>: the summary is the feature name, the content is
+  // the description. Same animation as the section, same reason for clip.
+  .feature {
+    interpolate-size: allow-keywords;
+    min-inline-size: 0;
+
+    &::details-content {
+      block-size: 0;
+      overflow-x: visible;
+      overflow-y: clip;
+      opacity: 0;
+      transition-property: block-size, opacity, content-visibility;
+      transition-duration: var(--duration-normal);
+      transition-timing-function: var(--ease-out);
+      transition-behavior: allow-discrete;
+    }
+
+    &[open]::details-content {
+      block-size: auto;
+      opacity: 1;
+    }
+  }
+
+  .featureSummary {
+    display: flex;
+    align-items: start;
+    gap: $space-2;
+    cursor: pointer;
+    list-style: none;
+    font-size: var(--type-body);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    color: var(--color-text-primary);
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    @include focus-ring($offset: 2px);
+
+    &:hover .featureName {
+      color: var(--color-accent-text);
+    }
+  }
+
+  .featureChevron {
+    flex: none;
+    inline-size: var(--compare-chevron);
+    block-size: var(--compare-chevron);
+    // On the first line's centre rather than the block's, so a name that
+    // wraps keeps the mark beside its first word.
+    margin-block-start: 0.15em;
+    color: var(--color-text-muted);
+    transition-property: rotate, color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .feature[open] .featureChevron {
+    rotate: 90deg;
+    color: var(--color-accent-text);
+  }
+
+  .featureName {
+    text-wrap: pretty;
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .description {
+    max-inline-size: 52ch;
+    margin-block-start: $space-2;
+    // Under the name, not under the chevron.
+    padding-inline-start: calc(var(--compare-chevron) + #{$space-2});
+    font-size: var(--type-small);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  // --- Cells ------------------------------------------------------------------
+
+  .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-inline: $space-2;
+    font-size: var(--type-small);
+    line-height: $line-height-snug;
+    color: var(--color-text-secondary);
+    text-align: center;
+  }
+
+  // The card lists' tick, in the page's ink rather than green: the site has
+  // no green, and the brand rule is quiet confidence.
+  .tick {
+    display: block;
+    color: var(--color-text-primary);
+    @include tick-mark;
+  }
+
+  // "Not included". A short rule drawn here, not a dash character.
+  .none {
+    display: block;
+    inline-size: 1em;
+    block-size: 1px;
+    background-color: var(--color-text-muted);
+  }
+
+  .level {
+    text-wrap: balance;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sectionTitle,
+    .sectionChevron,
+    .featureName,
+    .featureChevron {
+      transition-duration: 0s;
+    }
+
+    .section::details-content,
+    .feature::details-content {
+      transition-duration: 0s;
+    }
+  }
+}

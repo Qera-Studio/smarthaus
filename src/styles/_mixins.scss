@@ -136,3 +136,47 @@
     #{$max-size}
   );
 }
+
+// --- Card gutter ------------------------------------------------------------
+// For a section that lays out a row of filled cards rather than text.
+//
+// Body's own gutter resolves to 0 above the 1440px cap, because past that
+// width the auto margin has taken over. That is right for text, which simply
+// stops at the cap. It is wrong for a row of filled cards: with no gutter the
+// outer two sit flush to the viewport edge and read as clipped by the screen
+// rather than as a deliberate edge.
+//
+// This is body's expression inverted: it supplies a gutter exactly where body
+// has stopped supplying one, so the two never stack. Below the cap body pays
+// and this is 0; above it body's is 0 and this pays. Cancelling the tokens by
+// name rather than picking a width keeps it correct if the cap ever moves.
+//
+// First written on the homepage pricing section; the pricing page is the
+// second consumer, which is when it moved here.
+@mixin card-gutter {
+  padding-inline: max(
+    0px,
+    var(--page-gutter) - min(
+        var(--page-gutter),
+        (var(--content-max) + 2 * var(--page-gutter) - 100vw) / 2
+      )
+  );
+}
+
+// --- Tick mark --------------------------------------------------------------
+// A tick drawn in the element's own ink. An inline SVG in a data URI applied
+// as a mask rather than as a background-image, so the stroke is `currentcolor`
+// and one asset serves brown-900 on a light card and brown-100 on a dark one;
+// a background-image bakes its colour in.
+//
+// Sets size and the mask only. The caller positions it (a pseudo-element in a
+// list, an inline block in a table cell) and sets `content` if it is one.
+@mixin tick-mark {
+  inline-size: 0.75em;
+  block-size: 0.75em;
+  background-color: currentcolor;
+  mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M2.5 8.5l3.5 3.5 7.5-8" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-position: center;
+}

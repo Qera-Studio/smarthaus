@@ -1,0 +1,39 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  // The page's own gutter above the 1440px cap, for the same reason the
+  // homepage pricing section has one: a row of filled cards reads as clipped
+  // with none. The reasoning is with the mixin. Below the cap it is 0 and body
+  // pays, so the header sits where every other inner page's does.
+  .page {
+    @include card-gutter;
+    padding-block: $space-12 0;
+
+    @include bp-lg {
+      padding-block-start: $space-16;
+    }
+  }
+
+  // The contact page's header, restated.
+  .header {
+    margin-block-end: $space-12;
+  }
+
+  .title {
+    font-size: var(--type-display);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+  }
+
+  .standfirst {
+    max-inline-size: 46ch;
+    margin-block-start: $space-4;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+}
