@@ -303,38 +303,12 @@
     @include focus-ring;
   }
 
-  .submit {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  // The band is the Button component. This places it: left-aligned rather than
+  // stretched, which is what `align-self` bought when the button was itself a
+  // flex item of the form.
+  .submitRow {
     align-self: flex-start;
     margin-block-start: $space-8;
-    padding-block: $space-3;
-    padding-inline: $space-6;
-    border: 0;
-    border-radius: 0;
-    background-color: var(--color-bg-inverse-strong);
-    color: var(--color-text-inverse);
-    font-family: inherit;
-    font-size: var(--font-size-sm);
-    font-weight: $font-weight-semibold;
-    text-decoration: none;
-    cursor: pointer;
-
-    transition-property: background-color, opacity;
-    transition-duration: var(--duration-fast);
-    transition-timing-function: var(--ease-out);
-
-    &:hover {
-      background-color: var(--color-hover);
-    }
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-
-    @include focus-ring;
   }
 
   // --- Confirmation ---------------------------------------------------------

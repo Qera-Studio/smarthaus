@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 
+import { Button } from "../../components/Button";
 import { HONEYPOT_FIELD, INTERESTS } from "../../lib/contact-schema";
 import { CONSENT_FORM_COPY } from "../../content/consent";
 import { whatsappLink } from "../../lib/contact";
@@ -324,9 +325,13 @@ function Checkbox({
 function Submit() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className={styles.submit} disabled={pending}>
-      {pending ? "Sending" : "Book a site visit"}
-    </button>
+    // The row owns the spacing and the left alignment; the button owns the
+    // band. See Button.tsx for why it carries no margin of its own.
+    <div className={styles.submitRow}>
+      <Button type="submit" disabled={pending}>
+        {pending ? "Sending" : "Book a site visit"}
+      </Button>
+    </div>
   );
 }
 
@@ -372,14 +377,13 @@ function Confirmation({ state }: { state: Extract<ContactState, { status: "ok" }
         install.
       </p>
       <div className={styles.confirmationActions}>
-        <a
-          className={styles.submit}
+        <Button
           href={whatsappLink("Hi, I just booked a site visit through your website.")}
           target="_blank"
           rel="noopener noreferrer"
         >
           Message us on WhatsApp
-        </a>
+        </Button>
         <Link className={styles.secondaryCta} href="/solutions">
           See what we install
         </Link>

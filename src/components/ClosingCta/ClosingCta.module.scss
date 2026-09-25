@@ -38,37 +38,10 @@
     text-wrap: pretty;
   }
 
-  // Matches the CTA in ComingSoon — same square band, same hover, same focus
-  // treatment. Restated rather than shared because a CSS Module's class names
-  // are local to its file: importing one stylesheet into another to reuse a
-  // button would pull that component's whole chunk in with it. When a third
-  // copy appears, this belongs in a Button component instead.
-  .cta {
-    display: inline-flex;
-    align-items: center;
+  // The band itself is now the Button component — this note used to say the
+  // third copy of it should become one, and the pricing section was the third.
+  // What is left here is placement only.
+  .ctaRow {
     margin-block-start: clamp(#{$space-8}, 4vw, #{$space-12});
-    padding-block: $space-3;
-    padding-inline: $space-6;
-    // Square, per the brand's architectural edges — see the commit that took
-    // the radius off every control.
-    border-radius: 0;
-    background-color: var(--color-bg-inverse-strong);
-    color: var(--color-text-inverse);
-    font-size: var(--font-size-sm);
-    font-weight: $font-weight-semibold;
-    text-decoration: none;
-
-    // Longhands, never the `transition` shorthand: var() substitution happens
-    // before the shorthand is parsed, so one missing token would silently
-    // invalidate the whole declaration.
-    transition-property: background-color;
-    transition-duration: var(--duration-fast);
-    transition-timing-function: var(--ease-out);
-
-    &:hover {
-      background-color: var(--color-hover);
-    }
-
-    @include focus-ring;
   }
 }
