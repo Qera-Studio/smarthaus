@@ -101,7 +101,10 @@
     --process-scroll-block: calc(var(--process-portal-block) + var(--process-rail-block));
     // How much further the reader scrolls past the previous section's last
     // screen before the slab starts rising. See the overlay margin below.
-    --process-portal-delay: #{$space-24};
+    // A share of the stage rather than a fixed length, so it scales with the
+    // screen. 96px was tried and the slab still arrived under the carousel's
+    // image; three tenths of a screen is the client's call.
+    --process-portal-delay: calc(var(--process-stage-block) * 0.3);
     // The square's size at the very start of the portal, as a fraction of the
     // full stage. 0.1 is what the client asked for and is small enough to read
     // as an object rather than as a shrunken page.
