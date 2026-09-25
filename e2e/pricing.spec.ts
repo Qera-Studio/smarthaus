@@ -51,41 +51,56 @@ test("prints a price on every tier", async ({ page }) => {
 });
 
 /**
- * The ground is painted by a pseudo-element escaping body's 1440px cap. If that
- * escape breaks the section still renders, just with bare canvas either side of
- * it, which no functional assertion would notice.
- *
- * Checked at a width well past the cap, which is the only place it can fail.
+ * The section shipped with a full-bleed dark ground first, which put two dark
+ * blocks back to back under the Process rail. It paints nothing of its own now
+ * and sits on the page canvas, so a background reappearing here is a
+ * regression rather than a style choice.
  */
-test("paints its ground to both viewport edges past the content cap", async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-
-  const section = pricing(page);
-  await section.scrollIntoViewIfNeeded();
-
-  // The section box itself stays inside the cap; the ground behind it does not.
-  // Sampling the page's own background at the far left, level with the section,
-  // is the only way to see the pseudo-element from outside.
-  const box = await section.boundingBox();
-  expect(box).not.toBeNull();
-
-  const groundAtEdge = await page.evaluate(
-    (y) => {
-      const el = document.elementFromPoint(4, y);
-      return el ? getComputedStyle(el).backgroundColor : null;
-    },
-    Math.round(box!.y + box!.height / 2),
-  );
-
-  // Whatever is under the pointer at the edge must not be the page's own
-  // brown-100 canvas showing through.
-  expect(groundAtEdge).not.toBe("rgb(240, 233, 221)");
+test("paints no ground of its own", async ({ page }) => {
+  const bg = await pricing(page).evaluate((el) => getComputedStyle(el).backgroundColor);
+  // Transparent, in whichever spelling the engine reports.
+  expect(["rgba(0, 0, 0, 0)", "transparent"]).toContain(bg);
 });
 
 /**
- * No horizontal scrollbar. The ground overhangs the viewport by design and
- * relies on html's `overflow-x: clip` to contain it, which is exactly the kind
- * of thing a later change to globals.scss could remove without anyone noticing.
+ * Four across in one row is the point of the layout: the tiers are meant to be
+ * compared at a glance, not scrolled through. Below lg they wrap, which is
+ * intended, so this is asserted at a desktop width only.
+ */
+test("puts all four tiers on one row at desktop width", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await pricing(page).scrollIntoViewIfNeeded();
+
+  const tops = await pricing(page)
+    .locator("[data-tone]")
+    .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+
+  expect(tops).toHaveLength(4);
+  expect(new Set(tops).size).toBe(1);
+});
+
+/**
+ * The subgrid is what makes the set read as one comparison rather than four
+ * cards: without it each card stacks independently and the buttons land at
+ * four different heights.
+ */
+test("lines the four buttons up on one row", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await pricing(page).scrollIntoViewIfNeeded();
+
+  const tops = await pricing(page)
+    .getByRole("link", { name: "Get started" })
+    .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+
+  expect(tops).toHaveLength(4);
+  expect(new Set(tops).size).toBe(1);
+});
+
+/**
+ * No horizontal scrollbar. Four columns at a fixed minimum would be the usual
+ * way to cause one, so this guards the `minmax(0, 1fr)` tracks: without the 0
+ * a grid column refuses to shrink below its content and the row pushes the
+ * page sideways at narrow widths.
  */
 test("does not introduce a horizontal scrollbar", async ({ page }) => {
   const overflows = await page.evaluate(

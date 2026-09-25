@@ -76,20 +76,20 @@ describe("Pricing", () => {
 
   /**
    * data-ground marks a dark-painted box so globals.scss can invert the cursor
-   * and ScrollToTop can pick its own colour. It inherits, so putting it on the
-   * section would claim the two sand cards are dark ground as well.
+   * and ScrollToTop can pick its own colour. It inherits, so claiming it on the
+   * section would say the light canvas and the two sand cards are dark ground.
+   *
+   * The section sits on the page's own light ground: only the Signature card
+   * paints dark.
    */
-  it("claims dark ground only on the boxes that actually paint dark", () => {
+  it("claims dark ground only on the one card that paints dark", () => {
     const { container } = render(<Pricing />);
 
     expect(container.querySelector("section")).not.toHaveAttribute("data-ground");
 
     const dark = container.querySelectorAll('[data-ground="dark"]');
-    // The Signature card and the comparison row.
-    expect(dark).toHaveLength(2);
-    for (const el of dark) {
-      expect(el.getAttribute("data-tone") ?? "dark").not.toBe("sand");
-    }
+    expect(dark).toHaveLength(1);
+    expect(dark[0]).toHaveAttribute("data-tone", "dark");
   });
 
   it("renders no raw braces to the reader", () => {

@@ -15,6 +15,11 @@ import styles from "./Pricing.module.scss";
  * which is the next thing to be built and is what the comparison button points
  * at.
  *
+ * The section sits on the page's own light canvas. The dark ground is the
+ * Process rail's alone: this shipped dark first and, directly under the rail,
+ * the two read as one long tunnel rather than as two sections. Only the
+ * Signature card is dark now.
+ *
  * ## Claims status — read this before editing the numbers
  *
  * The four prices and every feature line here are PLACEHOLDER. They came from a
@@ -41,8 +46,6 @@ import styles from "./Pricing.module.scss";
 type PricingTier = {
   /** Stable key, and the anchor /pricing will use. */
   id: string;
-  /** "01".."04", the same step convention the Process rail uses. */
-  step: string;
   name: string;
   /** Rendered exactly as written, "+" included. */
   price: string;
@@ -60,7 +63,6 @@ type PricingTier = {
 const TIERS: readonly PricingTier[] = [
   {
     id: "essential",
-    step: "01",
     name: "Essential",
     price: "AED 4,999+",
     description:
@@ -83,7 +85,6 @@ const TIERS: readonly PricingTier[] = [
   },
   {
     id: "smart",
-    step: "02",
     name: "Smart",
     price: "AED 14,999+",
     description:
@@ -106,7 +107,6 @@ const TIERS: readonly PricingTier[] = [
   },
   {
     id: "connected",
-    step: "03",
     name: "Connected",
     price: "AED 39,999+",
     description:
@@ -129,7 +129,6 @@ const TIERS: readonly PricingTier[] = [
   },
   {
     id: "signature",
-    step: "04",
     name: "Signature",
     price: "AED 99,999+",
     description:
@@ -157,10 +156,13 @@ export function Pricing() {
     // data-pricing is the stable hook for e2e: the module's class names are
     // hashed at build time. Same reason Process carries data-process.
     //
-    // data-ground is NOT on the section, even though it paints near-black. It
-    // would inherit down into the two sand cards and give them the light cursor
-    // meant for dark surfaces, and ScrollToTop queries the same attribute to
-    // decide its own colour. It sits on the dark elements only, below.
+    // The section sits on the page's own light canvas. The dark ground belongs
+    // to the Process rail alone, and a second dark block directly below it read
+    // as one long tunnel rather than two sections.
+    //
+    // data-ground therefore appears on the Signature card only, which is the
+    // one box here that paints dark. It inherits, so putting it on the section
+    // would claim the light ground is dark and flip the cursor everywhere.
     <section className={styles.pricing} aria-labelledby="pricing" data-pricing>
       <div className={styles.intro}>
         <h2 className={styles.heading} id="pricing">
@@ -183,7 +185,6 @@ export function Pricing() {
             data-tone={tier.tone}
             {...(tier.tone === "dark" ? { "data-ground": "dark" } : {})}
           >
-            <p className={styles.step}>{tier.step}</p>
             <h3 className={styles.tierName}>{tier.name}</h3>
             <p className={styles.tierDescription}>{tier.description}</p>
             <p className={styles.tierPrice}>{tier.price}</p>
@@ -206,15 +207,14 @@ export function Pricing() {
         ))}
       </ul>
 
-      <div className={styles.compare} data-ground="dark">
+      <div className={styles.compare}>
         {/*
           /pricing does not exist yet, so this points at the contact form until
-          it does. Swap the href in the same change that adds the page — a link
-          to a 404 is worse than one extra step to the same enquiry.
+          it does. Swap the href in the same change that adds the page: a link
+          to a 404 is worse than one extra step to the same enquiry, and the
+          label already promises the page rather than the form.
         */}
-        <Button href="/contact" variant="inverse">
-          Talk through the options
-        </Button>
+        <Button href="/contact">View detailed pricing</Button>
       </div>
     </section>
   );
