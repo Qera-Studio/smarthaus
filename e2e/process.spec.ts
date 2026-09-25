@@ -215,18 +215,45 @@ test.describe("the portal", () => {
     expect(grown).toBeLessThan(small.top);
   });
 
+  // Where the zoom ends, as a fraction of the pin window, read from the CSS
+  // rather than hardcoded.
+  //
+  // It used to be a literal 0.08 for "mid-zoom", which was fine while both
+  // phases shared one ratio and the boundary sat at 17%. They now have their
+  // own — the zoom quick, the rail slow — and the split moved to about 6%, so
+  // 0.08 landed AFTER the zoom and both tests read the wrong moment. Reading
+  // the token means the pacing can be retuned without touching the assertions.
+  // Reading the property directly is no good: a custom property computes to its
+  // TOKEN value, so this came back as the literal string
+  // "calc(100% * (1 * .6) / (1 * .6 + 5 * 2))" and parseFloat took the 100 off
+  // the front. It only resolves once something uses it, so this borrows a real
+  // property on a throwaway element and reads the pixels back out.
+  const portalEnd = (page: import("@playwright/test").Page) =>
+    rail(page).evaluate((el) => {
+      const probe = document.createElement("div");
+      probe.style.position = "absolute";
+      probe.style.visibility = "hidden";
+      probe.style.inlineSize = "var(--process-portal-end)";
+      el.appendChild(probe);
+      const width = probe.getBoundingClientRect().width;
+      const parent = el.getBoundingClientRect().width;
+      probe.remove();
+      return width / parent;
+    });
+
   test("holds the section above still while the slab climbs over it", async ({ page }) => {
     // The overlay only reads as covering if the thing being covered stays put.
-    // Without the sticky rule the hero slides up behind the rising slab, two
-    // things move at once, and it looks like the slab is merely scrolling into
-    // view. Measured before the fix: the hero ran from y-293 to y-844 across
-    // the zoom.
+    // Without the hold the hero slides up behind the rising slab, two things
+    // move at once, and it looks like the slab is merely scrolling into view.
+    // Measured before the fix: the hero ran from y-293 to y-844 across the zoom.
     const previous = page.locator("[data-process]").locator("xpath=preceding-sibling::*[1]");
+    const end = await portalEnd(page);
 
     await at(page, 0);
     const start = await previous.evaluate((el) => el.getBoundingClientRect().top);
 
-    await at(page, 0.08);
+    // Half way through the zoom, whatever the pacing makes that.
+    await at(page, end / 2);
     const during = await previous.evaluate((el) => el.getBoundingClientRect().top);
 
     expect(
@@ -235,11 +262,26 @@ test.describe("the portal", () => {
     ).toBeLessThan(4);
   });
 
+  test("releases the section above once the slab has covered it", async ({ page }) => {
+    // The other half of the hold, and the bug it replaced. `position: sticky`
+    // pins for the whole of its containing block, so the hero stayed frozen
+    // behind every later section and its buttons went on taking clicks over
+    // content the reader was actually looking at: measured at scroll 4700, well
+    // past the rail, the hero still reported y0..833.
+    const previous = page.locator("[data-process]").locator("xpath=preceding-sibling::*[1]");
+
+    await at(page, 1);
+    const bottom = await previous.evaluate((el) => el.getBoundingClientRect().bottom);
+
+    expect(bottom, "the section above should have scrolled away").toBeLessThan(0);
+  });
+
   test("holds the rail still until the portal has finished growing", async ({ page }) => {
     const track = rail(page).locator("ol");
+    const end = await portalEnd(page);
 
     // Mid-zoom: the portal is partly grown and the track has NOT started.
-    await at(page, 0.08);
+    await at(page, end / 2);
     const scale = await scaleOf(page);
     expect(scale).toBeGreaterThan(0.1);
     expect(scale).toBeLessThan(1);
@@ -253,6 +295,35 @@ test.describe("the portal", () => {
     expect(await scaleOf(page)).toBeGreaterThan(0.99);
     const after = await track.evaluate((el) => parseFloat(getComputedStyle(el).translate) || 0);
     expect(after).toBeLessThan(0);
+  });
+
+  test("leaves the hero's buttons clickable while the slab is still small", async ({ page }) => {
+    // The overlay pulls this section up over the hero, so its box covers the
+    // hero's CTAs from the moment the page loads — while the slab inside it is
+    // a tenth of a stage and nothing is painted over them at all. Measured
+    // before the fix: both "Book a site visit" and "Explore Villa" reported the
+    // process SECTION as the hit target, and neither button worked.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+
+    const blocked = await page.evaluate(() => {
+      const process = document.querySelector("[data-process]");
+      return [...document.querySelectorAll("a, button")]
+        .filter((el) => /explore villa|book a site visit/i.test(el.textContent || ""))
+        .filter((el) => {
+          const rect = el.getBoundingClientRect();
+          // On screen only: the footer carries its own copy of the CTA.
+          if (!rect.width || rect.top > window.innerHeight || rect.bottom < 0) return false;
+          const hit = document.elementFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          return !(el === hit || el.contains(hit)) && !!process?.contains(hit);
+        })
+        .map((el) => (el.textContent || "").trim());
+    });
+
+    expect(blocked, "the process section should not swallow the hero's clicks").toEqual([]);
   });
 
   test("keeps the title and its progress rule inside the page gutter", async ({ page }) => {
