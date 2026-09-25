@@ -128,8 +128,8 @@ test("reaches the last page by the end of the pin window", async ({ page }) => {
 });
 
 /**
- * The portal: the section opens as a small square near the bottom of the
- * viewport and grows to fill it BEFORE the rail moves at all.
+ * The portal: the section opens as a small square near the TOP of the viewport
+ * and grows downward to fill it BEFORE the rail moves at all.
  *
  * The two phases share one timeline, split at --process-portal-end, so the
  * thing worth guarding is the handover. If that boundary ever drifts, the rail
