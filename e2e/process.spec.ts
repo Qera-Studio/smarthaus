@@ -157,22 +157,25 @@ test.describe("the portal", () => {
   const scaleOf = (page: import("@playwright/test").Page) =>
     portal(page).evaluate((el) => parseFloat(getComputedStyle(el).scale) || 1);
 
-  test("starts small and low, then grows to fill the stage", async ({ page }) => {
+  test("starts small and high, then grows down to fill the stage", async ({ page }) => {
     await at(page, 0);
 
     // Small: a tenth of the stage, so it reads as an object rather than as a
     // page that happens to be slightly inset.
     expect(await scaleOf(page)).toBeLessThan(0.2);
 
-    // And LOW. The square sits in the bottom portion of the viewport, which is
-    // what gives the grow somewhere to rise from. Asserted against the
-    // viewport's midpoint rather than an exact offset, so the anchor token can
-    // be retuned without rewriting the test.
+    // And HIGH. The square sits in the top portion of the viewport so it is
+    // visible the moment the section is, and the growth opens downward into
+    // the space the reader is still revealing. Anchored low it arrived at the
+    // bottom edge, which meant scrolling past most of an empty screen first.
+    //
+    // Asserted against the viewport's midpoint rather than an exact offset, so
+    // the anchor token can be retuned without rewriting the test.
     const { top, height } = await portal(page).evaluate((el) => {
       const r = el.getBoundingClientRect();
       return { top: r.top, height: window.innerHeight };
     });
-    expect(top).toBeGreaterThan(height / 2);
+    expect(top).toBeLessThan(height / 2);
 
     // By the end of the portal's slice it fills the stage.
     await at(page, 0.25);
@@ -197,6 +200,26 @@ test.describe("the portal", () => {
     expect(await scaleOf(page)).toBeGreaterThan(0.99);
     const after = await track.evaluate((el) => parseFloat(getComputedStyle(el).translate) || 0);
     expect(after).toBeLessThan(0);
+  });
+
+  test("keeps the title and its progress rule inside the page gutter", async ({ page }) => {
+    // The pin bleeds past body's padding so the dark ground can reach the
+    // viewport edge, and that carried the header out with it: the heading sat
+    // flush against the screen edge and the progress rule ran off both sides.
+    // The ground still bleeds; only the contents are inset again.
+    await at(page, 0.3);
+
+    const { width } = page.viewportSize()!;
+    const bounds = await page.locator("[data-process] header").evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const rule = el.querySelector("div")!.getBoundingClientRect();
+      return { headerLeft: r.left, ruleLeft: rule.left, ruleRight: rule.right };
+    });
+
+    expect(bounds.ruleLeft, "progress rule should not touch the left edge").toBeGreaterThan(8);
+    expect(bounds.ruleRight, "progress rule should not run off the right edge").toBeLessThan(
+      width - 8,
+    );
   });
 
   test("the dark ground grows with the slab instead of being there all along", async ({ page }) => {

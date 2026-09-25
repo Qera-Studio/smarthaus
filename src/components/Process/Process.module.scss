@@ -112,11 +112,21 @@
     // full stage. 0.1 is what the client asked for and is small enough to read
     // as an object rather than as a shrunken page.
     --process-portal-scale: 0.1;
-    // How far down the viewport the square sits when it is smallest. 90% puts
-    // its CENTRE at nine tenths of the stage, so it reads as sitting near the
-    // bottom edge and rises as it grows. transform-origin does the work: see
-    // .portal below.
-    --process-portal-anchor: 90%;
+    // How far down the viewport the square sits when it is smallest, as the
+    // scale's origin. 10% puts it near the TOP of the stage, so the slab opens
+    // downward from where the section begins.
+    //
+    // It was 90% and opened upward from the bottom. That is the same effect
+    // mirrored, but it reads worse here: the square arrived at the bottom edge
+    // of the viewport, which meant scrolling through most of an empty screen
+    // before anything appeared, and the growth then pushed INTO the space the
+    // reader had already passed. Anchored high, the slab appears as soon as
+    // the section does and grows into the space still being revealed, which is
+    // the direction the reader is already moving.
+    //
+    // Not 0%: a hair of inset keeps it reading as an object placed near the
+    // top rather than one welded to the edge.
+    --process-portal-anchor: 10%;
     // The image is 124% of its frame and sits at -12%, so it has 12% of the
     // FRAME of slack at each edge — just under 10% as a fraction of the image's
     // own height. 4.5% therefore sits at roughly half the available travel and
@@ -273,9 +283,22 @@
     // it, and the reader lost the middle third of the only progress indicator
     // on the page. The nav publishes its own height, so this tracks it rather
     // than hard-coding the measurement.
+    //
+    // HALF the nav height, not all of it. The capsule is centred and floats,
+    // so it only covers the middle of this row; reserving its full height
+    // again below it left a band of dead space above the title with nothing in
+    // it. Half clears the rule while pulling the whole header up.
+    //
     // 24px below the rule before the rail begins, so the bar reads as the
     // section's own header rather than as the top edge of the first image.
-    padding-block: calc(var(--nav-bar-block-size) + #{$space-5}) $space-6;
+    padding-block: calc(var(--nav-bar-block-size) / 2 + #{$space-5}) $space-6;
+
+    // The gutter back. .pin now bleeds past body's padding so the dark ground
+    // can reach the viewport edge, and the title and its progress rule were
+    // carried out with it: the heading sat flush against the screen edge and
+    // the rule ran off both sides. The ground still bleeds; only the contents
+    // are inset again.
+    padding-inline: var(--page-gutter);
 
     @include bp-max($bp-lg) {
       // Below lg the nav is a bottom bar, so there is nothing to clear here.
