@@ -115,6 +115,32 @@ test("carries no placeholder marks and no em dashes", async ({ page }) => {
   expect(text).not.toMatch(/—/);
 });
 
+test("answers a handful of pricing questions in the FAQ accordion", async ({ page }) => {
+  const faqs = page.locator('section[aria-labelledby="pricing-faqs"]');
+  await expect(
+    faqs.getByRole("heading", { level: 2, name: "Questions about pricing" }),
+  ).toBeVisible();
+
+  const entries = faqs.locator("details");
+  expect(await entries.count()).toBeGreaterThanOrEqual(4);
+
+  const first = entries.first();
+  await expect(first).not.toHaveAttribute("open", "");
+  await first.locator("summary").click();
+  await expect(first).toHaveAttribute("open", "");
+});
+
+test("closes with a primary to the form and a secondary to the full FAQ", async ({ page }) => {
+  await expect(page.getByRole("link", { name: "Book a site visit" }).last()).toHaveAttribute(
+    "href",
+    "/contact",
+  );
+  await expect(page.getByRole("link", { name: "Read the full FAQ" })).toHaveAttribute(
+    "href",
+    "/faq",
+  );
+});
+
 test("passes axe with no violations", async ({ page }) => {
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);

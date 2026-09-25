@@ -124,6 +124,14 @@
   .section {
     interpolate-size: allow-keywords;
 
+    // Air between systems. Without it the last row of one section and the
+    // title of the next sat one rule apart and the eleven groups read as one
+    // long list. On the section rather than the rows, so a collapsed one
+    // still keeps its distance.
+    & + & {
+      margin-block-start: $space-10;
+    }
+
     &::details-content {
       block-size: 0;
       overflow-x: visible;

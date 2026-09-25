@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 
 import { ClosingCta } from "../../components/ClosingCta";
+import { FaqAccordion } from "../../components/Faq";
 import { PricingComparison } from "../../components/PricingComparison";
 import { PricingTiers } from "../../components/PricingTiers";
+import { PRICING_FAQS } from "../../content/pricing";
 import styles from "./page.module.scss";
 
 /**
@@ -53,11 +55,26 @@ export default function PricingPage() {
 
       <PricingComparison />
 
+      {/* The questions a number raises. Six, not the full FAQ: that page is
+          linked from the closing prompt for everything else. FaqAccordion is
+          the FAQ page's own component, so the two cannot drift in behaviour. */}
+      <section className={styles.faqs} aria-labelledby="pricing-faqs">
+        <h2 className={styles.faqsHeading} id="pricing-faqs">
+          Questions about pricing
+        </h2>
+        <div className={styles.faqsList}>
+          {PRICING_FAQS.map((entry) => (
+            <FaqAccordion key={entry.id} entry={entry} />
+          ))}
+        </div>
+      </section>
+
       <ClosingCta
         heading="Not sure which level?"
         body="Most people are between two. Tell us about the property and we will say which one fits, and why."
         href="/contact"
         label="Book a site visit"
+        secondary={{ href: "/faq", label: "Read the full FAQ" }}
       />
     </div>
   );

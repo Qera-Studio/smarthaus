@@ -1,4 +1,4 @@
-import { COMPARISON, PRICING_TIERS } from "../pricing";
+import { COMPARISON, PRICING_FAQS, PRICING_TIERS } from "../pricing";
 
 /**
  * The comparison is read POSITIONALLY: `values[2]` is the Connected column
@@ -21,6 +21,7 @@ function allCopy(): string[] {
       for (const value of row.values) if (typeof value === "string") out.push(value);
     }
   }
+  for (const faq of PRICING_FAQS) out.push(faq.question, ...faq.answer);
   return out;
 }
 
@@ -41,6 +42,29 @@ describe("pricing tiers", () => {
       expect(tier.price).toMatch(/^AED [\d,]+\+$/);
       expect(tier.includes.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("pricing faqs", () => {
+  it("has a handful of questions with unique ids and non-empty answers", () => {
+    expect(PRICING_FAQS.length).toBeGreaterThanOrEqual(4);
+    expect(PRICING_FAQS.length).toBeLessThanOrEqual(8);
+    const ids = PRICING_FAQS.map((f) => f.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const faq of PRICING_FAQS) {
+      expect(faq.question.trim()).not.toBe("");
+      expect(faq.answer.length).toBeGreaterThan(0);
+      expect(faq.answer.every((a) => a.trim() !== "")).toBe(true);
+    }
+  });
+
+  /**
+   * The one figure the FAQs quote also appears on the contact page. If either
+   * changes alone a visitor is told two different prices for the same visit.
+   */
+  it("quotes the site assessment fee the contact page prints", () => {
+    const visit = PRICING_FAQS.find((f) => f.id === "site-visit");
+    expect(visit?.answer.join(" ")).toContain("AED 1,500");
   });
 });
 

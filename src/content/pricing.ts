@@ -617,3 +617,60 @@ export const COMPARISON: readonly ComparisonSection[] = [
     ],
   },
 ];
+
+/**
+ * The questions people ask once they have seen a number.
+ *
+ * Short on purpose: the full FAQ page is the place for everything else, and
+ * the pricing page links there. The one figure quoted, the assessment fee,
+ * matches what the contact page prints; the two must move together. Same
+ * FaqEntry shape as faq.ts so FaqAccordion renders it unchanged.
+ */
+export const PRICING_FAQS: readonly {
+  id: string;
+  question: string;
+  answer: readonly string[];
+}[] = [
+  {
+    id: "why-plus",
+    question: "Why does every price end in a plus?",
+    answer: [
+      "Because the number is where a quote starts, not where it lands. Every system is priced against your own drawings after a site visit, and the figure on the card is the least a home in that tier has cost. A three-bedroom apartment and a six-bedroom villa can both be Connected and will not pay the same.",
+    ],
+  },
+  {
+    id: "what-moves-the-price",
+    question: "What decides where in a tier a home lands?",
+    answer: [
+      "Three things, in order: how many rooms and circuits are in scope, what cabling is already in the walls, and which devices you choose within the tier. A house that is being renovated is usually cheaper to do well than a finished one, because the cabling can go in while the walls are open.",
+    ],
+  },
+  {
+    id: "site-visit",
+    question: "Is the site visit included?",
+    answer: [
+      "The assessment is a paid visit, AED 1,500, credited in full against any installation you go ahead with. You get a fixed, itemised proposal within 48 hours of it. If you decide not to proceed you keep the report and owe nothing further.",
+    ],
+  },
+  {
+    id: "start-small",
+    question: "Can I start with Essential and move up later?",
+    answer: [
+      "Yes. The four tiers are one platform with more on it, not four products, so what you install first is kept when you add to it. Most people who start small do it room by room, and the cabling we run in the first phase is sized for where the house is going rather than for where it starts.",
+    ],
+  },
+  {
+    id: "what-is-included",
+    question: "Does the price include the devices?",
+    answer: [
+      "It includes the devices, the installation, the commissioning and the training. It does not include civil works, major electrical rewiring, or decorative fittings such as curtain fabric and architectural light fixtures, unless the proposal names them. Where your project needs those we will say so before you commit, and we will not bury them in a later invoice.",
+    ],
+  },
+  {
+    id: "after-handover",
+    question: "What does support cost after handover?",
+    answer: [
+      "Ongoing care is a separate annual package, chosen after the installation rather than bundled into it, so a one-room system is not paying for a villa's cover. The two packages and what each promises are on the homepage.",
+    ],
+  },
+];

@@ -172,8 +172,14 @@
   // h4 rather than h3 on the fluid scale: at roughly 300px of column the h3
   // set "AED 99,999+" close enough to the card edge to look cramped.
   .tierPrice {
-    align-self: end;
     margin-block-start: $space-3;
+    // Bottom of its subgrid row, so the four prices share a baseline however
+    // long the description above each one runs. Scoped to the grid: below md
+    // the card is a flex column, where `align-self: end` means the inline end
+    // and pushed the price to the right edge of the card.
+    @include bp-md {
+      align-self: end;
+    }
     font-size: var(--type-h4);
     font-weight: $font-weight-semibold;
     line-height: $line-height-snug;

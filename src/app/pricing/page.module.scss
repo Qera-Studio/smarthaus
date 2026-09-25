@@ -36,4 +36,25 @@
     color: var(--color-text-secondary);
     text-wrap: pretty;
   }
+
+  // --- Pricing FAQs -----------------------------------------------------------
+  // The FAQ page's own accordion, on a prose measure rather than the full
+  // width the comparison takes: six questions do not want to be 1440px wide.
+  .faqs {
+    max-inline-size: 72ch;
+    margin-block-start: clamp(#{$space-16}, 8vw, #{$space-24});
+  }
+
+  .faqsHeading {
+    font-size: var(--type-h2);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+  }
+
+  .faqsList {
+    margin-block-start: $space-6;
+  }
 }
