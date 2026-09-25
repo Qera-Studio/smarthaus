@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import { ClosingCta } from "../../components/ClosingCta";
-import { FaqAccordion } from "../../components/Faq";
 import { PricingComparison } from "../../components/PricingComparison";
 import { PricingTiers } from "../../components/PricingTiers";
 import { PRICING_FAQS } from "../../content/pricing";
@@ -56,15 +55,29 @@ export default function PricingPage() {
       <PricingComparison />
 
       {/* The questions a number raises. Six, not the full FAQ: that page is
-          linked from the closing prompt for everything else. FaqAccordion is
-          the FAQ page's own component, so the two cannot drift in behaviour. */}
-      <section className={styles.faqs} aria-labelledby="pricing-faqs">
-        <h2 className={styles.faqsHeading} id="pricing-faqs">
-          Questions about pricing
+          linked from the closing prompt for everything else. The block is the
+          contact page's FAQ section, markup and styles copied, with only the
+          content swapped. */}
+      <section className={styles.section} aria-labelledby="pricing-faqs">
+        <h2 className={styles.sectionTitle} id="pricing-faqs">
+          Frequently Asked Questions
         </h2>
-        <div className={styles.faqsList}>
-          {PRICING_FAQS.map((entry) => (
-            <FaqAccordion key={entry.id} entry={entry} />
+        <div className={styles.faqs}>
+          {PRICING_FAQS.map(({ id, question, answer }) => (
+            // Native details/summary: keyboard operable and open without JS for
+            // free, and it costs no client component. `name` makes them an
+            // exclusive accordion, which browsers implement natively.
+            <details key={id} className={styles.faq} name="pricing-faq">
+              <summary className={styles.faqQuestion}>
+                <span>{question}</span>
+                <Chevron />
+              </summary>
+              {answer.map((paragraph) => (
+                <p key={paragraph} className={styles.faqAnswer}>
+                  {paragraph}
+                </p>
+              ))}
+            </details>
           ))}
         </div>
       </section>
@@ -77,5 +90,23 @@ export default function PricingPage() {
         secondary={{ href: "/faq", label: "Read the full FAQ" }}
       />
     </div>
+  );
+}
+
+function Chevron() {
+  return (
+    <svg
+      className={styles.faqChevron}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
   );
 }

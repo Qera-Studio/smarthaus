@@ -118,7 +118,7 @@ test("carries no placeholder marks and no em dashes", async ({ page }) => {
 test("answers a handful of pricing questions in the FAQ accordion", async ({ page }) => {
   const faqs = page.locator('section[aria-labelledby="pricing-faqs"]');
   await expect(
-    faqs.getByRole("heading", { level: 2, name: "Questions about pricing" }),
+    faqs.getByRole("heading", { level: 2, name: "Frequently Asked Questions" }),
   ).toBeVisible();
 
   const entries = faqs.locator("details");
