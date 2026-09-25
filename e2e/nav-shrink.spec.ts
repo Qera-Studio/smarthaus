@@ -102,12 +102,16 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
   // each side. The widths it is built from are measurements of the real
   // artwork and copy (see --nav-stuck-size), so this is what catches them
   // drifting — as a gap beside the mark, or the CTA poking out.
+  //
+  // 708 = 2 * (129 + 24 + 8 + 1) + 384, the five-link row. It was 639 with
+  // four links; a change to NAV_LINKS moves this number and the 384px in
+  // Nav.module.scss together.
   const settled = shrink.at(-1)!;
   expect(settled.stuck, "settled in the capsule").toBe(true);
   const width = await page.evaluate(
     () => document.querySelector("header")!.getBoundingClientRect().width,
   );
-  expect(Math.round(width)).toBe(639);
+  expect(Math.round(width)).toBe(708);
   expect(Math.round(settled.leftGap)).toBe(77);
   expect(Math.round(settled.rightGap)).toBe(77);
 

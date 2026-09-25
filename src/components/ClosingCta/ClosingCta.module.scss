@@ -42,6 +42,10 @@
   // third copy of it should become one, and the pricing section was the third.
   // What is left here is placement only.
   .ctaRow {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $space-3;
     margin-block-start: clamp(#{$space-8}, 4vw, #{$space-12});
   }
 }

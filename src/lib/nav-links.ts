@@ -2,14 +2,14 @@
  * Shared link registry.
  *
  * Most of these routes do not exist yet and 404 until each page lands. That is
- * deliberate, and matches the choice already documented in Nav.tsx: the site
- * ships its real information architecture rather than a stub, and the dev
- * overlay surfaces each missing route as a reminder to build it.
+ * deliberate: the site ships its real information architecture rather than a
+ * stub, and the dev overlay surfaces each missing route as a reminder to build
+ * it. e2e/coming-soon.spec.ts guards the other direction, failing if a link is
+ * added here without a page or a placeholder behind it.
  *
- * Nav.tsx keeps its own local copy of the page links for now — it is being
- * edited on feature/navbar and must not be touched from here. It adopts this
- * module in a follow-up once that branch merges, at which point this file
- * becomes the single source and the two cannot drift.
+ * Nav.tsx reads NAV_LINKS from here. It kept a local copy while the navbar was
+ * being built on its own branch; that branch has merged and the copy is gone,
+ * so this file is the single source and the nav and footer cannot drift.
  */
 
 import { PREFERENCES_ROUTE } from "./consent";
@@ -19,9 +19,25 @@ export type NavLink = {
   readonly label: string;
 };
 
+/**
+ * The primary nav, in its own order. Pricing sits second: after what we
+ * install, the next question a visitor has is what it costs.
+ *
+ * Nav.module.scss measures this row by hand for the scrolled capsule (see
+ * --nav-links-half there). Adding or renaming a link means re-measuring.
+ */
+export const NAV_LINKS: readonly NavLink[] = [
+  { href: "/solutions", label: "Solutions" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/designers", label: "Designers" },
+  { href: "/developers", label: "Developers" },
+  { href: "/about", label: "About" },
+] as const;
+
 /** Primary pages. Order follows the footer design, not the nav's. */
 export const PAGE_LINKS: readonly NavLink[] = [
   { href: "/solutions", label: "Solutions" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
   { href: "/designers", label: "Designers" },
   { href: "/developers", label: "Developers" },

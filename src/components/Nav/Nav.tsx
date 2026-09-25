@@ -1,17 +1,9 @@
 import Link from "next/link";
+import { NAV_LINKS } from "../../lib/nav-links";
 import { Logo } from "../Logo";
 import { RollingText } from "../RollingText";
 import { NavShell } from "./NavShell";
 import styles from "./Nav.module.scss";
-
-// These routes do not exist yet — they 404 until each page lands. Kept here so
-// the nav ships with its real information architecture rather than a stub.
-const LINKS = [
-  { href: "/solutions", label: "Solutions" },
-  { href: "/designers", label: "Designers" },
-  { href: "/developers", label: "Developers" },
-  { href: "/about", label: "About" },
-] as const;
 
 /**
  * Server Component. Renders every visible piece and hands them to NavShell,
@@ -33,7 +25,7 @@ export function Nav() {
       }
       links={
         <ul className={styles.list}>
-          {LINKS.map(({ href, label }, index) => (
+          {NAV_LINKS.map(({ href, label }, index) => (
             <li
               key={href}
               className={styles.item}
