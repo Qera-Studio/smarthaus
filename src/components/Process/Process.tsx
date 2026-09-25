@@ -25,10 +25,10 @@ import styles from "./Process.module.scss";
  * ## The portal
  *
  * The section opens with a zoom reveal: the pinned stage starts as a small
- * square near the bottom of the viewport and grows to fill it, rising as it
- * grows, and only then does the track start sliding. Both phases run on the
- * SAME timeline, split at `--process-portal-end`. The rise is not animated
- * separately — it falls out of scaling about a low `transform-origin`.
+ * square near the top of the viewport and grows downward to fill it, and only
+ * then does the track start sliding. Both phases run on the SAME timeline,
+ * split at `--process-portal-end`. The direction is not animated separately —
+ * it falls out of scaling about a high `transform-origin`.
  *
  * Scroll drives only the first half of the zoom. Past that point ProcessHandoff
  * flips an attribute and a transition finishes the grow on its own, and runs it
