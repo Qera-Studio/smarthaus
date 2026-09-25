@@ -103,6 +103,36 @@ test("pins the feature column while the tier columns scroll", async ({ page }) =
   expect(after - regionLeft).toBeLessThan(2);
 });
 
+/**
+ * The header row holds still against the viewport once the table is scrolled
+ * past, under the nav capsule at desktop and at the top edge where the nav is
+ * at the bottom. Desktop and tablet only: below md the region is a horizontal
+ * scroll container, and nothing inside one can pin to the page.
+ */
+test("freezes the header row under the nav while the table scrolls", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "Desktop Chrome", "the region scrolls sideways on phones");
+
+  const head = comparison(page).locator("[aria-hidden='true']").first();
+  const midTable = await comparison(page)
+    .locator("details:not(details details)")
+    .nth(3)
+    .evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+  await page.evaluate((y) => window.scrollTo(0, y), midTable);
+
+  // The painted box starts at the viewport's top edge, so nothing scrolling
+  // past shows between the capsule and the row; the text sits below the
+  // capsule. 76 = --nav-float-inset + --nav-bar-block-size.
+  const box = (await head.boundingBox())!;
+  expect(Math.round(box.y)).toBe(0);
+  const textTop = await head.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return el.getBoundingClientRect().top + parseFloat(s.paddingTop);
+  });
+  const nav = (await page.getByRole("banner").boundingBox())!;
+  expect(textTop).toBeGreaterThanOrEqual(nav.y + nav.height);
+  expect(Math.round(textTop)).toBe(76 + 12);
+});
+
 test("tells crawlers to wait while the figures are unconfirmed", async ({ page }) => {
   const robots = page.locator('meta[name="robots"]');
   await expect(robots).toHaveAttribute("content", /noindex/);

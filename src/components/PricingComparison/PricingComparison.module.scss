@@ -11,12 +11,25 @@
     --compare-col-feature: 200px;
     --compare-col-tier: 112px;
     --compare-chevron: 1em;
+    // The band the header row must keep clear when stuck, from lg where the
+    // nav capsule is sticky at the top. Its stuck bottom edge measures 67px;
+    // the two global tokens sum to 76px, erring high for the same reason
+    // --nav-bar-block-size does. 0 below lg, where the nav is at the bottom.
+    --compare-nav-clearance: 0px;
 
     margin-block-start: clamp(#{$space-16}, 8vw, #{$space-24});
+
+    @include bp-lg {
+      --compare-nav-clearance: calc(var(--nav-float-inset) + var(--nav-bar-block-size));
+    }
   }
 
   .heading {
-    margin-block-end: $space-8;
+    // The head's box reaches up into this margin by the clearance (see .head),
+    // so the margin must be at least that or the box paints over the heading.
+    // max, not a sum: the clearance is the whole gap where it applies, which
+    // keeps the heading close to the table rather than a capsule's height off.
+    margin-block-end: max(#{$space-8}, var(--compare-nav-clearance));
     font-size: var(--type-h2);
     font-weight: $font-weight-bold;
     line-height: $line-height-tight;
@@ -44,6 +57,17 @@
     overscroll-behavior-x: contain;
 
     @include focus-ring($offset: 3px);
+
+    // From md the row fits, so the region stops being a scroll container.
+    // That is what lets the header row below stick to the VIEWPORT: a sticky
+    // element pins to its nearest scrolling ancestor, and `overflow-x: auto`
+    // makes this box one on both axes, so the head was pinning to a box as
+    // tall as the table and never held still. Below md the region has to
+    // scroll sideways, and there is no CSS that pins to the page through a
+    // scroll container, so the header scrolls with the table there.
+    @include bp-md {
+      overflow-x: visible;
+    }
   }
 
   // --- One grid for every row -------------------------------------------------
@@ -95,7 +119,13 @@
     position: sticky;
     inset-block-start: 0;
     z-index: 2;
-    padding-block: $space-3;
+    // Stuck, the row sits under the nav capsule, and the rows scrolling past
+    // must not show in the band between the two. So the head's PAINTED box
+    // starts at the viewport's top edge: the clearance is extra top padding,
+    // and the negative margin gives it back so nothing moves in flow (the
+    // heading above reserved it). An inset of 76px alone left the band open.
+    margin-block-start: calc(-1 * var(--compare-nav-clearance));
+    padding-block: calc(#{$space-3} + var(--compare-nav-clearance)) $space-3;
     background-color: var(--color-bg-canvas);
     border-block-end-style: solid;
     border-block-end-width: 1px;
