@@ -85,6 +85,12 @@
     // overflow their slot on a wide screen and every page after the first would
     // land short of where it should.
     --process-travel: calc(100% * (var(--process-pages) - 1) / var(--process-pages));
+    // A little past the last page. At exactly (pages - 1) / pages the rail
+    // stopped with the last page's image a hair short of its slot and the pin
+    // let go the same instant, which read as the rail quitting early. The
+    // overrun keeps it moving past full for this much; the ground shows on
+    // the right for that last stretch, on the client's call.
+    --process-overrun: 8vw;
     // --process-portal-ratio, --process-rail-ratio, --process-portal-stages and
     // --process-portal-end are declared on <main>, not here: the hero is a
     // SIBLING of this section and needs them too. See that rule for why.
@@ -989,7 +995,7 @@
 
   @keyframes process-slide {
     to {
-      translate: calc(-1 * var(--process-travel)) 0;
+      translate: calc(-1 * var(--process-travel) - var(--process-overrun)) 0;
     }
   }
 
@@ -1140,7 +1146,8 @@
       // calc() cannot multiply a percentage by a unitless var here, so the
       // progress scales the page count instead and the percentage stays whole.
       translate: calc(
-          -100% * var(--process-rail-progress) * (var(--process-pages) - 1) / var(--process-pages)
+          -100% * var(--process-rail-progress) * (var(--process-pages) - 1) /
+            var(--process-pages) - var(--process-overrun) * var(--process-rail-progress)
         )
         0;
     }

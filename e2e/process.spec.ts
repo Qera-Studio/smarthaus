@@ -138,12 +138,15 @@ test("reaches the last page by the end of the pin window", async ({ page }) => {
   await page.evaluate(({ top, height }) => window.scrollTo(0, top + height), box);
   await page.waitForTimeout(400);
 
-  // Six pages, so the track travels five of them: -83.33% of its own width.
-  // Asserted as a range rather than a string because the browser rounds.
-  const percent = await rail(page)
+  // Six pages, so the track travels five of them and a little more: the
+  // computed translate is a calc() of a percentage and the overrun, so the
+  // RENDERED offset is read rather than the string parsed.
+  const offset = await rail(page)
     .locator("ol")
-    .evaluate((el) => parseFloat(getComputedStyle(el).translate));
-  expect(percent).toBeLessThan(0);
+    .evaluate(
+      (el) => el.getBoundingClientRect().left - el.parentElement!.getBoundingClientRect().left,
+    );
+  expect(offset).toBeLessThan(0);
 });
 
 /**
@@ -283,15 +286,18 @@ test.describe("the portal", () => {
     expect(scale).toBeGreaterThan(0.1);
     expect(scale).toBeLessThan(1);
 
-    // parseFloat("0%") is 0, and so is parseFloat("none") via the || 0 below.
-    const during = await track.evaluate((el) => parseFloat(getComputedStyle(el).translate) || 0);
-    expect(during).toBe(0);
+    // The rendered offset of the track in its viewport, not the computed
+    // translate: that is a calc() of a percentage and the overrun.
+    const offsetOf = () =>
+      track.evaluate(
+        (el) => el.getBoundingClientRect().left - el.parentElement!.getBoundingClientRect().left,
+      );
+    expect(Math.abs(await offsetOf())).toBeLessThan(1);
 
     // Past the boundary the rail is moving and the portal is done.
     await at(page, 0.5);
     await expect.poll(() => scaleOf(page)).toBeGreaterThan(0.99);
-    const after = await track.evaluate((el) => parseFloat(getComputedStyle(el).translate) || 0);
-    expect(after).toBeLessThan(0);
+    expect(await offsetOf()).toBeLessThan(0);
   });
 
   test("finishes growing on its own past the handoff, and shrinks back above it", async ({
