@@ -14,7 +14,9 @@
     // The dot's own ink, so the frame reads as the cursor changing shape.
     border-style: solid;
     border-width: 1px;
-    border-color: var(--color-text-primary);
+    // Mid-tone, not the ink. Drawn in brown-900 the frame read as a black
+    // outline around the button, heavier than the dot it grows out of.
+    border-color: var(--color-text-muted);
     opacity: 0;
 
     transition-property: translate, inline-size, block-size, border-radius, opacity;
@@ -27,7 +29,7 @@
 
     // Inverts on dark grounds, same as the dot in globals.scss.
     &[data-ground="dark"] {
-      border-color: var(--color-text-inverse);
+      border-color: color-mix(in srgb, var(--color-text-inverse) 60%, transparent);
     }
 
     // Set for one frame on entry, to jump to the dot before growing out of it.
