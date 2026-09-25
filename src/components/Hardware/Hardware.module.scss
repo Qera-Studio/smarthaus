@@ -98,12 +98,12 @@
   // without this the pause glyph sat there while nothing advanced and gave
   // the reader no reason why. Same two conditions as the timer.
   .glyphPlay,
-  .stageRoot:focus-within .glyphPause,
+  .stageRoot:has(.tabs :focus-visible) .glyphPause,
   .pause[aria-pressed="true"] .glyphPause {
     display: none;
   }
 
-  .stageRoot:focus-within .glyphPlay,
+  .stageRoot:has(.tabs :focus-visible) .glyphPlay,
   .pause[aria-pressed="true"] .glyphPlay {
     display: block;
   }
@@ -129,11 +129,18 @@
     }
   }
 
-  // Focus pauses without a render, so a keyboard reader arrowing through the
-  // tabs is not raced by the timer. No hover pause: it was here and was
-  // removed at the client's request, so a pointer resting on the section
-  // leaves the carousel running.
-  .stageRoot:focus-within .progress {
+  // Keyboard focus on a tab pauses without a render, so a reader arrowing
+  // through the tabs is not raced by the timer.
+  //
+  // :focus-visible inside .tabs, not :focus-within on the section. A click
+  // leaves focus on the button it hit, and the wider rule kept the carousel
+  // held after that click until the reader clicked somewhere else: the pause
+  // button's second press looked as if it did nothing. A mouse click does
+  // not set :focus-visible, so this fires only for the keyboard, and only
+  // for the tabs, so the pause button is never in its own way.
+  //
+  // No hover pause: it was here and was removed at the client's request.
+  .stageRoot:has(.tabs :focus-visible) .progress {
     animation-play-state: paused;
   }
 

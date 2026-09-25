@@ -48,16 +48,18 @@ test("arrow keys, Home and End move the selection", async ({ page }) => {
   await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
 });
 
-test("the pause button stops the timer", async ({ page }) => {
+test("the pause button stops the timer, and a second click restarts it", async ({ page }) => {
   const s = section(page);
   const pause = s.getByRole("button", { name: "Pause automatic advance" });
   await pause.click();
   await expect(pause).toHaveAttribute("aria-pressed", "true");
-  // Clicking focused the button, and focus also pauses. Blur so the toggle is
-  // the only thing holding it.
-  await pause.blur();
   await page.waitForTimeout(6000);
   await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
+  // Focus is still on the button after the click. That must not hold it.
+  await pause.click();
+  await expect(pause).toHaveAttribute("aria-pressed", "false");
+  await expect(pause.locator("svg").nth(0)).toBeVisible();
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible({ timeout: 8000 });
 });
 
 test("the timer runs under a resting pointer and advances on its own", async ({ page }) => {
@@ -69,7 +71,12 @@ test("the timer runs under a resting pointer and advances on its own", async ({ 
 test("focus inside the bar pauses it and shows the play glyph", async ({ page }) => {
   const s = section(page);
   const pause = s.getByRole("button", { name: "Pause automatic advance" });
+  // Keyboard focus, so :focus-visible is set; locator.focus() alone is not
+  // enough for Chromium to treat it as keyboard-originated.
+  await page.keyboard.press("Tab");
   await s.getByRole("tab", { name: "Cameras" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowLeft");
   await expect(pause.locator("svg").nth(0)).toBeHidden();
   await expect(pause.locator("svg").nth(1)).toBeVisible();
   await page.waitForTimeout(6000);
