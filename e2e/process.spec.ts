@@ -50,26 +50,45 @@ test("exposes the rail as a focusable, labelled scroll region", async ({ page })
   await expect(region).toHaveAttribute("aria-label", /process/i);
 });
 
-test("insets every page by 64px, except the two outer edges", async ({ page }) => {
+test("insets every page, and never lets the copy reach the screen edge", async ({ page }) => {
   // This regressed twice. The inset is spread across a base rule plus several
   // per-layout overrides, so a layout that sets its own padding silently drops
   // it and nothing else notices. Asserted on the COMPUTED value of every page
   // rather than on the stylesheet, which is the only way to catch an override.
+  //
+  // The 64px figure is DESKTOP only. Below lg it is the page gutter: two 64px
+  // insets on a 390px screen left the body text 47px wide, a word or two per
+  // line. So the assertion is expressed as "at least a gutter, and the outer
+  // edges are flush only where flush means the section rather than the screen".
+  const wide = page.viewportSize()!.width >= 1024;
   const padding = await rail(page)
     .locator("li")
     .evaluateAll((pages) =>
       pages.map((el) => {
         const styles = getComputedStyle(el);
-        return { start: styles.paddingInlineStart, end: styles.paddingInlineEnd };
+        return {
+          start: parseFloat(styles.paddingInlineStart),
+          end: parseFloat(styles.paddingInlineEnd),
+        };
       }),
     );
 
   expect(padding).toHaveLength(6);
   padding.forEach(({ start, end }, index) => {
-    // The rail starts and ends flush with the section, so the first page has no
-    // leading inset and the last no trailing one.
-    expect(start).toBe(index === 0 ? "0px" : "64px");
-    expect(end).toBe(index === padding.length - 1 ? "0px" : "64px");
+    const first = index === 0;
+    const last = index === padding.length - 1;
+
+    if (wide) {
+      // Flush with the section at the two outer edges, 64px everywhere else.
+      expect(start).toBe(first ? 0 : 64);
+      expect(end).toBe(last ? 0 : 64);
+      return;
+    }
+
+    // Below lg the pin is full-bleed, so every edge including the outer two
+    // must keep a gutter or the copy runs into the screen edge.
+    expect(start, `page ${index} leading inset`).toBeGreaterThanOrEqual(16);
+    expect(end, `page ${index} trailing inset`).toBeGreaterThanOrEqual(16);
   });
 });
 
@@ -154,32 +173,66 @@ test.describe("the portal", () => {
   const portal = (page: import("@playwright/test").Page) =>
     rail(page).locator("[class*='portal']").first();
 
+  // The BLOCK axis of the scale, which is the one the zoom animates at every
+  // width. `scale` computes to "x y", and below lg the x is pinned at 1 so the
+  // slab rises as a full-width band: parseFloat on the whole string reads the x
+  // and reported 1 throughout, which made the zoom look like it never ran.
   const scaleOf = (page: import("@playwright/test").Page) =>
-    portal(page).evaluate((el) => parseFloat(getComputedStyle(el).scale) || 1);
+    portal(page).evaluate((el) => {
+      const parts = getComputedStyle(el).scale.split(/\s+/).map(parseFloat);
+      if (parts.length === 0 || Number.isNaN(parts[0])) return 1;
+      // One value means both axes share it; two means x then y.
+      return parts.length > 1 ? parts[1] : parts[0];
+    });
 
-  test("starts small and high, then grows down to fill the stage", async ({ page }) => {
+  test("rises out of the bottom edge and grows upward to fill the stage", async ({ page }) => {
     await at(page, 0);
 
     // Small: a tenth of the stage, so it reads as an object rather than as a
     // page that happens to be slightly inset.
     expect(await scaleOf(page)).toBeLessThan(0.2);
 
-    // And HIGH. The square sits in the top portion of the viewport so it is
-    // visible the moment the section is, and the growth opens downward into
-    // the space the reader is still revealing. Anchored low it arrived at the
-    // bottom edge, which meant scrolling past most of an empty screen first.
+    // Its BOTTOM is welded to the bottom of the stage and its top climbs, so
+    // the slab appears to rise out of the screen edge rather than to sit in a
+    // reserved box. That is what the overlay buys: the space it has not
+    // covered yet belongs to the section above, so there is no empty stage to
+    // sit in.
     //
     // Asserted against the viewport's midpoint rather than an exact offset, so
     // the anchor token can be retuned without rewriting the test.
-    const { top, height } = await portal(page).evaluate((el) => {
+    const small = await portal(page).evaluate((el) => {
       const r = el.getBoundingClientRect();
-      return { top: r.top, height: window.innerHeight };
+      return { top: r.top, bottom: r.bottom, height: window.innerHeight };
     });
-    expect(top).toBeLessThan(height / 2);
+    expect(small.top).toBeGreaterThan(small.height / 2);
+    expect(small.bottom).toBeGreaterThan(small.height - 8);
 
-    // By the end of the portal's slice it fills the stage.
+    // By the end of the portal's slice it fills the stage, having grown upward
+    // while its bottom stayed put.
     await at(page, 0.25);
     expect(await scaleOf(page)).toBeGreaterThan(0.99);
+    const grown = await portal(page).evaluate((el) => el.getBoundingClientRect().top);
+    expect(grown).toBeLessThan(small.top);
+  });
+
+  test("holds the section above still while the slab climbs over it", async ({ page }) => {
+    // The overlay only reads as covering if the thing being covered stays put.
+    // Without the sticky rule the hero slides up behind the rising slab, two
+    // things move at once, and it looks like the slab is merely scrolling into
+    // view. Measured before the fix: the hero ran from y-293 to y-844 across
+    // the zoom.
+    const previous = page.locator("[data-process]").locator("xpath=preceding-sibling::*[1]");
+
+    await at(page, 0);
+    const start = await previous.evaluate((el) => el.getBoundingClientRect().top);
+
+    await at(page, 0.08);
+    const during = await previous.evaluate((el) => el.getBoundingClientRect().top);
+
+    expect(
+      Math.abs(during - start),
+      "the section above should not move during the zoom",
+    ).toBeLessThan(4);
   });
 
   test("holds the rail still until the portal has finished growing", async ({ page }) => {
@@ -269,8 +322,22 @@ test.describe("the portal", () => {
     // wrong origin, or a stage wider than its container, would push the
     // document width out. The pin clips it; this asserts the clip holds
     // throughout the grow rather than only at the two ends.
+    //
+    // Measured once and stepped in a single evaluate rather than through at(),
+    // which re-measures the section and settles for 300ms on every call. Five
+    // of those ran to 13.5s against a 30s limit and timed out under load.
+    const box = await rail(page).evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      return { top: rect.top + window.scrollY, height: rect.height };
+    });
+
     for (const f of [0, 0.05, 0.1, 0.16, 0.25]) {
-      await at(page, f);
+      await page.evaluate(
+        ({ top, height, f }) => window.scrollTo(0, top + (height - window.innerHeight) * f),
+        { ...box, f },
+      );
+      // One frame is enough: the assertion reads layout, not an animated value.
+      await page.evaluate(() => new Promise(requestAnimationFrame));
       const overflows = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
       );
