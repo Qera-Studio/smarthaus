@@ -1,0 +1,278 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  // The one section that DOES set padding-inline, and the reason is the ground.
+  //
+  // Elsewhere body's own gutter is the only one needed, and it resolves to 0
+  // above the 1440px cap because the auto margin has taken over. That is right
+  // when the page ground runs edge to edge: content stops at the cap and the
+  // canvas continues past it. Here the section paints its own dark ground to
+  // the viewport edge, so content sitting flush against the cap reads as cards
+  // clipped by the screen rather than as a margin.
+  //
+  // A fixed inline padding rather than body's max()/min() expression: this one
+  // must NOT collapse to zero at any width, which is exactly what that
+  // expression is designed to do.
+  .pricing {
+    position: relative;
+    padding-block: clamp(#{$space-20}, 10vw, #{$space-32});
+    padding-inline: var(--content-gutter);
+
+    // --- Full-bleed ground ----------------------------------------------------
+    // body is capped at --content-max with margin-inline: auto, so a background
+    // on this element would stop at the cap and leave bare canvas either side.
+    //
+    // The footer's technique, not the Process rail's negative page-gutter
+    // margins: this section has no clip to preserve, and a pseudo-element keeps
+    // the ground out of layout entirely, so nothing here can be pushed sideways
+    // by it. `inset-inline: calc(50% - 50vw)` resolves against this box, which
+    // is centred, so it reaches both viewport edges at any width. The overhang
+    // cannot become a scrollbar: html carries `overflow-x: clip`.
+    //
+    // z-index: -1 puts it behind the content but still inside this stacking
+    // context, so it cannot slide under the page's own ground.
+    &::before {
+      content: "";
+      position: absolute;
+      inset-block: 0;
+      inset-inline: calc(50% - 50vw);
+      z-index: -1;
+      background-color: var(--color-bg-inverse-strong);
+    }
+  }
+
+  // --- Intro ------------------------------------------------------------------
+
+  .intro {
+    margin-inline: auto;
+    max-inline-size: 80ch;
+    margin-block-end: clamp(#{$space-12}, 8vw, #{$space-20});
+    text-align: center;
+  }
+
+  .heading {
+    font-size: var(--type-h2);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-inverse);
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    max-inline-size: 62ch;
+    margin-inline: auto;
+    margin-block-start: $space-4;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-snug;
+    // brown-200 rather than brown-100 at an opacity: a real token holds its
+    // contrast against brown-950 (well past 4.5:1) where a faded one drifts.
+    color: var(--color-bg-muted);
+    text-wrap: pretty;
+  }
+
+  // --- The four cards ---------------------------------------------------------
+
+  // Care's row puts an aspect-ratio on the grid so two panels share one box.
+  // That is wrong here: four tiers carry lists of different lengths, and a
+  // fixed box would either clip the longest or pad the shortest. `1fr` rows
+  // with `stretch` gives equal heights driven by the tallest card instead.
+  //
+  // Four columns wait for xl (1280px), not lg: at 1024px four cards of this
+  // content are too narrow for the feature lines to sit on one line each.
+  // Seven rows, one per child of a card: step, name, description, price,
+  // button, list label, list. The cards subgrid onto these, so each of those
+  // parts lands on one line across all four however long a description runs.
+  //
+  // The last row is `1fr` and takes all the slack, which is what gives the
+  // cards equal height without clipping the shorter ones: a short list leaves
+  // space beneath it rather than shrinking its card.
+  //
+  // Below md the cards stack and each is its own auto-sized column instead, so
+  // no row list is declared there.
+  .tiers {
+    display: grid;
+    gap: $space-4;
+    list-style: none;
+    min-inline-size: 0;
+
+    // Two columns means two bands of seven rows.
+    @include bp-md {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(2, auto auto auto auto auto auto 1fr);
+    }
+
+    @include bp-xl {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-rows: auto auto auto auto auto auto 1fr;
+    }
+  }
+
+  // `subgrid` so every card's rows are the SAME rows: the step, name,
+  // description, price, button and list each land on one line across all four
+  // cards however long an individual description runs. As independent flex
+  // columns the four buttons sat at four different heights, which is the thing
+  // that most made the set read as four cards rather than one comparison.
+  //
+  // The row count here must match the children in Pricing.tsx. The last row is
+  // the list and takes the slack, so a short list leaves space beneath it
+  // rather than shrinking its card.
+  .tier {
+    position: relative;
+    // Stacked, below md: a plain column sized by its own content.
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+    padding: $space-6;
+    min-inline-size: 0;
+
+    // Declared on every card even though only the dark one draws it, so all
+    // four keep identical dimensions. A border on one card alone would make it
+    // 2px taller than its neighbours.
+    border-style: solid;
+    border-width: 1px;
+    border-color: transparent;
+
+    // Side by side: adopt the parent's seven rows so the price and the button
+    // line up across every card. The span must match the child count in
+    // Pricing.tsx — too few and the card's last children share one row.
+    @include bp-md {
+      display: grid;
+      grid-row: span 7;
+      grid-template-rows: subgrid;
+    }
+
+    // One ramp above the ground. brown-200 against the brown-950 section is the
+    // lift; the dark card below sits at brown-900, one step up rather than two.
+    &[data-tone="sand"] {
+      background-color: var(--color-bg-muted);
+      color: var(--color-text-primary);
+    }
+
+    // The rendered swirl. A CSS background rather than next/image: it carries
+    // no information, so it needs no alt and must not be in the a11y tree, and
+    // an <img> here would need absolute positioning under the content anyway.
+    //
+    // The scrim is not optional. The PNG is light but it varies across the
+    // card, and body text at 4.5:1 is an Accessibility System [Floor]. A flat
+    // bone wash at 62% holds the ink legible over the darkest part of the swirl
+    // while the pattern still reads through it.
+    &[data-tone="image"] {
+      background-color: var(--color-bg-surface);
+      background-image: url("/hero/pricing/connectedPricingBg.png");
+      background-position: center;
+      background-size: cover;
+      color: var(--color-text-primary);
+
+      &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background-color: color-mix(in srgb, #{$brown-50} 62%, transparent);
+      }
+
+      // Lifts the content over the scrim. The scrim is inside the card, so
+      // without this the text paints under it.
+      > * {
+        position: relative;
+        z-index: 1;
+      }
+    }
+
+    // brown-900 on the section's brown-950 is one step of the ramp and reads as
+    // no card at all. A hairline in brown-800 gives the edge the fill cannot:
+    // the top tier should look like a distinct object, not like a hole in the
+    // section.
+    &[data-tone="dark"] {
+      background-color: var(--color-bg-inverse);
+      border-color: #{$brown-800};
+      color: var(--color-text-inverse);
+    }
+  }
+
+  .step {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    color: inherit;
+    opacity: 0.5;
+  }
+
+  .tierName {
+    font-size: var(--font-size-md);
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-snug;
+    color: inherit;
+  }
+
+  .tierDescription {
+    // 70% of the card's own ink, so one rule covers all three tones. Checked
+    // against each: brown-900 at 70% over brown-200 and over the scrimmed
+    // image, brown-100 at 70% over brown-900. All clear 4.5:1.
+    max-inline-size: 34ch;
+    font-size: var(--font-size-sm);
+    line-height: $line-height-snug;
+    color: inherit;
+    opacity: 0.7;
+    text-wrap: pretty;
+  }
+
+  // The largest element on the card. Aligned to the bottom of its row so the
+  // four prices sit on one baseline even where a description above ran short.
+  .tierPrice {
+    align-self: end;
+    margin-block-start: $space-2;
+    font-size: var(--type-h3);
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    color: inherit;
+  }
+
+  // A block rather than the button itself, so the band stretches the card's
+  // width without the Button component knowing anything about this layout.
+  .tierCta {
+    display: grid;
+    margin-block-start: $space-2;
+  }
+
+  .includesLabel {
+    margin-block-start: $space-4;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-snug;
+    color: inherit;
+  }
+
+  // No auto margin: the parent grid's last row is 1fr and already takes the
+  // slack, so the list sits at the top of whatever space it is given.
+  .includes {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    align-content: start;
+    padding-inline-start: $space-4;
+    font-size: var(--font-size-sm);
+    line-height: $line-height-snug;
+    color: inherit;
+
+    li {
+      // 80%, not the 70% the description uses. These are short lines set at
+      // font-size-sm, and on the dark card 70% of brown-100 over brown-900 is
+      // legible but tiring to read eleven times.
+      opacity: 0.8;
+      text-wrap: pretty;
+    }
+  }
+
+  // --- Comparison link --------------------------------------------------------
+
+  .compare {
+    display: flex;
+    justify-content: center;
+    margin-block-start: clamp(#{$space-10}, 5vw, #{$space-16});
+  }
+}
