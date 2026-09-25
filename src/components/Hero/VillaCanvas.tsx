@@ -490,7 +490,13 @@ export function VillaCanvas({
         visually transparent, so only the render is seen.
       */}
       {ready && !touring ? (
-        <button type="button" className={styles.enter} onClick={() => flyTo(SERVICE_SHOTS[0]!.id)}>
+        <button
+          type="button"
+          className={styles.enter}
+          // No cursor frame: this button is the whole render.
+          data-cursor-morph="none"
+          onClick={() => flyTo(SERVICE_SHOTS[0]!.id)}
+        >
           <span className="visually-hidden">Explore the villa</span>
         </button>
       ) : null}

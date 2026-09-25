@@ -24,7 +24,10 @@ import styles from "./CursorMorph.module.scss";
 
 // Buttons, and links styled as buttons. Inline text links keep the dot: a frame
 // around a word mid-sentence is noise. Anything else opts in with the attribute.
-const TARGETS = 'button, [role="button"], a[data-variant], [data-cursor-morph]';
+// A control opts OUT with data-cursor-morph="none": the hero's stage is a real
+// <button> the size of the render, and a frame around that is not a cursor.
+const TARGETS =
+  ':is(button, [role="button"], a[data-variant], [data-cursor-morph]):not([data-cursor-morph="none"])';
 // px the frame sits outside the control.
 const PAD = 6;
 // Max px the frame leans toward the pointer, at the control's edge.

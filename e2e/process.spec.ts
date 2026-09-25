@@ -182,18 +182,18 @@ test.describe("the portal", () => {
       (el) => el.getBoundingClientRect().height / (el as HTMLElement).offsetHeight,
     );
 
-  test("starts small and high, then grows down to fill the stage", async ({ page }) => {
+  test("rises out of the bottom edge and grows upward to fill the stage", async ({ page }) => {
     await at(page, 0);
 
     // Small: a tenth of the stage, so it reads as an object rather than as a
     // page that happens to be slightly inset.
     expect(await scaleOf(page)).toBeLessThan(0.2);
 
-    // And HIGH. The square sits in the top portion of the viewport so it is
-    // visible the moment the section is, and the growth opens downward into
-    // the space the reader is still revealing. Anchored low it arrived at the
-    // bottom edge, which the review rejected twice; this is what catches a
-    // third return of it.
+    // Its BOTTOM is welded to the bottom of the stage and its top climbs, so
+    // the slab appears to rise out of the screen edge rather than to sit in a
+    // reserved box. That is what the overlay buys: the space it has not
+    // covered yet belongs to the section above, so there is no empty stage to
+    // sit in.
     //
     // Asserted against the viewport's midpoint rather than an exact offset, so
     // the anchor token can be retuned without rewriting the test.
@@ -201,15 +201,15 @@ test.describe("the portal", () => {
       const r = el.getBoundingClientRect();
       return { top: r.top, bottom: r.bottom, height: window.innerHeight };
     });
-    expect(small.top).toBeLessThan(small.height / 2);
-    expect(small.bottom).toBeLessThan(small.height / 2 + small.height * 0.1);
+    expect(small.top).toBeGreaterThan(small.height / 2);
+    expect(small.bottom).toBeGreaterThan(small.height - 8);
 
-    // By the end of the portal's slice it fills the stage, having grown
-    // downward while its top stayed near where it started.
+    // By the end of the portal's slice it fills the stage, having grown upward
+    // while its bottom stayed put.
     await at(page, 0.25);
     await expect.poll(() => scaleOf(page)).toBeGreaterThan(0.99);
-    const grown = await portal(page).evaluate((el) => el.getBoundingClientRect().bottom);
-    expect(grown).toBeGreaterThan(small.bottom);
+    const grown = await portal(page).evaluate((el) => el.getBoundingClientRect().top);
+    expect(grown).toBeLessThan(small.top);
   });
 
   // Where the zoom ends, as a fraction of the pin window, read from the CSS

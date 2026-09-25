@@ -109,20 +109,21 @@
     // axis at lg, where there is width to spare and the square reads as an
     // object. See .portal for what scaling both axes did on a phone.
     --process-portal-scale-x: 1;
-    // How far down the viewport the square sits when it is smallest, as the
-    // scale's origin. 10% puts it near the TOP of the stage, so the slab opens
-    // downward from where the section begins, into the space the reader is
-    // still revealing. This is the reviewed direction (AGENTS.md records the
-    // reasoning); a later change moved it to 100% and the slab rose off the
-    // bottom edge again, which is the thing the review had already rejected.
+    // Where the square sits when it is smallest, as the scale's origin.
     //
-    // The OVERLAY below is independent of the anchor and stays: it is what
-    // keeps the nine tenths the slab has not covered yet from being empty
-    // page, whichever edge the slab grows from.
+    // 100% is the stage's bottom edge, so the slab grows UPWARD out of it. The
+    // anchor has now been all three: 90%, then 10%, now dead bottom, and the
+    // reason it kept moving is that the anchor was never the actual problem.
     //
-    // Not 0%: a hair of inset keeps it reading as an object placed near the
-    // top rather than one welded to the edge.
-    --process-portal-anchor: 10%;
+    // While the slab is at a tenth of the stage, the other nine tenths of that
+    // stage are empty page. Anchored low that emptiness sat above the square;
+    // anchored high it sat below it. Moving the origin only moved the gap.
+    // What removes it is the OVERLAY below: the section is pulled up over the
+    // one before it, so the space the slab has not yet covered is the previous
+    // section rather than nothing at all. With that in place, dead bottom is
+    // the right origin, because the slab then rises off the bottom edge of the
+    // screen and climbs over what is already there.
+    --process-portal-anchor: 100%;
     // WHERE SCROLL LETS GO OF THE ZOOM. Scroll grows the slab from
     // --process-portal-scale up to this, and a timed transition on .grow takes
     // it the rest of the way, so the reader does not have to scroll the whole
