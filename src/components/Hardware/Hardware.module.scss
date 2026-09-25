@@ -64,8 +64,10 @@
   .pause {
     display: grid;
     place-items: center;
+    // 48px tall, the client's number. Wider than tall so eight tabs still
+    // read as a row rather than a strip of squares.
     inline-size: $space-16;
-    block-size: $space-16;
+    block-size: $space-12;
     flex-shrink: 0;
     background: none;
     border: 0;
