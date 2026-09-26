@@ -6,6 +6,7 @@
 // observed from inside the same run: these tests spawn Jest on fixtures.
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import { isolatedEnv } from "../test-support/isolated-env";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const FIXTURES = path.join(__dirname, "guard-fixtures");
@@ -35,7 +36,7 @@ function runJest(fixture: string): JestJson {
       "--runTestsByPath",
       path.join(FIXTURES, fixture),
     ],
-    { cwd: ROOT, encoding: "utf8" },
+    { cwd: ROOT, encoding: "utf8", env: isolatedEnv() },
   );
   return JSON.parse(r.stdout) as JestJson;
 }

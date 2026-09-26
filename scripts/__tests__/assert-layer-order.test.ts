@@ -8,6 +8,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { isolatedEnv } from "../test-support/isolated-env";
 
 const SCRIPT = path.resolve(__dirname, "..", "assert-layer-order.mjs");
 const ORDER = "@layer reset, base, components, blocks, utilities;";
@@ -34,7 +35,10 @@ function chunk(name: string, css: string) {
 }
 
 function run(...args: string[]) {
-  const r = spawnSync("node", [SCRIPT, "--root", root, ...args], { encoding: "utf8" });
+  const r = spawnSync("node", [SCRIPT, "--root", root, ...args], {
+    encoding: "utf8",
+    env: isolatedEnv(),
+  });
   return { status: r.status, stdout: r.stdout, stderr: r.stderr };
 }
 

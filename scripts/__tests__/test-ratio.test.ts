@@ -8,6 +8,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { isolatedEnv } from "../test-support/isolated-env";
 
 const SCRIPT = path.resolve(__dirname, "..", "test-ratio.mjs");
 
@@ -57,7 +58,10 @@ function lines(n: number) {
 }
 
 function run(...args: string[]) {
-  const result = spawnSync("node", [SCRIPT, "--root", root, ...args], { encoding: "utf8" });
+  const result = spawnSync("node", [SCRIPT, "--root", root, ...args], {
+    encoding: "utf8",
+    env: isolatedEnv(),
+  });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
@@ -67,7 +71,7 @@ function report(...args: string[]): Report {
 }
 
 function git(...args: string[]) {
-  execFileSync("git", ["-C", root, ...args], { stdio: "pipe" });
+  execFileSync("git", ["-C", root, ...args], { stdio: "pipe", env: isolatedEnv() });
 }
 
 function commitAll(message: string) {
@@ -384,7 +388,10 @@ describe("the ratchet, with --base", () => {
     put("src/lib/b.ts", lines(3));
     git("add", "src/lib/b.ts");
     run("--base", "base");
-    const status = execFileSync("git", ["-C", root, "status", "--porcelain"], { encoding: "utf8" });
+    const status = execFileSync("git", ["-C", root, "status", "--porcelain"], {
+      encoding: "utf8",
+      env: isolatedEnv(),
+    });
     expect(status.trim()).toBe("A  src/lib/b.ts");
   });
 

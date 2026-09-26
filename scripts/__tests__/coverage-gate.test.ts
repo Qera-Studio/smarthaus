@@ -8,6 +8,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { isolatedEnv } from "../test-support/isolated-env";
 
 const SCRIPT = path.resolve(__dirname, "..", "coverage-gate.mjs");
 
@@ -61,7 +62,10 @@ function put(rel: string, content = "export const x = 1;\n") {
 }
 
 function run(...args: string[]) {
-  const r = spawnSync("node", [SCRIPT, "--root", root, ...args], { encoding: "utf8" });
+  const r = spawnSync("node", [SCRIPT, "--root", root, ...args], {
+    encoding: "utf8",
+    env: isolatedEnv(),
+  });
   return { status: r.status, stdout: r.stdout, stderr: r.stderr };
 }
 
@@ -70,7 +74,7 @@ function json(...args: string[]) {
 }
 
 function git(...args: string[]) {
-  execFileSync("git", ["-C", root, ...args], { stdio: "pipe" });
+  execFileSync("git", ["-C", root, ...args], { stdio: "pipe", env: isolatedEnv() });
 }
 
 function commitAll(message: string) {
