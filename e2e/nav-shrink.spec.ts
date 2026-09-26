@@ -40,6 +40,9 @@ type Frame = {
   rightInset: number;
   markMid: number;
   fullMid: number;
+  // What the capsule was built from on this frame: the widths NavShell wrote
+  // (empty before it measured) against the widths actually rendered.
+  widths: string;
 };
 
 /**
@@ -89,6 +92,7 @@ function sample(
             rightInset: box.right - c.right,
             markMid: mid(mark!),
             fullMid: mid(full!),
+            widths: `row ${header.style.getPropertyValue("--nav-links-row") || "unset"} (rendered ${l.width}), cta ${header.style.getPropertyValue("--nav-cta-width") || "unset"} (rendered ${c.width}), box ${box.width}`,
           });
         };
         const wantStuck = y > 0;
@@ -185,7 +189,8 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
   ] as const) {
     expect(frames.length, `${label}: sampled frames`).toBeGreaterThan(10);
     const first = frames[0]!;
-    for (const f of frames) {
+    for (const [index, f] of frames.entries()) {
+      const at = `frame ${index} of ${frames.length}, stuck=${f.stuck}, ${f.widths}`;
       // The box top is the shared inset on every frame — never 0.
       expect(Math.round(f.top), `${label}: bar top`).toBe(16);
       // Nothing in the row moves: the links on either axis, or the CTA's row.
@@ -193,8 +198,8 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
       expect(Math.abs(f.linksY - first.linksY), `${label}: links moved on y`).toBeLessThan(1);
       expect(Math.abs(f.ctaTop - first.ctaTop), `${label}: CTA moved on y`).toBeLessThan(1);
       // Both ends keep their distance from the frame while it travels.
-      expect(Math.round(f.leftInset), `${label}: mark inset`).toBe(9);
-      expect(Math.round(f.rightInset), `${label}: CTA inset`).toBe(9);
+      expect(Math.round(f.leftInset), `${label}: mark inset at ${at}`).toBe(9);
+      expect(Math.round(f.rightInset), `${label}: CTA inset at ${at}`).toBe(9);
       // The two lockups cross-fade on one centre line. Their heights differ by
       // ~5px so the tops never match; the centres must.
       expect(Math.abs(f.markMid - f.fullMid), `${label}: lockup centres`).toBeLessThan(3);
@@ -203,7 +208,7 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
       // the two gaps around it genuinely differ by the lockup's extra width —
       // the cross-fade is what resolves it, on the first stuck frame.
       if (f.stuck) {
-        expect(Math.abs(f.leftGap - f.rightGap), `${label}: gaps unequal`).toBeLessThan(1);
+        expect(Math.abs(f.leftGap - f.rightGap), `${label}: gaps unequal at ${at}`).toBeLessThan(1);
       }
     }
   }

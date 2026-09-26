@@ -65,9 +65,27 @@ test.describe("the e2e server", () => {
     });
     await page.goto("/");
     await expect(page.getByRole("region", { name: "Cookie preferences" })).toBeVisible();
-    await expect
+    const stuck = await expect
       .poll(() => [...pending].map((request) => request.url()), { timeout: 15_000 })
-      .toEqual([]);
+      .toEqual([])
+      .then(
+        () => [],
+        () => [...pending].map((request) => request.url()),
+      );
+    // When one hangs, ask the server for it directly, outside the browser, so
+    // the report says which side is holding it: an answer here means the
+    // browser never finished a response the server can give.
+    const probes = await Promise.all(
+      stuck.map(async (url) => {
+        const started = Date.now();
+        const verdict = await page.request.get(url, { timeout: 10_000 }).then(
+          (response) => `server answered ${response.status()}`,
+          (error: Error) => `server did not answer: ${error.message.split("\n")[0]}`,
+        );
+        return `${url}: ${verdict} after ${Date.now() - started}ms`;
+      }),
+    );
+    expect(probes, "images the browser requested and never got").toEqual([]);
     expect(failed).toEqual([]);
   });
 });
