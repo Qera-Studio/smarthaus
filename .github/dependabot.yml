@@ -1,0 +1,21 @@
+# Security System §12, automated dependency monitoring. Weekly and grouped, so
+# updates arrive as a reviewable batch. Every update PR goes through CI like
+# any other change, and pnpm's minimumReleaseAge cooldown still applies.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    target-branch: latest
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: latest

@@ -1,0 +1,9 @@
+# Fast half of the CI gate, before anything leaves the machine. The browser
+# suites run in CI only; they take minutes. Bypassing with --no-verify only
+# moves the failure to CI, where the branch cannot merge red.
+set -e
+BASE="${PRE_PUSH_BASE:-origin/latest}"
+pnpm typecheck
+pnpm test:coverage --silent
+node scripts/coverage-gate.mjs --base "$BASE"
+node scripts/test-ratio.mjs --base "$BASE"
