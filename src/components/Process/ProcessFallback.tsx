@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { latestEntry } from "@/lib/observer";
 
 /**
  * Drives the process rail in browsers without scroll-driven animations.
@@ -56,8 +57,8 @@ export function ProcessFallback() {
 
     // 3. Start and stop from an IntersectionObserver, the codebase's own
     //    primitive, so the loop never runs while the rail is off screen.
-    const io = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting) {
+    const io = new IntersectionObserver((entries) => {
+      if (latestEntry(entries)?.isIntersecting) {
         if (!frame) frame = requestAnimationFrame(tick);
         return;
       }

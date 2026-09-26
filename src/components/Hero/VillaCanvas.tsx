@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { LANDING, SERVICE_SHOTS, shotById } from "./scenes";
 import { ServiceTabs } from "./ServiceTabs";
 import styles from "./Hero.module.scss";
+import { latestEntry } from "@/lib/observer";
 
 /** Where the exported model lives. Dropped in by scripts/export-villa.py. */
 const MODEL = "/hero/villa.glb";
@@ -390,8 +391,8 @@ export function VillaCanvas({
       };
 
       // Alive only while the hero is on screen. No scroll listener.
-      const io = new IntersectionObserver(([entry]) => {
-        if (entry?.isIntersecting) listen();
+      const io = new IntersectionObserver((entries) => {
+        if (latestEntry(entries)?.isIntersecting) listen();
         else unlisten();
       });
       io.observe(host);

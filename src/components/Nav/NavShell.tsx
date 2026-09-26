@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import styles from "./Nav.module.scss";
+import { latestEntry } from "@/lib/observer";
 
 /**
  * How much of the viewport the footer must cover before the nav hides. The
@@ -55,8 +56,8 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
-    const io = new IntersectionObserver(([entry]) => {
-      setStuck(!entry?.isIntersecting);
+    const io = new IntersectionObserver((entries) => {
+      setStuck(!latestEntry(entries)?.isIntersecting);
     });
     io.observe(el);
     return () => io.disconnect();
@@ -80,7 +81,8 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
     const el = document.querySelector("footer");
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => {
+      (entries) => {
+        const entry = latestEntry(entries);
         if (!entry) return;
         // Intersecting the shortened root means the footer's top has passed
         // the trigger line — i.e. it now covers at least FOOTER_HIDE_RATIO of
