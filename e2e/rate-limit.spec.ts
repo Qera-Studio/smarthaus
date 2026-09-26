@@ -68,7 +68,13 @@ test("a refused visitor keeps what they typed", async ({ page }) => {
 test("another visitor is unaffected while one is refused", async ({ page, browser }) => {
   await pin(page, "rate-limit-first");
   const marker = uniqueName("Busy");
-  for (let i = 1; i <= 6; i += 1) await sendShort(page, `${marker} ${i}`);
+  // Each send confirmed before the next, or a navigation can abandon one
+  // mid-flight and the sixth is not the sixth the server saw.
+  for (let i = 1; i <= 5; i += 1) {
+    await sendShort(page, `${marker} ${i}`);
+    await expect(page.getByRole("status")).toBeVisible();
+  }
+  await sendShort(page, `${marker} 6`);
   await expect(page.getByRole("alert").filter({ hasText: "Several enquiries" })).toBeVisible();
 
   const other = await browser.newContext({

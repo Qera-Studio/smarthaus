@@ -61,4 +61,30 @@ describe("Button", () => {
     );
     expect(screen.getByRole("link", { name: "Go" })).toHaveAttribute("data-variant", "outline");
   });
+
+  it("stays focusable while loading, announced as busy and unavailable", () => {
+    render(
+      <Button type="submit" loading>
+        Sending
+      </Button>,
+    );
+    const button = screen.getByRole("button", { name: "Sending" });
+    expect(button).not.toBeDisabled();
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    button.focus();
+    expect(button).toHaveFocus();
+  });
+
+  it("carries neither busy nor disabled state when not loading", () => {
+    render(<Button>Send</Button>);
+    const button = screen.getByRole("button", { name: "Send" });
+    expect(button).not.toHaveAttribute("aria-busy");
+    expect(button).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("keeps an aria-disabled the caller set", () => {
+    render(<Button aria-disabled>Send</Button>);
+    expect(screen.getByRole("button", { name: "Send" })).toHaveAttribute("aria-disabled", "true");
+  });
 });

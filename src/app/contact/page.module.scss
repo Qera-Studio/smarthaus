@@ -296,6 +296,19 @@
     max-inline-size: 52ch;
   }
 
+  // A field's format or limit, stated before any error.
+  .hint {
+    margin-block-start: $space-1;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .errorList {
+    margin-block-start: $space-2;
+    padding-inline-start: $space-5;
+    list-style: disc;
+  }
+
   .inlineLink {
     color: inherit;
     text-decoration-line: underline;

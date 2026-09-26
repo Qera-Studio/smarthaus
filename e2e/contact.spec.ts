@@ -82,8 +82,13 @@ test("an empty submission names both required fields and focuses the first", asy
   await expectHydrated(page);
   await page.getByRole("button", { name: "Book a site visit" }).click();
 
-  await expect(page.getByText("Add your name so we know who we're calling.")).toBeVisible();
-  await expect(page.getByText("Add a phone number so we can call you back.")).toBeVisible();
+  // Each field's own message (the summary above repeats them as links).
+  await expect(page.locator("#name-error")).toHaveText(
+    "Add your name so we know who we're calling.",
+  );
+  await expect(page.locator("#phone-error")).toHaveText(
+    "Add a phone number so we can call you back.",
+  );
 
   // Focus must move to the first failing field, or a keyboard user is left at
   // the submit button with errors above them they were never told about.
@@ -99,7 +104,9 @@ test("a badly formatted number is rejected on format, not presence", async ({ pa
 
   await page.getByRole("button", { name: "Book a site visit" }).click();
 
-  await expect(page.getByText("Check the number. It should start with +971 or 05.")).toBeVisible();
+  await expect(page.locator("#phone-error")).toHaveText(
+    "Check the number. It should start with +971 or 05.",
+  );
   await expect(form(page).getByLabel("Phone")).toBeFocused();
 });
 
@@ -213,9 +220,9 @@ test("the consent boxes start unticked and the required one gates submission", a
   await form(page).getByLabel("Name").fill("Ravi");
   await form(page).getByLabel("Phone").fill("0543755150");
   await page.getByRole("button", { name: "Book a site visit" }).click();
-  await expect(
-    page.getByText("Please confirm you would like us to contact you about your enquiry."),
-  ).toBeVisible();
+  await expect(page.locator("#contactConsent-error")).toHaveText(
+    "Please confirm you would like us to contact you about your enquiry.",
+  );
 });
 
 test("the marketing box never gates submission", async ({ page }) => {
