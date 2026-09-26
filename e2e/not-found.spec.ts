@@ -268,32 +268,49 @@ test.describe("404 particle physics on touch", () => {
    * *stream* of pointermove with `pointerType: "touch"`, and the touchscreen
    * API emits a tap rather than a sustained drag with intermediate moves.
    */
+  // One drag, run inside the page on its own frame clock: a move every 28ms,
+  // as a finger reports. It used to be fifteen page.evaluate round trips with
+  // a 28ms wait between them, which only approximates 28ms where a round trip
+  // is free. On the CI runner each trip cost far more, the finger moved at a
+  // fraction of the intended speed, and a speed-driven field barely moved
+  // (11 and 21px against ~66px locally). The assertions did not change.
   const drag = async (
     page: import("@playwright/test").Page,
     box: { x: number; y: number; width: number; height: number },
     opts: { down: boolean },
   ) => {
-    const y = box.y + box.height / 2;
-    for (let i = 0; i <= 14; i++) {
-      const x = box.x + 8 + ((box.width - 16) * i) / 14;
-      await page.evaluate(
-        ([x, y, first, down]) => {
-          const mk = (type: string) =>
+    await page.evaluate(
+      ([bx, by, bw, bh, down]) =>
+        new Promise<void>((resolve) => {
+          const STEPS = 14;
+          const INTERVAL = 28;
+          const y = by + bh / 2;
+          const mk = (type: string, x: number) =>
             new PointerEvent(type, {
-              clientX: x as number,
-              clientY: y as number,
+              clientX: x,
+              clientY: y,
               pointerType: "touch",
               isPrimary: true,
               bubbles: true,
               pointerId: 1,
             });
-          if (first && down) window.dispatchEvent(mk("pointerdown"));
-          window.dispatchEvent(mk("pointermove"));
-        },
-        [x, y, i === 0, opts.down] as const,
-      );
-      await page.waitForTimeout(28);
-    }
+          let i = 0;
+          let last = -Infinity;
+          const tick = (now: number) => {
+            if (now - last >= INTERVAL) {
+              const x = bx + 8 + ((bw - 16) * i) / STEPS;
+              if (i === 0 && down) window.dispatchEvent(mk("pointerdown", x));
+              window.dispatchEvent(mk("pointermove", x));
+              last = now;
+              i += 1;
+            }
+            if (i <= STEPS) requestAnimationFrame(tick);
+            else resolve();
+          };
+          requestAnimationFrame(tick);
+        }),
+      [box.x, box.y, box.width, box.height, opts.down] as const,
+    );
   };
 
   test("a finger drag deforms the field, and lifting it lets the field recover", async ({
