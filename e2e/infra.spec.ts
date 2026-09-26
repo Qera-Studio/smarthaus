@@ -93,18 +93,72 @@ test.describe("the e2e server", () => {
         description: `${url}: the image loaded and has pixels, but the browser never reported its request finished`,
       });
     }
-    const unanswered = stuck.filter((url) => !loaded.includes(url));
+    // A request still open here is, on CI's Linux Chromium, a lazy image far
+    // below the fold that the browser started and then parked: measured
+    // 2026-09-26, the first Process image at y=1830 in a 720px viewport, 57x69
+    // inside the portal's 0.1 scale, no timing entry, no source chosen, while
+    // the server answered the URL in 14ms. What a visitor can notice is only
+    // whether it appears once they reach it, so scroll each one into view, as
+    // a visitor would, and require real pixels. An image that stays blank on
+    // screen is the failure; one that loads on arrival is recorded.
+    const stillOpen = stuck.filter((url) => !loaded.includes(url));
+    const loadedOnArrival: string[] = [];
+    for (const url of stillOpen) {
+      const source = encodeURIComponent(new URL(url).searchParams.get("url") ?? url);
+      const img = page.locator(`img[srcset*="${source}"]`).first();
+      if ((await img.count()) === 0) continue;
+      await img.evaluate((el) => el.scrollIntoView({ block: "center" }));
+      const arrived = await expect
+        .poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0), {
+          timeout: 10_000,
+        })
+        .toBe(true)
+        .then(
+          () => true,
+          () => false,
+        );
+      if (arrived) {
+        loadedOnArrival.push(url);
+        test.info().annotations.push({
+          type: "lazy image parked until reached",
+          description: `${url}: its request stalled while it was off screen, and it loaded with pixels once scrolled into view`,
+        });
+      }
+    }
+    const unanswered = stillOpen.filter((url) => !loadedOnArrival.includes(url));
     // When one hangs, ask the server for it directly, outside the browser, so
     // the report says which side is holding it: an answer here means the
     // browser never finished a response the server can give.
+    //
+    // And say what the page itself knows about it: the <img> that asked for it
+    // (matched by source file, since the browser may have switched to another
+    // srcset width), and whether a resource timing entry exists, which is the
+    // browser's own record of having received a response.
+    const pageSide = await page.evaluate(
+      (urls) =>
+        urls.map((url) => {
+          const source = new URL(url).searchParams.get("url") ?? url;
+          const imgs = Array.from(document.images)
+            .filter((img) =>
+              (img.getAttribute("srcset") ?? img.src).includes(encodeURIComponent(source)),
+            )
+            .map((img) => {
+              const rect = img.getBoundingClientRect();
+              return `img{currentSrc=${img.currentSrc.slice(-60)} complete=${img.complete} naturalWidth=${img.naturalWidth} loading=${img.loading} rect=${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)}x${Math.round(rect.height)}}`;
+            });
+          const timing = performance.getEntriesByName(url).length;
+          return `timing entries=${timing}; ${imgs.join(" ") || "no <img> references it"}`;
+        }),
+      unanswered,
+    );
     const probes = await Promise.all(
-      unanswered.map(async (url) => {
+      unanswered.map(async (url, index) => {
         const started = Date.now();
         const verdict = await page.request.get(url, { timeout: 10_000 }).then(
           (response) => `server answered ${response.status()}`,
           (error: Error) => `server did not answer: ${error.message.split("\n")[0]}`,
         );
-        return `${url}: ${verdict} after ${Date.now() - started}ms`;
+        return `${url}: ${verdict} after ${Date.now() - started}ms; ${pageSide[index]}`;
       }),
     );
     expect(probes, "images the browser requested and never got").toEqual([]);

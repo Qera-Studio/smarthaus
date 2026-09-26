@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
 
 /**
  * The contact page — the site's only conversion event.
@@ -30,8 +30,7 @@ test("responds with one h1 and is indexable", async ({ page }) => {
 });
 
 test("passes axe accessibility checks", async ({ page }) => {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
+  await expectAccessible(page);
 });
 
 test("no em dashes in the copy, including the collapsed FAQ answers", async ({ page }) => {
@@ -39,8 +38,7 @@ test("no em dashes in the copy, including the collapsed FAQ answers", async ({ p
   // not innerText: a closed <details> hides its answer from the rendered text,
   // so innerText alone would let an em dash through in exactly the copy most
   // likely to be pasted in from elsewhere.
-  const copy = await page.locator("main").textContent();
-  expect(copy).not.toContain("—");
+  await expectNoEmDash(page.locator("main"));
 });
 
 test("a valid submission confirms with the name and number given", async ({ page }) => {
@@ -64,6 +62,9 @@ test("a valid submission confirms with the name and number given", async ({ page
   // A local 05… number typed in comes back as the canonical +971… form. The
   // copy promises a call on this number, so it has to be the number we stored.
   await expect(status).toContainText("+971543755150");
+  // "Usually": the terms say no response time is guaranteed, so the
+  // confirmation must not promise one.
+  await expect(status).toContainText("We’ll usually call you on +971543755150 within the hour");
 
   // The form is replaced, not merely hidden.
   await expect(form(page).getByLabel("Name")).toHaveCount(0);
@@ -186,10 +187,7 @@ test("every contact channel stays on one line", async ({ page }) => {
 });
 
 test("the page does not overflow horizontally", async ({ page }) => {
-  const overflows = await page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth + 1,
-  );
-  expect(overflows).toBe(false);
+  await expectNoHorizontalOverflow(page);
 });
 
 test("the consent boxes start unticked and the required one gates submission", async ({ page }) => {

@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
 
 /**
  * The "Our Process" rail.
@@ -93,13 +93,11 @@ test("insets every page, and never lets the copy reach the screen edge", async (
 });
 
 test("passes axe accessibility checks", async ({ page }) => {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
+  await expectAccessible(page);
 });
 
 test("no em dashes in the copy", async ({ page }) => {
-  const copy = await rail(page).textContent();
-  expect(copy).not.toContain("—");
+  await expectNoEmDash(rail(page));
 });
 
 test("vertical scrolling drives the track sideways, and the page never scrolls sideways", async ({
@@ -124,10 +122,7 @@ test("vertical scrolling drives the track sideways, and the page never scrolls s
 
   // The whole point of the clipped viewport: the rail moves, the document does
   // not. A horizontal scrollbar here would mean the track escaped its box.
-  const overflows = await page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-  );
-  expect(overflows).toBe(false);
+  await expectNoHorizontalOverflow(page);
 });
 
 test("reaches the last page by the end of the pin window", async ({ page }) => {

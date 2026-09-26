@@ -5,3 +5,4 @@ coverage
 qera-system
 public/draco
 * [2-9].*
+.e2e-mail/

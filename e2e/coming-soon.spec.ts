@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible, expectNoEmDash } from "./checks";
 
 /**
  * Every route that links from the nav or footer but has no page yet.
@@ -37,8 +37,7 @@ for (const route of PLACEHOLDER_ROUTES) {
 
     test("passes axe accessibility checks", async ({ page }) => {
       await page.goto(route);
-      const results = await new AxeBuilder({ page }).analyze();
-      expect(results.violations).toEqual([]);
+      await expectAccessible(page);
     });
 
     test("is noindex while it is a placeholder", async ({ page }) => {
@@ -61,7 +60,7 @@ for (const route of PLACEHOLDER_ROUTES) {
     test("no em dashes in the visible copy", async ({ page }) => {
       // Same house rule the legal pages assert.
       await page.goto(route);
-      expect(await page.locator("main").innerText()).not.toContain("—");
+      await expectNoEmDash(page.locator("main"));
     });
 
     test("the lockup fits the viewport and clears the copy", async ({ page }) => {

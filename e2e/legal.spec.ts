@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible, expectNoEmDash } from "./checks";
 
 // Both legal pages share one layout, so they share one suite. The ToC
 // assertions run only on desktop — below lg the rail is not rendered at all
@@ -34,8 +34,7 @@ for (const { path, heading, sections } of PAGES) {
 
     test("passes axe accessibility checks", async ({ page }) => {
       await page.goto(path);
-      const results = await new AxeBuilder({ page }).analyze();
-      expect(results.violations).toEqual([]);
+      await expectAccessible(page);
     });
 
     test("every ToC entry resolves to a real heading", async ({ page }) => {
@@ -153,8 +152,7 @@ for (const { path, heading, sections } of PAGES) {
 
     test("no em dashes in the visible copy", async ({ page }) => {
       await page.goto(path);
-      const text = await page.locator("main").innerText();
-      expect(text).not.toContain("—");
+      await expectNoEmDash(page.locator("main"));
     });
 
     test("the ToC stops at the end of the article", async ({ page }) => {
@@ -253,3 +251,77 @@ for (const { path, heading, sections } of PAGES) {
     });
   });
 }
+
+// The identity facts, asserted as literals on purpose: src/lib/contact.ts feeds
+// both pages, and a change there must be a deliberate one that this notices.
+const IDENTITY = {
+  address: "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai",
+  email: "contact@mapletech.ae",
+  phone: "+971 54 375 5150",
+};
+
+for (const path of ["/privacy", "/terms"]) {
+  test.describe(`${path} published facts`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto(path);
+    });
+
+    test("stays out of search while it is a draft", async ({ page }) => {
+      await expect(page.locator('head meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+    });
+
+    test("states the confirmed registered address, email and phone", async ({ page }) => {
+      const main = page.locator("main");
+      await expect(main).toContainText(IDENTITY.address);
+      await expect(main).toContainText(IDENTITY.email);
+      await expect(main).toContainText(IDENTITY.phone);
+    });
+
+    test("never states the old wording of the address", async ({ page }) => {
+      await expect(page.locator("main")).not.toContainText("The Iridium. Umm Suqeim");
+    });
+
+    test("marks every unconfirmed fact as a visible placeholder", async ({ page }) => {
+      const marks = page.locator("main mark[data-placeholder]");
+      expect(await marks.count()).toBeGreaterThan(0);
+      for (const mark of await marks.all()) {
+        await expect(mark).toBeAttached();
+        expect((await mark.textContent())?.trim()).toBeTruthy();
+      }
+    });
+  });
+}
+
+test.describe("/privacy says what the build does", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/privacy");
+  });
+
+  test("prints version 0.2.0-draft", async ({ page }) => {
+    await expect(page.locator("main")).toContainText("0.2.0-draft");
+  });
+
+  test("lists Resend among the providers in use, and not among the planned ones", async ({
+    page,
+  }) => {
+    const current = page.getByRole("table", { name: /currently processing/i });
+    const planned = page.getByRole("table", { name: /planned but not yet/i });
+    await expect(current.getByRole("rowheader", { name: "Resend" })).toHaveCount(1);
+    await expect(planned.getByRole("rowheader", { name: "Resend" })).toHaveCount(0);
+  });
+
+  test("says the only essential cookie remembers the cookie choice", async ({ page }) => {
+    const main = page.locator("main");
+    await expect(main).toContainText("There is one: it remembers your cookie choice.");
+    await expect(main).not.toContainText("reject spam");
+  });
+
+  test("says the needed fields are marked required, and the phone is required", async ({
+    page,
+  }) => {
+    const main = page.locator("main");
+    await expect(main).toContainText("The fields we need are marked required");
+    await expect(main).toContainText("Every enquiry form requires it");
+    await expect(main).not.toContainText("marked optional");
+  });
+});

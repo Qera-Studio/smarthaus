@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible, expectNoEmDash } from "./checks";
 
 /**
  * /faq — the smoke suite AGENTS.md requires of every real page, plus the two
@@ -19,8 +19,7 @@ test.describe("/faq", () => {
 
   test("passes axe accessibility checks", async ({ page }) => {
     await page.goto("/faq");
-    const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations).toEqual([]);
+    await expectAccessible(page);
   });
 
   test("answers are in the DOM while collapsed", async ({ page }) => {
@@ -166,8 +165,7 @@ test.describe("/faq", () => {
     // textContent, not innerText: a closed <details> hides its answer from the
     // rendered text, and on this page 42 of the 42 answers start closed — which
     // is exactly the copy an em dash would slip through in.
-    const copy = await page.locator("main").textContent();
-    expect(copy).not.toContain("—");
+    await expectNoEmDash(page.locator("main"));
   });
 
   test("is noindex and emits no schema while facts are unconfirmed", async ({ page }) => {

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { MAIL_SINK } from "./e2e/mail-sink";
 
 // Port 3000 is a shared default — another project's dev server squatting on it
 // would silently be tested instead of this one. Use a project-specific port and
@@ -17,7 +18,13 @@ const CI = Boolean(process.env["CI"]);
 
 // Specs for the two extra projects carry a tag in their title. The device
 // projects skip them; the extra projects run nothing else.
-const EXTRA_TAGS = /@forced-colors|@zoom/;
+const EXTRA_TAGS = /@forced-colors|@zoom|@delivery/;
+
+// The mail sink: every form test's email is written here instead of sent (see
+// src/app/contact/actions.ts). E2E_REAL_MAIL=1 turns it off for the one job that
+// proves real delivery through Resend, the delivery project below.
+const REAL_MAIL = process.env.E2E_REAL_MAIL === "1";
+const SINK_ENV = REAL_MAIL ? "" : `E2E_MAIL_SINK=${MAIL_SINK} `;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -80,6 +87,19 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], forcedColors: "active" },
       grep: /@forced-colors/,
     },
+    // One real email through Resend per run, proving delivery end to end. The
+    // project exists only with E2E_REAL_MAIL=1, as the CI delivery job sets it
+    // with the Resend secrets: in a plain run the server is in sink mode, where
+    // this test would rightly fail. Every other project skips @delivery.
+    ...(REAL_MAIL
+      ? [
+          {
+            name: "delivery",
+            use: { ...devices["Desktop Chrome"] },
+            grep: /@delivery/,
+          },
+        ]
+      : []),
     // 200% browser zoom on a 1440px laptop: a 720 CSS px layout viewport at
     // twice the pixel density. Architecture spec §8.3.
     {
@@ -97,7 +117,7 @@ export default defineConfig({
     // — see next.config.ts. Both are correct in production and unchanged there;
     // on plain-HTTP loopback they make WebKit abort every asset, leaving a page
     // that renders but never hydrates.
-    command: `PLAYWRIGHT=1 pnpm build && PLAYWRIGHT=1 pnpm start --port ${PORT}`,
+    command: `rm -rf ${MAIL_SINK} && PLAYWRIGHT=1 pnpm build && PLAYWRIGHT=1 ${SINK_ENV}pnpm start --port ${PORT}`,
     port: PORT,
     reuseExistingServer: false,
     // A cold `next build` takes well over Playwright's 60s default.

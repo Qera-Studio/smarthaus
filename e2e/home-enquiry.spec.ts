@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible, expectNoEmDash } from "./checks";
 
 /**
  * The short enquiry form at the foot of the homepage, above the footer.
@@ -93,11 +93,9 @@ test("the homepage still has exactly one h1", async ({ page }) => {
 });
 
 test("passes axe accessibility checks", async ({ page }) => {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
+  await expectAccessible(page);
 });
 
 test("no em dashes in the copy", async ({ page }) => {
-  const copy = await enquiry(page).textContent();
-  expect(copy).not.toContain("—");
+  await expectNoEmDash(enquiry(page));
 });

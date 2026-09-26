@@ -8,6 +8,8 @@ import {
   Placeholder,
   PRIVACY_SECTIONS as S,
 } from "../../components/LegalPage";
+import { ADDRESS, EMAIL, PHONE_DISPLAY } from "../../lib/contact";
+import { PRIVACY_POLICY_VERSION } from "../../content/legal/versions";
 
 // ---------------------------------------------------------------------------
 // DRAFT — pending the counsel review this document requires.
@@ -28,7 +30,6 @@ import {
 // ---------------------------------------------------------------------------
 
 const LAST_UPDATED = "Draft, not yet effective";
-const VERSION = "0.1.0-draft";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -49,20 +50,20 @@ const ENTITY_ROWS = [
   { label: "Licensing authority", value: "Dubai, UAE" },
   {
     label: "Registered address",
-    value: "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai",
+    value: ADDRESS,
   },
-  { label: "Privacy contact", value: "contact@mapletech.ae" },
-  { label: "General contact", value: "contact@mapletech.ae" },
-  { label: "Phone", value: "+971 54 375 5150" },
+  { label: "Privacy contact", value: EMAIL },
+  { label: "General contact", value: EMAIL },
+  { label: "Phone", value: PHONE_DISPLAY },
 ] as const;
 
 const CONTACT_ROWS = [
-  { label: "Privacy and data protection", value: "contact@mapletech.ae" },
-  { label: "General enquiries", value: "contact@mapletech.ae" },
-  { label: "Phone", value: "+971 54 375 5150" },
+  { label: "Privacy and data protection", value: EMAIL },
+  { label: "General enquiries", value: EMAIL },
+  { label: "Phone", value: PHONE_DISPLAY },
   {
     label: "Post",
-    value: "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai",
+    value: ADDRESS,
   },
 ] as const;
 
@@ -72,7 +73,7 @@ export default function PrivacyPolicy() {
       title="Privacy Policy"
       standfirst="What we collect when you use this site or enquire about our services, why we collect it, how long we keep it, who else sees it, and what you can ask us to do with it."
       lastUpdated={LAST_UPDATED}
-      version={VERSION}
+      version={PRIVACY_POLICY_VERSION}
       sections={S}
     >
       <p>
@@ -149,8 +150,8 @@ export default function PrivacyPolicy() {
             </tr>
             <tr>
               <th scope="row">Phone number</th>
-              <td>To call or message you about your enquiry, where you provide it</td>
-              <td>Consent</td>
+              <td>To call or message you about your enquiry. Every enquiry form requires it</td>
+              <td>Consent, and steps toward a contract</td>
             </tr>
             <tr>
               <th scope="row">Property location or area</th>
@@ -170,8 +171,8 @@ export default function PrivacyPolicy() {
           </tbody>
         </LegalTable>
         <p>
-          We ask for the minimum needed to respond usefully. Fields that are not required are marked
-          optional, and leaving them blank does not stop us replying.
+          We ask for the minimum needed to respond usefully. The fields we need are marked required;
+          leaving any other field blank does not stop us replying.
         </p>
         <p>
           <strong>We do not ask for and do not want:</strong> your identity documents, passport or
@@ -229,8 +230,8 @@ export default function PrivacyPolicy() {
         */}
         <h3 id="cookies">Cookies and analytics</h3>
         <p>
-          <strong>Essential cookies</strong> keep the site working: they remember your cookie choice
-          and help us reject spam submissions. These are always active.
+          <strong>Essential cookies</strong> keep the site working. There is one: it remembers your
+          cookie choice. It is always active.
         </p>
         <p>
           <strong>Analytics cookies are off until you turn them on.</strong> We are preparing to use
@@ -293,6 +294,11 @@ export default function PrivacyPolicy() {
               <td>Server log data described in section 3</td>
             </tr>
             <tr>
+              <th scope="row">Resend</th>
+              <td>Delivers each enquiry you send to our mailbox</td>
+              <td>Everything you submit in an enquiry form</td>
+            </tr>
+            <tr>
               <th scope="row">Vercel Web Analytics and Speed Insights</th>
               <td>Aggregate page performance and visit counts</td>
               <td>
@@ -318,11 +324,6 @@ export default function PrivacyPolicy() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <th scope="row">Resend</th>
-              <td>Delivering enquiry emails to our team</td>
-              <td>Everything you submit in an enquiry form</td>
-            </tr>
             <tr>
               <th scope="row">Sanity</th>
               <td>Managing website content</td>
@@ -515,10 +516,10 @@ export default function PrivacyPolicy() {
           </li>
         </ul>
         <p>
-          <strong>How to exercise a right:</strong> email contact@mapletech.ae and tell us what you
-          want. We will acknowledge your request and respond within{" "}
-          <Placeholder>30 days</Placeholder> of receiving it. If a request is complex and needs
-          longer, we will tell you why and when to expect our response.
+          <strong>How to exercise a right:</strong> email {EMAIL} and tell us what you want. We will
+          acknowledge your request and respond within <Placeholder>30 days</Placeholder> of
+          receiving it. If a request is complex and needs longer, we will tell you why and when to
+          expect our response.
         </p>
         <p>
           <strong>We will verify who you are first.</strong> Before we hand over or delete personal
@@ -529,9 +530,9 @@ export default function PrivacyPolicy() {
         </p>
         <p>
           <strong>If you are unhappy with how we have handled your information,</strong> tell us
-          first: most problems are faster to fix directly. Contact contact@mapletech.ae, and we will
-          investigate and respond. If you remain dissatisfied, you may complain to the relevant UAE
-          data protection authority.
+          first: most problems are faster to fix directly. Contact {EMAIL}, and we will investigate
+          and respond. If you remain dissatisfied, you may complain to the relevant UAE data
+          protection authority.
         </p>
       </LegalSectionBlock>
 

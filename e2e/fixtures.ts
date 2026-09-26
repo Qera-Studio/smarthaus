@@ -1,6 +1,6 @@
 import { test as base } from "@playwright/test";
 
-export { expect, devices, type Page } from "@playwright/test";
+export { expect, devices, type Locator, type Page } from "@playwright/test";
 
 /**
  * Every spec imports `test` from here, never from @playwright/test. ESLint

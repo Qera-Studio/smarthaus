@@ -111,11 +111,14 @@ Two categories. Only two, because the tag container holds analytics only.
 Nothing in this category may be consent-gated, and the banner must not imply a
 choice that does not exist.
 
-| What                          | Why it is essential                                       | Consent   |
-| ----------------------------- | --------------------------------------------------------- | --------- |
-| Your cookie preference itself | Remembering your choice is what stops us asking again     | Always on |
-| Security and abuse prevention | Keeping the site available and rejecting spam submissions | Always on |
-| Core site function            | Serving pages, remembering nothing else                   | Always on |
+| What                          | Why it is essential                                   | Consent   |
+| ----------------------------- | ----------------------------------------------------- | --------- |
+| Your cookie preference itself | Remembering your choice is what stops us asking again | Always on |
+| Core site function            | Serving pages, remembering nothing else               | Always on |
+
+A "Security and abuse prevention" row stood here until 2026-09-26, when it was
+cut: no cookie does either job. Spam is rejected by a honeypot field, which sets
+nothing, so the consent record is the only essential cookie there is.
 
 **Essential does not include analytics.** A site works perfectly without knowing
 who visited. Anyone classifying GA4 or Clarity as "essential" is mislabelling,
@@ -222,10 +225,9 @@ fear that declining breaks something.
 ```
 Essential                                          [ Always on ]
 
-Remembering your cookie choice, keeping the site secure, and rejecting
-spam submissions. The site cannot work without these, so there is no
-choice to offer — we would rather say that than present a switch that
-does nothing.
+Remembering your cookie choice. The site cannot work without it, so
+there is no choice to offer — we would rather say that than present a
+switch that does nothing.
 ```
 
 The control must be rendered as a **disabled, visibly-on** state with
@@ -400,8 +402,8 @@ Replacement, with a new `#cookies` anchor for the banner to link to:
 
 > ### Cookies and analytics
 >
-> **Essential cookies** keep the site working: they remember your cookie choice
-> and help us reject spam submissions. These are always active.
+> **Essential cookies** keep the site working. There is one: it remembers your
+> cookie choice. It is always active.
 >
 > **Analytics cookies are off until you turn them on.** If you accept them, we
 > use Google Analytics and Microsoft Clarity to understand which pages are read
@@ -609,36 +611,36 @@ conversion tag is ever added, **all** of these fire:
 
 For handing to the component build, or to a translator when Arabic lands in V2.
 
-| Key                         | String                                                                                                                                                                                                                          |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `banner.heading`            | Cookies                                                                                                                                                                                                                         |
-| `banner.body`               | We use cookies that keep this site working, and we would like to use analytics cookies to understand which pages are useful. Analytics stays off unless you turn it on.                                                         |
-| `banner.accept`             | Accept analytics                                                                                                                                                                                                                |
-| `banner.decline`            | Decline                                                                                                                                                                                                                         |
-| `banner.customise`          | Choose what to share                                                                                                                                                                                                            |
-| `banner.link`               | How we use cookies                                                                                                                                                                                                              |
-| `prefs.heading`             | Cookie preferences                                                                                                                                                                                                              |
-| `prefs.intro`               | Analytics is off until you turn it on, and you can change this at any time. Declining changes nothing about how the site works for you.                                                                                         |
-| `prefs.essential.label`     | Essential                                                                                                                                                                                                                       |
-| `prefs.essential.state`     | Always on                                                                                                                                                                                                                       |
-| `prefs.essential.body`      | Remembering your cookie choice, keeping the site secure, and rejecting spam submissions. The site cannot work without these, so there is no choice to offer — we would rather say that than present a switch that does nothing. |
-| `prefs.analytics.label`     | Analytics                                                                                                                                                                                                                       |
-| `prefs.analytics.body`      | Google Analytics and Microsoft Clarity. These tell us which pages people read, where they scroll, and where they give up — so we can fix the parts that are not working.                                                        |
-| `prefs.analytics.clarity`   | Clarity records how a page is used, including clicks and scrolling. Anything typed into a form is masked and never recorded.                                                                                                    |
-| `prefs.analytics.retention` | Stored for up to 14 months. Neither tool is used to advertise to you.                                                                                                                                                           |
-| `prefs.save`                | Save preferences                                                                                                                                                                                                                |
-| `prefs.withdraw`            | Changed your mind? Open cookie preferences from the footer of any page. Turning analytics off stops it immediately.                                                                                                             |
-| `state.on`                  | Analytics is on. Change this in cookie preferences.                                                                                                                                                                             |
-| `state.off`                 | Analytics is off. Change this in cookie preferences.                                                                                                                                                                            |
-| `state.expired`             | It has been a while since we asked, so we are checking again.                                                                                                                                                                   |
-| `state.changed`             | We have added a tool since you last chose, so we are asking again.                                                                                                                                                              |
-| `footer.link`               | Cookie preferences                                                                                                                                                                                                              |
-| `form.consent.required`     | I would like Smarthaus to contact me about this enquiry.                                                                                                                                                                        |
-| `form.consent.helper`       | We use your details to answer your enquiry and nothing else. Read how we handle them in our Privacy Policy.                                                                                                                     |
-| `form.consent.error`        | Please confirm you would like us to contact you about your enquiry.                                                                                                                                                             |
-| `form.marketing.optional`   | Occasionally send me new projects and ideas. No more than a few times a year, and you can stop at any time.                                                                                                                     |
-| `form.success.heading`      | Thank you — we have your enquiry.                                                                                                                                                                                               |
-| `form.success.body`         | We reply to every enquiry, usually within one working day. If it is easier to talk now, message us on WhatsApp.                                                                                                                 |
+| Key                         | String                                                                                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `banner.heading`            | Cookies                                                                                                                                                                  |
+| `banner.body`               | We use cookies that keep this site working, and we would like to use analytics cookies to understand which pages are useful. Analytics stays off unless you turn it on.  |
+| `banner.accept`             | Accept analytics                                                                                                                                                         |
+| `banner.decline`            | Decline                                                                                                                                                                  |
+| `banner.customise`          | Choose what to share                                                                                                                                                     |
+| `banner.link`               | How we use cookies                                                                                                                                                       |
+| `prefs.heading`             | Cookie preferences                                                                                                                                                       |
+| `prefs.intro`               | Analytics is off until you turn it on, and you can change this at any time. Declining changes nothing about how the site works for you.                                  |
+| `prefs.essential.label`     | Essential                                                                                                                                                                |
+| `prefs.essential.state`     | Always on                                                                                                                                                                |
+| `prefs.essential.body`      | Remembering your cookie choice. The site cannot work without it, so there is no choice to offer — we would rather say that than present a switch that does nothing.      |
+| `prefs.analytics.label`     | Analytics                                                                                                                                                                |
+| `prefs.analytics.body`      | Google Analytics and Microsoft Clarity. These tell us which pages people read, where they scroll, and where they give up — so we can fix the parts that are not working. |
+| `prefs.analytics.clarity`   | Clarity records how a page is used, including clicks and scrolling. Anything typed into a form is masked and never recorded.                                             |
+| `prefs.analytics.retention` | Stored for up to 14 months. Neither tool is used to advertise to you.                                                                                                    |
+| `prefs.save`                | Save preferences                                                                                                                                                         |
+| `prefs.withdraw`            | Changed your mind? Open cookie preferences from the footer of any page. Turning analytics off stops it immediately.                                                      |
+| `state.on`                  | Analytics is on. Change this in cookie preferences.                                                                                                                      |
+| `state.off`                 | Analytics is off. Change this in cookie preferences.                                                                                                                     |
+| `state.expired`             | It has been a while since we asked, so we are checking again.                                                                                                            |
+| `state.changed`             | We have added a tool since you last chose, so we are asking again.                                                                                                       |
+| `footer.link`               | Cookie preferences                                                                                                                                                       |
+| `form.consent.required`     | I would like Smarthaus to contact me about this enquiry.                                                                                                                 |
+| `form.consent.helper`       | We use your details to answer your enquiry and nothing else. Read how we handle them in our Privacy Policy.                                                              |
+| `form.consent.error`        | Please confirm you would like us to contact you about your enquiry.                                                                                                      |
+| `form.marketing.optional`   | Occasionally send me new projects and ideas. No more than a few times a year, and you can stop at any time.                                                              |
+| `form.success.heading`      | Thank you — we have your enquiry.                                                                                                                                        |
+| `form.success.body`         | We reply to every enquiry, usually within one working day. If it is easier to talk now, message us on WhatsApp.                                                          |
 
 ---
 

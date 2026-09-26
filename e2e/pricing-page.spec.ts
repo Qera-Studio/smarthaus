@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
 
 /**
  * The /pricing page: four cards, then the comparison.
@@ -74,10 +74,7 @@ test("scrolls the comparison sideways at phone width, not the page", async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   await comparison(page).scrollIntoViewIfNeeded();
 
-  const pageOverflows = await page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-  );
-  expect(pageOverflows).toBe(false);
+  await expectNoHorizontalOverflow(page);
 
   const region = comparison(page).getByRole("group", { name: /feature comparison/i });
   const regionOverflows = await region.evaluate((el) => el.scrollWidth > el.clientWidth);
@@ -141,8 +138,7 @@ test("tells crawlers to wait while the figures are unconfirmed", async ({ page }
 
 test("carries no placeholder marks and no em dashes", async ({ page }) => {
   await expect(page.locator("[data-placeholder]")).toHaveCount(0);
-  const text = await page.locator("main").innerText();
-  expect(text).not.toMatch(/—/);
+  await expectNoEmDash(page.locator("main"));
 });
 
 test("answers a handful of pricing questions in the FAQ accordion", async ({ page }) => {
@@ -172,8 +168,7 @@ test("closes with a primary to the form and a secondary to the full FAQ", async 
 });
 
 test("passes axe with no violations", async ({ page }) => {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
+  await expectAccessible(page);
 });
 
 test("the homepage's comparison button now lands here", async ({ page }) => {

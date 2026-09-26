@@ -1,0 +1,10 @@
+Draco 3D Data Compression, decoder
+https://github.com/google/draco
+
+draco_decoder.wasm and draco_wasm_wrapper.js in this directory are the glTF
+variant of the Draco decoder, byte-identical to the copies three.js ships in
+examples/jsm/libs/draco/gltf/ (three 0.186.0). They are served unmodified.
+
+Copyright The Draco Authors (Google LLC).
+Licensed under the Apache License, Version 2.0. The full licence text is in
+LICENSE in this directory, and at http://www.apache.org/licenses/LICENSE-2.0

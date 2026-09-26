@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible } from "./checks";
 
 test("homepage loads", async ({ page }) => {
   await page.goto("/");
@@ -8,6 +8,5 @@ test("homepage loads", async ({ page }) => {
 
 test("homepage passes axe accessibility checks", async ({ page }) => {
   await page.goto("/");
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
+  await expectAccessible(page);
 });
