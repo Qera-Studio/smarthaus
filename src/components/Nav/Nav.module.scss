@@ -298,6 +298,25 @@
 
     // Hover feedback is the character roll (see RollingText), not a fade.
     @include focus-ring;
+
+    // The page being viewed: a 1px rule under the label. Not recoloured,
+    // because colour alone fails WCAG 1.4.1. Not text-decoration either:
+    // RollingText renders the label as inline-block spans, which a decoration
+    // does not reach (measured: computed underline, nothing on screen). A
+    // border, not a background, so forced colours keep it.
+    &[aria-current="page"] {
+      position: relative;
+    }
+
+    &[aria-current="page"]::after {
+      content: "";
+      position: absolute;
+      inset-inline: 0;
+      inset-block-end: -0.3em;
+      border-block-end-style: solid;
+      border-block-end-width: 1px;
+      border-block-end-color: currentColor;
+    }
   }
 
   .cta {

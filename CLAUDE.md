@@ -231,7 +231,7 @@ Server Components first. `'use client'` limited to:
 - Hardware carousel (`Hardware/HardwareStage.tsx` — ARIA tablist, active slide, one IntersectionObserver; the timer is a CSS animation whose `animationend` advances the slide, and it never starts under reduced motion)
 - Wireframe/scene reveal (Web Animations API)
 - Contact form (form state, Turnstile widget)
-- Mobile navigation (toggle state)
+- Mobile navigation (toggle state), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
 - Process portal handoff (`Process/ProcessHandoff.tsx` — one IntersectionObserver that sets `data-portal-open` and the transition's duration from the measured scroll speed; a CSS transition finishes the zoom's second half)

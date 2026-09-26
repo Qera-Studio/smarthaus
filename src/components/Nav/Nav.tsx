@@ -2,6 +2,7 @@ import Link from "next/link";
 import { NAV_LINKS } from "../../lib/nav-links";
 import { Logo } from "../Logo";
 import { RollingText } from "../RollingText";
+import { NavLink } from "./NavLink";
 import { NavShell } from "./NavShell";
 import styles from "./Nav.module.scss";
 
@@ -33,9 +34,9 @@ export function Nav() {
               // CSS — see --nav-stagger-step in Nav.module.scss.
               style={{ "--link-index": index } as React.CSSProperties}
             >
-              <Link href={href} className={styles.link}>
+              <NavLink href={href} className={styles.link}>
                 <RollingText>{label}</RollingText>
-              </Link>
+              </NavLink>
             </li>
           ))}
         </ul>

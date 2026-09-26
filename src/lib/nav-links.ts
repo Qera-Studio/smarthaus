@@ -75,3 +75,17 @@ export const LEGAL_LINKS: readonly NavLink[] = [
   { href: PREFERENCES_ROUTE, label: "Cookie Preferences" },
   { href: "/sitemap.xml", label: "Sitemap" },
 ] as const;
+
+/**
+ * Whether a nav link points at the page being viewed, for aria-current
+ * (Accessibility System §8, WCAG 2.4.8 Location, adopted at AAA). A section
+ * link stays current on its sub-pages (/solutions on /solutions/lighting);
+ * home is current only on home, or it would be current everywhere. A trailing
+ * slash, a query or a hash never changes the answer.
+ */
+export function isCurrentPath(pathname: string, href: string): boolean {
+  const path = pathname.split(/[?#]/)[0]!.replace(/\/+$/, "") || "/";
+  const target = href.split(/[?#]/)[0]!.replace(/\/+$/, "") || "/";
+  if (target === "/") return path === "/";
+  return path === target || path.startsWith(`${target}/`);
+}
