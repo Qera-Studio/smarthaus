@@ -160,16 +160,36 @@ test("reaches the last page by the end of the pin window", async ({ page }) => {
  */
 test.describe("the portal", () => {
   // Percentage of the pin window to scroll to, as a fraction of its travel.
+  //
+  // Converges rather than scrolling once. The target is measured from layout,
+  // and right after load the layout above the rail is still settling: on
+  // WebKit the first jump from the top landed 5 to 8px short of where the rail
+  // then sat (measured, 40 runs: y=1080 to 1083 against 1088.5), while every
+  // later jump landed exactly. At the start of the pin the section above
+  // still moves 1:1 with scroll, so that shortfall read as the "hold" moving
+  // and failed the test on iPhone about one run in fifteen. Re-measuring after
+  // each scroll removes the dependency on when the page happened to settle.
   const at = async (page: import("@playwright/test").Page, fraction: number) => {
-    const box = await rail(page).evaluate((el) => {
-      const rect = el.getBoundingClientRect();
-      return { top: rect.top + window.scrollY, height: rect.height };
-    });
-    await page.evaluate(
-      ({ top, height, fraction }) =>
-        window.scrollTo(0, top + (height - window.innerHeight) * fraction),
-      { ...box, fraction },
-    );
+    let miss = Infinity;
+    for (let attempt = 0; attempt < 5 && miss > 1; attempt += 1) {
+      miss = await rail(page).evaluate(
+        (el, f) =>
+          new Promise<number>((resolve) => {
+            const rect = el.getBoundingClientRect();
+            const target = rect.top + window.scrollY + (rect.height - window.innerHeight) * f;
+            window.scrollTo(0, target);
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => {
+                const now = el.getBoundingClientRect();
+                const settled = now.top + window.scrollY + (now.height - window.innerHeight) * f;
+                resolve(Math.abs(window.scrollY - settled));
+              }),
+            );
+          }),
+        fraction,
+      );
+    }
+    expect(miss, `could not land at ${fraction} of the pin window`).toBeLessThanOrEqual(1);
     await page.waitForTimeout(300);
   };
 
