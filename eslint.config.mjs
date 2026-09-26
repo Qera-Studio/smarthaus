@@ -18,6 +18,14 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "playwright-report/**",
     "test-results/**",
+    "coverage/**",
+    // Vendored and generated assets. public/draco/ is Google's Draco decoder,
+    // shipped byte for byte; linting it reports six errors nobody may fix.
+    "public/**",
+    // The standards submodule is documentation, read-only from this repo.
+    "qera-system/**",
+    // macOS Finder duplicates ("name 2.ts"). Never code; see .gitignore.
+    "**/* [2-9].*",
   ]),
 ]);
 
