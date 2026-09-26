@@ -1,0 +1,58 @@
+@use "../styles/variables" as *;
+@use "../styles/mixins" as *;
+
+// Laid out like not-found.module.scss: one centred block in the viewport.
+@layer blocks {
+  .page {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: $space-6;
+    min-block-size: calc(100svh - var(--nav-bar-block-size));
+    padding-inline: var(--content-gutter);
+    padding-block: $space-16;
+    text-align: center;
+
+    @include bp-lg {
+      min-block-size: 100svh;
+    }
+  }
+
+  .title {
+    max-inline-size: 20ch;
+    font-size: var(--type-h2);
+    line-height: $line-height-tight;
+    text-wrap: balance;
+  }
+
+  .body {
+    max-inline-size: 42ch;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  .ctaRow {
+    display: flex;
+    justify-content: center;
+  }
+
+  .channels {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $space-3 $space-6;
+    list-style: none;
+
+    a {
+      color: inherit;
+      text-underline-offset: 0.2em;
+    }
+  }
+
+  .reference {
+    font-size: $font-size-sm;
+    color: var(--color-text-secondary);
+  }
+}

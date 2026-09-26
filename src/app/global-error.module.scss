@@ -1,0 +1,56 @@
+@use "../styles/variables" as *;
+
+// Rendered without globals.scss, so no custom properties exist here: every
+// value is a compile-time SCSS variable. The brand palette, flattened.
+.body {
+  margin: 0;
+  background-color: $brown-100;
+  color: $brown-900;
+  font-family: system-ui, sans-serif;
+}
+
+.page {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: $space-6;
+  min-block-size: 100svh;
+  padding-inline: $space-6;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: $font-size-2xl;
+}
+
+.text {
+  max-inline-size: 42ch;
+  margin: 0;
+  line-height: 1.6;
+
+  a {
+    color: inherit;
+  }
+}
+
+.button {
+  padding-block: $space-3;
+  padding-inline: $space-6;
+  border: 0;
+  border-radius: 0;
+  background-color: $brown-950;
+  color: $brown-100;
+  font: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $brown-950;
+    outline-offset: 3px;
+  }
+}
+
+.reference {
+  margin: 0;
+  font-size: $font-size-sm;
+}
