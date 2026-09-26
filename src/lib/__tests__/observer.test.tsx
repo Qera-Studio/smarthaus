@@ -441,7 +441,7 @@ describe("VillaCanvas", () => {
     spy.mock.calls.some(([type]) => type === "pointermove");
 
   async function mountReady() {
-    const { container } = render(<VillaCanvas poster={<img alt="" />} />);
+    const { container } = render(<VillaCanvas poster={<span data-poster />} />);
     const host = container.firstElementChild!;
     await waitFor(() => expect(host).toHaveAttribute("data-ready"));
     return host;
