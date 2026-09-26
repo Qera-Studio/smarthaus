@@ -362,9 +362,10 @@ test.describe("the choice", () => {
       );
     });
     await page.goto("/");
-    // Settle past hydration so a region that did appear would be visible.
-    await page.waitForLoadState("networkidle");
-    // It did appear, so "hidden" below means dismissed, not never shown.
+    // The poll is the hydration witness: the flag is set only once React has
+    // inserted the region. It did appear, so "hidden" below means dismissed,
+    // not never shown. Not networkidle: one slow image elsewhere on the page
+    // held that open on CI and timed this out without testing anything.
     await expect
       .poll(() =>
         page.evaluate(() => (window as unknown as { __bannerSeen?: boolean }).__bannerSeen),
@@ -390,8 +391,9 @@ test.describe("the choice", () => {
     // timeout: the banner resolves in an effect after hydration, so on a
     // fresh navigation under parallel load the first poll can land before the
     // cookie has been read. That made this flake on the iPhone project while
-    // passing in isolation — a slow assertion, not a wrong one.
-    await page.goto("/", { waitUntil: "networkidle" });
+    // passing in isolation — a slow assertion, not a wrong one. The explicit
+    // wait is the whole settle; networkidle also waited on unrelated images.
+    await page.goto("/");
     await expect(region(page)).toBeVisible({ timeout: 15_000 });
   });
 });

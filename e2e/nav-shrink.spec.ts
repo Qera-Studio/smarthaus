@@ -146,21 +146,38 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
   expect(shrinkSettled, `shrink finished within 5s: ${why}`).toBe(true);
 
   // Settled capsule: it hugs its content, 8px of padding and a 1px border on
-  // each side. The widths it is built from are measurements of the real
-  // artwork and copy (see --nav-stuck-size), so this is what catches them
-  // drifting — as a gap beside the mark, or the CTA poking out.
+  // each side, around mark, gap, links, gap, CTA. The row and the CTA are text,
+  // and text width depends on the platform's font rendering (Linux Chrome draws
+  // the row about 10px wider than macOS), so the expected geometry is derived
+  // from what this browser rendered, measured here independently of how
+  // NavShell measures it. On macOS this is 708px wide with 77px gaps.
   //
-  // 708 = 2 * (129 + 24 + 8 + 1) + 384, the five-link row. It was 639 with
-  // four links; a change to NAV_LINKS moves this number and the 384px in
-  // Nav.module.scss together.
+  // The equations: width = 2 * (cta + 24 + 8 + 1) + row, and each gap is
+  // 24 + (cta - 23) / 2, where 23 is the mark the stylesheet assumes. A gap
+  // off by more than a pixel means the capsule was built from widths the page
+  // did not render: the CTA poking out, or slack beside the mark.
   const settled = shrink.at(-1)!;
   expect(settled.stuck, "settled in the capsule").toBe(true);
-  const width = await page.evaluate(
-    () => document.querySelector("header")!.getBoundingClientRect().width,
+  const geometry = await page.evaluate(() => {
+    const header = document.querySelector("header")!;
+    const items = header.querySelectorAll("nav ul > li");
+    return {
+      width: header.getBoundingClientRect().width,
+      row:
+        items[items.length - 1]!.getBoundingClientRect().right -
+        items[0]!.getBoundingClientRect().left,
+      cta: header.querySelector('a[href="/contact"]')!.getBoundingClientRect().width,
+    };
+  });
+  expect(Math.abs(geometry.width - (2 * (geometry.cta + 33) + geometry.row))).toBeLessThan(1);
+  const gap = 24 + (geometry.cta - 23) / 2;
+  expect(Math.abs(settled.leftGap - gap), `left gap ${settled.leftGap}, want ${gap}`).toBeLessThan(
+    1,
   );
-  expect(Math.round(width)).toBe(708);
-  expect(Math.round(settled.leftGap)).toBe(77);
-  expect(Math.round(settled.rightGap)).toBe(77);
+  expect(
+    Math.abs(settled.rightGap - gap),
+    `right gap ${settled.rightGap}, want ${gap}`,
+  ).toBeLessThan(1);
 
   for (const [label, frames] of [
     ["shrink", shrink],

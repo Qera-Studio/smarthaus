@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import type { Request } from "@playwright/test";
 
 // The e2e server is not the production server: next.config.ts drops two
 // headers when PLAYWRIGHT is set, because WebKit on plain-HTTP loopback aborts
@@ -47,6 +48,28 @@ test.describe("the e2e server", () => {
     await page.goto("/");
     await expect(page.getByRole("region", { name: "Cookie preferences" })).toBeVisible();
   });
+
+  // Named for what it guards. On CI the image optimizer once stopped answering
+  // one cache key for the rest of the run, and the only symptom was three
+  // unrelated tests timing out on networkidle. A hung image now fails here.
+  test("every image the homepage requests is answered", async ({ page }) => {
+    // Request objects, not URLs: the same image can be asked for twice.
+    const pending = new Set<Request>();
+    const failed: string[] = [];
+    page.on("request", (request) => {
+      if (request.resourceType() === "image") pending.add(request);
+    });
+    page.on("requestfinished", (request) => pending.delete(request));
+    page.on("requestfailed", (request) => {
+      if (pending.delete(request)) failed.push(`${request.url()}: ${request.failure()?.errorText}`);
+    });
+    await page.goto("/");
+    await expect(page.getByRole("region", { name: "Cookie preferences" })).toBeVisible();
+    await expect
+      .poll(() => [...pending].map((request) => request.url()), { timeout: 15_000 })
+      .toEqual([]);
+    expect(failed).toEqual([]);
+  });
 });
 
 // Runs only in the forced-colors project (playwright.config.ts). A smoke check
@@ -82,6 +105,10 @@ test.describe("200% zoom @zoom", () => {
 // unless asked, and on when asked, so the switch cannot rot into "always off".
 test.describe("the hero's villa in e2e", () => {
   test("is off by default: the page reports Save-Data and no canvas mounts", async ({ page }) => {
+    const villaRequests: string[] = [];
+    page.on("request", (request) => {
+      if (/\/hero\/villa\.glb|\/draco\//.test(request.url())) villaRequests.push(request.url());
+    });
     await page.goto("/");
     expect(
       await page.evaluate(
@@ -89,9 +116,12 @@ test.describe("the hero's villa in e2e", () => {
           (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData,
       ),
     ).toBe(true);
-    // Long enough for the canvas to have started if it were going to: it
-    // starts on a zero timeout after hydration and mounts once the model loads.
-    await page.waitForLoadState("networkidle");
+    // The gate runs in an effect at hydration and, when it passes, starts the
+    // load on a zero timeout. So: hydrated, then a window far longer than that
+    // timeout, and neither the model nor its decoder was ever asked for.
+    await expect(page.getByRole("region", { name: "Cookie preferences" })).toBeVisible();
+    await page.waitForTimeout(2_000);
+    expect(villaRequests).toEqual([]);
     await expect(page.locator("canvas")).toHaveCount(0);
   });
 
