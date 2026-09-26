@@ -44,7 +44,7 @@ type Options = { villa: boolean; clientAddress: string | undefined };
  * Trusting the header is safe only because production runs on Vercel, which
  * overwrites x-forwarded-for with the real client address; the e2e server is
  * `next start` on loopback, which passes it through. See
- * docs/runbooks/vercel-firewall.md for how that was confirmed.
+ * docs/runbooks/vercel-firewall.md for the platform guarantee this relies on.
  */
 export function addressFor(seed: string): string {
   const [a, b, c] = createHash("sha256").update(seed).digest();

@@ -34,6 +34,11 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Security System §12: no known high or critical advisory in what ships.
+      # --prod: the dev-only tree (Lighthouse CI's dependencies) never reaches a
+      # visitor; its advisories are tracked in docs/runbooks/compromised-dependency.md.
+      - name: Audit shipped dependencies
+        run: pnpm audit --prod --audit-level high
       - name: Lint
         run: pnpm lint
       - name: Typecheck
