@@ -55,3 +55,10 @@ next-env.d.ts
 # Blender source frames for the hero grid: 1.9MB PNGs, 82MB the set. The
 # committed output is public/hero/grid/*.webp — see scripts/hero-grid.sh.
 /public/hero/hero_grid/*.png
+
+# Jest coverage output. The committed floor is coverage-baseline.json.
+/coverage/
+
+# macOS Finder duplicates ("name 2.ts"). They are never code: a copy of a test
+# runs twice, a copy of a type shadows the original. Archive, never commit.
+* [2-9].*

@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import styles from "./Nav.module.scss";
 import { latestEntry } from "@/lib/observer";
+import { trackNavWidths } from "./measure";
 
 /**
  * How much of the viewport the footer must cover before the nav hides. The
@@ -49,6 +50,8 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
   // panel: the bar is part of the open nav, and a tap on the hamburger must
   // reach its own onClick rather than being closed out from under it.
   const headerRef = useRef<HTMLElement>(null);
+  const linksRef = useRef<HTMLElement>(null);
+  const ctaRef = useRef<HTMLSpanElement>(null);
 
   // Desktop capsule trigger. A sentinel plus IntersectionObserver rather than a
   // scroll listener, which AGENTS.md rules out — this fires twice per crossing
@@ -165,6 +168,9 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
     return () => document.removeEventListener("pointerdown", onPointerDown, { capture: true });
   }, [open]);
 
+  // The capsule's geometry uses the widths this platform renders: measure.ts.
+  useEffect(() => trackNavWidths(headerRef.current!, linksRef.current!, ctaRef.current!), []);
+
   return (
     <>
       {/* Marks the top of the page. Once it scrolls out, the nav is "stuck". */}
@@ -196,7 +202,7 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
         */}
         <div id={panelId} className={styles.panel} inert={(!isDesktop && !open) || undefined}>
           <div className={styles.panelInner}>
-            <nav className={styles.panelLinks} aria-label="Primary">
+            <nav ref={linksRef} className={styles.panelLinks} aria-label="Primary">
               {links}
             </nav>
             <div className={styles.panelFooter}>{footer}</div>
@@ -224,7 +230,9 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
             </svg>
           </button>
 
-          <span className={styles.ctaSlot}>{cta}</span>
+          <span ref={ctaRef} className={styles.ctaSlot}>
+            {cta}
+          </span>
         </div>
       </header>
     </>

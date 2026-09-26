@@ -92,7 +92,7 @@ manifest = {
 
 ### Implementation
 
-- **`src/lib/manifest.ts`** — Zod schema + typed loader. A malformed manifest fails the **build**, not the browser
+- **`src/lib/manifest.ts`** — Zod schema + typed loader. **Not yet imported by any page**: it is the contract for hero phases 2 and 3, which are unbuilt, so today it is enforced only by `src/lib/__tests__/manifest.test.ts`. Once `HeroStage` reads it, a malformed manifest fails the **build**, not the browser
 - **`src/content/scene-manifest.json`** — the manifest file itself. Committed to git. Updated by the Blender Python export module
 - **Asset directory:** `public/hero/landing/`, `public/hero/approach/`, `public/hero/explorer/{serviceId}/`
 
@@ -599,31 +599,76 @@ re-baseline deliberately and record why — see the budget note in CLAUDE.md.
 
 ---
 
-## Testing
+## Testing policy: 1:3, enforced
 
-### Unit (Jest + RTL)
+**Every line of code carries three lines of test.** This is a standing rule, set by Shivanshu on 2026-09-26, and it is enforced by machines rather than by review. Missing it is not an option under any condition, including a deadline.
 
-- Behaviour only. Never assert appearance — jsdom doesn't apply CSS Modules
-- Test components in isolation: does the button call the handler? does the form validate? does the manifest loader reject bad input?
-- The manifest Zod schema gets its own test: valid manifest passes, every invalid variant fails
+### What is counted
 
-### E2E (Playwright + axe)
+`scripts/test-ratio.mjs` is the only place the counting rules live. In short:
 
-- Smoke test on every page: loads, has `<h1>`, passes axe accessibility scan
-- Three device profiles: Desktop Chrome, iPhone 14, Pixel 7
-- Hero: landing poster loads, service tabs are keyboard-navigable, reduced-motion shows stills only
-- Contact form: submit with valid data, submit with invalid data, honeypot rejection
+- **Code** is the non-blank lines of `src/**/*.{ts,tsx}`, excluding tests, `index.ts` barrels and `.d.ts` files. `src/content/*.ts` counts as code, because copy and tables ship to users and can be wrong.
+- **Tests** are the non-blank lines of `src/**/__tests__/**`, `src/**/*.test.{ts,tsx}` and everything under `e2e/`, fixtures and helpers included.
+- Blank lines are dropped on both sides. Finder duplicates (`name 2.ts`) are skipped.
 
-### Performance (Lighthouse CI)
+Run it with `pnpm test:ratio`.
 
-- Runs against `http://localhost:3000/` (homepage)
-- Thresholds in `lighthouserc.json`: performance ≥ 0.95, accessibility = 1.0, best-practices ≥ 0.95, SEO = 1.0
-- JS budget: ≤ 100KB (102,400 bytes resource size)
-- LCP < 2500ms, TBT < 200ms, CLS < 0.05
+### The two gates
 
-### Pre-commit
+**Ratio** (`scripts/test-ratio.mjs --base <ref>`). The repo started at 0.43:1, so an absolute 3:1 check would be red on every PR until the backlog is paid, including the PRs that pay it. A permanently red gate hides real regressions (see the JS budget note in CLAUDE.md). So until the tree reaches 3:1, a PR passes only when both hold:
 
-Husky + lint-staged: ESLint fix, Prettier format, TypeScript typecheck on staged files. Catches errors before they enter the branch, not in CI.
+1. its new code carries three times its lines in new tests;
+2. the overall ratio did not fall.
+
+Once the tree is at 3:1 the absolute check applies and the ratchet no longer matters.
+
+**Coverage** (`scripts/coverage-gate.mjs --base <ref>`). Line counts alone can be padded, so coverage proves the tests exercise the code:
+
+1. **Floor:** global line and statement coverage may not fall below `coverage-baseline.json`. Raise it with `pnpm coverage:raise` after adding tests, and commit it. It only ever goes up. Functions and branches are reported but not floored: Jest counts them only in files a test loads, so the first test for an untested file lowers their percentage (measured: lines 30% to 45%, branches 77.9% to 76.7%, in a change that only added tests).
+2. **Changed lines:** every executable line a PR adds or changes must be run by a test, and at least 90% of the branch arms on those lines must be taken. Blank and comment-only lines are exempt. Untested old lines in the same file are backlog, measured by the ratio, not a condition on the fix (decided 2026-09-26: holding a one-line fix to the coverage of the whole file around it turned every bug fix into a backfill project).
+
+### What runs where
+
+| Where                           | What                                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Pre-commit                      | ESLint, Prettier, whole-project `tsc` on staged files (`lint-staged`)                             |
+| Pre-push (`.husky/pre-push`)    | Typecheck, Jest with coverage, both gates against `origin/latest` (override with `PRE_PUSH_BASE`) |
+| CI (`.github/workflows/ci.yml`) | Everything, on every PR into `latest` or `main` and every push to them                            |
+
+The CI jobs, which are the required status checks:
+
+- `static`: lint, typecheck, production build, cascade layer order in every CSS chunk (`scripts/assert-layer-order.mjs`)
+- `unit`: Jest with coverage, the coverage gate, the ratio gate
+- `e2e (Desktop Chrome)`, `e2e (iPhone 14)`, `e2e (Pixel 7)`: the Playwright suite per device, with axe
+- `e2e-extra`: specs tagged `@forced-colors` and `@zoom`, in the `forced-colors` and `zoom-200` projects
+- `lighthouse`: `lighthouserc.json` against the production build
+
+`scripts/__tests__/ci-workflow.test.ts` fails if any of these jobs is renamed, removed, or allowed to fail quietly.
+
+### Branch protection
+
+Set once in GitHub, under Settings, then Branches, for both `latest` and `main`:
+
+- Require a pull request before merging.
+- Require status checks to pass before merging, with every check listed above selected.
+- Require branches to be up to date before merging.
+- Require conversation resolution before merging.
+- Do not allow bypassing the above settings.
+- Block force pushes and deletions.
+
+Repository secrets for the e2e jobs: `RESEND_API_KEY`, `LEAD_EMAIL`, `LEAD_FROM_EMAIL`. The contact and home-enquiry specs send real email through Resend on every run, by decision.
+
+### When a test fails
+
+**A failing test is a finding, reported to Shivanshu with its output.** It is never fixed by weakening, skipping, retrying or deleting the assertion. If the test is right and the code is wrong, fix the code. If the test encodes a decision that has changed, say which decision and ask. A test that only passes on retry is flaky, and flaky is a failure: CI runs with `failOnFlakyTests`, so a flaky pass blocks the merge.
+
+### Writing tests
+
+- **Unit (Jest + RTL):** behaviour only; jsdom does not apply CSS Modules, so never assert appearance. CSS Module class lookups go through a strict proxy (`__mocks__/strictStyleProxy.js`) that throws on an impossible key.
+- **Console guard:** `jest.setup.ts` fails any test that writes `console.error` or `console.warn`. A test that expects a log spies on `console` and asserts on it.
+- **E2E (Playwright + axe):** every route loads, has one `<h1>`, and passes axe, on all three devices. Workers are fixed at three locally and two in CI: at the default count WebKit timed out under load, and the CI runner is smaller.
+- **Lighthouse:** thresholds live in `lighthouserc.json` and nowhere else.
+- **Placeholders:** content carrying a `pending` marker has a test that fails once the marker is cleared, so publishing is a deliberate act.
 
 ---
 

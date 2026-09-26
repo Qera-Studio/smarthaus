@@ -20,17 +20,27 @@
     // The scrolled capsule's width from lg up. A max, not a fixed size: on a
     // 1024px window the content column is already narrower than this, and the
     // capsule should never grow past the gutters it sits inside.
-    // Half the link row plus one gap — the distance from the middle track's
-    // centre to an edge track's inner boundary. The 384px is the measured
-    // width of the five labels and their four gaps; there is no way to read
-    // it from CSS, so it is stated once here and everything else derives.
-    // Re-measure it (last li right edge minus first li left edge, at lg+) if
-    // NAV_LINKS in src/lib/nav-links.ts changes. It was 315px with four.
-    --nav-links-half: calc(384px / 2 + var(--nav-gap));
+    // The rendered widths of the link row (five labels, four gaps) and the
+    // CTA. NavShell measures both and writes them inline on this element
+    // (see measure.ts), because text width depends on the platform's font
+    // rendering: Linux Chrome draws the row about 10px wider than macOS. These
+    // fallbacks are the macOS measurements, used before hydration and
+    // without JS. The mark is an SVG, so its 23px is the same everywhere.
+    --nav-links-row: 384px;
+    --nav-cta-width: 129px;
+    // Half the link row plus one gap: the distance from the middle track's
+    // centre to an edge track's inner boundary.
+    --nav-links-half: calc(var(--nav-links-row) / 2 + var(--nav-gap));
+    // Half the difference between the two end pieces. See the grid note in
+    // the desktop band for why the link row sits this far off centre.
+    --nav-end-offset: calc((var(--nav-cta-width) - 23px) / 2);
     // The capsule hugs its content: mark, gap, links, gap, CTA, plus padding
     // and border. Derived rather than a round number, so it cannot drift out
     // of step with the tracks above.
-    --nav-stuck-size: calc(2 * (129px + var(--nav-gap) + var(--nav-padding-stuck) + 1px) + 384px);
+    --nav-stuck-size: calc(
+      2 * (var(--nav-cta-width) + var(--nav-gap) + var(--nav-padding-stuck) + 1px) +
+        var(--nav-links-row)
+    );
     // How far the bar's BOX sits below the viewport top, in both states: the
     // tall bar's reserved top margin and the capsule's sticky inset, so
     // sticking never moves the box. 16, not 24: it is the tall bar's 24px of
@@ -466,13 +476,13 @@
       // frame; it was the mismatch, not the fr edges.)
       //
       // The consequence, and it is deliberate: with equal gaps the link row
-      // cannot also sit on the page's centre line. It settles 53px to the
+      // cannot also sit on the page's centre line. It settles 53px (on macOS) to the
       // start of it — half the difference between the two end pieces — and,
       // because that offset is the SAME constant at every width, it is already
       // there in the tall bar and never travels during the shrink.
       grid-template-columns:
-        calc(50% - var(--nav-links-half) - 53px) auto
-        calc(50% - var(--nav-links-half) + 53px);
+        calc(50% - var(--nav-links-half) - var(--nav-end-offset)) auto
+        calc(50% - var(--nav-links-half) + var(--nav-end-offset));
       align-items: center;
       // Each item is placed by its own justify-self below, in both states, so
       // nothing flips on stick. The old rule set justify-items only on

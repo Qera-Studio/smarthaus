@@ -1,0 +1,188 @@
+# The gate. Every job here is a required status check on `latest` and `main`
+# (AGENTS.md "Testing policy" lists the exact branch-protection settings). A red
+# job is reported with its output and fixed at the cause; it is never skipped,
+# retried into green, or worked around by weakening an assertion.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [latest, main]
+  push:
+    branches: [latest, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  static:
+    name: static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Production build
+        run: pnpm build
+      - name: Cascade layer order in every chunk
+        run: node scripts/assert-layer-order.mjs
+
+  unit:
+    name: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The ratchet and the touched-file rule compare against the base, so
+          # the base commit has to be in the clone.
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Resolve the base to compare against
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "ref=origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            echo "ref=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Unit tests with coverage
+        run: pnpm test:coverage
+      - name: Coverage gate
+        run: |
+          if [ -n "${{ steps.base.outputs.ref }}" ]; then
+            node scripts/coverage-gate.mjs --base "${{ steps.base.outputs.ref }}"
+          else
+            node scripts/coverage-gate.mjs
+          fi
+      - name: Test ratio
+        run: |
+          if [ -n "${{ steps.base.outputs.ref }}" ]; then
+            node scripts/test-ratio.mjs --base "${{ steps.base.outputs.ref }}"
+          else
+            node scripts/test-ratio.mjs
+          fi
+      - name: Ratio summary
+        if: always()
+        run: |
+          {
+            echo '## Test ratio'
+            echo '```'
+            node scripts/test-ratio.mjs ${{ steps.base.outputs.ref && format('--base {0}', steps.base.outputs.ref) || '' }} || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
+
+  e2e:
+    name: e2e (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ["Desktop Chrome", "iPhone 14", "Pixel 7"]
+    env:
+      CI: "true"
+      # The contact and home-enquiry specs send real email through Resend, by
+      # decision (2026-09-26). Without these the success-path tests fail.
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      LEAD_EMAIL: ${{ secrets.LEAD_EMAIL }}
+      LEAD_FROM_EMAIL: ${{ secrets.LEAD_FROM_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install browsers
+        run: pnpm exec playwright install --with-deps chromium webkit
+      - name: Playwright
+        run: pnpm exec playwright test --project "${{ matrix.project }}"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-${{ strategy.job-index }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  e2e-extra:
+    name: e2e-extra
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Forced colours and 200% zoom
+        run: pnpm exec playwright test --project forced-colors --project zoom-200
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-extra
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  lighthouse:
+    name: lighthouse
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Production build
+        run: pnpm build
+      - name: Lighthouse CI
+        run: pnpm test:lhci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse
+          path: .lighthouseci/
+          retention-days: 14
