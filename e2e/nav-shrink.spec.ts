@@ -42,11 +42,23 @@ type Frame = {
   fullMid: number;
 };
 
-/** Scroll, then read the bar and its contents on every frame for 600ms. */
-function sample(page: Page, scrollTo: number): Promise<Frame[]> {
+/**
+ * Scroll, then read the bar and its contents on every frame until it settles.
+ *
+ * Settled means the header has flipped to the state the scroll implies and no
+ * animation or transition inside it is still running. A fixed 600ms window
+ * passed locally and failed in CI, where the slower runner was still mid-shrink
+ * at 600ms (measured 766, 858 and 969px on three attempts): the "settled" frame
+ * was a moving one. Sampling to the real end also means the per-frame checks
+ * cover the whole motion on any machine, not its first 600ms.
+ */
+function sample(
+  page: Page,
+  scrollTo: number,
+): Promise<{ frames: Frame[]; settled: boolean; why: string }> {
   return page.evaluate(
     (y) =>
-      new Promise<Frame[]>((resolve) => {
+      new Promise<{ frames: Frame[]; settled: boolean; why: string }>((resolve) => {
         const header = document.querySelector("header")!;
         const [mark, full] = Array.from(
           header.querySelectorAll<HTMLElement>('span > a[aria-label="Smarthaus — home"]'),
@@ -79,12 +91,40 @@ function sample(page: Page, scrollTo: number): Promise<Frame[]> {
             fullMid: mid(full!),
           });
         };
+        const wantStuck = y > 0;
+        const running = () =>
+          header.getAnimations({ subtree: true }).some((a) => a.playState === "running");
+        // Two quiet frames in a row, so a transition that starts on the frame
+        // after the state flip is not mistaken for a finished one.
+        let quiet = 0;
         const t0 = performance.now();
         window.scrollTo(0, y);
         const loop = () => {
           snap();
-          if (performance.now() - t0 < 600) requestAnimationFrame(loop);
-          else resolve(frames);
+          const elapsed = performance.now() - t0;
+          const flipped = header.hasAttribute("data-stuck") === wantStuck;
+          quiet = flipped && !running() ? quiet + 1 : 0;
+          if (elapsed >= 600 && quiet >= 2) resolve({ frames, settled: true, why: "" });
+          else if (elapsed > 5000) {
+            // Say what never settled, so a failure explains itself.
+            const live = header
+              .getAnimations({ subtree: true })
+              .filter((a) => a.playState === "running")
+              .map((a) => {
+                const target = (a.effect as KeyframeEffect | null)?.target as Element | null;
+                const name =
+                  (a as CSSTransition).transitionProperty ??
+                  (a as CSSAnimation).animationName ??
+                  "animation";
+                return `${name} on <${target?.tagName.toLowerCase()} class="${target?.className}">`;
+              });
+            resolve({
+              frames,
+              settled: false,
+              // The consent region is client-only: present means React hydrated.
+              why: `stuck=${header.hasAttribute("data-stuck")} want=${wantStuck} scrollY=${window.scrollY} hydrated=${Boolean(document.querySelector('[aria-label="Cookie preferences"]'))} sentinelTop=${(header.previousElementSibling as HTMLElement | null)?.getBoundingClientRect().top} running=[${live.join(", ")}]`,
+            });
+          } else requestAnimationFrame(loop);
         };
         requestAnimationFrame(loop);
       }),
@@ -92,11 +132,18 @@ function sample(page: Page, scrollTo: number): Promise<Frame[]> {
   );
 }
 
+async function expandBack(page: Page): Promise<Frame[]> {
+  const { frames, settled, why } = await sample(page, 0);
+  expect(settled, `expand back finished within 5s: ${why}`).toBe(true);
+  return frames;
+}
+
 test("the capsule closes around a fixed row with the gaps held equal", async ({ page }) => {
   // /about rather than the homepage: it has content to scroll.
   await page.goto("/about");
 
-  const shrink = await sample(page, 80);
+  const { frames: shrink, settled: shrinkSettled, why } = await sample(page, 80);
+  expect(shrinkSettled, `shrink finished within 5s: ${why}`).toBe(true);
 
   // Settled capsule: it hugs its content, 8px of padding and a 1px border on
   // each side. The widths it is built from are measurements of the real
@@ -117,7 +164,7 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
 
   for (const [label, frames] of [
     ["shrink", shrink],
-    ["expand back", await sample(page, 0)],
+    ["expand back", await expandBack(page)],
   ] as const) {
     expect(frames.length, `${label}: sampled frames`).toBeGreaterThan(10);
     const first = frames[0]!;
