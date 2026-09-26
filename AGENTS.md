@@ -25,7 +25,7 @@ Before guessing a rule, check the owning document.
 | Concern                                       | Document                                                    | Key sections                                                |
 | --------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
 | Legal, privacy, PDPL, breach clocks           | `qera-system/systems/1-legal-system.md`                     | §6 (consent/cookies), §8 (breach)                           |
-| Security headers, CSP, deps, SSRF             | `qera-system/systems/2-security-system.md`                  | §1 (auth), §5 (headers), §13 (deps)                         |
+| Security headers, CSP, deps, SSRF             | `qera-system/systems/2-security-system.md`                  | §1 (auth), §8 (headers), §12 (deps)                         |
 | WCAG conformance, contrast, motion, a11y      | `qera-system/systems/3-accessibility-system.md`             | §4 (contrast), §5 (keyboard), §7 (motion)                   |
 | TypeScript, deps policy, AI code, testing     | `qera-system/systems/4-engineering-system.md`               | Part A (TS), Part C (deps), Part E (AI)                     |
 | CWV, budgets, fonts, images, animation        | `qera-system/systems/5-performance-system.md`               | §0 (budgets), §1 (CWV), §3 (images)                         |
@@ -362,7 +362,7 @@ The corollary is that those paths are served by the **platform**, not by this ap
 
 **Each addition must be checked against:**
 
-1. Security System §5 (headers) — new origins expand the attack surface
+1. Security System §8 (headers) — new origins expand the attack surface
 2. Engineering System Part C (dependency policy) — is there a data flow? does it send PII?
 3. Legal System §6 (consent, cookies & tracking) — does it set cookies? does it track users?
 
@@ -584,7 +584,7 @@ motion`, `Save-Data`, 2g/3g and any WebGL failure keep the poster and load
     Blob, so the worker URL is `blob:`. Scoped to workers alone; it does not
     allow `blob:` as a script or frame source.
 
-  Both are reviewed against Security System §5. The decoder is **self-hosted**
+  Both are reviewed against Security System §8. The decoder is **self-hosted**
   under `public/draco/`, never a public CDN, so the only wasm module that can be
   compiled is one this repo ships. That self-hosting is the condition the
   exception rests on — if the decoder ever moves to a CDN, this decision is
