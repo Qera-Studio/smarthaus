@@ -32,7 +32,7 @@ export default defineConfig({
   // failure (AGENTS.md "When a test fails"). Retries still run, so the report
   // shows whether a failure reproduces; the build goes red either way.
   failOnFlakyTests: CI,
-  // Measured both ways. Locally, at the default count WebKit (iPhone 14) timed
+  // Measured both ways. Locally, at the default count WebKit (then the iPhone 14 profile) timed
   // out 61 tests under load and passed all of them at three. In CI the runner
   // is smaller: at three, one consent test took 37.5s of a 30s budget with
   // every step completing, and passed alone in 9.5s. Two there.
@@ -57,14 +57,20 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       grepInvert: EXTRA_TAGS,
     },
+    // The current base iPhone (402 CSS px, WebKit) and the narrow Android
+    // width (360 CSS px, Chromium) that Samsung's Galaxy S line ships. The name
+    // sets only screen, density, user agent and touch; the engine is always
+    // Playwright's current build. Renaming a project renames its CI check, and
+    // the required checks in the "protect latest and main" ruleset must change
+    // in the same sitting (AGENTS.md "Branch protection").
     {
-      name: "iPhone 14",
-      use: { ...devices["iPhone 14"] },
+      name: "iPhone 17",
+      use: { ...devices["iPhone 17"] },
       grepInvert: EXTRA_TAGS,
     },
     {
-      name: "Pixel 7",
-      use: { ...devices["Pixel 7"] },
+      name: "Galaxy S24",
+      use: { ...devices["Galaxy S24"] },
       grepInvert: EXTRA_TAGS,
     },
     // Windows High Contrast and its successors. Launch-gate Security item and
