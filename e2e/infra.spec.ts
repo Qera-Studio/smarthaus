@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // The e2e server is not the production server: next.config.ts drops two
 // headers when PLAYWRIGHT is set, because WebKit on plain-HTTP loopback aborts
@@ -76,4 +76,32 @@ test.describe("200% zoom @zoom", () => {
       expect(overflow, `${route} scrolls sideways by ${overflow}px`).toBeLessThanOrEqual(1);
     });
   }
+});
+
+// The villa default lives in e2e/fixtures.ts. Both halves are pinned here: off
+// unless asked, and on when asked, so the switch cannot rot into "always off".
+test.describe("the hero's villa in e2e", () => {
+  test("is off by default: the page reports Save-Data and no canvas mounts", async ({ page }) => {
+    await page.goto("/");
+    expect(
+      await page.evaluate(
+        () =>
+          (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData,
+      ),
+    ).toBe(true);
+    // Long enough for the canvas to have started if it were going to: it
+    // starts on a zero timeout after hydration and mounts once the model loads.
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("canvas")).toHaveCount(0);
+  });
+
+  test.describe("when a spec opts in", () => {
+    test.use({ villa: true });
+
+    test("mounts on a desktop pointer", async ({ page, isMobile }) => {
+      test.skip(isMobile, "touch devices never get the villa, by the product's own gate");
+      await page.goto("/");
+      await expect(page.locator("[data-ready] canvas")).toHaveCount(1, { timeout: 20_000 });
+    });
+  });
 });
