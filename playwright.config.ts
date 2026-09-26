@@ -28,9 +28,11 @@ export default defineConfig({
   // Retries are for infrastructure noise. A test that only passes on retry is
   // reported as flaky in the summary, never quietly green.
   retries: CI ? 2 : 0,
-  // Three, measured: at the default worker count WebKit (iPhone 14) timed out
-  // 61 tests under load on a full run and passed all of them at three.
-  workers: 3,
+  // Measured both ways. Locally, at the default count WebKit (iPhone 14) timed
+  // out 61 tests under load and passed all of them at three. In CI the runner
+  // is smaller: at three, one consent test took 37.5s of a 30s budget with
+  // every step completing, and passed alone in 9.5s. Two there.
+  workers: CI ? 2 : 3,
   reporter: CI
     ? [
         ["list"],

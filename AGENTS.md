@@ -666,7 +666,7 @@ Repository secrets for the e2e jobs: `RESEND_API_KEY`, `LEAD_EMAIL`, `LEAD_FROM_
 
 - **Unit (Jest + RTL):** behaviour only; jsdom does not apply CSS Modules, so never assert appearance. CSS Module class lookups go through a strict proxy (`__mocks__/strictStyleProxy.js`) that throws on an impossible key.
 - **Console guard:** `jest.setup.ts` fails any test that writes `console.error` or `console.warn`. A test that expects a log spies on `console` and asserts on it.
-- **E2E (Playwright + axe):** every route loads, has one `<h1>`, and passes axe, on all three devices. Workers are fixed at three: at the default count WebKit timed out under load.
+- **E2E (Playwright + axe):** every route loads, has one `<h1>`, and passes axe, on all three devices. Workers are fixed at three locally and two in CI: at the default count WebKit timed out under load, and the CI runner is smaller.
 - **Lighthouse:** thresholds live in `lighthouserc.json` and nowhere else.
 - **Placeholders:** content carrying a `pending` marker has a test that fails once the marker is cleared, so publishing is a deliberate act.
 
