@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import styles from "./ScrollToTop.module.scss";
+import { latestEntry } from "@/lib/observer";
 
 /**
  * A back-to-top button that appears once the page top has scrolled away.
@@ -24,8 +25,8 @@ export function ScrollToTop() {
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
-    const io = new IntersectionObserver(([entry]) => {
-      setVisible(!entry?.isIntersecting);
+    const io = new IntersectionObserver((entries) => {
+      setVisible(!latestEntry(entries)?.isIntersecting);
     });
     io.observe(el);
     return () => io.disconnect();
@@ -54,6 +55,9 @@ export function ScrollToTop() {
     if (!button || targets.length === 0) return;
 
     let io: IntersectionObserver | undefined;
+    // Last known state of every dark section. Kept across rebuilds of the
+    // observer; a fresh one reports every target again on its first callback.
+    const over = new Map<Element, boolean>();
 
     const observe = () => {
       io?.disconnect();
@@ -62,9 +66,12 @@ export function ScrollToTop() {
       const bottom = Math.round(window.innerHeight - box.bottom);
       io = new IntersectionObserver(
         (entries) => {
-          // Several dark sections could be observed, so this cannot read one
-          // entry — it asks whether ANY of them currently overlaps the band.
-          setOnDark(entries.some((entry) => entry.isIntersecting));
+          // Several dark sections are observed, and a callback carries entries
+          // only for the ones that CHANGED. Asking "does any entry intersect"
+          // forgot a section still under the button whenever a different one
+          // left the band. Record each target's state, then ask of all of them.
+          for (const entry of entries) over.set(entry.target, entry.isIntersecting);
+          setOnDark([...over.values()].some(Boolean));
         },
         { rootMargin: `-${top}px 0px -${bottom}px 0px`, threshold: 0 },
       );

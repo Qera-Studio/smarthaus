@@ -59,24 +59,29 @@ export function ProcessHandoff() {
     let last: { top: number; time: number } | null = null;
 
     const io = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry) return;
-        const top = entry.boundingClientRect.top;
+      // Every entry, in order, not just the first or the last: each one is a
+      // sample of the scroll speed, and the last one sets the state. Reading
+      // only the first applied a stale state whenever two arrived together;
+      // see src/lib/observer.ts.
+      (entries) => {
+        for (const entry of entries) {
+          const top = entry.boundingClientRect.top;
 
-        if (last && entry.time > last.time) {
-          const pxPerMs = Math.abs(top - last.top) / (entry.time - last.time);
-          const portalPx =
-            marker.getBoundingClientRect().bottom - section.getBoundingClientRect().top;
-          const scalePerMs = (pxPerMs * (grown - from)) / portalPx;
-          if (scalePerMs > 0) {
-            const ms = Math.min(MAX, Math.max(MIN, (EASE_START * remaining) / scalePerMs));
-            section.style.setProperty("--process-grow-duration", `${Math.round(ms)}ms`);
+          if (last && entry.time > last.time) {
+            const pxPerMs = Math.abs(top - last.top) / (entry.time - last.time);
+            const portalPx =
+              marker.getBoundingClientRect().bottom - section.getBoundingClientRect().top;
+            const scalePerMs = (pxPerMs * (grown - from)) / portalPx;
+            if (scalePerMs > 0) {
+              const ms = Math.min(MAX, Math.max(MIN, (EASE_START * remaining) / scalePerMs));
+              section.style.setProperty("--process-grow-duration", `${Math.round(ms)}ms`);
+            }
           }
-        }
-        last = { top, time: entry.time };
+          last = { top, time: entry.time };
 
-        const past = !entry.isIntersecting && top < 0;
-        section.toggleAttribute("data-portal-open", past);
+          const past = !entry.isIntersecting && top < 0;
+          section.toggleAttribute("data-portal-open", past);
+        }
       },
       { threshold: THRESHOLDS },
     );

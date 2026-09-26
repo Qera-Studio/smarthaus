@@ -341,6 +341,39 @@ test.describe("the choice", () => {
     expect(days).toBeLessThan(370);
   });
 
+  test("an Escape pressed the instant the banner appears is not lost", async ({ page }) => {
+    // The banner used to attach its Escape listener in a passive effect, which
+    // runs after paint. On a slow device a visitor could press Escape while the
+    // banner was already on screen and not yet listening (CI's iPhone project
+    // did, intermittently). This makes that timing exact instead of lucky: a
+    // MutationObserver fires in the microtask right after React inserts the
+    // region, before any paint, and presses Escape there. A listener attached
+    // in the same commit (a layout effect) receives it; a passive one never
+    // does, so the old code fails this every time.
+    await page.addInitScript(() => {
+      const watch = new MutationObserver(() => {
+        if (!document.querySelector('[aria-label="Cookie preferences"]')) return;
+        watch.disconnect();
+        (window as unknown as { __bannerSeen?: boolean }).__bannerSeen = true;
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+      document.addEventListener("DOMContentLoaded", () =>
+        watch.observe(document.body, { childList: true, subtree: true }),
+      );
+    });
+    await page.goto("/");
+    // Settle past hydration so a region that did appear would be visible.
+    await page.waitForLoadState("networkidle");
+    // It did appear, so "hidden" below means dismissed, not never shown.
+    await expect
+      .poll(() =>
+        page.evaluate(() => (window as unknown as { __bannerSeen?: boolean }).__bannerSeen),
+      )
+      .toBe(true);
+    await expect(region(page)).toBeHidden();
+    expect(await readCookie(page)).toBeNull();
+  });
+
   test("Escape dismisses without storing anything", async ({ page }) => {
     await page.goto("/");
     await waitForBanner(page);
