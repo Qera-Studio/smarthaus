@@ -70,6 +70,10 @@ $brown-50: #f8f5f0;
 
   // Borders
   --color-border: #{$brown-200};
+  // A form control's own edge, which is how a sighted visitor finds the field:
+  // WCAG 1.4.11 asks 3:1 of it. --color-border (brown-200) measured 1.37:1 on
+  // canvas; brown-500 is 3.9:1. src/styles/__tests__/contrast.test.ts holds it.
+  --color-border-input: #{$brown-500};
   --color-border-focus: #{$brown-600}; // 5.5:1 on canvas — replaces bronze for focus rings
 
   // Interactive states

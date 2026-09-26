@@ -129,7 +129,7 @@
     // invalidate the whole declaration.
     border-block-end-style: solid;
     border-block-end-width: 1px;
-    border-block-end-color: var(--color-border);
+    border-block-end-color: var(--color-border-input);
 
     transition-property: border-block-end-color;
     transition-duration: var(--duration-fast);
