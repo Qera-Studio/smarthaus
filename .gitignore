@@ -62,3 +62,6 @@ next-env.d.ts
 # macOS Finder duplicates ("name 2.ts"). They are never code: a copy of a test
 # runs twice, a copy of a type shadows the original. Archive, never commit.
 * [2-9].*
+
+# e2e mail sink: emails the test server wrote instead of sending
+.e2e-mail/

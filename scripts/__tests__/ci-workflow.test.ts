@@ -65,8 +65,15 @@ describe("triggers", () => {
 });
 
 describe("the required checks exist under the names branch protection uses", () => {
-  it("has exactly the five jobs", () => {
-    expect([...JOBS.keys()].sort()).toEqual(["e2e", "e2e-extra", "lighthouse", "static", "unit"]);
+  it("has exactly the five required jobs, plus the delivery job", () => {
+    expect([...JOBS.keys()].sort()).toEqual([
+      "delivery",
+      "e2e",
+      "e2e-extra",
+      "lighthouse",
+      "static",
+      "unit",
+    ]);
   });
 
   it.each(["static", "unit", "e2e-extra", "lighthouse"])("names job %s after itself", (id) => {
@@ -159,7 +166,10 @@ describe("e2e", () => {
   }
 
   it("covers every device project in playwright.config.ts, and only those", () => {
-    const devices = projectNames().filter((n) => n !== "forced-colors" && n !== "zoom-200");
+    // Every project except the tagged ones, which have their own jobs.
+    const devices = projectNames().filter(
+      (n) => n !== "forced-colors" && n !== "zoom-200" && n !== "delivery",
+    );
     expect(job("e2e")).toContain(`project: [${devices.map((d) => `"${d}"`).join(", ")}]`);
   });
 
@@ -168,9 +178,12 @@ describe("e2e", () => {
     expect(job("e2e-extra")).toContain("--project forced-colors --project zoom-200");
   });
 
-  it.each(["RESEND_API_KEY", "LEAD_EMAIL", "LEAD_FROM_EMAIL"])("passes the %s secret", (name) => {
-    expect(job("e2e")).toContain(`${name}: \${{ secrets.${name} }}`);
-  });
+  it.each(["RESEND_API_KEY", "LEAD_EMAIL", "LEAD_FROM_EMAIL"])(
+    "does not hand the device jobs the %s secret: their emails go to the sink",
+    (name) => {
+      expect(job("e2e")).not.toContain(`secrets.${name}`);
+    },
+  );
 
   it("installs WebKit, which the iPhone project needs", () => {
     expect(job("e2e")).toContain("playwright install --with-deps chromium webkit");
@@ -276,5 +289,54 @@ describe("dependency monitoring", () => {
 
   it("opens its PRs against latest, so they pass the gate before main", () => {
     expect(dependabot.match(/target-branch: latest/g)).toHaveLength(2);
+  });
+});
+
+describe("the delivery job", () => {
+  it.each(["RESEND_API_KEY", "LEAD_EMAIL", "LEAD_FROM_EMAIL"])("passes the %s secret", (name) => {
+    expect(job("delivery")).toContain(`${name}: \${{ secrets.${name} }}`);
+  });
+
+  it("turns the mail sink off, so its one email is sent for real", () => {
+    expect(job("delivery")).toContain('E2E_REAL_MAIL: "1"');
+  });
+
+  it("runs only the delivery project", () => {
+    expect(job("delivery")).toContain("playwright test --project delivery");
+  });
+
+  it("is named delivery and is not one of the required checks", () => {
+    expect(job("delivery")).toContain("name: delivery\n");
+    expect(REQUIRED_CHECKS).not.toContain("delivery");
+  });
+
+  it("is not allowed to fail quietly either", () => {
+    expect(job("delivery")).not.toContain("continue-on-error");
+  });
+
+  it("is the only job holding the Resend key", () => {
+    for (const [id, block] of JOBS) {
+      if (id !== "delivery")
+        expect({ id, hasKey: block.includes("RESEND_API_KEY") }).toEqual({ id, hasKey: false });
+    }
+  });
+});
+
+describe("the mail sink in playwright.config.ts", () => {
+  it("hands the web server the sink unless real mail is asked for", () => {
+    expect(playwright).toContain('const REAL_MAIL = process.env.E2E_REAL_MAIL === "1";');
+    expect(playwright).toContain("E2E_MAIL_SINK=${MAIL_SINK}");
+    expect(playwright).toContain("${SINK_ENV}pnpm start");
+  });
+
+  it("clears the sink before each run", () => {
+    expect(playwright).toContain("rm -rf ${MAIL_SINK} &&");
+  });
+
+  it("keeps @delivery out of the device projects and in its own project", () => {
+    expect(playwright).toMatch(/const EXTRA_TAGS = \/[^/]*@delivery[^/]*\//);
+    expect(playwright).toMatch(/name: "delivery",[\s\S]*?grep: \/@delivery\//);
+    // Only when real mail is on, so a plain local run never includes it.
+    expect(playwright).toMatch(/\.\.\.\(REAL_MAIL\s*\?\s*\[\s*\{\s*name: "delivery"/);
   });
 });

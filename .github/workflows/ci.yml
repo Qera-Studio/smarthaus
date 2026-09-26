@@ -111,11 +111,10 @@ jobs:
         project: ["Desktop Chrome", "iPhone 17", "Galaxy S24"]
     env:
       CI: "true"
-      # The contact and home-enquiry specs send real email through Resend, by
-      # decision (2026-09-26). Without these the success-path tests fail.
-      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-      LEAD_EMAIL: ${{ secrets.LEAD_EMAIL }}
-      LEAD_FROM_EMAIL: ${{ secrets.LEAD_FROM_EMAIL }}
+      # No Resend secrets here. Form tests write their emails to the e2e mail
+      # sink (src/app/contact/actions.ts), since sending them for real
+      # exhausted the account's monthly quota on 2026-09-26. The delivery job
+      # below is the one place a real email is sent.
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -132,6 +131,40 @@ jobs:
         if: failure()
         with:
           name: playwright-${{ strategy.job-index }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  # One real email through Resend per run. Not a required check, by decision:
+  # it fails whenever Resend refuses a send (quota, key, domain), a fact about
+  # the account rather than the code under review. Visible on every PR.
+  delivery:
+    name: delivery
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      E2E_REAL_MAIL: "1"
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      LEAD_EMAIL: ${{ secrets.LEAD_EMAIL }}
+      LEAD_FROM_EMAIL: ${{ secrets.LEAD_FROM_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: One real email through Resend
+        run: pnpm exec playwright test --project delivery
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-delivery
           path: |
             playwright-report/
             test-results/

@@ -650,6 +650,8 @@ The CI jobs, which are the required status checks:
 - `e2e-extra`: specs tagged `@forced-colors` and `@zoom`, in the `forced-colors` and `zoom-200` projects
 - `lighthouse`: `lighthouserc.json` against the production build
 
+Not required, and visible on every PR: `delivery`, one real email through Resend.
+
 `scripts/__tests__/ci-workflow.test.ts` fails if any of these jobs is renamed, removed, or allowed to fail quietly.
 
 ### Branch protection
@@ -664,7 +666,7 @@ A repository ruleset, "protect latest and main" (Settings, then Rules, then Rule
 
 Required checks are matched by job name. Renaming a job or a Playwright project leaves the ruleset waiting for a check that never reports, and nothing can merge. Change the ruleset in the same sitting as the rename, once the renamed checks have run on the PR.
 
-Repository secrets for the e2e jobs: `RESEND_API_KEY`, `LEAD_EMAIL`, `LEAD_FROM_EMAIL`. The contact and home-enquiry specs send real email through Resend on every run, by decision.
+Repository secrets `RESEND_API_KEY`, `LEAD_EMAIL`, `LEAD_FROM_EMAIL` go to the `delivery` job only. Every other e2e job writes the emails its form tests produce to a mail sink (`.e2e-mail/`, read back by `e2e/mail.ts`), because sending them all for real exhausted the Resend account's monthly quota on 2026-09-26. The sink needs both `PLAYWRIGHT=1` and `E2E_MAIL_SINK`, and no deployment sets `PLAYWRIGHT`. The `delivery` job sends one real email per run (`e2e/delivery.spec.ts`, `E2E_REAL_MAIL=1`). It is deliberately not a required check: it fails when Resend refuses a send, which is a fact about the account, not the code. It is visible on every PR.
 
 ### When a test fails
 

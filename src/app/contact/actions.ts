@@ -1,5 +1,8 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { Resend } from "resend";
 import type { z } from "zod";
 
@@ -145,10 +148,6 @@ async function deliver(data: Enquiry): Promise<void> {
   const to = process.env.LEAD_EMAIL;
   const from = process.env.LEAD_FROM_EMAIL;
 
-  if (!apiKey || !to || !from) {
-    throw new Error("[contact] RESEND_API_KEY, LEAD_EMAIL or LEAD_FROM_EMAIL is not set");
-  }
-
   const lines = [
     `Name:      ${data.name}`,
     `Phone:     ${data.phone}`,
@@ -169,7 +168,7 @@ async function deliver(data: Enquiry): Promise<void> {
     `Sent at:                    ${new Date().toISOString()}`,
   ];
 
-  const { error } = await new Resend(apiKey).emails.send({
+  const email = {
     from: `Smarthaus enquiries <${from}>`,
     to,
     subject: `New enquiry — ${data.name}`,
@@ -177,7 +176,27 @@ async function deliver(data: Enquiry): Promise<void> {
     // So a reply from the inbox goes to the lead, not to the send-only address.
     // Only set when they gave one; the schema makes email optional.
     ...(data.email ? { replyTo: data.email } : {}),
-  });
+  };
+
+  // The e2e mail sink. Every form test used to send real email, and on
+  // 2026-09-26 that exhausted the Resend account's monthly quota. Under
+  // Playwright the email is written to a file the tests read back instead, so
+  // they can assert its exact content. Both variables are required: PLAYWRIGHT
+  // is set only by playwright.config.ts's web server, never by a deployment, so
+  // a stray E2E_MAIL_SINK in production cannot divert a lead. One test per CI
+  // run still sends for real (e2e/delivery.spec.ts).
+  const sink = process.env.PLAYWRIGHT === "1" ? process.env.E2E_MAIL_SINK : undefined;
+  if (sink) {
+    await mkdir(sink, { recursive: true });
+    await writeFile(join(sink, `${Date.now()}-${randomUUID()}.json`), JSON.stringify(email));
+    return;
+  }
+
+  if (!apiKey || !to || !from) {
+    throw new Error("[contact] RESEND_API_KEY, LEAD_EMAIL or LEAD_FROM_EMAIL is not set");
+  }
+
+  const { error } = await new Resend(apiKey).emails.send({ ...email, to, from: email.from });
 
   // The SDK returns errors in the payload instead of rejecting, so a non-2xx
   // is silent unless it is checked and rethrown here.
