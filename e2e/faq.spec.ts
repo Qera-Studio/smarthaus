@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { expectAccessible, expectNoEmDash } from "./checks";
+import { expectAccessible, expectHydrated, expectNoEmDash } from "./checks";
 
 /**
  * /faq — the smoke suite AGENTS.md requires of every real page, plus the two
@@ -94,6 +94,10 @@ test.describe("/faq", () => {
     // reader had not scrolled. globals.scss now arms the smoothing only while a
     // :target is active.
     await page.goto("/solutions");
+    // This asserts a client-side route change, so tap only once the client
+    // router is live: on CI's WebKit runner a tap before hydration went
+    // nowhere and the test timed out waiting for /faq.
+    await expectHydrated(page);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.getByRole("link", { name: "FAQs" }).click();
     await page.waitForURL("**/faq");

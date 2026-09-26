@@ -3,11 +3,13 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { headers } from "next/headers";
 import { Resend } from "resend";
 import type { z } from "zod";
 
 import { contactSchema, shortContactSchema, HONEYPOT_FIELD } from "../../lib/contact-schema";
 import { PRIVACY_POLICY_VERSION } from "../../content/legal/versions";
+import { clientKey, enquiryLimiter } from "../../lib/rate-limit";
 import { submittedValues } from "./state";
 import type { ContactState, FieldErrors } from "./state";
 
@@ -120,6 +122,16 @@ async function handle(
     return { status: "invalid", fieldErrors, values };
   }
 
+  // The ceiling on sends (Security System §11). Checked after validation, on
+  // purpose: a send is what costs something (an email in the inbox, a unit of
+  // the Resend quota, which ran out on 2026-09-26), while a failed validation
+  // costs nothing, and counting those would lock out a visitor who mistyped
+  // their number a few times. The honeypot above still answers bots first.
+  const verdict = enquiryLimiter.take(clientKey(await headers()));
+  if (!verdict.ok) {
+    return { status: "failed", reason: "rate-limited", values };
+  }
+
   try {
     await deliver(parsed.data);
   } catch (error) {
@@ -196,11 +208,37 @@ async function deliver(data: Enquiry): Promise<void> {
     throw new Error("[contact] RESEND_API_KEY, LEAD_EMAIL or LEAD_FROM_EMAIL is not set");
   }
 
-  const { error } = await new Resend(apiKey).emails.send({ ...email, to, from: email.from });
+  const { error } = await withTimeout(
+    new Resend(apiKey).emails.send({ ...email, to, from: email.from }),
+    SEND_TIMEOUT_MS,
+  );
 
   // The SDK returns errors in the payload instead of rejecting, so a non-2xx
   // is silent unless it is checked and rethrown here.
   if (error) {
     throw new Error(`[contact] resend rejected the send: ${error.name} — ${error.message}`);
   }
+}
+
+/**
+ * How long a visitor waits on Resend before seeing the WhatsApp fallback.
+ * Without a ceiling a hung API holds the form's pending state indefinitely,
+ * which reads as a broken site. Eight seconds is well past Resend's normal
+ * answer and short of a visitor giving up.
+ *
+ * A race, not an abort signal: the SDK's typed options do not accept one. The
+ * cost is that a send answering after the ceiling can still arrive, and the
+ * visitor, told it failed, may send again. A duplicate lead is the lesser harm.
+ */
+const SEND_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const ceiling = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`[contact] resend did not answer within ${ms}ms`)),
+      ms,
+    );
+  });
+  return Promise.race([work, ceiling]).finally(() => clearTimeout(timer));
 }

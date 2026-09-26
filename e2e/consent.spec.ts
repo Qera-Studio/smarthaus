@@ -568,6 +568,32 @@ test.describe("the preferences panel", () => {
     expect(record.analytics).toBe(true);
   });
 
+  test("a switch turned on before the page's JavaScript arrives stays on, and saves", async ({
+    page,
+  }) => {
+    // Found by the keyboard test above failing on CI's slow WebKit runner: the
+    // switch is server-rendered here, the browser flipped it, and React set it
+    // back to off when it arrived. Made deterministic by holding the scripts.
+    await page.route("**/_next/static/chunks/**", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      await route.continue();
+    });
+    await page.goto("/cookie-preferences", { waitUntil: "commit" });
+    const analytics = page.getByRole("switch", { name: "Analytics" });
+    await analytics.waitFor({ state: "attached" });
+    await analytics.focus();
+    await page.keyboard.press("Space");
+    expect(await analytics.isChecked()).toBe(true);
+
+    await page.waitForLoadState("load");
+    // Well past hydration, the choice is still the visitor's.
+    await expect(page.getByRole("button", { name: "Save preferences" })).toBeEnabled();
+    await expect(analytics).toBeChecked();
+    await page.getByRole("button", { name: "Save preferences" }).click();
+    const record = JSON.parse(decodeURIComponent((await readCookie(page))!.value));
+    expect(record.analytics).toBe(true);
+  });
+
   test("keeps the Clarity session-recording disclosure visible and separate", async ({ page }) => {
     await page.goto("/cookie-preferences");
 

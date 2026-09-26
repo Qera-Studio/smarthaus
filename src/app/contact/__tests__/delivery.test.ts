@@ -15,6 +15,17 @@ import { join } from "node:path";
 
 const send = jest.fn();
 
+// The action reads the client's address for the rate limit. Every call gets a
+// fresh one unless a test pins it, so the limiter never leaks between tests.
+let pinnedIp: string | undefined;
+let ipCounter = 0;
+jest.mock("next/headers", () => ({
+  headers: async () =>
+    new Headers({
+      "x-forwarded-for": pinnedIp ?? `198.51.100.${(ipCounter += 1) % 250}, 10.0.0.1`,
+    }),
+}));
+
 jest.mock("resend", () => ({
   Resend: jest.fn(() => ({ emails: { send } })),
 }));
@@ -546,5 +557,173 @@ describe("the e2e mail sink", () => {
     jest.spyOn(console, "error").mockImplementation(() => {});
     const result = await submitEnquiry(initial, validForm());
     expect(result.status).toBe("failed");
+  });
+});
+
+describe("the send rate limit", () => {
+  const env = process.env;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env = {
+      ...env,
+      RESEND_API_KEY: "re_test",
+      LEAD_EMAIL: "contact@mapletech.ae",
+      LEAD_FROM_EMAIL: "leads@smarthaus.ae",
+    };
+    delete process.env.PLAYWRIGHT;
+    send.mockResolvedValue({ data: { id: "sent" }, error: null });
+  });
+
+  afterEach(() => {
+    pinnedIp = undefined;
+  });
+
+  afterAll(() => {
+    process.env = env;
+  });
+
+  it("sends five from one client, then refuses the sixth without sending it", async () => {
+    pinnedIp = "203.0.113.50";
+    const results = [];
+    for (let i = 0; i < 6; i += 1) results.push(await submitEnquiry(initial, validForm()));
+    expect(results.map((r) => r.status)).toEqual(["ok", "ok", "ok", "ok", "ok", "failed"]);
+    expect(send).toHaveBeenCalledTimes(5);
+    expect(results[5]).toMatchObject({ status: "failed", reason: "rate-limited" });
+  });
+
+  it("hands back what was typed when it refuses", async () => {
+    pinnedIp = "203.0.113.51";
+    for (let i = 0; i < 5; i += 1) await submitEnquiry(initial, validForm());
+    const refused = await submitEnquiry(initial, validForm({ community: "Al Barari" }));
+    if (refused.status !== "failed") throw new Error("unreachable");
+    expect(refused.values.name).toBe("Nadia Rahman");
+    expect(refused.values.community).toBe("Al Barari");
+  });
+
+  it("counts the short form against the same ceiling: both fill one inbox", async () => {
+    pinnedIp = "203.0.113.52";
+    for (let i = 0; i < 5; i += 1) await submitEnquiry(initial, validForm());
+    const form = new FormData();
+    form.set("name", "James Carter");
+    form.set("phone", "0501234567");
+    expect(await submitShortEnquiry(initial, form)).toMatchObject({ reason: "rate-limited" });
+  });
+
+  it("does not count failed validations, so typos never lock a visitor out", async () => {
+    pinnedIp = "203.0.113.53";
+    for (let i = 0; i < 10; i += 1) await submitEnquiry(initial, validForm({ phone: "nope" }));
+    expect((await submitEnquiry(initial, validForm())).status).toBe("ok");
+  });
+
+  it("does not count honeypot catches, which never send", async () => {
+    pinnedIp = "203.0.113.54";
+    for (let i = 0; i < 10; i += 1) {
+      await submitEnquiry(initial, validForm({ [HONEYPOT_FIELD]: "bot" }));
+    }
+    expect((await submitEnquiry(initial, validForm())).status).toBe("ok");
+  });
+
+  it("still answers a bot with the success shape, even over the limit", async () => {
+    pinnedIp = "203.0.113.55";
+    for (let i = 0; i < 5; i += 1) await submitEnquiry(initial, validForm());
+    const bot = await submitEnquiry(initial, validForm({ [HONEYPOT_FIELD]: "bot" }));
+    expect(bot).toEqual({ status: "ok", name: "", phone: "" });
+  });
+
+  it("keeps other clients sending while one is refused", async () => {
+    pinnedIp = "203.0.113.56";
+    for (let i = 0; i < 6; i += 1) await submitEnquiry(initial, validForm());
+    pinnedIp = "203.0.113.57";
+    expect((await submitEnquiry(initial, validForm())).status).toBe("ok");
+  });
+
+  it("does not log a refusal as a delivery failure", async () => {
+    pinnedIp = "203.0.113.58";
+    const logged = jest.spyOn(console, "error").mockImplementation(() => {});
+    for (let i = 0; i < 6; i += 1) await submitEnquiry(initial, validForm());
+    expect(logged).not.toHaveBeenCalled();
+  });
+});
+
+describe("the send timeout", () => {
+  const env = process.env;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    process.env = {
+      ...env,
+      RESEND_API_KEY: "re_test",
+      LEAD_EMAIL: "contact@mapletech.ae",
+      LEAD_FROM_EMAIL: "leads@smarthaus.ae",
+    };
+    delete process.env.PLAYWRIGHT;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  afterAll(() => {
+    process.env = env;
+  });
+
+  it("gives up after eight seconds and shows the fallback, with the typing kept", async () => {
+    send.mockReturnValue(new Promise(() => {}));
+    const logged = jest.spyOn(console, "error").mockImplementation(() => {});
+    const pending = submitEnquiry(initial, validForm());
+    await jest.advanceTimersByTimeAsync(8_000);
+    const result = await pending;
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.values.name).toBe("Nadia Rahman");
+      expect(result.reason).toBeUndefined();
+    }
+    expect(String(logged.mock.calls[0]?.[1])).toContain("did not answer within 8000ms");
+  });
+
+  it("is still waiting just before the ceiling", async () => {
+    send.mockReturnValue(new Promise(() => {}));
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    let settled = false;
+    void submitEnquiry(initial, validForm()).then(() => {
+      settled = true;
+    });
+    await jest.advanceTimersByTimeAsync(7_999);
+    expect(settled).toBe(false);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(settled).toBe(true);
+  });
+
+  it("confirms a send that answers in time, and leaves no timer behind", async () => {
+    send.mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ data: { id: "x" }, error: null }), 3_000),
+        ),
+    );
+    const pending = submitEnquiry(initial, validForm());
+    await jest.advanceTimersByTimeAsync(3_000);
+    expect((await pending).status).toBe("ok");
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it("clears the timer when the send fails fast, too", async () => {
+    send.mockResolvedValue({ data: null, error: { name: "api_error", message: "down" } });
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    expect((await submitEnquiry(initial, validForm())).status).toBe("failed");
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it("does not apply to the e2e sink, which never calls Resend", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mail-sink-"));
+    process.env.PLAYWRIGHT = "1";
+    process.env.E2E_MAIL_SINK = dir;
+    jest.useRealTimers();
+    expect((await submitEnquiry(initial, validForm())).status).toBe("ok");
+    expect(send).not.toHaveBeenCalled();
+    rmSync(dir, { recursive: true, force: true });
+    delete process.env.E2E_MAIL_SINK;
   });
 });

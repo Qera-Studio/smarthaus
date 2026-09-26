@@ -119,6 +119,17 @@ export function ConsentShell({
   // What the Analytics switch currently says, which is not yet a decision —
   // `Save preferences` is what commits it.
   const [analyticsOn, setAnalyticsOn] = useState(false);
+  // Set once the visitor moves the switch, cleared when a choice is committed.
+  // Until then the stored record decides what the switch shows; after it, the
+  // visitor's unsaved choice does, so a re-read (on mount, or on tab focus)
+  // cannot quietly undo it. That was a real loss on /cookie-preferences: a
+  // toggle made before hydration was adopted, then overwritten by the mount
+  // read of a cookie that said off (e2e/consent.spec.ts, "before hydration").
+  const touched = useRef(false);
+  const chooseAnalytics = useCallback((on: boolean) => {
+    touched.current = true;
+    setAnalyticsOn(on);
+  }, []);
   const [saved, setSaved] = useState(false);
 
   // Ids, all namespaced by idPrefix so two instances cannot collide. Must stay
@@ -173,7 +184,7 @@ export function ConsentShell({
     const sync = (force = false) => {
       const next = readConsentState(readConsentCookie(document.cookie));
       setState(force ? { ...next, ask: true } : next);
-      setAnalyticsOn(next.analytics);
+      if (!touched.current) setAnalyticsOn(next.analytics);
     };
 
     // NODE_ENV is inlined by the bundler, so in a production build this is
@@ -222,6 +233,7 @@ export function ConsentShell({
       });
       setState({ ask: false, analytics: allow });
       setAnalyticsOn(allow);
+      touched.current = false;
       setSaved(true);
       setExpanded(standalone);
     },
@@ -541,7 +553,7 @@ export function ConsentShell({
                     labelId={ids.analyticsLabel}
                     describedBy={ids.analyticsBody}
                     checked={analyticsOn}
-                    onChange={setAnalyticsOn}
+                    onChange={chooseAnalytics}
                   />
                 }
               >

@@ -1,4 +1,13 @@
+# Security System §12, install-time scripts: pnpm runs none by default. This is
+# the whole allowlist, and each entry is a decision. @parcel/watcher needs its
+# native build; sharp and unrs-resolver ship prebuilt binaries and do not.
 allowBuilds:
   '@parcel/watcher': true
   sharp: false
   unrs-resolver: false
+
+# Security System §12, version cooldown: never resolve a release younger than
+# three days. Compromised versions have historically been caught and pulled
+# within hours, so waiting turns "we were patient" into "we were unaffected".
+# In minutes. Dependabot waits the same three days (.github/dependabot.yml).
+minimumReleaseAge: 4320

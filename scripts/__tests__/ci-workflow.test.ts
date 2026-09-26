@@ -340,3 +340,44 @@ describe("the mail sink in playwright.config.ts", () => {
     expect(playwright).toMatch(/\.\.\.\(REAL_MAIL\s*\?\s*\[\s*\{\s*name: "delivery"/);
   });
 });
+
+describe("supply chain (Security System §12)", () => {
+  const workspace = read("pnpm-workspace.yaml");
+  const dependabot = read(".github/dependabot.yml");
+
+  it("audits the shipped dependencies for high and critical advisories", () => {
+    expect(job("static")).toContain("pnpm audit --prod --audit-level high");
+  });
+
+  it("audits before building, so a flagged tree fails fast", () => {
+    expect(job("static").indexOf("pnpm audit")).toBeLessThan(job("static").indexOf("pnpm build"));
+  });
+
+  it("never resolves a release younger than three days", () => {
+    expect(workspace).toMatch(/^minimumReleaseAge: 4320$/m);
+  });
+
+  it("keeps the install-script allowlist to the three reviewed entries", () => {
+    const entries = workspace.match(/^ {2}'?[@\w/.-]+'?: (true|false)$/gm) ?? [];
+    expect(entries.map((e) => e.trim())).toEqual([
+      "'@parcel/watcher': true",
+      "sharp: false",
+      "unrs-resolver: false",
+    ]);
+  });
+
+  it("makes Dependabot wait the same three days, for both ecosystems", () => {
+    expect(dependabot.match(/cooldown:\n\s+default-days: 3/g)).toHaveLength(2);
+  });
+
+  it("installs from the lockfile everywhere, never resolving afresh in CI", () => {
+    for (const [id, block] of JOBS) {
+      if (block.includes("pnpm install")) {
+        expect({ id, frozen: block.includes("pnpm install --frozen-lockfile") }).toEqual({
+          id,
+          frozen: true,
+        });
+      }
+    }
+  });
+});

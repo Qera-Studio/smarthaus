@@ -68,3 +68,18 @@ export async function expectNoEmDash(scope: Locator) {
     at < 0 ? "no em dash" : `em dash in: "${text.slice(Math.max(0, at - 40), at + 40).trim()}"`,
   ).toBe(-1);
 }
+
+/**
+ * The page has hydrated: its client components are live. The consent region
+ * is rendered only by a client effect on a first visit, which every test's
+ * fresh context is, so its presence means React has run.
+ *
+ * For tests of client behaviour (focus moving to an error, a client-side route
+ * change). Without it, a tap on CI's slower WebKit runner can land before
+ * hydration and exercise the no-JavaScript path instead of the one asserted.
+ */
+export async function expectHydrated(page: Page) {
+  await expect(page.getByRole("region", { name: "Cookie preferences" })).toBeAttached({
+    timeout: 15_000,
+  });
+}

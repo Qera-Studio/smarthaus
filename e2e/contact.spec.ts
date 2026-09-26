@@ -1,5 +1,10 @@
 import { test, expect } from "./fixtures";
-import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
+import {
+  expectAccessible,
+  expectHydrated,
+  expectNoEmDash,
+  expectNoHorizontalOverflow,
+} from "./checks";
 
 /**
  * The contact page — the site's only conversion event.
@@ -72,6 +77,9 @@ test("a valid submission confirms with the name and number given", async ({ page
 });
 
 test("an empty submission names both required fields and focuses the first", async ({ page }) => {
+  // Focus management is client behaviour: tap only once it is live. On CI's
+  // WebKit runner a tap before hydration went down the no-JS path instead.
+  await expectHydrated(page);
   await page.getByRole("button", { name: "Book a site visit" }).click();
 
   await expect(page.getByText("Add your name so we know who we're calling.")).toBeVisible();

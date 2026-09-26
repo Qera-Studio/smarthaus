@@ -25,7 +25,7 @@ Before guessing a rule, check the owning document.
 | Concern                                       | Document                                                    | Key sections                                                |
 | --------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
 | Legal, privacy, PDPL, breach clocks           | `qera-system/systems/1-legal-system.md`                     | §6 (consent/cookies), §8 (breach)                           |
-| Security headers, CSP, deps, SSRF             | `qera-system/systems/2-security-system.md`                  | §1 (auth), §5 (headers), §13 (deps)                         |
+| Security headers, CSP, deps, SSRF             | `qera-system/systems/2-security-system.md`                  | §1 (auth), §8 (headers), §12 (deps)                         |
 | WCAG conformance, contrast, motion, a11y      | `qera-system/systems/3-accessibility-system.md`             | §4 (contrast), §5 (keyboard), §7 (motion)                   |
 | TypeScript, deps policy, AI code, testing     | `qera-system/systems/4-engineering-system.md`               | Part A (TS), Part C (deps), Part E (AI)                     |
 | CWV, budgets, fonts, images, animation        | `qera-system/systems/5-performance-system.md`               | §0 (budgets), §1 (CWV), §3 (images)                         |
@@ -343,6 +343,8 @@ Turbopack does not support `sassOptions.includePaths` or `sassOptions.additional
 
 The current CSP in `next.config.ts` is `default-src 'self'` everywhere. As third parties are added, update the CSP **in the same PR that adds the dependency**. Never leave a CSP update for later — it will break in production.
 
+The policy is built once, by `csp(strict)` in `next.config.ts`, and sent twice: enforced, and as a `Content-Security-Policy-Report-Only` twin that drops `'unsafe-inline'` from `script-src` and `style-src` and nothing else. Both report to `/api/csp-report` (`report-uri` for Firefox and Safari, `report-to csp-endpoint` via `Reporting-Endpoints` for Chromium). The endpoint is rate-limited, capped at 16KB, schema-checked, strips query strings, and logs each distinct violation once an hour as one `csp-violation` JSON line. `e2e/headers.spec.ts` asserts the two policies differ only by `'unsafe-inline'`.
+
 ### Planned CSP changes (update when implementing)
 
 | Service          | CSP directive            | Domain(s)                      |
@@ -362,7 +364,7 @@ The corollary is that those paths are served by the **platform**, not by this ap
 
 **Each addition must be checked against:**
 
-1. Security System §5 (headers) — new origins expand the attack surface
+1. Security System §8 (headers) — new origins expand the attack surface
 2. Engineering System Part C (dependency policy) — is there a data flow? does it send PII?
 3. Legal System §6 (consent, cookies & tracking) — does it set cookies? does it track users?
 
@@ -584,7 +586,7 @@ motion`, `Save-Data`, 2g/3g and any WebGL failure keep the poster and load
     Blob, so the worker URL is `blob:`. Scoped to workers alone; it does not
     allow `blob:` as a script or frame source.
 
-  Both are reviewed against Security System §5. The decoder is **self-hosted**
+  Both are reviewed against Security System §8. The decoder is **self-hosted**
   under `public/draco/`, never a public CDN, so the only wasm module that can be
   compiled is one this repo ships. That self-hosting is the condition the
   exception rests on — if the decoder ever moves to a CDN, this decision is
