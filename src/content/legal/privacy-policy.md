@@ -201,11 +201,11 @@ We use a small number of service providers who process information on our instru
 
 ### 4.1 Currently in use
 
-| Provider                                | What it does                                  | What it sees                                                                                | Where                                        |
-| --------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Vercel Inc.                             | Hosts and serves this website                 | Server log data in section 3.2                                                              | [PLACEHOLDER: confirm deployment region]     |
-| Resend                                  | Delivers each enquiry you send to our mailbox | Everything you submit in an enquiry form                                                    | [PLACEHOLDER: confirm Resend sending region] |
-| Vercel Web Analytics and Speed Insights | Aggregate page performance and visit counts   | Aggregated, non-identifying usage data. No cookies, and no identifier that survives a visit | [PLACEHOLDER: confirm deployment region]     |
+| Provider                                | What it does                                  | What it sees                                                                                | Where                                    |
+| --------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Vercel Inc.                             | Hosts and serves this website                 | Server log data in section 3.2                                                              | [PLACEHOLDER: confirm deployment region] |
+| Resend                                  | Delivers each enquiry you send to our mailbox | Everything you submit in an enquiry form                                                    | United States (US East, Virginia)        |
+| Vercel Web Analytics and Speed Insights | Aggregate page performance and visit counts   | Aggregated, non-identifying usage data. No cookies, and no identifier that survives a visit | [PLACEHOLDER: confirm deployment region] |
 
 <!-- ACCURACY GATE — Legal System §5 requires the policy to name every third party
      that receives data, and to describe only what the build actually does. The
@@ -428,8 +428,9 @@ TRANSFERS
   [ ] Vercel deployment region
   [ ] PDPL transfer mechanism for that corridor, documented in writing
   [ ] Vercel sub-processor list reviewed for onward transfers
-  [ ] Resend sending region (set per account in Resend), and the transfer
-      mechanism for that corridor
+  [ ] Resend sending region — reported as US East (Virginia) on 2026-09-26 and
+      entered in §4.1; confirm in the Resend dashboard (Domains, Region column)
+  [ ] PDPL transfer mechanism for the UAE to US corridor, for Resend
   [ ] Resend sub-processor list reviewed for onward transfers
 
 RIGHTS

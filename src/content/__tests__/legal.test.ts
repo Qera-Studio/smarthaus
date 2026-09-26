@@ -128,9 +128,13 @@ describe("processors: the policy names what the build sends data to", () => {
     },
   );
 
-  it("leaves Resend's sending region as a registered placeholder until it is confirmed", () => {
-    expect(privacyMd).toContain("[PLACEHOLDER: confirm Resend sending region]");
-    expect(privacyMd).toMatch(/\[ \] Resend sending region/);
+  it("states Resend's sending region in §4.1, still open in the register until confirmed", () => {
+    const row = section(privacyMd, "### 4.1")
+      .split("\n")
+      .find((line) => line.startsWith("| Resend"))!;
+    expect(row).toContain("United States (US East, Virginia)");
+    expect(privacyMd).not.toContain("confirm Resend sending region");
+    expect(privacyMd).toMatch(/\[ \] Resend sending region — reported as US East \(Virginia\)/);
   });
 
   it("no longer carries the drafting note that Resend was misfiled", () => {
@@ -208,7 +212,9 @@ describe("identity: one source for the published contact facts", () => {
   });
 
   it("states the same address in the terms source, in both places it appears", () => {
-    const rows = termsMd.split("\n").filter((line) => line.includes("Iridium"));
+    const rows = termsMd
+      .split("\n")
+      .filter((line) => line.startsWith("|") && line.includes("Iridium"));
     expect(rows).toHaveLength(2);
     for (const row of rows) expect(row).toContain(ADDRESS);
   });
@@ -251,14 +257,15 @@ describe("placeholders: every marker on a page is registered in its source", () 
     expect(registered("figure and currency: counsel to advise", termsMd)).toBe(true);
   });
 
-  // KNOWN MISMATCH, reported 2026-09-26 and awaiting a decision. The terms page
-  // renders the forum as a placeholder ("forum: counsel to confirm") while
-  // terms-and-conditions.md states "The courts of Dubai, United Arab Emirates
-  // have jurisdiction". The markdown's own notes say the forum is unsettled
-  // until the licensing regime is confirmed. `it.failing` passes while the two
-  // disagree and fails the day they agree, so resolving it is deliberate.
-  it.failing("terms page forum marker is registered in the markdown", () => {
+  // Resolved 2026-09-26: the markdown carried "the courts of Dubai" while the
+  // page showed a placeholder. Decided: the placeholder, in both, until the
+  // entity's licensing settles the forum.
+  it("terms page forum marker is registered in the markdown", () => {
     expect(registered("forum: counsel to confirm", termsMd)).toBe(true);
+  });
+
+  it("no longer states a forum in the terms source before counsel confirms it", () => {
+    expect(published(termsMd)).not.toContain("The courts of Dubai");
   });
 
   it("finds markers on both pages, so a parsing change cannot pass this vacuously", () => {

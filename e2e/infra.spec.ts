@@ -97,14 +97,36 @@ test.describe("the e2e server", () => {
     // When one hangs, ask the server for it directly, outside the browser, so
     // the report says which side is holding it: an answer here means the
     // browser never finished a response the server can give.
+    //
+    // And say what the page itself knows about it: the <img> that asked for it
+    // (matched by source file, since the browser may have switched to another
+    // srcset width), and whether a resource timing entry exists, which is the
+    // browser's own record of having received a response.
+    const pageSide = await page.evaluate(
+      (urls) =>
+        urls.map((url) => {
+          const source = new URL(url).searchParams.get("url") ?? url;
+          const imgs = Array.from(document.images)
+            .filter((img) =>
+              (img.getAttribute("srcset") ?? img.src).includes(encodeURIComponent(source)),
+            )
+            .map((img) => {
+              const rect = img.getBoundingClientRect();
+              return `img{currentSrc=${img.currentSrc.slice(-60)} complete=${img.complete} naturalWidth=${img.naturalWidth} loading=${img.loading} rect=${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)}x${Math.round(rect.height)}}`;
+            });
+          const timing = performance.getEntriesByName(url).length;
+          return `timing entries=${timing}; ${imgs.join(" ") || "no <img> references it"}`;
+        }),
+      unanswered,
+    );
     const probes = await Promise.all(
-      unanswered.map(async (url) => {
+      unanswered.map(async (url, index) => {
         const started = Date.now();
         const verdict = await page.request.get(url, { timeout: 10_000 }).then(
           (response) => `server answered ${response.status()}`,
           (error: Error) => `server did not answer: ${error.message.split("\n")[0]}`,
         );
-        return `${url}: ${verdict} after ${Date.now() - started}ms`;
+        return `${url}: ${verdict} after ${Date.now() - started}ms; ${pageSide[index]}`;
       }),
     );
     expect(probes, "images the browser requested and never got").toEqual([]);
