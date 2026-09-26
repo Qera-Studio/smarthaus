@@ -25,9 +25,13 @@ export default defineConfig({
   testIgnore: /.* 2\./,
   fullyParallel: true,
   forbidOnly: CI,
-  // Retries are for infrastructure noise. A test that only passes on retry is
-  // reported as flaky in the summary, never quietly green.
+  // Retries tell a reproducible failure from an intermittent one. Neither is
+  // green: see failOnFlakyTests below.
   retries: CI ? 2 : 0,
+  // A test that fails and then passes on retry is flaky, and flaky is a
+  // failure (AGENTS.md "When a test fails"). Retries still run, so the report
+  // shows whether a failure reproduces; the build goes red either way.
+  failOnFlakyTests: CI,
   // Measured both ways. Locally, at the default count WebKit (iPhone 14) timed
   // out 61 tests under load and passed all of them at three. In CI the runner
   // is smaller: at three, one consent test took 37.5s of a 30s budget with

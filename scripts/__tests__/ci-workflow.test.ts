@@ -181,9 +181,14 @@ describe("e2e", () => {
     expect(job("e2e")).toContain("playwright-report/");
   });
 
-  it("sets CI so Playwright forbids .only and retries flaky infrastructure", () => {
+  it("sets CI so Playwright forbids .only", () => {
     expect(job("e2e")).toContain('CI: "true"');
     expect(playwright).toContain("forbidOnly: CI");
+  });
+
+  it("fails the build on a flaky test, not only on a failing one", () => {
+    // Decided 2026-09-26: a pass on retry is still a failure.
+    expect(playwright).toContain("failOnFlakyTests: CI");
   });
 });
 
