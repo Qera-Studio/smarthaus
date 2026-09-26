@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { HardwareItem } from "../../content/hardware";
 import styles from "./Hardware.module.scss";
+import { latestEntry } from "@/lib/observer";
 
 type Props = { items: readonly HardwareItem[] };
 
@@ -53,7 +54,7 @@ export function HardwareStage({ items }: Props) {
     reduced.addEventListener("change", sync);
 
     const io = new IntersectionObserver(
-      (entries) => setInView(entries.some((e) => e.isIntersecting)),
+      (entries) => setInView(latestEntry(entries)?.isIntersecting ?? false),
       {
         threshold: 0.4,
       },
