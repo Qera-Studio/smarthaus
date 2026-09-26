@@ -101,3 +101,19 @@ test.describe("/api/csp-report", () => {
     expect((await request.get("/api/csp-report")).status()).toBe(405);
   });
 });
+
+test.describe("files crawlers and researchers read", () => {
+  test("serves security.txt as plain text with a contact", async ({ request }) => {
+    const res = await request.get("/.well-known/security.txt");
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toMatch(/^text\/plain/);
+    expect(await res.text()).toContain("Contact: mailto:contact@mapletech.ae");
+  });
+
+  test("serves robots.txt with the production rules outside a preview", async ({ request }) => {
+    const body = await (await request.get("/robots.txt")).text();
+    expect(body).toMatch(/User-Agent: \*\s+Allow: \//i);
+    expect(body).toContain("Sitemap: https://smarthaus.ae/sitemap.xml");
+    expect(body).not.toMatch(/Disallow: \/\s/);
+  });
+});

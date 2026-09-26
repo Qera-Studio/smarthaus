@@ -1,0 +1,7 @@
+# Security contact for smarthaus.ae (RFC 9116).
+# If you have found a vulnerability, please write to the address below rather
+# than disclosing it publicly. We will acknowledge your report.
+Contact: mailto:contact@mapletech.ae
+Expires: 2027-09-25T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://smarthaus.ae/.well-known/security.txt
