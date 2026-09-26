@@ -14,6 +14,7 @@ import {
   orbitShare,
   pushMagnitude,
   smoothSpeed,
+  fixedSteps,
 } from "./physics";
 import { sampleText, type Particle } from "./sampleText";
 import styles from "./ParticleText.module.scss";
@@ -322,23 +323,21 @@ export function ParticleText({ text, label, as: Tag = "span" }: ParticleTextProp
       });
     };
 
-    const tick = () => {
+    // One simulation step: 1/60 s of physics, whatever the display's refresh
+    // rate. `raw` is the pointer's travel during this step, or null while the
+    // pointer is parked (nothing to measure, so speed is left alone).
+    const step = (raw: number | null) => {
       time += 1;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = paintColor;
 
-      // --- Pointer speed, once per frame -----------------------------------
+      // --- Pointer speed, once per step ------------------------------------
       // Measured here rather than in the event handler so it decays on its own
       // when pointermove stops firing. That decay IS the "cursor stopped"
       // signal — no timers, no stale-event bookkeeping.
-      if (prevX > -9000) {
-        const raw = Math.hypot(pointer.x - prevX, pointer.y - prevY);
+      if (raw !== null) {
         // Asymmetric smoothing: rise fast so a flick registers on the frame it
         // happens, fall slower so the warp eases out instead of snapping off.
         speed = smoothSpeed(speed, raw);
       }
-      prevX = pointer.x;
-      prevY = pointer.y;
 
       // Only motion earns the orbit: orbitShare is 0 at rest, so the push is
       // purely radial and nothing circles a parked cursor.
@@ -464,14 +463,43 @@ export function ParticleText({ text, label, as: Tag = "span" }: ParticleTextProp
             p.vy -= ny * inward;
           }
         }
+      }
+    };
 
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = paintColor;
+      for (const p of particles) {
         // One path for the whole field would be cheaper, but per-particle arcs
         // are what allow the jittered radii that stop this reading as halftone.
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r * dpr, 0, Math.PI * 2);
         ctx.fill();
       }
+    };
 
+    // The physics advances on its own 60 Hz clock, not once per frame. Every
+    // constant in physics.ts was tuned at 60 frames a second, and stepping once
+    // per frame made the effect a function of the display: twice as strong on
+    // a 120 Hz phone, and barely moving on a slow one (the CI runner's drag
+    // moved the field 15px where 66px was designed). fixedSteps turns elapsed
+    // time into whole steps and carries the remainder to the next frame.
+    let last = -1;
+    let carry = 0;
+    const tick = (now: number) => {
+      const due = fixedSteps(last < 0 ? 0 : now - last, carry);
+      last = now;
+      carry = due.carry;
+      // A frame that owes no step (common at 120 Hz) leaves prevX alone, so
+      // the pointer's travel is measured across the frames until the next one.
+      if (due.steps > 0) {
+        const raw =
+          prevX > -9000 ? Math.hypot(pointer.x - prevX, pointer.y - prevY) / due.steps : null;
+        prevX = pointer.x;
+        prevY = pointer.y;
+        for (let i = 0; i < due.steps; i += 1) step(raw);
+      }
+      draw();
       frame = requestAnimationFrame(tick);
     };
 
