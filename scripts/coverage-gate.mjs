@@ -4,7 +4,14 @@
 // code, so a wall of trivial assertions cannot satisfy the rule.
 //
 // Reads Jest's json-summary and lcov reports and applies two rules:
-//   1. Floor: no global metric may fall below coverage-baseline.json.
+//   1. Floor: global line and statement coverage may not fall below
+//      coverage-baseline.json. Functions and branches are reported, not gated,
+//      because v8 counts them only in files some test loads: the first test
+//      for an untested file adds its untested branches to the total, so a PR
+//      that took lines from 30% to 45% took branches from 77.9% to 76.7%. A
+//      floor on that number punishes exactly the work it should reward. Line
+//      and statement totals include every file, loaded or not, so they only
+//      rise when tests are added. Branches are held on changed lines instead.
 //   2. Changed lines: every executable line added or changed against --base,
 //      in a coverable source file, must be run by a test. Across all changed
 //      lines, at least BRANCH_BAR percent of branch arms must be taken.
@@ -25,6 +32,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 export const METRICS = ["lines", "statements", "functions", "branches"];
+// The metrics whose denominator covers every file. See rule 1 above.
+export const FLOOR_METRICS = ["lines", "statements"];
 
 // Share of branch arms on changed lines that tests must take. Not 100: v8
 // counts both arms of every `??` and optional chain, including ones only a
@@ -141,7 +150,7 @@ export function pct(entry, metric) {
 
 export function checkFloor(total, baseline) {
   const failures = [];
-  for (const metric of METRICS) {
+  for (const metric of FLOOR_METRICS) {
     const now = pct(total, metric);
     const floor = Number(baseline?.[metric] ?? 0);
     if (now + 1e-9 < floor) failures.push({ metric, now, floor });
@@ -265,10 +274,12 @@ function main() {
   } else {
     const lines = ["Coverage gate"];
     for (const metric of METRICS) {
+      const gated = FLOOR_METRICS.includes(metric);
+      const floorText = gated
+        ? `floor ${Number(baseline[metric] ?? 0).toFixed(2)}%`
+        : "reported, not gated";
       lines.push(
-        `  ${metric.padEnd(12)}${pct(summary.total, metric).toFixed(2).padStart(8)}%  floor ${Number(
-          baseline[metric] ?? 0,
-        ).toFixed(2)}%`,
+        `  ${metric.padEnd(12)}${pct(summary.total, metric).toFixed(2).padStart(8)}%  ${floorText}`,
       );
     }
     if (args.base) {

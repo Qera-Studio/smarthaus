@@ -105,7 +105,7 @@ describe("the floor", () => {
     expect(run().status).toBe(0);
   });
 
-  it.each(["lines", "statements", "functions", "branches"] as const)(
+  it.each(["lines", "statements"] as const)(
     "fails when %s falls by a hundredth of a point",
     (name) => {
       const total = entry(50);
@@ -118,10 +118,25 @@ describe("the floor", () => {
     },
   );
 
-  it("reports every metric that fell, not only the first", () => {
+  it.each(["functions", "branches"] as const)(
+    "does not gate %s, whose total grows as untested files gain their first test",
+    (name) => {
+      // The real case: lines 30% to 45%, branches 77.9% to 76.7%, in a PR that
+      // only added tests. A floor here would have failed it.
+      const total = entry(50);
+      total[name] = metric(10);
+      writeSummary(total);
+      writeBaseline(FLOOR);
+      const { status, stdout } = run();
+      expect(status).toBe(0);
+      expect(stdout).toMatch(new RegExp(`${name}\\s+10\\.00%\\s+reported, not gated`));
+    },
+  );
+
+  it("reports every gated metric that fell, not only the first", () => {
     writeSummary(entry(10));
     writeBaseline(FLOOR);
-    expect(json().floor).toHaveLength(4);
+    expect(json().floor.map((f: { metric: string }) => f.metric)).toEqual(["lines", "statements"]);
   });
 
   it("treats a missing baseline as a floor of zero", () => {
@@ -131,9 +146,9 @@ describe("the floor", () => {
 
   it("treats a metric with nothing to count as fully covered", () => {
     const total = entry(50);
-    total.branches = { total: 0, covered: 0, skipped: 0, pct: "Unknown" };
+    total.lines = { total: 0, covered: 0, skipped: 0, pct: "Unknown" };
     writeSummary(total);
-    writeBaseline({ ...FLOOR, branches: 100 });
+    writeBaseline({ ...FLOOR, lines: 100 });
     expect(run().status).toBe(0);
   });
 });
@@ -368,7 +383,7 @@ describe("changed lines, with --base", () => {
     writeLcov(lcovRecord("src/lib/new.ts", { 1: 0 }));
     const report = json("--base", "base");
     expect(report.pass).toBe(false);
-    expect(report.floor.length).toBe(4);
+    expect(report.floor.length).toBe(2);
     expect(report.changedFailures).toEqual([{ file: "src/lib/new.ts", kind: "lines", lines: [1] }]);
   });
 

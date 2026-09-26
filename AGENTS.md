@@ -624,7 +624,7 @@ Once the tree is at 3:1 the absolute check applies and the ratchet no longer mat
 
 **Coverage** (`scripts/coverage-gate.mjs --base <ref>`). Line counts alone can be padded, so coverage proves the tests exercise the code:
 
-1. **Floor:** no global metric may fall below `coverage-baseline.json`. Raise it with `pnpm coverage:raise` after adding tests, and commit it. It only ever goes up.
+1. **Floor:** global line and statement coverage may not fall below `coverage-baseline.json`. Raise it with `pnpm coverage:raise` after adding tests, and commit it. It only ever goes up. Functions and branches are reported but not floored: Jest counts them only in files a test loads, so the first test for an untested file lowers their percentage (measured: lines 30% to 45%, branches 77.9% to 76.7%, in a change that only added tests).
 2. **Changed lines:** every executable line a PR adds or changes must be run by a test, and at least 90% of the branch arms on those lines must be taken. Blank and comment-only lines are exempt. Untested old lines in the same file are backlog, measured by the ratio, not a condition on the fix (decided 2026-09-26: holding a one-line fix to the coverage of the whole file around it turned every bug fix into a backfill project).
 
 ### What runs where
