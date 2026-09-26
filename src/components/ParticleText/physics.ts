@@ -222,3 +222,31 @@ export function repulsion(
     fy: (ry * (1 - orbit) + ty * orbit) * force,
   };
 }
+
+/**
+ * The simulation's clock. Every constant above was tuned at 60 frames a
+ * second, so the physics steps at that rate on every display.
+ */
+export const STEP_MS = 1000 / 60;
+
+/**
+ * The most steps one frame may run. Past this the simulation slows down rather
+ * than catching up, so a backgrounded tab resuming, or a device too slow to
+ * keep up, never runs seconds of physics in one frame and flings the field.
+ */
+export const MAX_STEPS = 4;
+
+/**
+ * Turns the time since the last frame into whole simulation steps.
+ *
+ * @param elapsed ms since the previous frame; negative is treated as 0
+ * @param carry the fraction of a step left over from previous frames
+ * @returns steps to run now, and the remainder to carry forward. When the
+ *   frame owes more than MAX_STEPS the remainder is dropped, not banked.
+ */
+export function fixedSteps(elapsed: number, carry: number): { steps: number; carry: number } {
+  const total = carry + Math.max(0, elapsed);
+  const steps = Math.floor(total / STEP_MS);
+  if (steps > MAX_STEPS) return { steps: MAX_STEPS, carry: 0 };
+  return { steps, carry: total - steps * STEP_MS };
+}
