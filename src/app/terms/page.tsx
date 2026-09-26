@@ -7,6 +7,8 @@ import {
   Placeholder,
   TERMS_SECTIONS as S,
 } from "../../components/LegalPage";
+import { ADDRESS, EMAIL, PHONE_DISPLAY } from "../../lib/contact";
+import { TERMS_VERSION } from "../../content/legal/versions";
 
 // ---------------------------------------------------------------------------
 // DRAFT — pending the counsel review this document requires.
@@ -23,7 +25,6 @@ import {
 // ---------------------------------------------------------------------------
 
 const LAST_UPDATED = "Draft, not yet effective";
-const VERSION = "0.1.0-draft";
 
 export const metadata: Metadata = {
   title: "Terms and Conditions",
@@ -46,18 +47,18 @@ const ENTITY_ROWS = [
   { label: "SIRA licence number", value: "SSP202210037219" },
   {
     label: "Registered address",
-    value: "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai",
+    value: ADDRESS,
   },
-  { label: "Contact", value: "contact@mapletech.ae" },
-  { label: "Phone", value: "+971 54 375 5150" },
+  { label: "Contact", value: EMAIL },
+  { label: "Phone", value: PHONE_DISPLAY },
 ] as const;
 
 const CONTACT_ROWS = [
-  { label: "Email", value: "contact@mapletech.ae" },
-  { label: "Phone", value: "+971 54 375 5150" },
+  { label: "Email", value: EMAIL },
+  { label: "Phone", value: PHONE_DISPLAY },
   {
     label: "Post",
-    value: "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai",
+    value: ADDRESS,
   },
 ] as const;
 
@@ -67,7 +68,7 @@ export default function TermsAndConditions() {
       title="Terms and Conditions"
       standfirst="These terms govern your use of this website. They are not the agreement for installing a system in your home. That is a separate written contract."
       lastUpdated={LAST_UPDATED}
-      version={VERSION}
+      version={TERMS_VERSION}
       sections={S}
     >
       <p>

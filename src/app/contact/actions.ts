@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import type { z } from "zod";
 
 import { contactSchema, shortContactSchema, HONEYPOT_FIELD } from "../../lib/contact-schema";
+import { PRIVACY_POLICY_VERSION } from "../../content/legal/versions";
 import { submittedValues } from "./state";
 import type { ContactState, FieldErrors } from "./state";
 
@@ -70,7 +71,21 @@ type Enquiry = {
   community?: string | undefined;
   message?: string | undefined;
   interest?: string | undefined;
+  /** Absent on the short form, which asks for neither: see consentLine. */
+  contactConsent?: boolean | undefined;
+  marketingConsent?: boolean | undefined;
 };
+
+/**
+ * How one consent answer reads in the lead email. Three states, not two: the
+ * short homepage form shows a notice instead of ticks (consent deck §6.4), so
+ * "not asked" is a different fact from "declined" and the record must not
+ * collapse it into either.
+ */
+function consentLine(answer: boolean | undefined): string {
+  if (answer === undefined) return "not asked (short form, notice only)";
+  return answer ? "yes, ticked" : "no";
+}
 
 /** The parts both actions share: honeypot, error shaping, delivery. */
 async function handle(
@@ -143,6 +158,15 @@ async function deliver(data: Enquiry): Promise<void> {
     "",
     "Message:",
     data.message ?? "not given",
+    "",
+    // The consent record. The inbox is the system of record for leads, so what
+    // the visitor agreed to, under which policy and when, is kept with the lead
+    // itself rather than nowhere.
+    "Consent, as recorded when this was sent:",
+    `Contact about this enquiry: ${consentLine(data.contactConsent)}`,
+    `Marketing:                  ${consentLine(data.marketingConsent)}`,
+    `Privacy policy shown:       ${PRIVACY_POLICY_VERSION}`,
+    `Sent at:                    ${new Date().toISOString()}`,
   ];
 
   const { error } = await new Resend(apiKey).emails.send({
