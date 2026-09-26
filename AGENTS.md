@@ -646,7 +646,7 @@ The CI jobs, which are the required status checks:
 
 - `static`: lint, typecheck, production build, cascade layer order in every CSS chunk (`scripts/assert-layer-order.mjs`)
 - `unit`: Jest with coverage, the coverage gate, the ratio gate
-- `e2e (Desktop Chrome)`, `e2e (iPhone 14)`, `e2e (Pixel 7)`: the Playwright suite per device, with axe
+- `e2e (Desktop Chrome)`, `e2e (iPhone 17)`, `e2e (Galaxy S24)`: the Playwright suite per device, with axe. iPhone 17 is the current base iPhone width (402 CSS px, WebKit); Galaxy S24 is the narrow Android width (360 CSS px, Chromium). A project name sets screen size, density, user agent and touch only; the engine is Playwright's current build
 - `e2e-extra`: specs tagged `@forced-colors` and `@zoom`, in the `forced-colors` and `zoom-200` projects
 - `lighthouse`: `lighthouserc.json` against the production build
 
@@ -654,14 +654,15 @@ The CI jobs, which are the required status checks:
 
 ### Branch protection
 
-Set once in GitHub, under Settings, then Branches, for both `latest` and `main`:
+A repository ruleset, "protect latest and main" (Settings, then Rules, then Rulesets), set 2026-09-26. A ruleset rather than classic branch protection: one ruleset covers both branches, the bypass list is explicit, and each required check is pinned to the GitHub Actions app so nothing else can report it green.
 
-- Require a pull request before merging.
-- Require status checks to pass before merging, with every check listed above selected.
-- Require branches to be up to date before merging.
-- Require conversation resolution before merging.
-- Do not allow bypassing the above settings.
-- Block force pushes and deletions.
+- Enforcement active, bypass list empty: nobody, the owner included, skips it.
+- Targets `latest` and `main`.
+- Deletions and force pushes blocked.
+- Pull request required, 0 approvals (a sole author cannot approve their own PR), conversation resolution required.
+- Every check listed above required, source GitHub Actions, and the branch must be up to date before merging.
+
+Required checks are matched by job name. Renaming a job or a Playwright project leaves the ruleset waiting for a check that never reports, and nothing can merge. Change the ruleset in the same sitting as the rename, once the renamed checks have run on the PR.
 
 Repository secrets for the e2e jobs: `RESEND_API_KEY`, `LEAD_EMAIL`, `LEAD_FROM_EMAIL`. The contact and home-enquiry specs send real email through Resend on every run, by decision.
 

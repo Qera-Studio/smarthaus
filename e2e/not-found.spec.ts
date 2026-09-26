@@ -214,8 +214,8 @@ test.describe("404 particle physics", () => {
   });
 });
 
-// Runs on the touch device profiles the config already declares (iPhone 14 and
-// Pixel 7) rather than pinning one here: `devices[...]` carries
+// Runs on the touch device profiles the config already declares (iPhone 17 and
+// Galaxy S24) rather than pinning one here: `devices[...]` carries
 // `defaultBrowserType`, which Playwright refuses inside a describe group, and
 // gating on `isMobile` covers both engines instead of just WebKit.
 test.describe("404 particle physics on touch", () => {
@@ -446,7 +446,7 @@ test.describe("404 motion gates", () => {
     // to orbit. But a finger drag reports the same pointermove stream a mouse
     // does, so the field is drivable on touch — it just has to be driven only
     // while a finger is down, which is what the drag gating below covers.
-    const context = await browser.newContext({ ...devices["iPhone 14"] });
+    const context = await browser.newContext({ ...devices["iPhone 17"] });
     const page = await context.newPage();
     await page.goto(MISSING);
     await page.locator("canvas").waitFor({ state: "attached" });
@@ -463,7 +463,7 @@ test.describe("404 motion gates", () => {
     // Relaxing the pointer gate must not have relaxed the motion gate with it:
     // reduced-motion is a hard floor, and a rAF loop ignores the CSS reset.
     const context = await browser.newContext({
-      ...devices["iPhone 14"],
+      ...devices["iPhone 17"],
       reducedMotion: "reduce",
     });
     const page = await context.newPage();

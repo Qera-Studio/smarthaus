@@ -43,8 +43,8 @@ const REQUIRED_CHECKS = [
   "static",
   "unit",
   "e2e (Desktop Chrome)",
-  "e2e (iPhone 14)",
-  "e2e (Pixel 7)",
+  "e2e (iPhone 17)",
+  "e2e (Galaxy S24)",
   "e2e-extra",
   "lighthouse",
 ];

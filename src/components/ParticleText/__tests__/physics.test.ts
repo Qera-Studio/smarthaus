@@ -1,5 +1,8 @@
 import {
   CLEAR_RADIUS,
+  MAX_STEPS,
+  STEP_MS,
+  fixedSteps,
   ORBIT_MAX,
   RADIUS,
   SPEED_DEADZONE,
@@ -148,5 +151,70 @@ describe("repulsion", () => {
         expect(Number.isFinite(fy)).toBe(true);
       }
     }
+  });
+});
+
+describe("fixedSteps", () => {
+  it("runs one step for one step's worth of time", () => {
+    expect(fixedSteps(STEP_MS, 0)).toEqual({ steps: 1, carry: 0 });
+  });
+
+  it("runs none, and banks the time, for a frame shorter than a step", () => {
+    const due = fixedSteps(STEP_MS / 2, 0);
+    expect(due.steps).toBe(0);
+    expect(due.carry).toBeCloseTo(STEP_MS / 2, 10);
+  });
+
+  it("pays out banked time once it adds up to a step: two 120 Hz frames are one step", () => {
+    const first = fixedSteps(STEP_MS / 2, 0);
+    const second = fixedSteps(STEP_MS / 2, first.carry);
+    expect(second.steps).toBe(1);
+    expect(second.carry).toBeCloseTo(0, 10);
+  });
+
+  it("runs two steps for a 30 Hz frame", () => {
+    expect(fixedSteps(STEP_MS * 2, 0).steps).toBe(2);
+  });
+
+  it("keeps the fractional remainder", () => {
+    const due = fixedSteps(STEP_MS * 2.25, 0);
+    expect(due.steps).toBe(2);
+    expect(due.carry).toBeCloseTo(STEP_MS * 0.25, 10);
+  });
+
+  it("runs exactly MAX_STEPS at the cap, keeping its remainder", () => {
+    const due = fixedSteps(STEP_MS * MAX_STEPS + 1, 0);
+    expect(due.steps).toBe(MAX_STEPS);
+    expect(due.carry).toBeCloseTo(1, 10);
+  });
+
+  it("caps a long gap at MAX_STEPS and drops the rest", () => {
+    expect(fixedSteps(10_000, 0)).toEqual({ steps: MAX_STEPS, carry: 0 });
+  });
+
+  it("counts banked time toward the cap", () => {
+    expect(fixedSteps(STEP_MS * MAX_STEPS, STEP_MS)).toEqual({ steps: MAX_STEPS, carry: 0 });
+  });
+
+  it("treats a negative elapsed time as none", () => {
+    expect(fixedSteps(-50, 0)).toEqual({ steps: 0, carry: 0 });
+    expect(fixedSteps(-50, STEP_MS / 4).carry).toBeCloseTo(STEP_MS / 4, 10);
+  });
+
+  it("does not drift over a long run of 120 Hz frames", () => {
+    let carry = 0;
+    let steps = 0;
+    for (let i = 0; i < 1200; i += 1) {
+      const due = fixedSteps(1000 / 120, carry);
+      carry = due.carry;
+      steps += due.steps;
+    }
+    // Ten seconds at 120 Hz is 600 steps of 1/60 s, give or take the last.
+    expect(steps).toBeGreaterThanOrEqual(599);
+    expect(steps).toBeLessThanOrEqual(600);
+  });
+
+  it("steps at 60 Hz, the rate every constant was tuned at", () => {
+    expect(STEP_MS).toBeCloseTo(1000 / 60, 10);
   });
 });
