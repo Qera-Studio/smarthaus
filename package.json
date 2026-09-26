@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "jest",
     "test:e2e": "playwright test",
     "test:lhci": "lhci autorun",
@@ -28,7 +28,7 @@
       "prettier --write"
     ],
     "*.{ts,tsx}": [
-      "bash -c 'tsc --noEmit'"
+      "bash -c 'pnpm typecheck'"
     ]
   },
   "dependencies": {

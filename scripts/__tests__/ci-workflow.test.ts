@@ -210,6 +210,20 @@ describe("every command the workflow calls exists", () => {
     },
   );
 
+  it("generates Next's route types before type-checking, so a fresh clone passes", () => {
+    // PageProps and LayoutProps are globals Next writes into .next/types. CI
+    // clones have no .next; without typegen, tsc failed there and passed
+    // locally on a stale build (first CI run, 2026-09-26).
+    expect(pkg.scripts["typecheck"]).toBe("next typegen && tsc --noEmit");
+  });
+
+  it("pre-commit type-checks through the same script", () => {
+    const staged = (
+      JSON.parse(read("package.json")) as { "lint-staged": Record<string, string[]> }
+    )["lint-staged"];
+    expect(staged["*.{ts,tsx}"]).toEqual(["bash -c 'pnpm typecheck'"]);
+  });
+
   it("measures coverage with the reporter the gate reads", () => {
     expect(read("jest.config.ts")).toContain('"json-summary"');
   });
