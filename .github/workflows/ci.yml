@@ -108,7 +108,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: ["Desktop Chrome", "iPhone 14", "Pixel 7"]
+        project: ["Desktop Chrome", "iPhone 17", "Galaxy S24"]
     env:
       CI: "true"
       # The contact and home-enquiry specs send real email through Resend, by
