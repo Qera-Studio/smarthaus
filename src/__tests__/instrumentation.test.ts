@@ -108,6 +108,14 @@ describe("onRequestError", () => {
     expect(logged.mock.calls[0]![0]).not.toContain("lead@example.com");
   });
 
+  it("keeps a path that has no query string as it is", () => {
+    const logged = jest.spyOn(console, "error").mockImplementation(() => {});
+    onRequestError(new Error("x"), { ...request, path: "/pricing", method: "GET" }, context);
+    const line = JSON.parse(logged.mock.calls[0]![0] as string);
+    expect(line.path).toBe("/pricing");
+    expect(line.method).toBe("GET");
+  });
+
   it("copes with a thrown non-Error and no digest", () => {
     const logged = jest.spyOn(console, "error").mockImplementation(() => {});
     onRequestError("plain string", request, context);

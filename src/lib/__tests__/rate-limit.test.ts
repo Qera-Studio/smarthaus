@@ -47,6 +47,16 @@ describe("createLimiter", () => {
     expect(limiter.take("a").ok).toBe(false);
   });
 
+  it("keeps a partial refill: half a token is still a refusal, and says how long is left", () => {
+    const c = clock();
+    const limiter = createLimiter({ capacity: 1, windowMs: 120_000, now: c.now });
+    limiter.take("a");
+    c.advance(60_000);
+    expect(limiter.take("a")).toEqual({ ok: false, retryAfterMs: 60_000 });
+    c.advance(60_000);
+    expect(limiter.take("a").ok).toBe(true);
+  });
+
   it("never refills past capacity, however long it waits", () => {
     const c = clock();
     const limiter = createLimiter({ capacity: 2, windowMs: 1000, now: c.now });

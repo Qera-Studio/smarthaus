@@ -80,6 +80,25 @@ describe("POST /api/csp-report", () => {
     expect(JSON.parse(logged.mock.calls[0][0]).disposition).toBe("report");
   });
 
+  it("logs each distinct violation in a Reporting API batch", async () => {
+    const violation = (blockedURL: string) => ({
+      type: "csp-violation",
+      body: { documentURL: "https://smarthaus.ae/", blockedURL, effectiveDirective: "img-src" },
+    });
+    const body = [violation("https://a.example/1.png"), violation("https://b.example/2.png")];
+    expect((await POST(report(body, { type: "application/reports+json" }))).status).toBe(204);
+    expect(logged.mock.calls.map((call) => JSON.parse(call[0]).blocked)).toEqual([
+      "https://a.example/1.png",
+      "https://b.example/2.png",
+    ]);
+  });
+
+  it("accepts a batch with no CSP reports in it, and logs nothing", async () => {
+    const body = [{ type: "deprecation", body: { id: "x" } }];
+    expect((await POST(report(body, { type: "application/reports+json" }))).status).toBe(204);
+    expect(logged).not.toHaveBeenCalled();
+  });
+
   it("logs a repeat of the same violation only once", async () => {
     await POST(report(legacy("https://evil.example/repeat.js")));
     await POST(report(legacy("https://evil.example/repeat.js")));
