@@ -9,11 +9,15 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test": "jest --passWithNoTests",
+    "test": "jest",
     "test:e2e": "playwright test",
     "test:lhci": "lhci autorun",
     "analyze": "ANALYZE=true next build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:coverage": "jest --ci --coverage",
+    "test:ratio": "node scripts/test-ratio.mjs",
+    "coverage:gate": "node scripts/coverage-gate.mjs",
+    "coverage:raise": "node scripts/coverage-gate.mjs --update"
   },
   "lint-staged": {
     "*.{ts,tsx,mjs}": [
