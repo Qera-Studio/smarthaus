@@ -661,6 +661,27 @@
     }
 
     @include focus-ring(var(--consent-ink));
+
+    // Forced colours (Windows High Contrast and its successors). The OS
+    // replaces every author colour, which flattens the knob into the track:
+    // on and off look the same. System colours, opted out of the override,
+    // put the state back: a grey knob when off, the highlight colour when on,
+    // with the frame in the same colour so "on" reads from the whole control.
+    // The state label beside the switch says it in words either way.
+    @media (forced-colors: active) {
+      &::after {
+        forced-color-adjust: none;
+        background-color: GrayText;
+      }
+
+      &:checked {
+        border-color: Highlight;
+      }
+
+      &:checked::after {
+        background-color: Highlight;
+      }
+    }
   }
 
   .stateLabel {
