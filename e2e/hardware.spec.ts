@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible } from "./checks";
 
 /**
  * The hardware carousel on the homepage.
@@ -84,8 +84,7 @@ test("focus inside the bar pauses it and shows the play glyph", async ({ page })
 });
 
 test("passes axe", async ({ page }) => {
-  const results = await new AxeBuilder({ page }).include("section:has(#hardware)").analyze();
-  expect(results.violations).toEqual([]);
+  await expectAccessible(page, { include: "section:has(#hardware)" });
 });
 
 test.describe("reduced motion", () => {

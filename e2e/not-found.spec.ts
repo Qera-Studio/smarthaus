@@ -1,5 +1,5 @@
 import { test, expect, devices } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible } from "./checks";
 
 // Any unrouted path renders not-found, so this doubles as a routing check.
 const MISSING = "/this-page-does-not-exist";
@@ -27,8 +27,7 @@ test.describe("404", () => {
 
   test("passes axe accessibility checks", async ({ page }) => {
     await page.goto(MISSING);
-    const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations).toEqual([]);
+    await expectAccessible(page);
   });
 
   test("the home link works", async ({ page }) => {

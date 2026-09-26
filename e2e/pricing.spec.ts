@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible, expectNoHorizontalOverflow } from "./checks";
 
 /**
  * The four-tier pricing section on the homepage.
@@ -103,10 +103,7 @@ test("lines the four buttons up on one row", async ({ page }) => {
  * page sideways at narrow widths.
  */
 test("does not introduce a horizontal scrollbar", async ({ page }) => {
-  const overflows = await page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-  );
-  expect(overflows).toBe(false);
+  await expectNoHorizontalOverflow(page);
 });
 
 /**
@@ -118,7 +115,5 @@ test("does not introduce a horizontal scrollbar", async ({ page }) => {
 test("passes axe with no violations", async ({ page }) => {
   await pricing(page).scrollIntoViewIfNeeded();
 
-  const results = await new AxeBuilder({ page }).include("[data-pricing]").analyze();
-
-  expect(results.violations).toEqual([]);
+  await expectAccessible(page, { include: "[data-pricing]" });
 });

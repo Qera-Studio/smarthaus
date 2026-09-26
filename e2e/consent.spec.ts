@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
 
 /**
  * Cookie consent: the banner, the preferences panel, and /cookie-preferences.
@@ -598,8 +598,7 @@ test.describe("/cookie-preferences", () => {
 
   test("passes axe accessibility checks", async ({ page }) => {
     await page.goto("/cookie-preferences");
-    const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations).toEqual([]);
+    await expectAccessible(page);
   });
 
   test("the footer link opens the panel in place once a choice is on file", async ({
@@ -664,16 +663,12 @@ test.describe("/cookie-preferences", () => {
     // The house rule every other page suite asserts. textContent, not
     // innerText: the panel's copy must be checked even where a container is
     // clipped.
-    const copy = await page.locator("main").textContent();
-    expect(copy).not.toContain("—");
+    await expectNoEmDash(page.locator("main"));
   });
 
   test("does not overflow horizontally", async ({ page }) => {
     await page.goto("/cookie-preferences");
-    const overflows = await page.evaluate(
-      () => document.documentElement.scrollWidth > window.innerWidth + 1,
-    );
-    expect(overflows).toBe(false);
+    await expectNoHorizontalOverflow(page);
   });
 });
 

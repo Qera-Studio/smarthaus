@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import { expectNoHorizontalOverflow } from "./checks";
 
 /**
  * The footer's two load-bearing behaviours, both of which are invisible to a
@@ -71,10 +72,7 @@ test("the ground bleeds past the content cap without horizontal overflow", async
   await page.setViewportSize({ width: 1800, height: 900 });
   await page.goto("/");
 
-  const overflows = await page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth,
-  );
-  expect(overflows).toBe(false);
+  await expectNoHorizontalOverflow(page);
 
   // The footer box itself stops at the 1440px cap — that is expected. What
   // must be true is that its painted ground still reaches both edges.
