@@ -145,6 +145,18 @@ async function expandBack(page: Page): Promise<Frame[]> {
 test("the capsule closes around a fixed row with the gaps held equal", async ({ page }) => {
   // /about rather than the homepage: it has content to scroll.
   await page.goto("/about");
+  // Scroll only once NavShell has measured. The capsule is JS-driven and cannot
+  // form before hydration, and until then the bar uses the macOS fallback
+  // widths: on CI's Linux Chrome, a scroll that landed first sampled that
+  // server-rendered bar with the CTA 3px from the edge instead of 9. That
+  // pre-hydration state is a known residual, not what this test measures.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        document.querySelector("header")!.style.getPropertyValue("--nav-links-row"),
+      ),
+    )
+    .not.toBe("");
 
   const { frames: shrink, settled: shrinkSettled, why } = await sample(page, 80);
   expect(shrinkSettled, `shrink finished within 5s: ${why}`).toBe(true);
