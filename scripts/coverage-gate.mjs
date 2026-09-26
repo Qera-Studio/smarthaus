@@ -3,15 +3,21 @@
 // script proves there are enough test lines; this proves they exercise the
 // code, so a wall of trivial assertions cannot satisfy the rule.
 //
-// Reads Jest's json-summary report and applies two rules:
+// Reads Jest's json-summary and lcov reports and applies two rules:
 //   1. Floor: no global metric may fall below coverage-baseline.json.
-//   2. Touched files: every coverable source file added or changed against
-//      --base must reach the per-file bar below.
+//   2. Changed lines: every executable line added or changed against --base,
+//      in a coverable source file, must be run by a test. Across all changed
+//      lines, at least BRANCH_BAR percent of branch arms must be taken.
+//
+// Changed lines, not whole files (decided 2026-09-26): the rule is "three
+// lines of test for every line you write". Holding a one-line fix to the
+// coverage of the whole legacy file around it turned every bug fix into a
+// backfill project; the backfill is its own work, measured by the ratio.
 // `--update` raises the baseline to the current numbers, metric by metric,
 // and never lowers one. CI never runs --update; a person does, and commits it.
 //
 // Usage:
-//   node scripts/coverage-gate.mjs [--summary <file>] [--baseline <file>]
+//   node scripts/coverage-gate.mjs [--summary <file>] [--lcov <file>] [--baseline <file>]
 //                                  [--base <ref>] [--root <dir>] [--update] [--json]
 
 import { execFileSync } from "node:child_process";
@@ -20,10 +26,10 @@ import path from "node:path";
 
 export const METRICS = ["lines", "statements", "functions", "branches"];
 
-// Per-file bar for touched files. Branches sit lower because v8 counts both
-// arms of every `??` and optional chain, including ones only a corrupted
-// runtime could take.
-export const FILE_BAR = { lines: 95, statements: 95, functions: 95, branches: 90 };
+// Share of branch arms on changed lines that tests must take. Not 100: v8
+// counts both arms of every `??` and optional chain, including ones only a
+// corrupted runtime could take.
+export const BRANCH_BAR = 90;
 
 // Same set as jest.config.ts collectCoverageFrom. Content modules are data:
 // they are held to the ratio, not to coverage, which would be meaningless.
@@ -42,6 +48,7 @@ function parseArgs(argv) {
   const out = {
     root: process.cwd(),
     summary: "coverage/coverage-summary.json",
+    lcov: "coverage/lcov.info",
     baseline: "coverage-baseline.json",
     base: null,
     update: false,
@@ -53,6 +60,7 @@ function parseArgs(argv) {
     else if (arg === "--json") out.json = true;
     else if (arg === "--root") out.root = path.resolve(argv[(i += 1)] ?? "");
     else if (arg === "--summary") out.summary = argv[(i += 1)] ?? "";
+    else if (arg === "--lcov") out.lcov = argv[(i += 1)] ?? "";
     else if (arg === "--baseline") out.baseline = argv[(i += 1)] ?? "";
     else if (arg === "--base") out.base = argv[(i += 1)] ?? "";
     else throw new Error(`Unknown argument: ${arg}`);
@@ -70,15 +78,56 @@ function readJson(file, what) {
   }
 }
 
-// Jest keys files by absolute path; everything here speaks repo-relative.
-export function perFile(summary, root) {
+// Per file: executable lines with their hit counts, and branch arms by line.
+// Paths are made repo-relative; Jest writes them relative or absolute
+// depending on the reporter.
+export function parseLcov(text, root) {
   const files = new Map();
-  for (const [key, value] of Object.entries(summary)) {
-    if (key === "total") continue;
-    const rel = path.isAbsolute(key) ? path.relative(root, key) : key;
-    files.set(rel.split(path.sep).join("/"), value);
+  let current = null;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.startsWith("SF:")) {
+      const file = line.slice(3);
+      const rel = (path.isAbsolute(file) ? path.relative(root, file) : file)
+        .split(path.sep)
+        .join("/");
+      current = { lines: new Map(), branches: [] };
+      files.set(rel, current);
+    } else if (!current) {
+      continue;
+    } else if (line.startsWith("DA:")) {
+      const [n, hits] = line.slice(3).split(",");
+      current.lines.set(Number(n), Number(hits));
+    } else if (line.startsWith("BRDA:")) {
+      const [n, , , taken] = line.slice(5).split(",");
+      current.branches.push({ line: Number(n), taken: taken === "-" ? 0 : Number(taken) });
+    } else if (line === "end_of_record") {
+      current = null;
+    }
   }
   return files;
+}
+
+// New-side line numbers from a zero-context diff. "@@ -a,b +c,d @@" adds lines
+// c..c+d-1; d defaults to 1, and d=0 is a pure deletion.
+export function changedLinesFromDiff(diff) {
+  const lines = new Set();
+  for (const m of diff.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)) {
+    const start = Number(m[1]);
+    const count = m[2] === undefined ? 1 : Number(m[2]);
+    for (let i = 0; i < count; i += 1) lines.add(start + i);
+  }
+  return lines;
+}
+
+// A blank or comment-only line executes nothing, so it needs no test. v8
+// reports every line of a file no test loads as uncovered, comments included,
+// so without this a reworded comment would demand a test.
+export function isInert(text) {
+  const t = text.trim();
+  return (
+    t === "" || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*") || t.startsWith("*/")
+  );
 }
 
 export function pct(entry, metric) {
@@ -100,23 +149,43 @@ export function checkFloor(total, baseline) {
   return failures;
 }
 
-export function checkTouched(files, touched) {
+// changed: Map<relPath, { lines: Set<number>, source: string[] }>
+export function checkChanged(lcov, changed) {
   const failures = [];
-  for (const rel of touched) {
+  let branchTotal = 0;
+  let branchTaken = 0;
+  for (const [rel, { lines, source }] of changed) {
     if (!isCoverable(rel)) continue;
-    const entry = files.get(rel);
+    const entry = lcov.get(rel);
     if (!entry) {
-      // Not in the report at all means Jest never saw it: collectCoverageFrom
-      // drifted from isCoverable. Fail loudly rather than pass silently.
-      failures.push({ file: rel, metric: "missing", now: 0, need: 100 });
+      // Jest never saw it: collectCoverageFrom drifted from isCoverable.
+      // Fail loudly rather than pass silently.
+      failures.push({ file: rel, kind: "missing" });
       continue;
     }
-    for (const metric of METRICS) {
-      const now = pct(entry, metric);
-      if (now < FILE_BAR[metric]) failures.push({ file: rel, metric, now, need: FILE_BAR[metric] });
+    const uncovered = [];
+    for (const n of [...lines].sort((a, b) => a - b)) {
+      if (isInert(source[n - 1] ?? "")) continue;
+      const hits = entry.lines.get(n);
+      if (hits === 0) uncovered.push(n);
+    }
+    if (uncovered.length > 0) failures.push({ file: rel, kind: "lines", lines: uncovered });
+    for (const b of entry.branches) {
+      if (!lines.has(b.line)) continue;
+      branchTotal += 1;
+      if (b.taken > 0) branchTaken += 1;
     }
   }
-  return failures;
+  const branchPct = branchTotal === 0 ? 100 : (branchTaken / branchTotal) * 100;
+  if (branchPct < BRANCH_BAR) {
+    failures.push({
+      kind: "branches",
+      pct: Number(branchPct.toFixed(2)),
+      taken: branchTaken,
+      total: branchTotal,
+    });
+  }
+  return { failures, branchTotal, branchTaken };
 }
 
 export function raise(baseline, total) {
@@ -127,20 +196,28 @@ export function raise(baseline, total) {
   return next;
 }
 
-// Added, modified, renamed or copied since the base, including uncommitted
-// work, so pre-push and CI judge the same set.
-export function touchedSince(root, ref) {
-  const out = execFileSync(
-    "git",
-    ["-C", root, "diff", "--name-only", "--diff-filter=AMRC", ref, "--", "src"],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-  );
-  const untracked = execFileSync(
-    "git",
-    ["-C", root, "ls-files", "--others", "--exclude-standard", "--", "src"],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-  );
-  return [...new Set(`${out}\n${untracked}`.split("\n").filter(Boolean))].sort();
+// Changed lines per coverable file since the base, uncommitted work included,
+// so pre-push and CI judge the same set. Untracked files are new in full.
+export function changedSince(root, ref) {
+  const run = (args) =>
+    execFileSync("git", ["-C", root, ...args], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  const tracked = run(["diff", "--name-only", "--diff-filter=AMRC", ref, "--", "src"]).split("\n");
+  const untracked = run(["ls-files", "--others", "--exclude-standard", "--", "src"]).split("\n");
+  const out = new Map();
+  for (const rel of new Set([...tracked, ...untracked].filter(Boolean))) {
+    if (!isCoverable(rel)) continue;
+    const full = path.join(root, rel);
+    if (!existsSync(full)) continue;
+    const source = readFileSync(full, "utf8").split(/\r?\n/);
+    const lines = untracked.includes(rel)
+      ? new Set(source.map((_, i) => i + 1))
+      : changedLinesFromDiff(run(["diff", "-U0", "--no-color", "--no-ext-diff", ref, "--", rel]));
+    if (lines.size > 0) out.set(rel, { lines, source });
+  }
+  return out;
 }
 
 function main() {
@@ -159,14 +236,31 @@ function main() {
   }
 
   const floor = checkFloor(summary.total, baseline);
-  const touched = args.base ? touchedSince(args.root, args.base) : [];
-  const files = perFile(summary, args.root);
-  const fileFailures = checkTouched(files, touched);
-  const pass = floor.length === 0 && fileFailures.length === 0;
+  const changed = args.base ? changedSince(args.root, args.base) : new Map();
+  let result = { failures: [], branchTotal: 0, branchTaken: 0 };
+  if (changed.size > 0) {
+    const lcovPath = path.resolve(args.root, args.lcov);
+    if (!existsSync(lcovPath)) throw new Error(`Coverage lcov not found: ${lcovPath}`);
+    result = checkChanged(parseLcov(readFileSync(lcovPath, "utf8"), args.root), changed);
+  }
+  const pass = floor.length === 0 && result.failures.length === 0;
 
   if (args.json) {
     process.stdout.write(
-      `${JSON.stringify({ pass, total: summary.total, baseline, floor, touched, fileFailures }, null, 2)}\n`,
+      `${JSON.stringify(
+        {
+          pass,
+          total: summary.total,
+          baseline,
+          floor,
+          changed: Object.fromEntries([...changed].map(([k, v]) => [k, [...v.lines]])),
+          changedFailures: result.failures,
+          branchTotal: result.branchTotal,
+          branchTaken: result.branchTaken,
+        },
+        null,
+        2,
+      )}\n`,
     );
   } else {
     const lines = ["Coverage gate"];
@@ -177,17 +271,19 @@ function main() {
         ).toFixed(2)}%`,
       );
     }
-    if (args.base)
-      lines.push(
-        `  touched coverable files since ${args.base}: ${touched.filter(isCoverable).length}`,
-      );
+    if (args.base) {
+      const count = [...changed.values()].reduce((n, v) => n + v.lines.size, 0);
+      lines.push(`  changed lines since ${args.base}: ${count} in ${changed.size} files`);
+    }
     for (const f of floor) lines.push(`FAIL floor: ${f.metric} ${f.now}% < ${f.floor}%`);
-    for (const f of fileFailures) {
-      lines.push(
-        f.metric === "missing"
-          ? `FAIL ${f.file}: not in the coverage report`
-          : `FAIL ${f.file}: ${f.metric} ${f.now}% < ${f.need}%`,
-      );
+    for (const f of result.failures) {
+      if (f.kind === "missing") lines.push(`FAIL ${f.file}: not in the coverage report`);
+      else if (f.kind === "lines")
+        lines.push(`FAIL ${f.file}: changed lines not run by any test: ${f.lines.join(", ")}`);
+      else
+        lines.push(
+          `FAIL branches on changed lines: ${f.taken}/${f.total} taken (${f.pct}% < ${BRANCH_BAR}%)`,
+        );
     }
     lines.push(pass ? "PASS" : "FAIL");
     process.stdout.write(`${lines.join("\n")}\n`);

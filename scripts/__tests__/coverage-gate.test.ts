@@ -168,77 +168,138 @@ describe("raising the baseline", () => {
   });
 });
 
-describe("touched files, with --base", () => {
+// lcov for one file: every listed line with its hit count, plus branch arms.
+function lcovRecord(rel: string, hits: Record<number, number>, branches: [number, number][] = []) {
+  const da = Object.entries(hits).map(([n, h]) => `DA:${n},${h}`);
+  const brda = branches.map(
+    ([line, taken], i) => `BRDA:${line},0,${i},${taken === 0 ? "-" : taken}`,
+  );
+  return [`SF:${rel}`, ...da, ...brda, "end_of_record"].join("\n");
+}
+
+function writeLcov(...records: string[]) {
+  mkdirSync(path.join(root, "coverage"), { recursive: true });
+  writeFileSync(path.join(root, "coverage", "lcov.info"), `${records.join("\n")}\n`);
+}
+
+const OLD = [
+  "export const a = 1;",
+  "export const b = 2;",
+  "export const c = 3;",
+  "export const d = 4;",
+  "",
+].join("\n");
+
+describe("changed lines, with --base", () => {
   beforeEach(() => {
     git("init", "-q");
-    put("src/lib/old.ts");
+    put("src/lib/old.ts", OLD);
     put("src/content/copy.ts");
     commitAll("base");
     git("tag", "base");
     writeBaseline({ lines: 0, statements: 0, functions: 0, branches: 0 });
+    writeSummary(entry(10));
   });
 
-  it("passes when nothing under src changed", () => {
-    writeSummary(entry(10), { "src/lib/old.ts": entry(10) });
+  it("passes when nothing under src changed, without needing lcov", () => {
     expect(run("--base", "base").status).toBe(0);
   });
 
-  it("passes a new file at exactly the bar", () => {
-    put("src/lib/new.ts");
-    writeSummary(entry(10), { "src/lib/new.ts": entry(95, 90) });
-    expect(run("--base", "base").status).toBe(0);
+  it("passes a one-line change that a test runs, in a file that is otherwise untested", () => {
+    // The whole point of the rule: the old lines stay untested, the new one is.
+    put("src/lib/old.ts", OLD.replace("const b = 2", "const b = 20"));
+    writeLcov(lcovRecord("src/lib/old.ts", { 1: 0, 2: 1, 3: 0, 4: 0 }));
+    const r = json("--base", "base");
+    expect(r.pass).toBe(true);
+    expect(r.changed).toEqual({ "src/lib/old.ts": [2] });
   });
 
-  it("fails a new file one point under the line bar", () => {
-    put("src/lib/new.ts");
-    writeSummary(entry(10), { "src/lib/new.ts": entry(94, 90) });
+  it("fails a changed line no test runs, and names the line", () => {
+    put("src/lib/old.ts", OLD.replace("const c = 3", "const c = 30"));
+    writeLcov(lcovRecord("src/lib/old.ts", { 1: 1, 2: 1, 3: 0, 4: 1 }));
     const { status, stdout } = run("--base", "base");
     expect(status).toBe(1);
-    expect(stdout).toContain("FAIL src/lib/new.ts: lines 94% < 95%");
+    expect(stdout).toContain("FAIL src/lib/old.ts: changed lines not run by any test: 3");
   });
 
-  it("fails a new file under the branch bar", () => {
-    put("src/lib/new.ts");
-    writeSummary(entry(10), { "src/lib/new.ts": entry(100, 89) });
-    expect(run("--base", "base").stdout).toContain("branches 89% < 90%");
+  it("lists every uncovered changed line in order", () => {
+    put(
+      "src/lib/old.ts",
+      [
+        "export const a = 10;",
+        "export const b = 2;",
+        "export const c = 30;",
+        "export const d = 40;",
+        "",
+      ].join("\n"),
+    );
+    writeLcov(lcovRecord("src/lib/old.ts", { 1: 0, 2: 1, 3: 0, 4: 0 }));
+    expect(run("--base", "base").stdout).toContain("changed lines not run by any test: 1, 3, 4");
   });
 
-  it("holds a modified old file to the same bar as a new one", () => {
-    put("src/lib/old.ts", "export const x = 2;\n");
-    writeSummary(entry(10), { "src/lib/old.ts": entry(20) });
-    expect(run("--base", "base").status).toBe(1);
+  it("holds every line of a new untracked file to the rule", () => {
+    put("src/lib/new.ts", "export const x = 1;\nexport const y = 2;\n");
+    writeLcov(lcovRecord("src/lib/new.ts", { 1: 1, 2: 0 }));
+    const r = json("--base", "base");
+    expect(r.changed["src/lib/new.ts"]).toEqual([1, 2, 3]);
+    expect(r.changedFailures).toEqual([{ file: "src/lib/new.ts", kind: "lines", lines: [2] }]);
   });
 
-  it("judges committed and uncommitted changes alike", () => {
-    put("src/lib/committed.ts");
+  it("judges committed and staged changes alike", () => {
+    put("src/lib/committed.ts", "export const x = 1;\n");
     commitAll("work");
-    put("src/lib/staged.ts");
+    put("src/lib/staged.ts", "export const y = 1;\n");
     git("add", "src/lib/staged.ts");
-    writeSummary(entry(10), {
-      "src/lib/committed.ts": entry(0),
-      "src/lib/staged.ts": entry(0),
-    });
-    expect(json("--base", "base").touched).toEqual(["src/lib/committed.ts", "src/lib/staged.ts"]);
+    writeLcov(
+      lcovRecord("src/lib/committed.ts", { 1: 1 }),
+      lcovRecord("src/lib/staged.ts", { 1: 1 }),
+    );
+    expect(Object.keys(json("--base", "base").changed).sort()).toEqual([
+      "src/lib/committed.ts",
+      "src/lib/staged.ts",
+    ]);
   });
 
-  it("includes untracked files, so a forgotten git add cannot dodge the gate", () => {
-    put("src/lib/untracked.ts");
-    writeSummary(entry(10), { "src/lib/untracked.ts": entry(0) });
-    expect(run("--base", "base").status).toBe(1);
+  it("does not ask tests of comment or blank lines, even in a file no test loads", () => {
+    put("src/lib/old.ts", `// a new comment\n\n/* block */\n * star line\n${OLD}`);
+    writeLcov(lcovRecord("src/lib/old.ts", { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 }));
+    expect(run("--base", "base").status).toBe(0);
+  });
+
+  it("ignores changed lines that are not executable, such as a type", () => {
+    // lcov has no DA entry for the line at all, which is how v8 reports
+    // type-only lines in a loaded file.
+    put("src/lib/old.ts", `export type T = string;\n${OLD}`);
+    writeLcov(lcovRecord("src/lib/old.ts", { 2: 1, 3: 1, 4: 1, 5: 1 }));
+    expect(run("--base", "base").status).toBe(0);
+  });
+
+  it("ignores pure deletions", () => {
+    put("src/lib/old.ts", OLD.replace("export const b = 2;\n", ""));
+    writeLcov(lcovRecord("src/lib/old.ts", { 1: 0, 2: 0, 3: 0 }));
+    const r = json("--base", "base");
+    expect(r.pass).toBe(true);
+    expect(r.changed).toEqual({});
   });
 
   it("ignores deleted files", () => {
     rmSync(path.join(root, "src/lib/old.ts"));
-    writeSummary(entry(10));
     expect(run("--base", "base").status).toBe(0);
   });
 
-  it("fails a touched coverable file that is missing from the report", () => {
-    put("src/lib/new.ts");
-    writeSummary(entry(10));
+  it("fails a changed coverable file that is missing from the lcov report", () => {
+    put("src/lib/new.ts", "export const x = 1;\n");
+    writeLcov(lcovRecord("src/lib/other.ts", { 1: 1 }));
     const { status, stdout } = run("--base", "base");
     expect(status).toBe(1);
     expect(stdout).toContain("FAIL src/lib/new.ts: not in the coverage report");
+  });
+
+  it("exits 2 when lines changed but there is no lcov report", () => {
+    put("src/lib/new.ts", "export const x = 1;\n");
+    const { status, stderr } = run("--base", "base");
+    expect(status).toBe(2);
+    expect(stderr).toContain("Coverage lcov not found");
   });
 
   it.each([
@@ -249,26 +310,73 @@ describe("touched files, with --base", () => {
     "src/types/global.d.ts",
     "src/styles/x.scss",
     "src/lib/new 2.ts",
-  ])("does not hold %s to the per-file bar", (rel) => {
+  ])("does not hold %s to the rule", (rel) => {
     put(rel, "x\n");
-    writeSummary(entry(10));
     expect(run("--base", "base").status).toBe(0);
   });
 
-  it("accepts summaries keyed by relative path as well as absolute", () => {
-    put("src/lib/new.ts");
-    writeSummary(entry(10), { "src/lib/new.ts": entry(100) }, false);
+  it("accepts lcov paths written absolute as well as relative", () => {
+    put("src/lib/new.ts", "export const x = 1;\n");
+    writeLcov(lcovRecord(path.join(root, "src/lib/new.ts"), { 1: 1 }));
     expect(run("--base", "base").status).toBe(0);
   });
 
-  it("applies the floor and the file bar together", () => {
+  describe("branches on changed lines", () => {
+    it("passes at exactly the bar", () => {
+      put("src/lib/new.ts", "export const x = 1;\n");
+      const arms: [number, number][] = [...Array(9).fill([1, 1]), [1, 0]];
+      writeLcov(lcovRecord("src/lib/new.ts", { 1: 1 }, arms));
+      expect(run("--base", "base").status).toBe(0);
+    });
+
+    it("fails below the bar and reports the count", () => {
+      put("src/lib/new.ts", "export const x = 1;\n");
+      writeLcov(
+        lcovRecord("src/lib/new.ts", { 1: 1 }, [
+          [1, 1],
+          [1, 0],
+        ]),
+      );
+      const { status, stdout } = run("--base", "base");
+      expect(status).toBe(1);
+      expect(stdout).toContain("FAIL branches on changed lines: 1/2 taken (50% < 90%)");
+    });
+
+    it("counts only arms on changed lines, not the rest of the file", () => {
+      put("src/lib/old.ts", OLD.replace("const b = 2", "const b = 20"));
+      writeLcov(
+        lcovRecord("src/lib/old.ts", { 1: 1, 2: 1, 3: 1, 4: 1 }, [
+          [1, 0],
+          [3, 0],
+          [2, 1],
+        ]),
+      );
+      const r = json("--base", "base");
+      expect(r).toMatchObject({ pass: true, branchTotal: 1, branchTaken: 1 });
+    });
+
+    it("passes when changed lines carry no branches at all", () => {
+      put("src/lib/new.ts", "export const x = 1;\n");
+      writeLcov(lcovRecord("src/lib/new.ts", { 1: 1 }));
+      expect(json("--base", "base")).toMatchObject({ pass: true, branchTotal: 0 });
+    });
+  });
+
+  it("applies the floor and the changed-line rule together", () => {
     writeBaseline(FLOOR);
-    put("src/lib/new.ts");
-    writeSummary(entry(10), { "src/lib/new.ts": entry(0) });
+    put("src/lib/new.ts", "export const x = 1;\n");
+    writeLcov(lcovRecord("src/lib/new.ts", { 1: 0 }));
     const report = json("--base", "base");
     expect(report.pass).toBe(false);
     expect(report.floor.length).toBe(4);
-    expect(report.fileFailures.length).toBe(4);
+    expect(report.changedFailures).toEqual([{ file: "src/lib/new.ts", kind: "lines", lines: [1] }]);
+  });
+
+  it("honours --lcov", () => {
+    put("src/lib/new.ts", "export const x = 1;\n");
+    mkdirSync(path.join(root, "elsewhere"), { recursive: true });
+    writeFileSync(path.join(root, "elsewhere", "l.info"), lcovRecord("src/lib/new.ts", { 1: 1 }));
+    expect(run("--base", "base", "--lcov", "elsewhere/l.info").status).toBe(0);
   });
 });
 

@@ -625,7 +625,7 @@ Once the tree is at 3:1 the absolute check applies and the ratchet no longer mat
 **Coverage** (`scripts/coverage-gate.mjs --base <ref>`). Line counts alone can be padded, so coverage proves the tests exercise the code:
 
 1. **Floor:** no global metric may fall below `coverage-baseline.json`. Raise it with `pnpm coverage:raise` after adding tests, and commit it. It only ever goes up.
-2. **Touched files:** every source file a PR adds or changes must reach 95% lines, statements and functions and 90% branches. Touching an untested file means testing it.
+2. **Changed lines:** every executable line a PR adds or changes must be run by a test, and at least 90% of the branch arms on those lines must be taken. Blank and comment-only lines are exempt. Untested old lines in the same file are backlog, measured by the ratio, not a condition on the fix (decided 2026-09-26: holding a one-line fix to the coverage of the whole file around it turned every bug fix into a backfill project).
 
 ### What runs where
 
@@ -660,7 +660,7 @@ Repository secrets for the e2e jobs: `RESEND_API_KEY`, `LEAD_EMAIL`, `LEAD_FROM_
 
 ### When a test fails
 
-**A failing test is a finding, reported to Shivanshu with its output.** It is never fixed by weakening, skipping, retrying or deleting the assertion. If the test is right and the code is wrong, fix the code. If the test encodes a decision that has changed, say which decision and ask. A test that only passes on retry is flaky, and flaky is a failure.
+**A failing test is a finding, reported to Shivanshu with its output.** It is never fixed by weakening, skipping, retrying or deleting the assertion. If the test is right and the code is wrong, fix the code. If the test encodes a decision that has changed, say which decision and ask. A test that only passes on retry is flaky, and flaky is a failure: CI runs with `failOnFlakyTests`, so a flaky pass blocks the merge.
 
 ### Writing tests
 
