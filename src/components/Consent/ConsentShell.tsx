@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { CONSENT_COPY } from "../../content/consent";
 import {
   OPEN_PREFERENCES_EVENT,
@@ -344,7 +344,12 @@ export function ConsentShell({
   // no banner to dismiss on the preferences page. Also wired while the panel
   // is open with no `ask` outstanding — opened from the footer after a choice
   // — where the first branch below simply closes it.
-  useEffect(() => {
+  //
+  // A layout effect, so the listener is attached in the same commit that puts
+  // the banner on screen. As a passive effect it attached after paint, and on
+  // a slow device an Escape pressed the moment the banner appeared was lost:
+  // the banner was visible and not listening. CI's iPhone project hit it.
+  useLayoutEffect(() => {
     if (standalone || (state?.ask !== true && !expanded)) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
