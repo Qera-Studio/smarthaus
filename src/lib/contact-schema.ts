@@ -46,12 +46,35 @@ const normalisePhone = (value: string) =>
  */
 const UAE_PHONE = /^\+9715\d{8}$/;
 
-const name = z.string().trim().min(1, { message: "Add your name so we know who we're calling." });
+/**
+ * Length caps (Security System §4: bound every input). Generous for a person,
+ * useless for a script pasting a novel into the inbox. The form sets the same
+ * numbers as `maxLength`, so a visitor can never type past one and meet this
+ * error; the server check is for requests that did not come from the form.
+ * The two count differently, in the safe direction: the browser's maxLength
+ * counts UTF-16 units (an emoji is two), Zod counts code points (an emoji is
+ * one). The browser is always the stricter, so the server never refuses what
+ * the field allowed.
+ */
+export const MAX_LENGTH = {
+  name: 120,
+  phone: 32,
+  email: 254,
+  community: 120,
+  message: 2000,
+} as const;
+
+const name = z
+  .string()
+  .trim()
+  .min(1, { message: "Add your name so we know who we're calling." })
+  .max(MAX_LENGTH.name, { message: `Keep the name to ${MAX_LENGTH.name} characters or fewer.` });
 
 const phone = z
   .string()
   .trim()
   .min(1, { message: "Add a phone number so we can call you back." })
+  .max(MAX_LENGTH.phone, { message: "Check the number. It should start with +971 or 05." })
   .transform(normalisePhone)
   .refine((value) => UAE_PHONE.test(value), {
     message: "Check the number. It should start with +971 or 05.",
@@ -74,9 +97,14 @@ const optionalText = z
   .optional();
 
 const optionalEmail = optionalText.refine(
-  (value) => value === undefined || z.email().safeParse(value).success,
+  (value) =>
+    value === undefined || (value.length <= MAX_LENGTH.email && z.email().safeParse(value).success),
   { message: "Check the email address." },
 );
+
+/** Optional free text with a ceiling. */
+const boundedText = (max: number, message: string) =>
+  optionalText.refine((value) => value === undefined || value.length <= max, { message });
 
 /**
  * An unticked checkbox posts nothing at all; a ticked one posts "on". So the
@@ -117,8 +145,14 @@ const baseSchema = z.object({
   name,
   phone,
   email: optionalEmail,
-  community: optionalText,
-  message: optionalText,
+  community: boundedText(
+    MAX_LENGTH.community,
+    `Keep the community to ${MAX_LENGTH.community} characters or fewer.`,
+  ),
+  message: boundedText(
+    MAX_LENGTH.message,
+    `Keep the message to ${MAX_LENGTH.message.toLocaleString("en-US")} characters or fewer. We can cover the rest on the call.`,
+  ),
   /**
    * Not from the brief's field list. `interest` is a closed set, so an
    * unrecognised value means the payload was not produced by our form.

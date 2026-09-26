@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 
 import { Button } from "../../components/Button";
-import { HONEYPOT_FIELD, INTERESTS } from "../../lib/contact-schema";
+import { HONEYPOT_FIELD, INTERESTS, MAX_LENGTH } from "../../lib/contact-schema";
 import { CONSENT_FORM_COPY } from "../../content/consent";
 import { whatsappLink } from "../../lib/contact";
 import { submitEnquiry, submitShortEnquiry } from "./actions";
@@ -24,7 +24,16 @@ import styles from "./page.module.scss";
 // Order matters: the first failing field in this list is the one focused. The
 // consent checkbox is last because it sits below the field grid, so sending a
 // visitor there only happens when nothing above it also failed.
-const FOCUS_ORDER = ["name", "email", "phone", "interest", "contactConsent"] as const;
+// Visual order, so the first field focused is the first one the eye meets.
+const FOCUS_ORDER = [
+  "name",
+  "email",
+  "phone",
+  "community",
+  "interest",
+  "message",
+  "contactConsent",
+] as const;
 
 /**
  * `short` is the homepage form above the footer: name, email, phone, message.
@@ -77,7 +86,9 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
       {/* Announces the send failure, which belongs to no single field. */}
       {state.status === "failed" && (
         <p className={styles.formError} role="alert">
-          That didn&rsquo;t send.{" "}
+          {state.reason === "rate-limited"
+            ? "Several enquiries have come from here in the last few minutes, so this one was not sent. Try again in a few minutes. "
+            : "That didn’t send. "}
           <a
             className={styles.inlineLink}
             href={whatsappLink("Hi, I tried the enquiry form on your site and it did not send.")}
@@ -97,6 +108,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             name="name"
             type="text"
             autoComplete="name"
+            maxLength={MAX_LENGTH.name}
             defaultValue={values.name}
             placeholder="enter full name"
             className={styles.input}
@@ -111,6 +123,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             name="email"
             type="email"
             autoComplete="email"
+            maxLength={MAX_LENGTH.email}
             defaultValue={values.email}
             placeholder="enter email"
             className={styles.input}
@@ -131,6 +144,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             type="tel"
             inputMode="tel"
             autoComplete="tel"
+            maxLength={MAX_LENGTH.phone}
             defaultValue={values.phone}
             placeholder="enter phone number"
             className={styles.input}
@@ -140,15 +154,18 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
         </Field>
 
         {!short && (
-          <Field id="community" label="Community">
+          <Field id="community" label="Community" error={errors.community}>
             <input
               id="community"
               name="community"
               type="text"
               autoComplete="address-level2"
+              maxLength={MAX_LENGTH.community}
               defaultValue={values.community}
               placeholder="eg. Dubai Hills"
               className={styles.input}
+              aria-invalid={errors.community ? true : undefined}
+              aria-describedby={errors.community ? "community-error" : undefined}
             />
           </Field>
         )}
@@ -172,14 +189,17 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
           </Field>
         )}
 
-        <Field id="message" label="Message">
+        <Field id="message" label="Message" error={errors.message}>
           <input
             id="message"
             name="message"
             type="text"
+            maxLength={MAX_LENGTH.message}
             defaultValue={values.message}
             placeholder="enter message"
             className={styles.input}
+            aria-invalid={errors.message ? true : undefined}
+            aria-describedby={errors.message ? "message-error" : undefined}
           />
         </Field>
       </div>

@@ -3,6 +3,16 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+// The action reads the client's address for the rate limit. Every call gets a
+// fresh one unless a test pins it, so the limiter never leaks between tests.
+let pinnedIp: string | undefined;
+let ipCounter = 0;
+jest.mock("next/headers", () => ({
+  headers: async () =>
+    new Headers({
+      "x-forwarded-for": pinnedIp ?? `198.51.100.${(ipCounter += 1) % 250}, 10.0.0.1`,
+    }),
+}));
 
 /**
  * A "use server" module may export only async functions. Exporting anything

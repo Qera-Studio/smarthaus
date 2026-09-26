@@ -63,3 +63,44 @@ describe("the confirmation", () => {
     expect(status).toHaveTextContent("We’ll usually call you on +971501234567");
   });
 });
+
+describe("a refused or failed send", () => {
+  beforeEach(() => {
+    submitEnquiry.mockReset();
+  });
+
+  it("says a rate-limited send was not sent, asks for a few minutes, and offers WhatsApp", async () => {
+    submitEnquiry.mockResolvedValue({ status: "failed", reason: "rate-limited", values: {} });
+    render(<ContactForm />);
+    await submit();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "Several enquiries have come from here in the last few minutes, so this one was not sent. Try again in a few minutes. Message us on WhatsApp and we’ll pick it up straight away.",
+    );
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("keeps the plain failure copy when the send itself failed", async () => {
+    submitEnquiry.mockResolvedValue({ status: "failed", values: {} });
+    render(<ContactForm />);
+    await submit();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "That didn’t send. Message us on WhatsApp and we’ll pick it up straight away.",
+    );
+    expect(alert).not.toHaveTextContent("few minutes");
+  });
+
+  it("refills what was typed after a refusal, so nothing has to be retyped", async () => {
+    submitEnquiry.mockResolvedValue({
+      status: "failed",
+      reason: "rate-limited",
+      values: { name: "Nadia", phone: "0501234567", message: "Two villas" },
+    });
+    render(<ContactForm />);
+    await submit();
+    await screen.findByRole("alert");
+    expect(screen.getByLabelText("Name")).toHaveValue("Nadia");
+    expect(screen.getByLabelText("Phone")).toHaveValue("0501234567");
+  });
+});

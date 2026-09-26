@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { test as base } from "@playwright/test";
 
 export { expect, devices, type Locator, type Page } from "@playwright/test";
@@ -28,9 +29,41 @@ export { expect, devices, type Locator, type Page } from "@playwright/test";
  * Contexts a test creates itself (browser.newContext) do not get this; none of
  * them load the homepage today.
  */
-type Options = { villa: boolean };
+type Options = { villa: boolean; clientAddress: string | undefined };
 
-export const test = base.extend<Options & { villaGate: void }>({
+/**
+ * ## Every test is its own visitor
+ *
+ * Enquiry sends are rate-limited per client address (src/lib/rate-limit.ts),
+ * and every test reaches the server from loopback, so the whole suite would
+ * share one bucket of five sends. Each test instead presents its own
+ * x-forwarded-for, derived from the test, its retry and its repeat, so no two
+ * runs of anything share a bucket. A spec that tests the limit itself pins one
+ * address with test.use({ clientAddress: "…" }).
+ *
+ * Trusting the header is safe only because production runs on Vercel, which
+ * overwrites x-forwarded-for with the real client address; the e2e server is
+ * `next start` on loopback, which passes it through. See
+ * docs/runbooks/vercel-firewall.md for how that was confirmed.
+ */
+export function addressFor(seed: string): string {
+  const [a, b, c] = createHash("sha256").update(seed).digest();
+  // 10.0.0.0/8, never 10.x.x.0 or .255, so it always reads as one host.
+  return `10.${a}.${b}.${(c! % 254) + 1}`;
+}
+
+export const test = base.extend<Options & { villaGate: void; clientGate: void }>({
+  clientAddress: [undefined, { option: true }],
+  clientGate: [
+    async ({ context, clientAddress }, use, testInfo) => {
+      const address =
+        clientAddress ??
+        addressFor(`${testInfo.testId}:${testInfo.retry}:${testInfo.repeatEachIndex}`);
+      await context.setExtraHTTPHeaders({ "x-forwarded-for": address });
+      await use();
+    },
+    { auto: true },
+  ],
   villa: [false, { option: true }],
   villaGate: [
     async ({ page, villa }, use) => {
