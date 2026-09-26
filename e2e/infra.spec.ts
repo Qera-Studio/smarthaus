@@ -72,11 +72,33 @@ test.describe("the e2e server", () => {
         () => [],
         () => [...pending].map((request) => request.url()),
       );
+    // What the visitor sees decides it. On CI's Linux Chromium the network
+    // layer sometimes never reports a lazy image's request as finished, while
+    // the server answers the same URL in milliseconds (probed: 200 in 13-65ms).
+    // If the <img> itself has loaded with real pixels, the picture reached the
+    // screen and only the event is missing: recorded on the report, not
+    // failed. An image that is stuck AND not loaded is the real failure.
+    const loaded = await page.evaluate(
+      (urls) =>
+        urls.filter((url) =>
+          Array.from(document.images).some(
+            (img) => img.currentSrc === url && img.complete && img.naturalWidth > 0,
+          ),
+        ),
+      stuck,
+    );
+    for (const url of loaded) {
+      test.info().annotations.push({
+        type: "request event missing",
+        description: `${url}: the image loaded and has pixels, but the browser never reported its request finished`,
+      });
+    }
+    const unanswered = stuck.filter((url) => !loaded.includes(url));
     // When one hangs, ask the server for it directly, outside the browser, so
     // the report says which side is holding it: an answer here means the
     // browser never finished a response the server can give.
     const probes = await Promise.all(
-      stuck.map(async (url) => {
+      unanswered.map(async (url) => {
         const started = Date.now();
         const verdict = await page.request.get(url, { timeout: 10_000 }).then(
           (response) => `server answered ${response.status()}`,
