@@ -62,17 +62,11 @@ test("the skip link moves the next Tab into the main content", async ({ page }) 
   expect(now.inMain, `the Tab after skipping landed on ${now.name}`).toBe(true);
 });
 
-/**
- * KNOWN FAILURE, found 2026-09-27. The header's source order is the panel of
- * nav links first, then the home link, then the CTA (NavShell.tsx: the panel
- * comes first so the phone menu grows upward from the bottom bar). On desktop
- * the home link sits at the far left, so Tab runs through the centre links,
- * jumps back to the logo, then right to the CTA (WCAG 2.4.3 Focus Order).
- * Fixing it trades against the phone layout, so it is Shivanshu's decision.
- * `test.fail` passes while the order is wrong and fails the day it is fixed.
- */
+// Found out of order on 2026-09-27: the nav links came before the home link
+// in source, so on desktop Tab ran through the centre links, jumped back to
+// the logo at the far left, then on to the CTA (WCAG 2.4.3). NavShell.tsx now
+// puts the brand first; this keeps it there.
 test("the header reads in order: skip, home, every nav link, then the CTA", async ({ page }) => {
-  test.fail(true, "nav links precede the home link in source order; decision pending");
   await page.goto("/");
   await expectHydrated(page);
   const header = page.locator("header");

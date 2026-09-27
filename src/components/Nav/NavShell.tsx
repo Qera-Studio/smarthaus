@@ -190,10 +190,20 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
         inert={atFooter || undefined}
       >
         {/*
-          The panel comes FIRST so that below lg — where <header> is a flex
-          column pinned to the bottom of the screen — it grows upward while the
-          bar stays welded to the bottom edge. This is source order doing the
-          work; an `order` property cannot, and previously did not.
+          Source order is focus order: brand, then the links, then the toggle
+          and the CTA, which is the order they read left to right on desktop.
+          The brand used to sit after the panel, so Tab ran through the centre
+          links, jumped back to the logo, then on to the CTA (WCAG 2.4.3,
+          e2e/keyboard.spec.ts). Neither band's layout depends on this order:
+          both place every piece by grid row and column (Nav.module.scss).
+        */}
+        <span className={styles.brandMark}>{brandMark}</span>
+        <span className={styles.brandFull}>{brandFull}</span>
+
+        {/*
+          Below lg the panel is placed in the row ABOVE the bar, and the box
+          is pinned by its bottom edge, so opening it grows the capsule upward
+          while the bar stays welded to the bottom.
 
           `inert` when closed, not just visually clipped: overflow alone would
           leave the links tabbable and in the accessibility tree, giving
@@ -210,9 +220,6 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
         </div>
 
         <div className={styles.bar}>
-          <span className={styles.brandMark}>{brandMark}</span>
-          <span className={styles.brandFull}>{brandFull}</span>
-
           <button
             ref={toggleRef}
             type="button"
