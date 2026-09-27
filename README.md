@@ -280,6 +280,20 @@ When two rules disagree, the lower number wins. Before writing any threshold int
 
 Commits are imperative, lowercase, and explain **why**. One concern per branch, one concern per PR.
 
+### Runbooks
+
+When something needs doing by hand, or has gone wrong:
+
+| Situation                                | Runbook                                                           |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| Shipping, or undoing a bad release       | [Deploy and roll back](docs/runbooks/deploy-and-rollback.md)      |
+| A lead did not arrive                    | [Lead delivery failure](docs/runbooks/lead-delivery-failure.md)   |
+| The Resend key may be exposed, or is due | [Rotate the Resend key](docs/runbooks/rotate-resend-key.md)       |
+| The banner asks for something new        | [Bump the consent version](docs/runbooks/consent-version-bump.md) |
+| A new page                               | [Add a route](docs/runbooks/adding-a-route.md)                    |
+| The shared rate limit in Vercel          | [Vercel Firewall](docs/runbooks/vercel-firewall.md)               |
+| A dependency is compromised              | [Compromised dependency](docs/runbooks/compromised-dependency.md) |
+
 <br>
 
 <p align="center">
