@@ -363,6 +363,10 @@ $page-gutter: $space-6;
   // label, rounded up). A token because the footer reserves the button's
   // footprint while the consent banner lifts it over the footer's last row.
   --scroll-top-block-size: 40px;
+  // The tap area a touch control gets, whatever it looks like: 44x44, the
+  // best practice Accessibility System §9 names over WCAG 2.5.8's 24px floor.
+  // Grown with an invisible ::before where the design is smaller.
+  --size-touch-target: 44px;
   // How far that bar floats clear of the screen edges below lg. Global rather
   // than a nav-local token because `main` has to reserve it too, and the two
   // must not drift apart.

@@ -445,6 +445,13 @@
     // role on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip
     // them here instead. Same trade-off Nav already makes.
     list-style: none;
+
+    // Wider on touch, so each chip's 44px tap area (below) meets its
+    // neighbour's instead of overlapping it: 32px chips 12px apart are 44px
+    // centre to centre.
+    @media (pointer: coarse) {
+      gap: calc(var(--size-touch-target) - var(--footer-chip-size));
+    }
   }
 
   .chip {
@@ -454,6 +461,17 @@
     inline-size: var(--footer-chip-size);
     block-size: var(--footer-chip-size);
     background-color: #{$brown-100};
+
+    // 32px drawn, 44px to a finger (Accessibility System §9).
+    @media (pointer: coarse) {
+      position: relative;
+
+      &::before {
+        content: "";
+        position: absolute;
+        inset: calc((var(--footer-chip-size) - var(--size-touch-target)) / 2);
+      }
+    }
     border-radius: 0;
     // brown-900 at 75% on the brown-100 chip — 7.64:1, rising to 15.59:1 on
     // hover. Colour-only, so the reduced-motion reset covers it for free.
