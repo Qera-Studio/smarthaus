@@ -88,16 +88,20 @@ test.describe("the newsletter field", () => {
 });
 
 /**
- * KNOWN FAILURE, reported 2026-09-26. The footer's installation links point at
- * fragments of /solutions (#smart-home-automation and six more), and /solutions
- * is a coming-soon page with none of those ids, so every one lands at the top
- * of a placeholder. Fixing it is a content and routing decision on the plan
- * (Phase 4: point the links at /solutions without dead fragments until the page
- * exists). `test.fail` passes while the links are dead and fails the day they
- * resolve, so the fix has to update this test on purpose.
+ * Reported 2026-09-26 as a known failure: the install links pointed at seven
+ * fragments of /solutions, a coming-soon page with none of those ids. Since
+ * 2026-09-27 they point at /solutions itself until the page has its sections
+ * (src/lib/nav-links.ts). Any fragment a footer link does carry must exist.
  */
+test("the install links land on /solutions, which answers", async ({ page }) => {
+  const install = footer(page).getByRole("list", { name: "What we install" }).getByRole("link");
+  await expect(install).toHaveCount(7);
+  for (const link of await install.all()) await expect(link).toHaveAttribute("href", "/solutions");
+  const response = await page.request.get("/solutions");
+  expect(response.status()).toBe(200);
+});
+
 test("every in-page fragment a footer link points to exists on its page", async ({ page }) => {
-  test.fail(true, "footer /solutions#… links are dead until the Solutions page exists");
   const hrefs = await footer(page)
     .locator('a[href*="#"]')
     .evaluateAll((links) =>
@@ -105,7 +109,8 @@ test("every in-page fragment a footer link points to exists on its page", async 
         .map((link) => link.getAttribute("href")!)
         .filter((href) => href.startsWith("/") && !href.startsWith("/#")),
     );
-  expect(hrefs.length).toBeGreaterThan(0);
+  // May be empty today; the test above is what keeps this from being vacuous
+  // about the install links, and this still catches any fragment added later.
   const missing: string[] = [];
   for (const href of hrefs) {
     const [path, id] = href.split("#") as [string, string];

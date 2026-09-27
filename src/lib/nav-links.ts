@@ -46,21 +46,33 @@ export const PAGE_LINKS: readonly NavLink[] = [
 ] as const;
 
 /**
- * Service lines. These are anchors into the single Solutions page rather than
- * seven separate routes — CLAUDE.md specifies Solutions is "one page or towns,
- * not five thin pages", and seven thin service pages would be exactly that.
+ * Service lines. These become anchors into the single Solutions page rather
+ * than seven separate routes — CLAUDE.md specifies Solutions is "one page or
+ * towns, not five thin pages", and seven thin service pages would be exactly
+ * that.
  *
  * Every label here is a capability Maple Technologies has actually delivered.
  * Per AGENTS.md's claims audit, nothing speculative goes in this list.
  */
-export const INSTALL_LINKS: readonly NavLink[] = [
-  { href: "/solutions#smart-home-automation", label: "Smart home automation" },
-  { href: "/solutions#cctv-and-cameras", label: "CCTV and cameras" },
-  { href: "/solutions#video-intercom", label: "Video Intercom" },
-  { href: "/solutions#smart-locks-and-access", label: "Smart locks and access" },
-  { href: "/solutions#multiroom-audio", label: "Multiroom audio" },
-  { href: "/solutions#cabling-and-networks", label: "Cabling and networks" },
-  { href: "/solutions#care-plans", label: "Care plans" },
+export type InstallLink = NavLink & {
+  /**
+   * The id of this service's section on /solutions. Pending: /solutions is a
+   * coming-soon page with no sections, so every link lands on its top rather
+   * than on a fragment that does not exist (they did, until 2026-09-27).
+   * src/lib/__tests__/nav-links.test.ts fails once the real page ships, so
+   * the fragments are restored on purpose, as `/solutions#${section}`.
+   */
+  readonly section: string;
+};
+
+export const INSTALL_LINKS: readonly InstallLink[] = [
+  { href: "/solutions", section: "smart-home-automation", label: "Smart home automation" },
+  { href: "/solutions", section: "cctv-and-cameras", label: "CCTV and cameras" },
+  { href: "/solutions", section: "video-intercom", label: "Video Intercom" },
+  { href: "/solutions", section: "smart-locks-and-access", label: "Smart locks and access" },
+  { href: "/solutions", section: "multiroom-audio", label: "Multiroom audio" },
+  { href: "/solutions", section: "cabling-and-networks", label: "Cabling and networks" },
+  { href: "/solutions", section: "care-plans", label: "Care plans" },
 ] as const;
 
 /**
