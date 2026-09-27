@@ -1,4 +1,5 @@
 import { test, expect, addressFor, type Page } from "./fixtures";
+import { expectHydrated } from "./checks";
 import { mailFor, uniqueName } from "./mail";
 
 /**
@@ -12,6 +13,11 @@ import { mailFor, uniqueName } from "./mail";
 
 async function sendShort(page: Page, name: string) {
   await page.goto("/");
+  // Hydrated first. On CI's iPhone 17 a tap that landed mid-hydration was
+  // dropped outright (2026-09-26: no navigation, no confirmation, the name
+  // still in the field), so the send never reached the limiter this file is
+  // about. The before-hydration post is no-js.spec.ts's subject, not this one.
+  await expectHydrated(page);
   const form = page.locator('section[aria-labelledby="home-enquiry"]');
   await form.getByLabel("Name").fill(name);
   await form.getByLabel("Phone").fill("0543755150");
