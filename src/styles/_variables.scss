@@ -70,6 +70,10 @@ $brown-50: #f8f5f0;
 
   // Borders
   --color-border: #{$brown-200};
+  // A form control's own edge, which is how a sighted visitor finds the field:
+  // WCAG 1.4.11 asks 3:1 of it. --color-border (brown-200) measured 1.37:1 on
+  // canvas; brown-500 is 3.9:1. src/styles/__tests__/contrast.test.ts holds it.
+  --color-border-input: #{$brown-500};
   --color-border-focus: #{$brown-600}; // 5.5:1 on canvas — replaces bronze for focus rings
 
   // Interactive states
@@ -351,6 +355,18 @@ $page-gutter: $space-6;
   // this reserves space rather than creating it, so erring high costs nothing
   // while erring low hides page content behind the bar.
   --nav-bar-block-size: 60px;
+  // Height of the nav at the top from lg up, tall bar or capsule: measured 51px
+  // in both states. Rounded up for the same reason as the bar above. Used to
+  // keep a focused element clear of it (html's scroll-padding, globals.scss).
+  --nav-capsule-block-size: 52px;
+  // The back-to-top button's height (12px padding either side of a 14px
+  // label, rounded up). A token because the footer reserves the button's
+  // footprint while the consent banner lifts it over the footer's last row.
+  --scroll-top-block-size: 40px;
+  // The tap area a touch control gets, whatever it looks like: 44x44, the
+  // best practice Accessibility System §9 names over WCAG 2.5.8's 24px floor.
+  // Grown with an invisible ::before where the design is smaller.
+  --size-touch-target: 44px;
   // How far that bar floats clear of the screen edges below lg. Global rather
   // than a nav-local token because `main` has to reserve it too, and the two
   // must not drift apart.

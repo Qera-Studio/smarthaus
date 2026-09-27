@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "./fixtures";
 import { expectAccessible, expectNoEmDash } from "./checks";
 
-// Both legal pages share one layout, so they share one suite. The ToC
+// Every legal page shares one layout, so they share one suite. The ToC
 // assertions run only on desktop — below lg the rail is not rendered at all
 // (a fixed rail would eat a phone screen), and the document's own headings are
 // the navigation there.
@@ -9,6 +9,7 @@ import { expectAccessible, expectNoEmDash } from "./checks";
 const PAGES = [
   { path: "/privacy", heading: "Privacy Policy", sections: 12 },
   { path: "/terms", heading: "Terms and Conditions", sections: 15 },
+  { path: "/accessibility", heading: "Accessibility statement", sections: 5 },
 ] as const;
 
 // Every scroll below is `behavior: "instant"`. These pages set

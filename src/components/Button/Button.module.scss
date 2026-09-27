@@ -39,7 +39,8 @@
     @include focus-ring;
 
     // Only reachable on the <button> arm; a link cannot be disabled.
-    &:disabled {
+    &:disabled,
+    &[aria-disabled="true"] {
       opacity: 0.6;
       cursor: default;
     }

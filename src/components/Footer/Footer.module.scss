@@ -64,9 +64,29 @@
     // Longhands, not the `padding` shorthand: the top is its own value and a
     // shorthand would hide that behind a four-value list.
     padding-block-start: var(--space-12); // 48px
-    padding-block-end: var(--space-6);
+    // Plus the consent banner while it shows (--consent-block-size, published
+    // by ConsentShell). The footer is the end of the page, so without this
+    // there is nothing left to scroll and its last links stay under the
+    // banner: measured entirely hidden when tabbed to on a phone (WCAG 2.4.11).
+    // Here and not on body, so the added room is the footer's dark ground.
+    padding-block-end: calc(var(--space-6) + var(--consent-block-size, 0px));
     padding-inline: var(--space-6);
     color: var(--footer-ink);
+
+    // Below lg the banner also lifts the back-to-top button above itself
+    // (ScrollToTop.module.scss), which puts the button over this footer's last
+    // row: "Sitemap" was measured entirely hidden behind it. Reserve the whole
+    // stack, bar and banner and button, from the same tokens the button uses
+    // to position itself, so the two cannot drift.
+    @include bp-max($bp-lg) {
+      :global(body):has([aria-label="Cookie preferences"]) & {
+        padding-block-end: calc(
+          var(--space-6) + var(--nav-bar-block-size) + var(--nav-float-inset) * 3 +
+            env(safe-area-inset-bottom) + var(--consent-block-size, 22rem) +
+            var(--scroll-top-block-size)
+        );
+      }
+    }
 
     // Below lg the footer's own gutter is redundant: body already applies the
     // full --page-gutter at these widths (it only shrinks once the viewport
@@ -425,6 +445,13 @@
     // role on a <ul> is redundant (jsx-a11y/no-redundant-roles), so strip
     // them here instead. Same trade-off Nav already makes.
     list-style: none;
+
+    // Wider on touch, so each chip's 44px tap area (below) meets its
+    // neighbour's instead of overlapping it: 32px chips 12px apart are 44px
+    // centre to centre.
+    @media (pointer: coarse) {
+      gap: calc(var(--size-touch-target) - var(--footer-chip-size));
+    }
   }
 
   .chip {
@@ -434,6 +461,17 @@
     inline-size: var(--footer-chip-size);
     block-size: var(--footer-chip-size);
     background-color: #{$brown-100};
+
+    // 32px drawn, 44px to a finger (Accessibility System §9).
+    @media (pointer: coarse) {
+      position: relative;
+
+      &::before {
+        content: "";
+        position: absolute;
+        inset: calc((var(--footer-chip-size) - var(--size-touch-target)) / 2);
+      }
+    }
     border-radius: 0;
     // brown-900 at 75% on the brown-100 chip — 7.64:1, rising to 15.59:1 on
     // hover. Colour-only, so the reduced-motion reset covers it for free.

@@ -1,5 +1,10 @@
 import { test, expect } from "./fixtures";
-import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
+import {
+  expectAccessible,
+  expectNoEmDash,
+  expectNoHorizontalOverflow,
+  withConsentDecided,
+} from "./checks";
 
 /**
  * The /pricing page: four cards, then the comparison.
@@ -15,7 +20,12 @@ import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./
 const comparison = (page: import("@playwright/test").Page) =>
   page.locator("[data-pricing-comparison]");
 
+// Consent decided first. On a phone the banner covers the lower half of the
+// screen, and on CI's iPhone 17 it sat over the first FAQ question, so the tap
+// landed on the banner and the <details> never opened (2026-09-26, screenshot
+// in the run). These tests are about the page; the banner has its own suite.
 test.beforeEach(async ({ page }) => {
+  await withConsentDecided(page);
   await page.goto("/pricing");
 });
 
