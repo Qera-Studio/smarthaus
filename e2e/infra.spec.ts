@@ -41,6 +41,15 @@ test.describe("the e2e server", () => {
     expect(headers["x-powered-by"]).toBeUndefined();
   });
 
+  test("the image optimizer answers a browser that accepts AVIF with WebP", async ({ request }) => {
+    // AVIF is off on purpose (next.config.ts): its encode hung on CI.
+    const res = await request.get("/_next/image?url=%2Fhero%2Fprocess%2F1.2.jpg&w=640&q=75", {
+      headers: { accept: "image/avif,image/webp,*/*" },
+    });
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toBe("image/webp");
+  });
+
   test("hydrates, which the loopback address exists to guarantee", async ({ page }) => {
     // If WebKit upgraded to https, Server Components would still render and
     // every client island would be dead. The consent banner only exists once
