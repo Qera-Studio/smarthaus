@@ -52,8 +52,9 @@ next-env.d.ts
 # Lighthouse CI
 /.lighthouseci/
 
-# Blender source frames for the hero grid: 1.9MB PNGs, 82MB the set. The
-# committed output is public/hero/grid/*.webp — see scripts/hero-grid.sh.
+# Blender source frames from the retired hero grid: 1.9MB PNGs, 82MB the set.
+# Only the poster's resting frame survives, as public/hero/grid/r4_c4.webp;
+# the script that built the grid was deleted on 2026-09-27.
 /public/hero/hero_grid/*.png
 
 # Jest coverage output. The committed floor is coverage-baseline.json.

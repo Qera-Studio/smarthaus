@@ -13,8 +13,8 @@
  * the no-JS view, and the fallback for touch, reduced motion, Save-Data, slow
  * connections and any device without WebGL.
  *
- * The other 44 frames were deleted with the cross-fade. scripts/hero-grid.sh
- * regenerates the set from the Blender PNGs if one is ever needed again.
+ * The other 44 frames were deleted with the cross-fade, and the script that
+ * built them with it (2026-09-27).
  */
 
 /** The resting frame: camera level, dead centre. Matches REST_ANGLES. */

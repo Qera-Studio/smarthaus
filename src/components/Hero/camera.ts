@@ -5,7 +5,7 @@
  * cannot load it without a transform, so the maths that actually wants testing
  * lives here where it has no dependencies at all.
  *
- * The arc matches the 45-frame grid this replaced (hero_grid/manifest.json):
+ * The arc matches the 45-frame grid this replaced:
  * azimuth -4deg to +4deg, elevation 0 to +5deg. One-sided vertically, so the
  * camera never looks up at the villa from below ground.
  */
