@@ -35,6 +35,12 @@ import { submitEnquiry, submitShortEnquiry } from "../actions";
 import { PRIVACY_POLICY_VERSION } from "../../../content/legal/versions";
 import { HONEYPOT_FIELD, INTERESTS } from "../../../lib/contact-schema";
 import type { ContactState } from "../state";
+import { enquiryDedupe } from "../../../lib/dedupe";
+
+// These tests send the same enquiry over and over, which the duplicate guard
+// would rightly swallow after the first. Each starts with it empty; the guard's
+// own behaviour is asserted in its own describe below and in dedupe.test.ts.
+beforeEach(() => enquiryDedupe.clear());
 
 const initial: ContactState = { status: "idle" };
 
@@ -563,6 +569,10 @@ describe("the e2e mail sink", () => {
 describe("the send rate limit", () => {
   const env = process.env;
 
+  // Five DIFFERENT enquiries. Identical ones are one send by design (the
+  // duplicate guard), so they would never reach the ceiling this is about.
+  const nth = (i: number) => validForm({ message: `Enquiry ${i}` });
+
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = {
@@ -586,7 +596,7 @@ describe("the send rate limit", () => {
   it("sends five from one client, then refuses the sixth without sending it", async () => {
     pinnedIp = "203.0.113.50";
     const results = [];
-    for (let i = 0; i < 6; i += 1) results.push(await submitEnquiry(initial, validForm()));
+    for (let i = 0; i < 6; i += 1) results.push(await submitEnquiry(initial, nth(i)));
     expect(results.map((r) => r.status)).toEqual(["ok", "ok", "ok", "ok", "ok", "failed"]);
     expect(send).toHaveBeenCalledTimes(5);
     expect(results[5]).toMatchObject({ status: "failed", reason: "rate-limited" });
@@ -594,7 +604,7 @@ describe("the send rate limit", () => {
 
   it("hands back what was typed when it refuses", async () => {
     pinnedIp = "203.0.113.51";
-    for (let i = 0; i < 5; i += 1) await submitEnquiry(initial, validForm());
+    for (let i = 0; i < 5; i += 1) await submitEnquiry(initial, nth(i));
     const refused = await submitEnquiry(initial, validForm({ community: "Al Barari" }));
     if (refused.status !== "failed") throw new Error("unreachable");
     expect(refused.values.name).toBe("Nadia Rahman");
@@ -603,7 +613,7 @@ describe("the send rate limit", () => {
 
   it("counts the short form against the same ceiling: both fill one inbox", async () => {
     pinnedIp = "203.0.113.52";
-    for (let i = 0; i < 5; i += 1) await submitEnquiry(initial, validForm());
+    for (let i = 0; i < 5; i += 1) await submitEnquiry(initial, nth(i));
     const form = new FormData();
     form.set("name", "James Carter");
     form.set("phone", "0501234567");
@@ -626,14 +636,14 @@ describe("the send rate limit", () => {
 
   it("still answers a bot with the success shape, even over the limit", async () => {
     pinnedIp = "203.0.113.55";
-    for (let i = 0; i < 5; i += 1) await submitEnquiry(initial, validForm());
+    for (let i = 0; i < 5; i += 1) await submitEnquiry(initial, nth(i));
     const bot = await submitEnquiry(initial, validForm({ [HONEYPOT_FIELD]: "bot" }));
     expect(bot).toEqual({ status: "ok", name: "", phone: "" });
   });
 
   it("keeps other clients sending while one is refused", async () => {
     pinnedIp = "203.0.113.56";
-    for (let i = 0; i < 6; i += 1) await submitEnquiry(initial, validForm());
+    for (let i = 0; i < 6; i += 1) await submitEnquiry(initial, nth(i));
     pinnedIp = "203.0.113.57";
     expect((await submitEnquiry(initial, validForm())).status).toBe("ok");
   });
@@ -641,7 +651,7 @@ describe("the send rate limit", () => {
   it("does not log a refusal as a delivery failure", async () => {
     pinnedIp = "203.0.113.58";
     const logged = jest.spyOn(console, "error").mockImplementation(() => {});
-    for (let i = 0; i < 6; i += 1) await submitEnquiry(initial, validForm());
+    for (let i = 0; i < 6; i += 1) await submitEnquiry(initial, nth(i));
     expect(logged).not.toHaveBeenCalled();
   });
 });
@@ -725,5 +735,140 @@ describe("the send timeout", () => {
     expect(send).not.toHaveBeenCalled();
     rmSync(dir, { recursive: true, force: true });
     delete process.env.E2E_MAIL_SINK;
+  });
+});
+
+describe("the duplicate guard", () => {
+  const env = process.env;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env = {
+      ...env,
+      RESEND_API_KEY: "re_test",
+      LEAD_EMAIL: "contact@mapletech.ae",
+      LEAD_FROM_EMAIL: "leads@smarthaus.ae",
+    };
+    delete process.env.PLAYWRIGHT;
+    send.mockResolvedValue({ data: { id: "sent" }, error: null });
+  });
+
+  afterEach(() => {
+    pinnedIp = undefined;
+    jest.restoreAllMocks();
+  });
+
+  afterAll(() => {
+    process.env = env;
+  });
+
+  it("sends an identical enquiry once, and confirms both", async () => {
+    const first = await submitEnquiry(initial, validForm());
+    const again = await submitEnquiry(initial, validForm());
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(first).toEqual({ status: "ok", name: "Nadia Rahman", phone: "+971501234567" });
+    expect(again).toEqual(first);
+  });
+
+  it("delivers a corrected enquiry, which is a new lead", async () => {
+    await submitEnquiry(initial, validForm());
+    await submitEnquiry(initial, validForm({ message: "Three villas in Al Barari." }));
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it("treats the phone as the schema does: 050 and +97150 are the same lead", async () => {
+    await submitEnquiry(initial, validForm({ phone: "0501234567" }));
+    await submitEnquiry(initial, validForm({ phone: "+971501234567" }));
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("guards the short form too", async () => {
+    const short = () => {
+      const form = new FormData();
+      form.set("name", "James Carter");
+      form.set("phone", "0501234567");
+      return form;
+    };
+    await submitShortEnquiry(initial, short());
+    expect((await submitShortEnquiry(initial, short())).status).toBe("ok");
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends two identical submissions in flight at once only once, and confirms both", async () => {
+    let release!: () => void;
+    send.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve({ data: { id: "sent" }, error: null });
+        }),
+    );
+    const a = submitEnquiry(initial, validForm());
+    const b = submitEnquiry(initial, validForm());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    release();
+    const results = await Promise.all([a, b]);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(results.map((r) => r.status)).toEqual(["ok", "ok"]);
+  });
+
+  it("fails both when the one send they share fails, so neither is told it arrived", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    let fail!: () => void;
+    send.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          fail = () => resolve({ data: null, error: { name: "x", message: "down" } });
+        }),
+    );
+    const a = submitEnquiry(initial, validForm());
+    const b = submitEnquiry(initial, validForm());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    fail();
+    const results = await Promise.all([a, b]);
+    expect(results.map((r) => r.status)).toEqual(["failed", "failed"]);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("delivers the retry after a failed send", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    send.mockResolvedValueOnce({ data: null, error: { name: "x", message: "down" } });
+    expect((await submitEnquiry(initial, validForm())).status).toBe("failed");
+    expect((await submitEnquiry(initial, validForm())).status).toBe("ok");
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it("sends the same enquiry again once two minutes have passed", async () => {
+    const now = jest.spyOn(Date, "now").mockReturnValue(9_000_000);
+    await submitEnquiry(initial, validForm());
+    now.mockReturnValue(9_000_000 + 120_000);
+    await submitEnquiry(initial, validForm());
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not spend the send allowance on a duplicate", async () => {
+    pinnedIp = "203.0.113.90";
+    await submitEnquiry(initial, validForm({ message: "Enquiry 0" }));
+    for (let i = 0; i < 6; i += 1)
+      await submitEnquiry(initial, validForm({ message: "Enquiry 0" }));
+    // Four more distinct enquiries: five sends in all, the ceiling exactly.
+    const rest = [];
+    for (let i = 1; i <= 4; i += 1) {
+      rest.push(await submitEnquiry(initial, validForm({ message: `Enquiry ${i}` })));
+    }
+    expect(rest.map((r) => r.status)).toEqual(["ok", "ok", "ok", "ok"]);
+    expect(send).toHaveBeenCalledTimes(5);
+  });
+
+  it("still refuses a duplicate's new twin once the allowance is spent", async () => {
+    pinnedIp = "203.0.113.91";
+    for (let i = 0; i < 5; i += 1) await submitEnquiry(initial, validForm({ message: `E ${i}` }));
+    // A duplicate of a sent one is answered from the guard, not refused...
+    expect((await submitEnquiry(initial, validForm({ message: "E 0" }))).status).toBe("ok");
+    // ...while a sixth distinct enquiry is refused.
+    expect(await submitEnquiry(initial, validForm({ message: "E 5" }))).toMatchObject({
+      status: "failed",
+      reason: "rate-limited",
+    });
+    expect(send).toHaveBeenCalledTimes(5);
   });
 });

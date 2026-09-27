@@ -10,7 +10,7 @@
 
 `qera-system/` is a git submodule containing Qera's nine master documents. They govern every decision on this project.
 
-**Precedence order** (lower number wins):
+**Precedence order**, owned by the System Charter (`qera-system/charter/system-charter.md`) and replicated here for convenience; the charter wins if they ever differ. Lower number wins:
 
 1. Legal & Compliance
 2. Security
@@ -88,6 +88,8 @@ Where the Design System covers something (tokens, spacing, component conventions
 
 ## The Blender hero
 
+> **Partly superseded.** Phase 1 (the landing) shipped as real-time WebGL, not a pre-rendered clip: `src/components/Hero/VillaCanvas.tsx` renders `public/hero/villa.glb` with three.js. The reasoning below against runtime 3D did not hold for the scene we actually have; AGENTS.md ("three.js — the ban, and why it was lifted for the hero only") records why and on what conditions. Phases 2 and 3 are unbuilt and their description here still stands.
+
 The homepage hero is a **pre-rendered 3D scene** — not real-time WebGL. Blender renders frames or video; the site plays them.
 
 **Why pre-rendered:** No runtime 3D library, no shader compilation, no GPU requirement on the client. A 10MB WebGL bundle would blow the JS budget on page one and exclude every mid-range phone in Dubai. Pre-rendered video is a fraction of the code cost and works on every device.
@@ -152,11 +154,11 @@ Arabic is planned but not shipping at launch. English only (`lang="en"`, `dir="l
 Values owned by the system (via Owned Facts Register) — do not restate, point only:
 
 - **LCP, INP, CLS** → Performance System §1
-- **CSS budget** → Performance System (< 40KB gzipped, on the register)
+- **CSS budget** → Performance System, on the owned-facts register
 
 **Project-specific targets** (these are ours, not the system's):
 
-- **CLS < 0.05** — tighter than the system's 0.1 because the scroll-driven hero and motion-heavy design create more CLS risk. Project decision, not a system change
+- **CLS < 0.05** — tighter than the system's CLS threshold (Performance System §1, on the register) because the scroll-driven hero and motion-heavy design create more CLS risk. Project decision, not a system change
 - **TBT < 200ms** — lab metric (Lighthouse CI), complementary to the system's INP (field metric). Different measurements, not conflicting
 - **First-load JS: ≤ 640KB uncompressed** on marketing pages — set in `lighthouserc.json` as `resource-summary:script:size`. The system says JS budgets are per-project; this is ours. Does not apply to the `/studio` route (Sanity Studio is its own bundle). Turnstile and Zod load only on the contact page, not homepage.
 
@@ -208,11 +210,11 @@ Three rows here were Level AA, not AAA, so they are required by the build target
 
 - `prefers-reduced-motion` honoured on all significant motion (`[Floor]`)
 - Keyboard access to all functionality (`[Floor]`)
-- 4.5:1 body text contrast, 3:1 large text / UI (`[Floor]`, AA)
+- Text and UI contrast at the AA thresholds on the owned-facts register (`[Floor]`)
 - No keyboard traps (`[Floor]`)
 - All form fields labelled (`[Floor]`)
 - All meaningful images have alt text (`[Floor]`)
-- Automated tools catch ~30–40% of issues — manual + AT testing required for the rest
+- Automated tools catch only a minority of issues (the figure is on the owned-facts register) — manual + AT testing required for the rest
 
 ### Hero and WCAG 1.2.5 (Audio Description) — resolved
 
@@ -302,5 +304,5 @@ No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget c
 - **qera-system is read-only from this repo.** If a system document needs updating, say so — don't edit it here.
 - **No co-author attribution on commits or PRs.**
 - **Commit messages:** imperative mood, lowercase, concise. The diff tells what changed; the message tells why.
-- **Branch strategy:** `feature/*` branches off `main`. One concern per branch.
+- **Branch strategy:** `feature/*` branches off `latest`, the staging branch; `main` is production and is updated from `latest`. One concern per branch.
 - **Push back.** If something is wrong, smells wrong, or could be better — say it immediately with the fix. Don't wait to be asked. Don't soften it.

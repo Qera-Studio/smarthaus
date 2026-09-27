@@ -9,6 +9,7 @@ import type { z } from "zod";
 
 import { contactSchema, shortContactSchema, HONEYPOT_FIELD } from "../../lib/contact-schema";
 import { PRIVACY_POLICY_VERSION } from "../../content/legal/versions";
+import { enquiryDedupe, enquiryKey } from "../../lib/dedupe";
 import { clientKey, enquiryLimiter } from "../../lib/rate-limit";
 import { submittedValues } from "./state";
 import type { ContactState, FieldErrors } from "./state";
@@ -127,13 +128,22 @@ async function handle(
   // the Resend quota, which ran out on 2026-09-26), while a failed validation
   // costs nothing, and counting those would lock out a visitor who mistyped
   // their number a few times. The honeypot above still answers bots first.
-  const verdict = enquiryLimiter.take(clientKey(await headers()));
-  if (!verdict.ok) {
-    return { status: "failed", reason: "rate-limited", values };
+  //
+  // A duplicate of an enquiry already sent (or sending) is not a new send, so
+  // it is answered before the limiter and costs no allowance: a refresh that
+  // re-posts the confirmation must not count against the visitor.
+  const key = enquiryKey(parsed.data);
+  if (!enquiryDedupe.has(key)) {
+    const verdict = enquiryLimiter.take(clientKey(await headers()));
+    if (!verdict.ok) {
+      return { status: "failed", reason: "rate-limited", values };
+    }
   }
 
   try {
-    await deliver(parsed.data);
+    // One email per identical enquiry in two minutes (lib/dedupe.ts). A
+    // duplicate gets the same confirmation the first did.
+    await enquiryDedupe.once(key, () => deliver(parsed.data));
   } catch (error) {
     // Logged server-side, never surfaced: the message could carry the API key
     // or the lead's own data, and neither belongs in a browser.

@@ -228,8 +228,10 @@ function LinkColumn({
         {title}
       </h2>
       <ul className={styles.linkList} aria-labelledby={id}>
+        {/* Keyed by label: the install links share one href until /solutions
+            has its sections (nav-links.ts). */}
         {links.map(({ href, label }) => (
-          <li key={href}>
+          <li key={label}>
             <Link className={styles.link} href={href}>
               <RollingText>{label}</RollingText>
             </Link>
