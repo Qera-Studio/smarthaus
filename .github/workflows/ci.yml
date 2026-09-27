@@ -58,6 +58,12 @@ jobs:
           # The ratchet and the touched-file rule compare against the base, so
           # the base commit has to be in the clone.
           fetch-depth: 0
+          # qera-system, which src/__tests__/docs-consistency.test.ts reads to
+          # check every section the docs cite. It is private, so the checkout
+          # uses a read-only deploy key on that repo. This job only: nothing
+          # else reads it, and the build skips it.
+          submodules: true
+          ssh-key: ${{ secrets.QERA_SYSTEM_DEPLOY_KEY }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:

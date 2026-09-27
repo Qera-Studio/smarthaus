@@ -322,6 +322,24 @@ describe("the delivery job", () => {
   });
 });
 
+describe("the qera-system checkout", () => {
+  it("fetches the submodule in the unit job, which the docs-consistency test reads", () => {
+    expect(job("unit")).toContain("submodules: true");
+    expect(job("unit")).toContain("ssh-key: ${{ secrets.QERA_SYSTEM_DEPLOY_KEY }}");
+  });
+
+  it("gives the deploy key to the unit job alone", () => {
+    for (const [id, block] of JOBS) {
+      if (id !== "unit") {
+        expect({ id, hasKey: block.includes("QERA_SYSTEM_DEPLOY_KEY") }).toEqual({
+          id,
+          hasKey: false,
+        });
+      }
+    }
+  });
+});
+
 describe("the mail sink in playwright.config.ts", () => {
   it("hands the web server the sink unless real mail is asked for", () => {
     expect(playwright).toContain('const REAL_MAIL = process.env.E2E_REAL_MAIL === "1";');
