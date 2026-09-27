@@ -26,13 +26,13 @@ Before guessing a rule, check the owning document.
 | --------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
 | Legal, privacy, PDPL, breach clocks           | `qera-system/systems/1-legal-system.md`                     | §6 (consent/cookies), §8 (breach)                           |
 | Security headers, CSP, deps, SSRF             | `qera-system/systems/2-security-system.md`                  | §1 (auth), §8 (headers), §12 (deps)                         |
-| WCAG conformance, contrast, motion, a11y      | `qera-system/systems/3-accessibility-system.md`             | §4 (contrast), §5 (keyboard), §7 (motion)                   |
-| TypeScript, deps policy, AI code, testing     | `qera-system/systems/4-engineering-system.md`               | Part A (TS), Part C (deps), Part E (AI)                     |
-| CWV, budgets, fonts, images, animation        | `qera-system/systems/5-performance-system.md`               | §0 (budgets), §1 (CWV), §3 (images)                         |
+| WCAG conformance, contrast, motion, a11y      | `qera-system/systems/3-accessibility-system.md`             | §4 (contrast), §5 (keyboard), §16 (motion)                  |
+| TypeScript, deps policy, AI code, testing     | `qera-system/systems/4-engineering-system.md`               | §16 (types), §17 (testing), §20 (AI coding), §24 (deps)     |
+| CWV, budgets, fonts, images, animation        | `qera-system/systems/5-performance-system.md`               | §0 (budgets), §1 (CWV), §2 (images)                         |
 | Meta, schema, crawl, AEO/GEO, AI crawlers     | `qera-system/systems/6-seo-system.md`                       | §0a (AI crawlers), §2 (meta), §9 (schema), §18-19 (AEO/GEO) |
-| Tokens, typography, spacing, dark patterns    | `qera-system/systems/7-design-system.md`                    | §12a (dark patterns), §7 (spacing)                          |
-| Kill List (every deploy), Full Sweep (launch) | `qera-system/gates/launch-gate.md`                          | Kill List = 12 items, 2 minutes                             |
-| Token architecture, layers, components, SCSS  | `qera-system/implementations/design-system-architecture.md` | §1 (layers), §2 (tokens), §10 (SCSS)                        |
+| Tokens, typography, spacing, dark patterns    | `qera-system/systems/7-design-system.md`                    | §9 (tokens), §12a (dark patterns), §15 (spacing)            |
+| Kill List (every deploy), Full Sweep (launch) | `qera-system/gates/launch-gate.md`                          | The Kill List section: its size is the gate's to state      |
+| Token architecture, layers, components, SCSS  | `qera-system/implementations/design-system-architecture.md` | §1 (layers), §2 (tokens), §9 (enforcement)                  |
 | Thresholds that cross documents               | `qera-system/charter/owned-facts-register.md`               | Check before writing any number                             |
 
 ---
@@ -138,7 +138,7 @@ Front-view villa on warm background with **mouse-driven parallax**. Heading, sub
 - Front-facing villa, camera slightly elevated (~8° above horizontal)
 - Render at **110% of display area** — desktop: 2112×1320 minimum (1920×1200 × 1.1); mobile portrait: 1188×1584 minimum (1080×1440 × 1.1)
 - The extra 10% on each edge provides the parallax travel range
-- PNG 16-bit for the conversion pipeline (→ AVIF primary + WebP fallback via `scripts/optimise-images.sh`)
+- PNG 16-bit for the conversion pipeline (→ AVIF primary + WebP fallback via the planned optimise-images script)
 - Warm afternoon lighting, palette consistent with brand (brown-100 bg tones, brown-400 bronze warmth in the light)
 
 ### Phase 2 — Approach
@@ -274,11 +274,16 @@ Mobile bottom nav must account for `env(safe-area-inset-bottom)` — iOS home in
 
 ### Scripts (in `scripts/`)
 
-| Script                       | Purpose                                               |
-| ---------------------------- | ----------------------------------------------------- |
-| `scripts/render-export.sh`   | Wraps Blender CLI render → raw frames/clips           |
-| `scripts/encode-video.sh`    | ffmpeg: raw → AV1 (`.mp4` container) + H.264 fallback |
-| `scripts/optimise-images.sh` | Sharp: raw stills → AVIF primary + WebP fallback      |
+The three pipeline scripts for hero phases 2 and 3 are **planned, not written**: they arrive with those phases, and nothing in the build calls them yet.
+
+| Script                                 | Purpose                                                      | Status  |
+| -------------------------------------- | ------------------------------------------------------------ | ------- |
+| `scripts/export-villa.py`              | Blender: export the villa to `public/hero/villa.glb` (Draco) | Exists  |
+| `scripts/optimise-process-images.mjs`  | One-shot: shrink the Process photographs in place            | Exists  |
+| `scripts/optimise-hardware-images.mjs` | One-shot: shrink the hardware renders in place               | Exists  |
+| render-export.sh                       | Wraps Blender CLI render → raw frames/clips                  | Planned |
+| encode-video.sh                        | ffmpeg: raw → AV1 (`.mp4` container) + H.264 fallback        | Planned |
+| optimise-images.sh                     | Sharp: raw stills → AVIF primary + WebP fallback             | Planned |
 
 ### Asset naming
 
@@ -316,13 +321,14 @@ Turbopack does not support `sassOptions.includePaths` or `sassOptions.additional
 
 ### Import depth table
 
-| File location                                     | Import path for `_variables.scss`       |
-| ------------------------------------------------- | --------------------------------------- |
-| `src/styles/globals.scss`                         | `@use 'variables' as *`                 |
-| `src/app/page.module.scss`                        | `@use '../styles/variables' as *`       |
-| `src/app/about/page.module.scss`                  | `@use '../../styles/variables' as *`    |
-| `src/components/Button/Button.module.scss`        | `@use '../../styles/variables' as *`    |
-| `src/components/Hero/Chapter/Chapter.module.scss` | `@use '../../../styles/variables' as *` |
+| File location                              | Import path for `_variables.scss`    |
+| ------------------------------------------ | ------------------------------------ |
+| `src/styles/globals.scss`                  | `@use 'variables' as *`              |
+| `src/app/error.module.scss`                | `@use '../styles/variables' as *`    |
+| `src/app/contact/page.module.scss`         | `@use '../../styles/variables' as *` |
+| `src/components/Button/Button.module.scss` | `@use '../../styles/variables' as *` |
+
+One more `../` per directory level below these. Every file named here exists; `src/__tests__/docs-consistency.test.ts` fails if one is moved.
 
 ### No stale compiled CSS
 
@@ -341,7 +347,7 @@ Turbopack does not support `sassOptions.includePaths` or `sassOptions.additional
 
 ## CSP and third-party domains
 
-The current CSP in `next.config.ts` is `default-src 'self'` everywhere. As third parties are added, update the CSP **in the same PR that adds the dependency**. Never leave a CSP update for later — it will break in production.
+The CSP in `next.config.ts` is `default-src 'self'` plus the few widenings recorded below, each with its reason (the Draco decoder's `'wasm-unsafe-eval'` and `blob:` worker, and `'unsafe-inline'` for scripts and styles, which is an accepted risk in `docs/launch-gate/accepted-risks.md`). No third-party origin is allowed. As third parties are added, update the CSP **in the same PR that adds the dependency**. Never leave a CSP update for later — it will break in production.
 
 The policy is built once, by `csp(strict)` in `next.config.ts`, and sent twice: enforced, and as a `Content-Security-Policy-Report-Only` twin that drops `'unsafe-inline'` from `script-src` and `style-src` and nothing else. Both report to `/api/csp-report` (`report-uri` for Firefox and Safari, `report-to csp-endpoint` via `Reporting-Endpoints` for Chromium). The endpoint is rate-limited, capped at 16KB, schema-checked, strips query strings, and logs each distinct violation once an hour as one `csp-violation` JSON line. `e2e/headers.spec.ts` asserts the two policies differ only by `'unsafe-inline'`.
 
@@ -499,12 +505,12 @@ The brief suggested building `/en` routing now. **This is deferred.** Rationale:
 
 ## Git workflow
 
-- **Branch:** `feature/*` off `main`. One concern per branch
+- **Branch:** `feature/*` off `latest`. One concern per branch. `latest` is staging; `main` is production and is updated from `latest`
 - **Commits:** imperative mood, lowercase, concise. The diff tells what; the message tells why
 - **No co-author attribution** on commits or PRs
 - **Pre-commit:** Husky runs `lint-staged` — ESLint fix + Prettier + typecheck on staged `.ts`/`.tsx` files
 - **PR:** one concern per PR. Title under 70 characters. Body has summary bullets + test plan
-- **Deploy:** merge to `main` triggers Vercel production deploy. Kill List runs on every deploy
+- **Deploy:** merge to `main` triggers Vercel production deploy. The Kill List is run by hand after every deploy, not automatically: see `docs/runbooks/deploy-and-rollback.md`. The other runbooks are in `docs/runbooks/`
 
 ---
 
