@@ -21,6 +21,24 @@ import { expect, test, type Locator, type Page } from "./fixtures";
  * lists each rule with the elements it flagged.
  */
 export async function expectAccessible(page: Page, options: { include?: string } = {}) {
+  // Scan the settled state, not a frame of a transition. axe reads computed
+  // colours at one instant, so a label caught half way through its light-to-
+  // dark swap is measured as the blend: on 2026-09-27 the back-to-top label
+  // failed color-contrast on Galaxy S24 under load and passed at 0, 300 and
+  // 1500ms when probed alone. Only CSS transitions are waited for: scroll-
+  // driven and looping animations never finish and are the resting state.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            document
+              .getAnimations()
+              .filter((a) => a instanceof CSSTransition && a.playState === "running").length,
+        ),
+      { message: "CSS transitions still running before the axe scan", timeout: 5_000 },
+    )
+    .toBe(0);
   let builder = new AxeBuilder({ page });
   if (options.include) builder = builder.include(options.include);
   const { violations } = await builder.analyze();
