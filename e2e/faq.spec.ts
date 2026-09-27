@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { expectAccessible, expectHydrated, expectNoEmDash } from "./checks";
+import { expectAccessible, expectHydrated, expectNoEmDash, withConsentDecided } from "./checks";
 
 /**
  * /faq — the smoke suite AGENTS.md requires of every real page, plus the two
@@ -40,6 +40,10 @@ test.describe("/faq", () => {
     page.locator("details").filter({ hasText: "Where do you work?" }).first();
 
   test("a question opens and closes on click", async ({ page }) => {
+    // Consent decided, as in pricing-page.spec: on CI's iPhone 17 the banner
+    // sat over this question and took the tap (2026-09-27, screenshot in the
+    // run). The banner has its own suite; this is about the disclosure.
+    await withConsentDecided(page);
     await page.goto("/faq");
     const question = disclosure(page);
     await expect(question).not.toHaveAttribute("open", /.*/);
@@ -67,6 +71,7 @@ test.describe("/faq", () => {
   test("each question is announced with its question as the name and its state", async ({
     page,
   }) => {
+    await withConsentDecided(page); // the banner can take the tap; see above
     await page.goto("/faq");
     const question = disclosure(page);
     const summary = question.locator("summary");
