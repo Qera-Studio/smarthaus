@@ -64,3 +64,11 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
   { id: "governing-law", title: "Governing law and jurisdiction", short: "Governing law" },
   { id: "contact", title: "Contact" },
 ] as const;
+
+export const ACCESSIBILITY_SECTIONS: readonly LegalSection[] = [
+  { id: "commitment", title: "What we aim for" },
+  { id: "status", title: "Where the site stands today", short: "Where the site stands" },
+  { id: "limitations", title: "What we know does not work yet", short: "Does not work yet" },
+  { id: "method", title: "How we checked" },
+  { id: "feedback", title: "Tell us about a problem", short: "Tell us" },
+];

@@ -9,7 +9,15 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   images: {
-    formats: ["image/avif", "image/webp"],
+    // WebP only. With AVIF first, `next start` on CI's Linux intermittently
+    // hung encoding one photo's AVIF (hero/process/1.2.jpg at 640px) and never
+    // answered it for the rest of the run: probed 2026-09-27 with the
+    // browser's own Accept header, the server did not answer in 30s, while
+    // other runs of the same commit were clean. Not reproducible on macOS.
+    // Decided by Shivanshu: WebP until the cause is found. Production images
+    // go through Vercel's optimizer, but this config decides the formats there
+    // too. e2e/infra.spec.ts asserts it, so bringing AVIF back is deliberate.
+    formats: ["image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
   },
 

@@ -45,7 +45,17 @@ type ButtonProps =
       ComponentPropsWithoutRef<typeof Link>,
       "className" | "href"
     >)
-  | ({ href?: never; variant?: Variant } & Omit<ComponentPropsWithoutRef<"button">, "className">);
+  | ({
+      href?: never;
+      variant?: Variant;
+      /**
+       * Working: announced as busy and unavailable, but still focusable. A
+       * `disabled` button drops focus to the page, so a keyboard or screen
+       * reader user loses their place in the middle of a submit. The caller
+       * stops the second submit (the contact form does, on its onSubmit).
+       */
+      loading?: boolean;
+    } & Omit<ComponentPropsWithoutRef<"button">, "className">);
 
 export function Button({ variant = "solid", ...props }: ButtonProps) {
   const className = styles.button;
@@ -57,7 +67,16 @@ export function Button({ variant = "solid", ...props }: ButtonProps) {
   // `href` is absent, so this is the button arm. Deleted rather than spread,
   // because React warns on an `href={undefined}` reaching a <button>. `type`
   // defaults to "button" so one inside a form cannot submit it by accident.
-  const { type = "button", ...rest } = props;
+  const { type = "button", loading = false, ...rest } = props;
   delete rest.href;
-  return <button {...rest} type={type} className={className} data-variant={variant} />;
+  return (
+    <button
+      {...rest}
+      type={type}
+      className={className}
+      data-variant={variant}
+      aria-busy={loading || undefined}
+      aria-disabled={loading || rest["aria-disabled"] || undefined}
+    />
+  );
 }

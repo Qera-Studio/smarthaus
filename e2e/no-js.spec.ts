@@ -13,8 +13,14 @@ test("an empty contact form posts and comes back naming both required fields", a
   await page.goto("/contact");
   await page.getByRole("button", { name: "Book a site visit" }).click();
   await page.waitForLoadState("load");
-  await expect(page.getByText("Add your name so we know who we're calling.")).toBeVisible();
-  await expect(page.getByText("Add a phone number so we can call you back.")).toBeVisible();
+  await expect(page.locator("#name-error")).toHaveText(
+    "Add your name so we know who we're calling.",
+  );
+  await expect(page.locator("#phone-error")).toHaveText(
+    "Add a phone number so we can call you back.",
+  );
+  // The summary works without JavaScript too.
+  await expect(page.getByRole("alert")).toContainText("Check these before sending:");
 });
 
 test("a valid contact form posts, confirms, and the lead email is written", async ({ page }) => {

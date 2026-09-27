@@ -592,7 +592,9 @@
         animation-name: hero-leave;
         animation-timing-function: linear;
         animation-fill-mode: both;
-        animation-timeline: view();
+        // Inset zeroed: view()'s default inset is html's scroll-padding,
+        // which is there for focus, not for this range. See Process.module.scss.
+        animation-timeline: view(block 0px);
         animation-range: exit 0% exit 100%;
       }
     }

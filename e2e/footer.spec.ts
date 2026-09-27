@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { expectNoHorizontalOverflow } from "./checks";
+import { expectNoHorizontalOverflow, withConsentDecided } from "./checks";
 
 /**
  * The footer's two load-bearing behaviours, both of which are invisible to a
@@ -27,6 +27,12 @@ test.skip(
   ({ isMobile }) => Boolean(isMobile),
   "viewport-geometry assertions; runs on the desktop project only",
 );
+
+// The footer's own geometry, without the consent banner, whose height the
+// footer adds to its padding while the banner shows.
+test.beforeEach(async ({ page }) => {
+  await withConsentDecided(page);
+});
 
 /** Read the three children of the footer: top, spacer, bottom. */
 async function measure(page: import("@playwright/test").Page, width: number, height: number) {

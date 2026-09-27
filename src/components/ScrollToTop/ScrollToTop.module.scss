@@ -25,6 +25,8 @@
 
     display: flex;
     align-items: center;
+    // Fixed, so the footer can reserve exactly this much (see Footer.module.scss).
+    min-block-size: var(--scroll-top-block-size);
     padding-block: $space-3;
     padding-inline: $space-4;
 

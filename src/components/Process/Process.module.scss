@@ -224,6 +224,13 @@
     view-timeline-name: --process-scroll;
     view-timeline-axis: block;
 
+    // Zero, stated. The initial value is `auto`, which means "the scroller's
+    // scroll-padding", and html carries scroll-padding to keep focus clear of
+    // the fixed nav (globals.scss, WCAG 2.4.11). Left at auto, that padding
+    // shifted the whole pin window by the nav's height: measured 2026-09-27,
+    // the section above moved 4.9px during the zoom on Galaxy S24.
+    view-timeline-inset: 0px;
+
     // Above the section it overlaps, so the growing slab paints over the hero
     // rather than under it.
     z-index: 1;

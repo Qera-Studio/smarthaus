@@ -1,4 +1,5 @@
 import { test, expect, addressFor, type Page } from "./fixtures";
+import { expectHydrated } from "./checks";
 import { mailFor, uniqueName } from "./mail";
 
 /**
@@ -12,6 +13,11 @@ import { mailFor, uniqueName } from "./mail";
 
 async function sendShort(page: Page, name: string) {
   await page.goto("/");
+  // Hydrated first. On CI's iPhone 17 a tap that landed mid-hydration was
+  // dropped outright (2026-09-26: no navigation, no confirmation, the name
+  // still in the field), so the send never reached the limiter this file is
+  // about. The before-hydration post is no-js.spec.ts's subject, not this one.
+  await expectHydrated(page);
   const form = page.locator('section[aria-labelledby="home-enquiry"]');
   await form.getByLabel("Name").fill(name);
   await form.getByLabel("Phone").fill("0543755150");
@@ -68,7 +74,13 @@ test("a refused visitor keeps what they typed", async ({ page }) => {
 test("another visitor is unaffected while one is refused", async ({ page, browser }) => {
   await pin(page, "rate-limit-first");
   const marker = uniqueName("Busy");
-  for (let i = 1; i <= 6; i += 1) await sendShort(page, `${marker} ${i}`);
+  // Each send confirmed before the next, or a navigation can abandon one
+  // mid-flight and the sixth is not the sixth the server saw.
+  for (let i = 1; i <= 5; i += 1) {
+    await sendShort(page, `${marker} ${i}`);
+    await expect(page.getByRole("status")).toBeVisible();
+  }
+  await sendShort(page, `${marker} 6`);
   await expect(page.getByRole("alert").filter({ hasText: "Several enquiries" })).toBeVisible();
 
   const other = await browser.newContext({

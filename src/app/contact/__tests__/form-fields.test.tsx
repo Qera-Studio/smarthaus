@@ -46,7 +46,10 @@ describe("errors on the optional fields", () => {
     });
     const field = screen.getByLabelText("Message");
     expect(field).toHaveAttribute("aria-invalid", "true");
-    expect(field).toHaveAccessibleDescription("Keep the message to 2,000 characters or fewer.");
+    // The limit hint first, then the error: both read with the field.
+    expect(field).toHaveAccessibleDescription(
+      "Optional. Up to 2,000 characters. Keep the message to 2,000 characters or fewer.",
+    );
   });
 
   it("shows a community error beside the community field, tied to it", async () => {
@@ -87,5 +90,110 @@ describe("errors on the optional fields", () => {
     await submitWith({ status: "invalid", fieldErrors: { name: "Add your name." }, values: {} });
     expect(screen.getByLabelText("Message")).not.toHaveAttribute("aria-invalid");
     expect(screen.getByLabelText("Community")).not.toHaveAttribute("aria-invalid");
+  });
+});
+
+describe("hints stated before any error (WCAG 3.3.2)", () => {
+  it("tells the visitor the phone format before they type", () => {
+    render(<ContactForm />);
+    expect(screen.getByLabelText("Phone")).toHaveAccessibleDescription(
+      "A UAE mobile number. Starting with 05 or +971 both work.",
+    );
+  });
+
+  it("states the message's limit and that it is optional", () => {
+    render(<ContactForm />);
+    expect(screen.getByLabelText("Message")).toHaveAccessibleDescription(
+      "Optional. Up to 2,000 characters.",
+    );
+  });
+
+  it("gives the short form the same hints", () => {
+    render(<ContactForm variant="short" />);
+    expect(screen.getByLabelText("Phone")).toHaveAccessibleDescription(/UAE mobile number/);
+  });
+
+  it("reads the phone hint and then its error, in that order", async () => {
+    await submitWith({
+      status: "invalid",
+      fieldErrors: { phone: "Check the number. It should start with +971 or 05." },
+      values: {},
+    });
+    expect(screen.getByLabelText("Phone")).toHaveAccessibleDescription(
+      "A UAE mobile number. Starting with 05 or +971 both work. Check the number. It should start with +971 or 05.",
+    );
+  });
+
+  it("gives fields without a hint no empty description", () => {
+    render(<ContactForm />);
+    expect(screen.getByLabelText("Name")).not.toHaveAttribute("aria-describedby");
+  });
+});
+
+describe("the error summary (Accessibility System §12)", () => {
+  it("lists every problem once, in the order the fields appear", async () => {
+    await submitWith({
+      status: "invalid",
+      fieldErrors: {
+        contactConsent: "Please confirm.",
+        phone: "Add a phone.",
+        name: "Add your name.",
+      },
+      values: {},
+    });
+    const summary = screen.getByRole("alert");
+    expect(summary).toHaveTextContent("Check these before sending:");
+    expect(Array.from(summary.querySelectorAll("li")).map((item) => item.textContent)).toEqual([
+      "Add your name.",
+      "Add a phone.",
+      "Please confirm.",
+    ]);
+  });
+
+  it("says 'this' for a single problem", async () => {
+    await submitWith({ status: "invalid", fieldErrors: { name: "Add your name." }, values: {} });
+    expect(screen.getByRole("alert")).toHaveTextContent("Check this before sending:");
+  });
+
+  it("links each problem to its field", async () => {
+    await submitWith({
+      status: "invalid",
+      fieldErrors: { phone: "Add a phone.", contactConsent: "Please confirm." },
+      values: {},
+    });
+    const links = screen.getAllByRole("link", { name: /Add a phone|Please confirm/ });
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(["#phone", "#contactConsent"]);
+    for (const link of links) {
+      expect(document.getElementById(link.getAttribute("href")!.slice(1))).not.toBeNull();
+    }
+  });
+
+  it("is the only alert: the field messages are read with their fields instead", async () => {
+    await submitWith({
+      status: "invalid",
+      fieldErrors: { name: "Add your name.", phone: "Add a phone." },
+      values: {},
+    });
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(screen.getByLabelText("Name")).toHaveAccessibleDescription("Add your name.");
+  });
+
+  it("still moves focus to the first field in error", async () => {
+    await submitWith({
+      status: "invalid",
+      fieldErrors: { phone: "Add a phone.", name: "Add your name." },
+      values: {},
+    });
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+  });
+
+  it("is absent before a submit and after a failed send, which has its own banner", async () => {
+    render(<ContactForm />);
+    expect(screen.queryByText(/before sending/)).toBeNull();
+  });
+
+  it("ignores an empty error map rather than rendering an empty box", async () => {
+    await submitWith({ status: "invalid", fieldErrors: {}, values: {} });
+    expect(screen.queryByText(/before sending/)).toBeNull();
   });
 });
