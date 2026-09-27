@@ -166,6 +166,8 @@ Values owned by the system (via Owned Facts Register) — do not restate, point 
 
 - **Lighthouse mobile: ≥ 0.95** — project floor for Premium tier. The system does not set a Lighthouse threshold; it says "lab scores are a proxy, field data is the truth." We use this as a CI gate to catch regressions. A mostly-static Server Components site with optimised media has no excuse for scoring below 95
 
+  **Measured, not simulated** (decided 2026-09-27). `lighthouserc.json` runs mobile with `throttlingMethod: "devtools"`: a genuinely slowed network and 4x CPU, timed as it happens. Lighthouse's default simulation reported LCP 4.7s on `/` while the trace showed the poster painted at 82ms, because it charges the page for JavaScript chunks that did not hold the paint. The measured run found the one real problem the simulation hid among false ones: the consent banner painted only after hydration and was `/contact`'s LCP at 4.1s on a first visit. It now paints from the server HTML (`src/lib/consent-boot.ts`), and `/contact` measures 1.7s. `/pricing` is noindex, so it is held to every SEO audit except `is-crawlable`; `src/app/__tests__/sitemap.test.ts` ties that exemption to the page's own metadata
+
 ---
 
 ## Accessibility — AA with free AAA upgrades

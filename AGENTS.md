@@ -349,7 +349,7 @@ One more `../` per directory level below these. Every file named here exists; `s
 
 The CSP in `next.config.ts` is `default-src 'self'` plus the few widenings recorded below, each with its reason (the Draco decoder's `'wasm-unsafe-eval'` and `blob:` worker, and `'unsafe-inline'` for scripts and styles, which is an accepted risk in `docs/launch-gate/accepted-risks.md`). No third-party origin is allowed. As third parties are added, update the CSP **in the same PR that adds the dependency**. Never leave a CSP update for later — it will break in production.
 
-The policy is built once, by `csp(strict)` in `next.config.ts`, and sent twice: enforced, and as a `Content-Security-Policy-Report-Only` twin that drops `'unsafe-inline'` from `script-src` and `style-src` and nothing else. Both report to `/api/csp-report` (`report-uri` for Firefox and Safari, `report-to csp-endpoint` via `Reporting-Endpoints` for Chromium). The endpoint is rate-limited, capped at 16KB, schema-checked, strips query strings, and logs each distinct violation once an hour as one `csp-violation` JSON line. `e2e/headers.spec.ts` asserts the two policies differ only by `'unsafe-inline'`.
+The policy is built once, by `csp(strict)` in `next.config.ts`, and sent twice: enforced, and as a `Content-Security-Policy-Report-Only` twin that drops `'unsafe-inline'` from `script-src` and `style-src`, and allows the one inline script of our own, the consent boot script (`src/lib/consent-boot.ts`), by its SHA-256 hash. The hash is in the strict policy only: a policy that lists a hash makes browsers ignore its `'unsafe-inline'`, which in the enforced policy would block every inline script Next emits. Both report to `/api/csp-report` (`report-uri` for Firefox and Safari, `report-to csp-endpoint` via `Reporting-Endpoints` for Chromium). The endpoint is rate-limited, capped at 16KB, schema-checked, strips query strings, and logs each distinct violation once an hour as one `csp-violation` JSON line. `e2e/headers.spec.ts` asserts the two policies differ only by `'unsafe-inline'` and that hash, and `e2e/consent-boot.spec.ts` that the hash matches the script the page serves.
 
 ### Planned CSP changes (update when implementing)
 
@@ -664,7 +664,7 @@ The CI jobs, which are the required status checks:
 - `unit`: Jest with coverage, the coverage gate, the ratio gate
 - `e2e (Desktop Chrome)`, `e2e (iPhone 17)`, `e2e (Galaxy S24)`: the Playwright suite per device, with axe. iPhone 17 is the current base iPhone width (402 CSS px, WebKit); Galaxy S24 is the narrow Android width (360 CSS px, Chromium). A project name sets screen size, density, user agent and touch only; the engine is Playwright's current build
 - `e2e-extra`: specs tagged `@forced-colors` and `@zoom`, in the `forced-colors` and `zoom-200` projects
-- `lighthouse`: `lighthouserc.json` against the production build
+- `lighthouse`: `lighthouserc.json` against the production build: `/`, `/pricing` and `/contact`, mobile, measured throttling (see the Lighthouse note in CLAUDE.md)
 
 Not required, and visible on every PR: `delivery`, one real email through Resend.
 

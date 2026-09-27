@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { Metadata } from "next";
 import sitemap from "../sitemap";
@@ -67,6 +67,52 @@ describe("the sitemap", () => {
     for (const entry of sitemap()) {
       expect(entry).not.toHaveProperty("changeFrequency");
       expect(entry).not.toHaveProperty("priority");
+    }
+  });
+});
+
+describe("the Lighthouse gate", () => {
+  type Group = { matchingUrlPattern: string; assertions: Record<string, unknown> };
+  const lhci = JSON.parse(readFileSync(join(__dirname, "../../../lighthouserc.json"), "utf8"));
+  const urls: string[] = lhci.ci.collect.url;
+  const groups: Group[] = lhci.ci.assert.assertMatrix;
+  const groupsFor = (url: string) =>
+    groups.filter((group) => new RegExp(group.matchingUrlPattern).test(url));
+  const routeOf = (url: string) => new URL(url).pathname;
+
+  it("measures a phone with applied throttling, not the desktop preset or a simulation", () => {
+    expect(lhci.ci.collect.settings).toEqual({ throttlingMethod: "devtools" });
+  });
+
+  it("holds every URL to the performance, accessibility and budget assertions", () => {
+    for (const url of urls) {
+      const ids = groupsFor(url).flatMap((group) => Object.keys(group.assertions));
+      expect({ url, ids }).toEqual({
+        url,
+        ids: expect.arrayContaining([
+          "categories:performance",
+          "categories:accessibility",
+          "largest-contentful-paint",
+          "resource-summary:script:size",
+        ]),
+      });
+    }
+  });
+
+  it("holds every indexable URL to the whole SEO category, and exempts only noindex ones", async () => {
+    const indexable = await indexableRoutes();
+    for (const url of urls) {
+      const hasCategory = groupsFor(url).some((group) => "categories:seo" in group.assertions);
+      // A noindex page fails is-crawlable by design, so it is held to every
+      // other SEO audit instead; an indexable page gets the category.
+      expect({ url, hasCategory }).toEqual({ url, hasCategory: indexable.includes(routeOf(url)) });
+      if (!hasCategory) {
+        const ids = groupsFor(url).flatMap((group) => Object.keys(group.assertions));
+        expect(ids).toEqual(
+          expect.arrayContaining(["document-title", "meta-description", "canonical"]),
+        );
+        expect(ids).not.toContain("is-crawlable");
+      }
     }
   });
 });
