@@ -17,10 +17,13 @@
     padding: 0;
   }
 
+  // 100%, not none. Both stop a phone inflating text when it turns sideways;
+  // `none` can also stop a visitor enlarging text with their own browser
+  // setting, which is a WCAG 1.4.4 Resize Text risk.
   html {
-    -moz-text-size-adjust: none;
-    -webkit-text-size-adjust: none;
-    text-size-adjust: none;
+    -moz-text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {

@@ -15,6 +15,25 @@
   html {
     background-color: var(--color-bg-canvas);
 
+    // Focus never lands under a fixed bar (WCAG 2.4.11 Focus Not Obscured,
+    // Accessibility System §5). When Tab or a fragment link scrolls something
+    // into view, the browser keeps it this far from each edge. Below lg the nav
+    // is a bar floating at the bottom, so the bottom is reserved; from lg up it
+    // is at the top. The consent banner publishes its height while it shows
+    // (--consent-block-size, ConsentShell) and is reserved on both.
+    scroll-padding-block-start: $space-4;
+    scroll-padding-block-end: calc(
+      var(--nav-float-inset) + var(--nav-bar-block-size) + var(--consent-block-size, 0px) +
+        #{$space-4}
+    );
+
+    @include bp-lg {
+      scroll-padding-block-start: calc(
+        var(--nav-float-inset) + var(--nav-capsule-block-size) + #{$space-4}
+      );
+      scroll-padding-block-end: calc(var(--consent-block-size, 0px) + #{$space-4});
+    }
+
     // No rubber-band at the top or bottom of the page.
     //
     // Overscrolling past either end dragged the whole document and exposed

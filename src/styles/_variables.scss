@@ -355,6 +355,14 @@ $page-gutter: $space-6;
   // this reserves space rather than creating it, so erring high costs nothing
   // while erring low hides page content behind the bar.
   --nav-bar-block-size: 60px;
+  // Height of the nav at the top from lg up, tall bar or capsule: measured 51px
+  // in both states. Rounded up for the same reason as the bar above. Used to
+  // keep a focused element clear of it (html's scroll-padding, globals.scss).
+  --nav-capsule-block-size: 52px;
+  // The back-to-top button's height (12px padding either side of a 14px
+  // label, rounded up). A token because the footer reserves the button's
+  // footprint while the consent banner lifts it over the footer's last row.
+  --scroll-top-block-size: 40px;
   // How far that bar floats clear of the screen edges below lg. Global rather
   // than a nav-local token because `main` has to reserve it too, and the two
   // must not drift apart.

@@ -64,9 +64,29 @@
     // Longhands, not the `padding` shorthand: the top is its own value and a
     // shorthand would hide that behind a four-value list.
     padding-block-start: var(--space-12); // 48px
-    padding-block-end: var(--space-6);
+    // Plus the consent banner while it shows (--consent-block-size, published
+    // by ConsentShell). The footer is the end of the page, so without this
+    // there is nothing left to scroll and its last links stay under the
+    // banner: measured entirely hidden when tabbed to on a phone (WCAG 2.4.11).
+    // Here and not on body, so the added room is the footer's dark ground.
+    padding-block-end: calc(var(--space-6) + var(--consent-block-size, 0px));
     padding-inline: var(--space-6);
     color: var(--footer-ink);
+
+    // Below lg the banner also lifts the back-to-top button above itself
+    // (ScrollToTop.module.scss), which puts the button over this footer's last
+    // row: "Sitemap" was measured entirely hidden behind it. Reserve the whole
+    // stack, bar and banner and button, from the same tokens the button uses
+    // to position itself, so the two cannot drift.
+    @include bp-max($bp-lg) {
+      :global(body):has([aria-label="Cookie preferences"]) & {
+        padding-block-end: calc(
+          var(--space-6) + var(--nav-bar-block-size) + var(--nav-float-inset) * 3 +
+            env(safe-area-inset-bottom) + var(--consent-block-size, 22rem) +
+            var(--scroll-top-block-size)
+        );
+      }
+    }
 
     // Below lg the footer's own gutter is redundant: body already applies the
     // full --page-gutter at these widths (it only shrinks once the viewport

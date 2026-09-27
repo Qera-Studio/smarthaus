@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import { buildConsentRecord, CONSENT_COOKIE } from "../src/lib/consent";
 import { expect, test, type Locator, type Page } from "./fixtures";
 
 /**
@@ -82,4 +83,22 @@ export async function expectHydrated(page: Page) {
   await expect(page.getByRole("region", { name: "Cookie preferences" })).toBeAttached({
     timeout: 15_000,
   });
+}
+
+/**
+ * A consent choice already on file, so the banner never mounts. For tests
+ * whose subject is the page's own layout: the banner adds its height to the
+ * footer's padding while it shows (Footer.module.scss), which is right for a
+ * visitor and noise for a geometry test. The record comes from the app's own
+ * builder, so it cannot drift from what the site writes.
+ */
+export async function withConsentDecided(page: Page) {
+  const url = test.info().project.use.baseURL ?? "http://127.0.0.1:3210";
+  await page.context().addCookies([
+    {
+      name: CONSENT_COOKIE,
+      value: encodeURIComponent(JSON.stringify(buildConsentRecord(false))),
+      url,
+    },
+  ]);
 }
