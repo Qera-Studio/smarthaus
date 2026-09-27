@@ -14,6 +14,10 @@ Every POST on this site is an enquiry send (server actions post to the page they
 
 Publish the rule, then note the date in `docs/launch-gate/blocked-on-input.md` against the firewall row and delete that row.
 
+## AI crawlers: the edge must agree with robots.txt
+
+`robots.txt` refuses the six training crawlers and allows every search and user-directed crawler (`src/content/crawler-policy.ts`, SEO System §0a). A firewall that blocks what robots.txt allows is a config that lies: answer engines are refused at the edge and no SEO tool shows it. In **Firewall**, check that no managed rule or bot-protection setting blocks OAI-SearchBot, PerplexityBot, ChatGPT-User, Applebot or Googlebot. Blocking the training six there as well is optional; robots.txt already asks them to stay out.
+
 ## What the in-code limiter relies on
 
 The in-code limiter keys on the first address in `x-forwarded-for`. That is safe only because Vercel sets that header itself, from the connection, rather than passing through whatever the client sent. Vercel documents this under request headers. If the site ever moves off Vercel, or behind another proxy, re-check it before trusting the header: a host that passes the client's own header through lets anyone choose their bucket.

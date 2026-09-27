@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { TRAINING_CRAWLERS } from "../content/crawler-policy";
 
 /**
  * Production is crawlable; every other Vercel deployment is not. A preview is
@@ -15,10 +16,10 @@ export default function robots(): MetadataRoute.Robots {
     return { rules: { userAgent: "*", disallow: "/" } };
   }
   return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-    },
+    rules: [
+      { userAgent: "*", allow: "/" },
+      { userAgent: [...TRAINING_CRAWLERS], disallow: "/" },
+    ],
     sitemap: "https://smarthaus.ae/sitemap.xml",
   };
 }
