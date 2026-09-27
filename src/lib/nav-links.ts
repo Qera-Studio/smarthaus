@@ -72,6 +72,7 @@ export const INSTALL_LINKS: readonly NavLink[] = [
 export const LEGAL_LINKS: readonly NavLink[] = [
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
+  { href: "/accessibility", label: "Accessibility" },
   { href: PREFERENCES_ROUTE, label: "Cookie Preferences" },
   { href: "/sitemap.xml", label: "Sitemap" },
 ] as const;

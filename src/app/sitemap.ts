@@ -17,6 +17,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    {
+      // A real, finished page: the statement states only what has been
+      // checked, so unlike the legal drafts it has nothing awaiting sign-off.
+      url: `${BASE_URL}/accessibility`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
     // /privacy, /terms and /cookie-preferences are deliberately absent while
     // they carry `robots: noindex` as unreviewed drafts — listing a noindex URL
     // in the sitemap asks a crawler to index a page the page itself refuses,
