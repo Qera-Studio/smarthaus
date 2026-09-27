@@ -11,19 +11,22 @@ import {
 } from "../../lib/contact";
 import { ContactForm } from "./ContactForm";
 import styles from "./page.module.scss";
+import { JsonLd, pageGraph } from "../../components/Schema";
 import { pageMetadata } from "../../lib/metadata";
 
 // Title and h1 share their key words (SEO System §2): what the visitor came to
 // do, rather than "Contact", which named the page and fell short of the
 // title's 30 characters.
-export const metadata: Metadata = pageMetadata({
+const PAGE = {
   title: "Book a site visit in Dubai | Smarthaus",
   absolute: true,
   description:
     "Book a site visit with Smarthaus. Tell us about your home and we will call you back, usually within the hour during business hours. Dubai, U.A.E.",
   path: "/contact",
   index: true,
-});
+} as const;
+
+export const metadata: Metadata = pageMetadata(PAGE);
 
 /**
  * The FAQ content. Rendered only as visible text — see the note below on why
@@ -84,104 +87,107 @@ const CONTACT_ROWS = [
 
 export default function ContactPage() {
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Book a site visit</h1>
-        <p className={styles.standfirst}>
-          Tell us a little about your home and we&rsquo;ll call you back. During business hours,
-          that&rsquo;s usually within the hour.
-        </p>
-      </header>
+    <>
+      <JsonLd data={pageGraph(PAGE)} />
+      <div className={styles.page}>
+        <header className={styles.header}>
+          <h1 className={styles.title}>Book a site visit</h1>
+          <p className={styles.standfirst}>
+            Tell us a little about your home and we&rsquo;ll call you back. During business hours,
+            that&rsquo;s usually within the hour.
+          </p>
+        </header>
 
-      <section className={styles.section} aria-labelledby="book-a-visit">
-        <h2 className={styles.sectionTitle} id="book-a-visit">
-          Book a visit
-        </h2>
-        <div className={styles.sectionBody}>
-          <ContactForm />
-        </div>
-      </section>
+        <section className={styles.section} aria-labelledby="book-a-visit">
+          <h2 className={styles.sectionTitle} id="book-a-visit">
+            Book a visit
+          </h2>
+          <div className={styles.sectionBody}>
+            <ContactForm />
+          </div>
+        </section>
 
-      <section className={styles.section} aria-labelledby="get-in-touch">
-        <h2 className={styles.sectionTitle} id="get-in-touch">
-          Get In Touch
-        </h2>
-        <ul className={styles.channels}>
-          {CONTACT_ROWS.map(({ label, value, href, external }) => (
-            <li key={label} className={styles.channel}>
-              <span className={styles.channelLabel}>{label}</span>
+        <section className={styles.section} aria-labelledby="get-in-touch">
+          <h2 className={styles.sectionTitle} id="get-in-touch">
+            Get In Touch
+          </h2>
+          <ul className={styles.channels}>
+            {CONTACT_ROWS.map(({ label, value, href, external }) => (
+              <li key={label} className={styles.channel}>
+                <span className={styles.channelLabel}>{label}</span>
+                <a
+                  className={styles.channelValue}
+                  href={href}
+                  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                >
+                  {value}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className={styles.section} aria-labelledby="location">
+          <h2 className={styles.sectionTitle} id="location">
+            Location
+          </h2>
+          <div className={styles.location}>
+            <div className={styles.locationImage}>
+              {/* Served through next/image so the 3024x4032 source is re-encoded
+                  to AVIF/WebP at the widths actually needed. sizes is explicit:
+                  without it the largest candidate is picked at every viewport. */}
+              <Image
+                src="/contact-location.jpg"
+                alt="Downtown Dubai at dusk, looking along Sheikh Zayed Road towards the Burj Khalifa"
+                fill
+                sizes="(min-width: 1024px) 25vw, (min-width: 768px) 45vw, 90vw"
+                className={styles.locationPhoto}
+              />
+            </div>
+
+            {/* data-ground: this panel paints brown-900, where the default
+                brown-900 cursor dot is invisible. See globals.scss. */}
+            <div className={styles.locationCard} data-ground="dark">
+              <address className={styles.address}>
+                {ADDRESS_LINES.map((line) => (
+                  <span key={line} className={styles.addressLine}>
+                    {line}
+                  </span>
+                ))}
+              </address>
               <a
-                className={styles.channelValue}
-                href={href}
-                {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                className={styles.outlineCta}
+                href={MAPS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                {value}
+                Get directions
               </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className={styles.section} aria-labelledby="location">
-        <h2 className={styles.sectionTitle} id="location">
-          Location
-        </h2>
-        <div className={styles.location}>
-          <div className={styles.locationImage}>
-            {/* Served through next/image so the 3024x4032 source is re-encoded
-                to AVIF/WebP at the widths actually needed. sizes is explicit:
-                without it the largest candidate is picked at every viewport. */}
-            <Image
-              src="/contact-location.jpg"
-              alt="Downtown Dubai at dusk, looking along Sheikh Zayed Road towards the Burj Khalifa"
-              fill
-              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 45vw, 90vw"
-              className={styles.locationPhoto}
-            />
+            </div>
           </div>
+        </section>
 
-          {/* data-ground: this panel paints brown-900, where the default
-              brown-900 cursor dot is invisible. See globals.scss. */}
-          <div className={styles.locationCard} data-ground="dark">
-            <address className={styles.address}>
-              {ADDRESS_LINES.map((line) => (
-                <span key={line} className={styles.addressLine}>
-                  {line}
-                </span>
-              ))}
-            </address>
-            <a
-              className={styles.outlineCta}
-              href={MAPS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Get directions
-            </a>
+        <section className={styles.section} aria-labelledby="faqs">
+          <h2 className={styles.sectionTitle} id="faqs">
+            Frequently Asked Questions
+          </h2>
+          <div className={styles.faqs}>
+            {FAQS.map(({ q, a }) => (
+              // Native details/summary: keyboard operable and open without JS for
+              // free, and it costs no client component. `name` makes them an
+              // exclusive accordion, which browsers implement natively.
+              <details key={q} className={styles.faq} name="contact-faq">
+                <summary className={styles.faqQuestion}>
+                  <span>{q}</span>
+                  <Chevron />
+                </summary>
+                <p className={styles.faqAnswer}>{a}</p>
+              </details>
+            ))}
           </div>
-        </div>
-      </section>
-
-      <section className={styles.section} aria-labelledby="faqs">
-        <h2 className={styles.sectionTitle} id="faqs">
-          Frequently Asked Questions
-        </h2>
-        <div className={styles.faqs}>
-          {FAQS.map(({ q, a }) => (
-            // Native details/summary: keyboard operable and open without JS for
-            // free, and it costs no client component. `name` makes them an
-            // exclusive accordion, which browsers implement natively.
-            <details key={q} className={styles.faq} name="contact-faq">
-              <summary className={styles.faqQuestion}>
-                <span>{q}</span>
-                <Chevron />
-              </summary>
-              <p className={styles.faqAnswer}>{a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </>
   );
 }
 

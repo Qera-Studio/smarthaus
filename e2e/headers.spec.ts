@@ -115,7 +115,7 @@ test.describe("files crawlers and researchers read", () => {
     expect(body).toMatch(/User-Agent: \*\s+Allow: \//i);
     expect(body).toContain("Sitemap: https://smarthaus.ae/sitemap.xml");
     // The * group allows everything; only the training group is refused.
-    const groups = body.split(/\n(?=User-Agent:)/i);
+    const groups = body.split(/\n\s*\n/);
     const star = groups.find((group) => /^User-Agent: \*$/im.test(group))!;
     expect(star).not.toMatch(/Disallow:/i);
     const training = groups.find((group) => /User-Agent: GPTBot/i.test(group))!;

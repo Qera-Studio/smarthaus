@@ -31,7 +31,9 @@ test("responds with one h1 and is indexable", async ({ page }) => {
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 1, name: "Book a site visit" })).toBeVisible();
   // The placeholder's noindex must be gone, or the real page never ranks.
-  await expect(page.locator('head meta[name="robots"]')).toHaveCount(0);
+  const robots = await page.locator('head meta[name="robots"]').getAttribute("content");
+  expect(robots).toMatch(/^index, follow/);
+  expect(robots).not.toContain("noindex");
 });
 
 test("passes axe accessibility checks", async ({ page }) => {
@@ -153,7 +155,13 @@ test("no FAQ structured data while the assessment fee is unconfirmed", async ({ 
   // has signed off. /faq withholds its schema for the same reason.
   //
   // When the fee is confirmed, this assertion inverts rather than gets deleted.
-  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
+  // The site and page schema are here (business, website, page); what must
+  // not be is a FAQPage, or any node carrying the fee.
+  const blocks = await page
+    .locator('script[type="application/ld+json"]')
+    .evaluateAll((els) => els.map((el) => el.textContent ?? ""));
+  expect(blocks.join("")).not.toContain('"FAQPage"');
+  expect(blocks.join("")).not.toMatch(/1,?500/);
 });
 
 test("the fee is stated once, and only where a reader can question it", async ({ page }) => {

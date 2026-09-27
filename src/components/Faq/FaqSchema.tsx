@@ -1,5 +1,6 @@
 import { FAQ_CATEGORIES } from "../../content/faq";
 import { plainAnswer } from "./FaqAccordion";
+import { JsonLd } from "../Schema";
 
 /**
  * FAQPage structured data, built from the same array the page renders — so a
@@ -34,20 +35,5 @@ export function FaqSchema() {
     ),
   };
 
-  return (
-    <script
-      type="application/ld+json"
-      // The content is a JSON.stringify of a build-time constant in
-      // src/content/faq.ts — no user input reaches it, and there is no other
-      // way to emit a JSON-LD block (React escapes text children, which would
-      // corrupt the JSON).
-      //
-      // The `<` escape is belt-and-braces rather than theatre: a `</script>`
-      // sequence inside a string literal would close the element early even
-      // though the JSON itself is well-formed, and < is valid JSON that
-      // parses back to the same string. It costs one replace and removes the
-      // only way this element could ever emit markup.
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }}
-    />
-  );
+  return <JsonLd data={schema} />;
 }

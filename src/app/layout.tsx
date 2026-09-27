@@ -13,6 +13,7 @@ import { Footer } from "../components/Footer";
 import { Splash } from "../components/Loader/Splash";
 import { Consent } from "../components/Consent";
 import { ScrollToTop } from "../components/ScrollToTop";
+import { JsonLd, siteGraph } from "../components/Schema";
 
 const manrope = Manrope({
   variable: "--font-sans",
@@ -196,6 +197,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <SpeedInsights />
           </>
         ) : null}
+        {/* The business and the site, once per page (SEO System §9). Last, so the
+            skip link stays the first child of <body>. */}
+        <JsonLd data={siteGraph()} />
       </body>
     </html>
   );
