@@ -10,6 +10,7 @@ import {
 } from "../../components/LegalPage";
 import { ADDRESS, EMAIL, PHONE_DISPLAY } from "../../lib/contact";
 import { PRIVACY_POLICY_VERSION } from "../../content/legal/versions";
+import { pageMetadata } from "../../lib/metadata";
 
 // ---------------------------------------------------------------------------
 // DRAFT — pending the counsel review this document requires.
@@ -31,16 +32,16 @@ import { PRIVACY_POLICY_VERSION } from "../../content/legal/versions";
 
 const LAST_UPDATED = "Draft, not yet effective";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
   description:
     "How Smarthaus collects, uses, and protects your personal information, how long we keep it, and your rights over it.",
-  alternates: { canonical: "/privacy" },
+  path: "/privacy",
   // A draft legal page must not be indexed: it states data practices that have
   // not been confirmed. Flip to indexable in the same change that clears the
   // placeholders and records counsel sign-off.
-  robots: { index: false, follow: true },
-};
+  index: false,
+});
 
 const ENTITY_ROWS = [
   { label: "Legal entity", value: "Maple Technologies Security Systems LLC" },

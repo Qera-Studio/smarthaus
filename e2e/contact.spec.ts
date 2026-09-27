@@ -29,7 +29,7 @@ const form = (page: import("@playwright/test").Page) => page.locator("main");
 
 test("responds with one h1 and is indexable", async ({ page }) => {
   await expect(page.locator("h1")).toHaveCount(1);
-  await expect(page.getByRole("heading", { level: 1, name: "Contact" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Book a site visit" })).toBeVisible();
   // The placeholder's noindex must be gone, or the real page never ranks.
   await expect(page.locator('head meta[name="robots"]')).toHaveCount(0);
 });

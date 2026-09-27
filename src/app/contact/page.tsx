@@ -11,13 +11,19 @@ import {
 } from "../../lib/contact";
 import { ContactForm } from "./ContactForm";
 import styles from "./page.module.scss";
+import { pageMetadata } from "../../lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Contact",
+// Title and h1 share their key words (SEO System §2): what the visitor came to
+// do, rather than "Contact", which named the page and fell short of the
+// title's 30 characters.
+export const metadata: Metadata = pageMetadata({
+  title: "Book a site visit in Dubai | Smarthaus",
+  absolute: true,
   description:
     "Book a site visit with Smarthaus. Tell us about your home and we will call you back, usually within the hour during business hours. Dubai, U.A.E.",
-  alternates: { canonical: "/contact" },
-};
+  path: "/contact",
+  index: true,
+});
 
 /**
  * The FAQ content. Rendered only as visible text — see the note below on why
@@ -80,7 +86,7 @@ export default function ContactPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Contact</h1>
+        <h1 className={styles.title}>Book a site visit</h1>
         <p className={styles.standfirst}>
           Tell us a little about your home and we&rsquo;ll call you back. During business hours,
           that&rsquo;s usually within the hour.

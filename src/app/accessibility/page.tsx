@@ -7,6 +7,7 @@ import {
 } from "../../components/LegalPage";
 import { ACCESSIBILITY_ASSESSED } from "../../content/legal/versions";
 import { EMAIL, PHONE_DISPLAY, PHONE_E164, whatsappLink } from "../../lib/contact";
+import { pageMetadata } from "../../lib/metadata";
 
 /**
  * The accessibility statement (Accessibility System §22). Written as evidence,
@@ -24,12 +25,13 @@ const ASSESSED_LABEL = new Date(`${ACCESSIBILITY_ASSESSED}T00:00:00Z`).toLocaleD
   timeZone: "UTC",
 });
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Accessibility statement",
   description:
     "How accessible the Smarthaus website is today, what we know does not work yet, how we checked, and how to tell us about a problem.",
-  alternates: { canonical: "/accessibility" },
-};
+  path: "/accessibility",
+  index: true,
+});
 
 export default function AccessibilityStatement() {
   return (
