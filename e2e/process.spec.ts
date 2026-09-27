@@ -507,3 +507,25 @@ test.describe("reduced motion", () => {
     expect(ratio).toBeGreaterThan(0.9);
   });
 });
+
+test("the rail's label tells a keyboard user what moves it, and that works", async ({ page }) => {
+  test.skip(
+    test.info().project.name !== "Desktop Chrome",
+    "the pinned rail, driven by page scroll",
+  );
+  const viewport = page.getByRole("group", { name: /Our process, six panels/ });
+  await expect(viewport).toHaveAttribute(
+    "aria-label",
+    "Our process, six panels. Scroll the page or use the up and down arrow keys to move through them.",
+  );
+  // Bring the pin window on screen, focus the rail, and press Down.
+  await rail(page).evaluate((el) => {
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, top + window.innerHeight);
+  });
+  await viewport.focus();
+  const track = rail(page).locator("ol");
+  const before = await track.evaluate((el) => getComputedStyle(el).translate);
+  for (let i = 0; i < 8; i += 1) await page.keyboard.press("ArrowDown");
+  await expect.poll(() => track.evaluate((el) => getComputedStyle(el).translate)).not.toBe(before);
+});

@@ -112,7 +112,13 @@ export function Process() {
               // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- required by axe scrollable-region-focusable; same treatment as LegalTable.tsx
               tabIndex={0}
               role="group"
-              aria-label="Our process, six panels. Scroll or use the arrow keys."
+              // What actually works. In the pinned rail the panels move with the
+              // page's vertical scroll, so the up and down arrow keys (and Page
+              // Down, Space) move them; left and right have nothing to scroll.
+              // It said "use the arrow keys", which promised left and right.
+              // Under reduced motion the rail is a plain horizontal scroller and
+              // left and right also work, natively.
+              aria-label="Our process, six panels. Scroll the page or use the up and down arrow keys to move through them."
             >
               <ol className={styles.track}>
                 {PROCESS_PAGES.map((page) => (
