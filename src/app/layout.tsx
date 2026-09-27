@@ -14,6 +14,7 @@ import { Splash } from "../components/Loader/Splash";
 import { Consent } from "../components/Consent";
 import { ScrollToTop } from "../components/ScrollToTop";
 import { JsonLd, siteGraph } from "../components/Schema";
+import { CONSENT_BOOT_SCRIPT } from "../lib/consent-boot";
 
 const manrope = Manrope({
   variable: "--font-sans",
@@ -91,7 +92,20 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" dir="ltr" className={manrope.variable}>
+    // suppressHydrationWarning: the consent boot script sets data-consent on
+    // <html> before React hydrates, which is its whole job. It covers this
+    // element's own attributes only, never its children.
+    <html lang="en" dir="ltr" className={manrope.variable} suppressHydrationWarning>
+      <head>
+        {/*
+          Runs before first paint and decides whether the cookie banner, which
+          is in the server HTML, shows (src/lib/consent-boot.ts). Production
+          only: the development build forces the banner open on every load.
+        */}
+        {process.env.NODE_ENV !== "development" && (
+          <script dangerouslySetInnerHTML={{ __html: CONSENT_BOOT_SCRIPT }} />
+        )}
+      </head>
       <body>
         {/*
           FIRST child of <body>, deliberately: it is in the server HTML, so it

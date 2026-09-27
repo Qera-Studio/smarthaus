@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
+import { CONSENT_BOOT_HASH } from "./src/lib/consent-boot";
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env["ANALYZE"] === "true",
@@ -41,7 +42,12 @@ const nextConfig: NextConfig = {
     // Revisit if the site ever adds authentication or renders user-generated content.
     //
     // One builder for both policies so they cannot drift: `strict` drops
-    // 'unsafe-inline' from script-src and style-src and nothing else.
+    // 'unsafe-inline' from script-src and style-src, and allows the consent
+    // boot script (src/lib/consent-boot.ts) by its hash instead.
+    //
+    // The hash is in the STRICT policy only, and must stay out of the enforced
+    // one: a policy that lists a hash makes browsers ignore its
+    // 'unsafe-inline', which would block every inline script Next emits.
     const csp = (strict: boolean) =>
       [
         "default-src 'self'",
@@ -67,7 +73,7 @@ const nextConfig: NextConfig = {
         //
         // React's dev-only debugging (callstack reconstruction) needs
         // full 'unsafe-eval'. Dev server only — never in production.
-        `script-src 'self'${strict ? "" : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+        `script-src 'self'${strict ? ` ${CONSENT_BOOT_HASH}` : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
         // DRACOLoader builds its decoder worker from a Blob, so the
         // worker's URL is blob: rather than a file on our origin.
         // Without this directive workers fall back to script-src, which

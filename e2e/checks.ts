@@ -89,18 +89,20 @@ export async function expectNoEmDash(scope: Locator) {
 }
 
 /**
- * The page has hydrated: its client components are live. The consent region
- * is rendered only by a client effect on a first visit, which every test's
- * fresh context is, so its presence means React has run.
+ * The page has hydrated: its client components are live. The consent shell
+ * marks <html data-consent-ready> in its mount effect, on every page and
+ * whether or not a choice is on file, so the mark means React has run.
+ *
+ * It used to wait for the consent banner itself, but the banner is now in the
+ * server HTML (src/lib/consent-boot.ts), so it is attached before hydration
+ * and no longer proves anything.
  *
  * For tests of client behaviour (focus moving to an error, a client-side route
  * change). Without it, a tap on CI's slower WebKit runner can land before
  * hydration and exercise the no-JavaScript path instead of the one asserted.
  */
 export async function expectHydrated(page: Page) {
-  await expect(page.getByRole("region", { name: "Cookie preferences" })).toBeAttached({
-    timeout: 15_000,
-  });
+  await expect(page.locator("html[data-consent-ready]")).toBeAttached({ timeout: 15_000 });
 }
 
 /**
