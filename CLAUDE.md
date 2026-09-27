@@ -170,21 +170,28 @@ Values owned by the system (via Owned Facts Register) — do not restate, point 
 
 Build target is **WCAG 2.2 Level AA** (Accessibility System default). The following AAA criteria are adopted where the design meets them for free or near-free. The rest are explicitly declined with reasoning.
 
+### AA criteria this table used to list as AAA
+
+Three rows here were Level AA, not AAA, so they are required by the build target rather than adopted as extras. Corrected 2026-09-27:
+
+| Criterion                     | How it is met                                                                                                                                                         |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1.4.12 Text Spacing**       | No fixed heights on text containers; fluid type and logical properties                                                                                                |
+| **2.4.5 Multiple Ways**       | The primary nav, and the footer, which links every page and serves as the site map. There are no breadcrumbs and no search; `sitemap.xml` is for crawlers, not people |
+| **2.4.6 Headings and Labels** | Content discipline, and every form field has a visible label                                                                                                          |
+
 ### AAA criteria we adopt (zero or trivial extra cost)
 
-| Criterion                         | What it asks                                          | Why it's free                                                                                                 |
-| --------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **1.4.12 Text Spacing**           | Content readable when user overrides spacing          | Free if CSS doesn't use fixed heights on text containers. Fluid type + logical properties already handle this |
-| **2.4.5 Multiple Ways**           | Two+ ways to locate a page                            | Nav + sitemap + breadcrumbs. We're building all three anyway                                                  |
-| **2.4.6 Headings and Labels**     | Descriptive headings and labels                       | Free with good content discipline                                                                             |
-| **2.4.8 Location**                | User's location within the site is available          | Breadcrumbs on inner pages. Trivial                                                                           |
-| **2.4.10 Section Headings**       | Content organised with headings                       | Free — we'd never ship a page without heading structure                                                       |
-| **2.1.3 Keyboard (No Exception)** | All functionality operable by keyboard, no exceptions | Four client components, all simple. No keyboard traps possible                                                |
-| **2.2.3 No Timing**               | No time limits on content                             | Marketing site — nothing is timed                                                                             |
-| **2.2.4 Interruptions**           | User can postpone/suppress interruptions              | No interruptions, no pop-ups, no auto-playing modals                                                          |
-| **3.2.5 Change on Request**       | Context changes only on user action                   | No auto-redirects, no surprise navigation                                                                     |
-| **3.3.6 Error Prevention (All)**  | User submissions: review, confirm, reversible         | Contact form gets a confirmation step. One form, low cost                                                     |
-| **1.3.6 Identify Purpose**        | Programmatic purpose of UI components                 | Semantic HTML + `autocomplete` attributes on form fields. Free                                                |
+| Criterion                         | What it asks                                          | How it is met                                                                                                                                                                                       |
+| --------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **2.4.8 Location**                | User's location within the site is available          | **Partly.** The nav marks the current page (`aria-current="page"` and a visible rule, `Nav/NavLink.tsx`; W3C technique G128). Pages reached only from the footer are not marked yet. No breadcrumbs |
+| **2.4.10 Section Headings**       | Content organised with headings                       | Every page has a heading structure                                                                                                                                                                  |
+| **2.1.3 Keyboard (No Exception)** | All functionality operable by keyboard, no exceptions | Every client component in the list below is keyboard operable; the hero tablist, hardware carousel and consent panel have their own keyboard tests                                                  |
+| **2.2.3 No Timing**               | No time limits on content                             | Nothing is timed. The hardware carousel advances on its own but is not a time limit: it has a pause control and never starts under reduced motion                                                   |
+| **2.2.4 Interruptions**           | User can postpone/suppress interruptions              | No pop-ups or auto-playing modals. The consent banner is non-modal and can be ignored                                                                                                               |
+| **3.2.5 Change on Request**       | Context changes only on user action                   | No auto-redirects, no surprise navigation                                                                                                                                                           |
+| **3.3.6 Error Prevention (All)**  | User submissions: reversible, checked, or confirmed   | By "checked": the server validates every field and the error summary lets the visitor correct them before anything is sent. There is no confirmation step, and 3.3.6 does not require one           |
+| **1.3.6 Identify Purpose**        | Programmatic purpose of UI components                 | Semantic HTML + `autocomplete` attributes on form fields                                                                                                                                            |
 
 ### AAA criteria explicitly declined
 
