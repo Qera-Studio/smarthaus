@@ -102,6 +102,32 @@ test.describe("/api/csp-report", () => {
   });
 });
 
+test.describe("caching of public assets", () => {
+  for (const path of [
+    "/hero/villa.glb",
+    "/hero/grid/r4_c4.webp",
+    "/draco/draco_decoder.wasm",
+    "/brand/smarthaus-mark.svg",
+    "/icons/icon-192.png",
+  ]) {
+    test(`${path} is cached for a day and revalidated in the background, never immutable`, async ({
+      request,
+    }) => {
+      const res = await request.get(path);
+      expect(res.status()).toBe(200);
+      const cache = res.headers()["cache-control"];
+      expect(cache).toBe("public, max-age=86400, stale-while-revalidate=604800");
+      // These keep their names when they change (Performance System §8).
+      expect(cache).not.toContain("immutable");
+    });
+  }
+
+  test("an HTML page is not given the asset cache", async ({ request }) => {
+    const cache = (await request.get("/")).headers()["cache-control"] ?? "";
+    expect(cache).not.toContain("stale-while-revalidate=604800");
+  });
+});
+
 test.describe("files crawlers and researchers read", () => {
   test("serves security.txt as plain text with a contact", async ({ request }) => {
     const res = await request.get("/.well-known/security.txt");

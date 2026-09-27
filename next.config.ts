@@ -106,6 +106,19 @@ const nextConfig: NextConfig = {
         "report-to csp-endpoint",
       ].join("; ");
 
+    // The public/ assets: the hero model and poster, the Draco decoder, the
+    // logos and icons. A day, then a week of serving the cached copy while
+    // it revalidates in the background (Performance System §8).
+    //
+    // Not `immutable`, which §8 reserves for fingerprinted files: these keep
+    // their names when they change, so a year-long immutable cache would serve
+    // a replaced villa.glb to returning visitors for a year. Next's own hashed
+    // files under /_next/static are already immutable and cannot be changed.
+    const publicAssetCache = {
+      key: "Cache-Control",
+      value: "public, max-age=86400, stale-while-revalidate=604800",
+    };
+
     return [
       {
         source: "/(.*)",
@@ -215,6 +228,10 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      { source: "/hero/:path*", headers: [publicAssetCache] },
+      { source: "/draco/:path*", headers: [publicAssetCache] },
+      { source: "/brand/:path*", headers: [publicAssetCache] },
+      { source: "/icons/:path*", headers: [publicAssetCache] },
     ];
   },
 };
