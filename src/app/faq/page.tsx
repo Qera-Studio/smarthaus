@@ -5,6 +5,7 @@ import { LegalPage, LegalSectionBlock, type LegalSection } from "../../component
 import { ClosingCta } from "../../components/ClosingCta";
 import { FAQ_CATEGORIES } from "../../content/faq";
 import styles from "../../components/Faq/Faq.module.scss";
+import { pageMetadata } from "../../lib/metadata";
 
 // ---------------------------------------------------------------------------
 // LAUNCH GATE ITEM
@@ -37,13 +38,13 @@ const SECTIONS: readonly LegalSection[] = FAQ_CATEGORIES.map(({ id, title, short
   short,
 }));
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Frequently Asked Questions",
   description:
     "What a Smarthaus system costs, how the site assessment works, what happens at handover, and who we are, answered plainly.",
-  alternates: { canonical: "/faq" },
-  robots: FAQ_IS_PUBLISHABLE ? undefined : { index: false, follow: true },
-};
+  path: "/faq",
+  index: FAQ_IS_PUBLISHABLE,
+});
 
 export default function FaqPage() {
   return (

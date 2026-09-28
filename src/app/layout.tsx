@@ -1,3 +1,4 @@
+import { OG_IMAGES, SITE_NAME } from "../lib/metadata";
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
@@ -12,18 +13,14 @@ import { Footer } from "../components/Footer";
 import { Splash } from "../components/Loader/Splash";
 import { Consent } from "../components/Consent";
 import { ScrollToTop } from "../components/ScrollToTop";
+import { JsonLd, siteGraph } from "../components/Schema";
+import { CONSENT_BOOT_SCRIPT } from "../lib/consent-boot";
 
 const manrope = Manrope({
   variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
 });
-
-// One constant for every card's alt text, so the OG and Twitter copies cannot
-// drift apart. It describes what the graphic actually shows — brand name,
-// tagline, parent company and location — rather than restating the page title.
-const OG_IMAGE_ALT =
-  "Smarthaus — smarter living for a brighter tomorrow. Home automation by Maple Technologies Security Systems LLC, Dubai, U.A.E.";
 
 /**
  * The origin every relative metadata URL is resolved against.
@@ -58,60 +55,30 @@ function metadataOrigin(): URL {
   return new URL("https://smarthaus.ae");
 }
 
+// The site-wide fallback. Every page sets its own through pageMetadata()
+// (src/lib/metadata.ts), which owns the canonical, og:url and robots; this is
+// only what a route without one (the 404, the error pages) is left with. It
+// sets no og:url and no canonical, because a fallback that names "/" is
+// exactly how every page came to claim it was the homepage.
 export const metadata: Metadata = {
   title: {
-    template: "%s | Smarthaus",
-    default: "Smarthaus — Premium Smart Home Automation",
+    template: `%s | ${SITE_NAME}`,
+    default: `${SITE_NAME} | Home Automation and Security in Dubai`,
   },
   description:
-    "Smarthaus delivers premium smart home automation solutions in Dubai. Seamless control of lighting, climate, security, and entertainment.",
+    "Cameras, entry, audio and home automation for Dubai villas, installed, connected and looked after by one licensed team. Book a site visit.",
   metadataBase: metadataOrigin(),
-  alternates: {
-    canonical: "/",
-  },
   openGraph: {
     type: "website",
     locale: "en_AE",
-    siteName: "Smarthaus",
-    // og:url must match the canonical, per SEO System §7. metadataBase makes
-    // this absolute, which §6 requires.
-    url: "/",
-    // Both images are declared here rather than via the opengraph-image file
-    // convention. The convention emits exactly ONE og:image and silently drops
-    // any images array alongside it (verified: the square never reached the
-    // markup), and the square card is worth having — WhatsApp, Slack, iMessage
-    // and LinkedIn crop a 1200x630 to a square thumbnail and cut the wordmark.
-    //
-    // Order is load-bearing: consumers that honour it (Facebook, X) take the
-    // first, so the landscape stays the primary card and the square is the
-    // alternate for surfaces that pick by aspect ratio.
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: OG_IMAGE_ALT,
-      },
-      {
-        url: "/og-image-square.png",
-        width: 1200,
-        height: 1200,
-        alt: OG_IMAGE_ALT,
-      },
-    ],
+    siteName: SITE_NAME,
+    images: OG_IMAGES,
   },
   twitter: {
-    // summary_large_image, not summary: the card is a wide branded graphic, and
-    // summary would crop it to a small square beside the text. The image itself
-    // comes from src/app/twitter-image.png (file convention), as above.
-    //
-    // No `site` or `creator`: both take a real @handle and the brand's X
-    // account is still a placeholder link in the footer. An invented handle
-    // would attribute the card to someone else's account.
+    // No `site` or `creator`: both take a real @handle, and the brand's X
+    // account is still a placeholder link in the footer.
     card: "summary_large_image",
-    // The landscape only. X renders one image for summary_large_image, and its
-    // 5MB cap is lower than Facebook's 8MB.
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: OG_IMAGE_ALT }],
+    images: [OG_IMAGES[0]!],
   },
 };
 
@@ -125,7 +92,20 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" dir="ltr" className={manrope.variable}>
+    // suppressHydrationWarning: the consent boot script sets data-consent on
+    // <html> before React hydrates, which is its whole job. It covers this
+    // element's own attributes only, never its children.
+    <html lang="en" dir="ltr" className={manrope.variable} suppressHydrationWarning>
+      <head>
+        {/*
+          Runs before first paint and decides whether the cookie banner, which
+          is in the server HTML, shows (src/lib/consent-boot.ts). Production
+          only: the development build forces the banner open on every load.
+        */}
+        {process.env.NODE_ENV !== "development" && (
+          <script dangerouslySetInnerHTML={{ __html: CONSENT_BOOT_SCRIPT }} />
+        )}
+      </head>
       <body>
         {/*
           FIRST child of <body>, deliberately: it is in the server HTML, so it
@@ -231,6 +211,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <SpeedInsights />
           </>
         ) : null}
+        {/* The business and the site, once per page (SEO System §9). Last, so the
+            skip link stays the first child of <body>. */}
+        <JsonLd data={siteGraph()} />
       </body>
     </html>
   );

@@ -11,7 +11,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "jest",
     "test:e2e": "playwright test",
-    "test:lhci": "lhci autorun",
+    "test:lhci": "node scripts/lighthouse-calibrated.mjs",
     "analyze": "ANALYZE=true next build",
     "prepare": "husky",
     "test:coverage": "jest --ci --coverage",

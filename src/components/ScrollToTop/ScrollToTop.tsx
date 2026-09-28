@@ -48,7 +48,12 @@ export function ScrollToTop() {
   //
   // Margins are negative insets from each viewport edge, measured off the
   // button's real box so the band tracks it across breakpoints rather than
-  // duplicating the CSS offsets here.
+  // duplicating the CSS offsets here. All four sides: with only top and
+  // bottom the band spanned the whole viewport width, so a dark block anywhere
+  // in the button's row counted as behind it. That went unseen while the
+  // consent banner mounted after this effect; once the banner was in the
+  // server HTML (2026-09-27) its card, beside the button rather than under
+  // it, turned the button dark over light prose.
   useEffect(() => {
     const button = buttonRef.current;
     const targets = document.querySelectorAll('[data-ground="dark"]');
@@ -64,6 +69,8 @@ export function ScrollToTop() {
       const box = button.getBoundingClientRect();
       const top = Math.round(box.top);
       const bottom = Math.round(window.innerHeight - box.bottom);
+      const left = Math.round(box.left);
+      const right = Math.round(document.documentElement.clientWidth - box.right);
       io = new IntersectionObserver(
         (entries) => {
           // Several dark sections are observed, and a callback carries entries
@@ -73,7 +80,7 @@ export function ScrollToTop() {
           for (const entry of entries) over.set(entry.target, entry.isIntersecting);
           setOnDark([...over.values()].some(Boolean));
         },
-        { rootMargin: `-${top}px 0px -${bottom}px 0px`, threshold: 0 },
+        { rootMargin: `-${top}px -${right}px -${bottom}px -${left}px`, threshold: 0 },
       );
       targets.forEach((target) => io?.observe(target));
     };

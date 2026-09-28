@@ -131,6 +131,15 @@ describe("citations of qera-system sections", () => {
   });
 });
 
+/** An assertion from lighthouserc.json, wherever the matrix puts it. */
+function lhciAssertion(id: string): [string, { maxNumericValue: number }] {
+  const lhci = JSON.parse(read("lighthouserc.json"));
+  const groups: { assertions: Record<string, unknown> }[] = lhci.ci.assert.assertMatrix;
+  const found = groups.map((group) => group.assertions[id]).filter(Boolean);
+  expect(found).toHaveLength(1);
+  return found[0] as [string, { maxNumericValue: number }];
+}
+
 describe("numbers the project docs state", () => {
   it("do not restate values the owned-facts register owns", () => {
     // Point, never restate (CLAUDE.md). Each is a register row.
@@ -142,14 +151,12 @@ describe("numbers the project docs state", () => {
   });
 
   it("state the JS budget that lighthouserc.json enforces", () => {
-    const lhci = JSON.parse(read("lighthouserc.json"));
-    const bytes = lhci.ci.assert.assertions["resource-summary:script:size"][1].maxNumericValue;
+    const bytes = lhciAssertion("resource-summary:script:size")[1].maxNumericValue;
     expect(read("CLAUDE.md")).toContain(`≤ ${bytes / 1024}KB uncompressed`);
   });
 
   it("state the TBT budget that lighthouserc.json enforces", () => {
-    const lhci = JSON.parse(read("lighthouserc.json"));
-    const ms = lhci.ci.assert.assertions["total-blocking-time"][1].maxNumericValue;
+    const ms = lhciAssertion("total-blocking-time")[1].maxNumericValue;
     expect(read("CLAUDE.md")).toContain(`TBT < ${ms}ms`);
   });
 

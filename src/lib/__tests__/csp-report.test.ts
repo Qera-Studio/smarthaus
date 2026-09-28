@@ -201,3 +201,65 @@ describe("limits", () => {
     expect(MAX_REPORT_BYTES).toBe(16384);
   });
 });
+
+// Safari sends one Reporting API report under the legacy content type. Every
+// Safari report was refused with a 400 until 2026-09-28; this is the body
+// WebKit actually posted, trimmed of its long originalPolicy.
+describe("parseReport: Safari's report under application/csp-report", () => {
+  const safari = {
+    type: "csp-violation",
+    url: "http://127.0.0.1:3210/pricing",
+    body: {
+      documentURL: "http://127.0.0.1:3210/pricing",
+      disposition: "report",
+      referrer: "",
+      effectiveDirective: "style-src-attr",
+      blockedURL: "inline",
+      originalPolicy: "default-src 'self'",
+      statusCode: 200,
+    },
+  };
+
+  it("reads it as the one violation it is", () => {
+    expect(parseReport("application/csp-report", safari)).toEqual([
+      {
+        directive: "style-src-attr",
+        blocked: "inline",
+        document: "http://127.0.0.1:3210/pricing",
+        disposition: "report",
+      },
+    ]);
+  });
+
+  it("keeps reading the classic shape under the same content type", () => {
+    const classic = {
+      "csp-report": {
+        "document-uri": "https://smarthaus.ae/",
+        "blocked-uri": "inline",
+        "violated-directive": "script-src",
+      },
+    };
+    expect(parseReport("application/csp-report", classic)).toEqual([
+      {
+        directive: "script-src",
+        blocked: "inline",
+        document: "https://smarthaus.ae/",
+        disposition: "enforce",
+      },
+    ]);
+  });
+
+  it("drops a report of another type rather than logging it as a CSP violation", () => {
+    expect(parseReport("application/csp-report", { ...safari, type: "deprecation" })).toEqual([]);
+  });
+
+  it("still refuses a body that is neither shape", () => {
+    expect(parseReport("application/csp-report", { type: 5, body: "no" })).toBeNull();
+    expect(parseReport("application/csp-report", { anything: true })).toBeNull();
+  });
+
+  it("bounds the fields as it does for every other report", () => {
+    const long = { ...safari, body: { ...safari.body, blockedURL: "x".repeat(5000) } };
+    expect(parseReport("application/csp-report", long)).toBeNull();
+  });
+});
