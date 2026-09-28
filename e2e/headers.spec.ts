@@ -158,3 +158,19 @@ test.describe("files crawlers and researchers read", () => {
     expect(body.match(/User-Agent:/gi)).toHaveLength(1);
   });
 });
+
+// Safari posts each violation as one Reporting API report labelled
+// application/csp-report. The endpoint refused that shape with a 400 until
+// 2026-09-28, so every Safari report was lost. The strict report-only policy
+// reports inline styles on every page, so a page load is enough to prove it.
+test("every CSP report the browser sends is accepted", async ({ page }) => {
+  const refused: string[] = [];
+  page.on("response", (response) => {
+    if (!response.url().includes("/api/csp-report")) return;
+    if (response.status() !== 204)
+      refused.push(`${response.status()} ${response.request().headers()["content-type"]}`);
+  });
+  await page.goto("/pricing");
+  await page.waitForTimeout(2_000);
+  expect(refused).toEqual([]);
+});
