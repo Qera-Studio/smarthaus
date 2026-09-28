@@ -23,12 +23,13 @@ describe("Care packages", () => {
     expect(descriptions.every((d) => d && d.length > 0)).toBe(true);
   });
 
-  it("marks the unconfirmed response window as pending", () => {
-    // Same rule faq.ts is held to: a braced placeholder must be paired with a
-    // note naming who confirms it. The window also lives in faq.ts
-    // ("support-response") with the same brace — clear both together.
+  it("prints the confirmed six-hour response window plainly, with no pending note", () => {
+    // Confirmed by Shivanshu on 2026-09-28. faq.ts "support-response" states
+    // the same figure; the two move together.
     render(<Care />);
-    expect(screen.getByText(/to be confirmed with Sunil/i)).toBeInTheDocument();
+    expect(screen.getByText(/within 6 hours, seven days a week/)).toBeInTheDocument();
+    expect(screen.queryByText(/to be confirmed/i)).toBeNull();
+    expect(screen.queryByText(/pending/i)).toBeNull();
   });
 
   it("renders no raw braces to the reader", () => {
