@@ -124,6 +124,31 @@ describe("hints stated before any error (WCAG 3.3.2)", () => {
     );
   });
 
+  it("puts each hint under its control, so paired inputs line up", () => {
+    // A hint between label and control pushed Phone and Message below Name
+    // and Email in the two-column home enquiry (2026-09-28).
+    render(<ContactForm />);
+    for (const [label, hint] of [
+      ["Phone", "phone-hint"],
+      ["Message", "message-hint"],
+    ] as const) {
+      const control = screen.getByLabelText(label);
+      const note = document.getElementById(hint)!;
+      expect(control.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  it("keeps the hint above the error in the page, as in the description", async () => {
+    await submitWith({
+      status: "invalid",
+      fieldErrors: { phone: "Check the number. It should start with +971 or 05." },
+      values: {},
+    });
+    const hint = document.getElementById("phone-hint")!;
+    const error = document.getElementById("phone-error")!;
+    expect(hint.compareDocumentPosition(error) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("gives fields without a hint no empty description", () => {
     render(<ContactForm />);
     expect(screen.getByLabelText("Name")).not.toHaveAttribute("aria-describedby");
