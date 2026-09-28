@@ -298,6 +298,7 @@ describe("flip", () => {
 
 describe("createGlyphLayer", () => {
   interface FakeContext {
+    canvas: HTMLCanvasElement;
     clearRect: jest.Mock;
     drawImage: jest.Mock;
   }
@@ -305,8 +306,8 @@ describe("createGlyphLayer", () => {
 
   beforeEach(() => {
     contexts = [];
-    HTMLCanvasElement.prototype.getContext = jest.fn(() => {
-      const ctx: FakeContext = { clearRect: jest.fn(), drawImage: jest.fn() };
+    HTMLCanvasElement.prototype.getContext = jest.fn(function (this: HTMLCanvasElement) {
+      const ctx: FakeContext = { canvas: this, clearRect: jest.fn(), drawImage: jest.fn() };
       contexts.push(ctx);
       return ctx as unknown as RenderingContext;
     }) as typeof HTMLCanvasElement.prototype.getContext;
@@ -322,9 +323,19 @@ describe("createGlyphLayer", () => {
       width: 24,
       height: 24,
     })) as unknown as HTMLImageElement[];
+  // What the layer draws is a sprite canvas per icon, rasterised once at
+  // creation; this follows a sprite back to the icon it was drawn from.
+  type Source = { id: number } | HTMLCanvasElement;
+  const iconOf = (source: Source): number => {
+    if (!(source instanceof HTMLCanvasElement)) return source.id;
+    const sprite = contexts.find((c) => c.canvas === source);
+    const [image] = (sprite?.drawImage.mock.calls[0] ?? []) as [{ id: number }?];
+    if (!image) throw new Error("drawn from a canvas that is not an icon sprite");
+    return image.id;
+  };
   const drawn = (ctx: FakeContext | undefined) =>
-    ((ctx?.drawImage.mock.calls ?? []) as [{ id: number }, number, number, number, number][]).map(
-      ([image, x, y, w, h]) => ({ id: image.id, x, y, w, h }),
+    ((ctx?.drawImage.mock.calls ?? []) as [Source, number, number, number, number][]).map(
+      ([source, x, y, w, h]) => ({ id: iconOf(source), x, y, w, h }),
     );
   const clear = (ctx: FakeContext | undefined) => {
     ctx?.drawImage.mockClear();
@@ -341,6 +352,50 @@ describe("createGlyphLayer", () => {
       () => null,
     ) as typeof HTMLCanvasElement.prototype.getContext;
     expect(createGlyphLayer({ icons: icons(2), dpr: 1 })).toBeNull();
+  });
+
+  test("rasterises each icon once, at the drawn size, and draws the grid from those", () => {
+    const layer = createGlyphLayer({ icons: icons(3), dpr: 2 });
+    if (!layer) throw new Error("no layer");
+    // The layer's own context, then one per icon.
+    expect(contexts).toHaveLength(4);
+    for (const sprite of contexts.slice(1)) {
+      expect(sprite.canvas.width).toBe(ICON * 2);
+      expect(sprite.canvas.height).toBe(ICON * 2);
+      expect(sprite.drawImage).toHaveBeenCalledTimes(1);
+      expect(sprite.drawImage.mock.calls[0]?.slice(1)).toEqual([0, 0, ICON * 2, ICON * 2]);
+    }
+    layer.resize(300, 200, []);
+    layer.update(TICK_MS * 3);
+    // Every grid draw is from a sprite canvas, never from an image element.
+    const sources = contexts[0]?.drawImage.mock.calls.map(([s]) => s as Source) ?? [];
+    expect(sources.length).toBeGreaterThan(0);
+    for (const s of sources) expect(s).toBeInstanceOf(HTMLCanvasElement);
+    // And the icons were rasterised once: no sprite was drawn to again.
+    for (const sprite of contexts.slice(1)) expect(sprite.drawImage).toHaveBeenCalledTimes(1);
+  });
+
+  test("draws an icon from the image itself when its sprite has no context", () => {
+    let calls = 0;
+    HTMLCanvasElement.prototype.getContext = jest.fn(function (this: HTMLCanvasElement) {
+      calls += 1;
+      // The layer's context, then the first sprite's, then nothing.
+      if (calls > 2) return null;
+      const ctx: FakeContext = { canvas: this, clearRect: jest.fn(), drawImage: jest.fn() };
+      contexts.push(ctx);
+      return ctx as unknown as RenderingContext;
+    }) as typeof HTMLCanvasElement.prototype.getContext;
+    const layer = createGlyphLayer({ icons: icons(2), dpr: 1 });
+    if (!layer) throw new Error("no layer");
+    layer.resize(300, 200, []);
+    const sources = contexts[0]?.drawImage.mock.calls.map(([s]) => s as Source) ?? [];
+    expect(sources.some((s) => s instanceof HTMLCanvasElement)).toBe(true);
+    expect(sources.some((s) => !(s instanceof HTMLCanvasElement) && s.id === 1)).toBe(true);
+    expect(
+      drawn(contexts[0])
+        .map((r) => r.id)
+        .sort(),
+    ).toEqual(expect.arrayContaining([0, 1]));
   });
 
   test("resize sizes the canvas and draws one icon per cell, centred, at the icon size", () => {

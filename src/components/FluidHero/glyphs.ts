@@ -126,6 +126,19 @@ export function createGlyphLayer(options: GlyphOptions): GlyphLayer | null {
   const cell = CELL * options.dpr;
   const icon = ICON * options.dpr;
   const inset = (cell - icon) / 2;
+  // Each icon rasterised once, at the size it is drawn. An SVG image element
+  // is re-rendered from its DOM on every drawImage in WebKit, and the grid
+  // draws a few thousand per tick; a bitmap is a copy. An icon whose sprite
+  // canvas has no 2D context is drawn from the image, as before.
+  const sprites: CanvasImageSource[] = options.icons.map((image) => {
+    const sprite = document.createElement("canvas");
+    sprite.width = icon;
+    sprite.height = icon;
+    const sctx = sprite.getContext("2d");
+    if (!sctx) return image;
+    sctx.drawImage(image, 0, 0, icon, icon);
+    return sprite;
+  });
   let cols = 0;
   let rows = 0;
   let cells: Uint8Array = new Uint8Array(0);
@@ -139,8 +152,8 @@ export function createGlyphLayer(options: GlyphOptions): GlyphLayer | null {
       for (let col = 0; col < cols; col += 1) {
         const index = row * cols + col;
         if (quiet[index]) continue;
-        const image = options.icons[cells[index] ?? 0];
-        if (image) ctx.drawImage(image, col * cell + inset, row * cell + inset, icon, icon);
+        const sprite = sprites[cells[index] ?? 0];
+        if (sprite) ctx.drawImage(sprite, col * cell + inset, row * cell + inset, icon, icon);
       }
     }
   };
