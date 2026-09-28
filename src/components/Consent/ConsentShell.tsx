@@ -160,9 +160,13 @@ export function ConsentShell({
   // The card itself, measured so ScrollToTop can sit above it. See the
   // ResizeObserver effect below.
   const cardRef = useRef<HTMLElement>(null);
-  // False until the first stage change, so the focus effect below does not fire
-  // on mount. See the effect for why that distinction matters.
-  const stageSwitched = useRef(false);
+  // The stage the focus effect below last acted on, so it moves focus only
+  // when the stage actually changed. A one-shot "first run" flag did not
+  // survive React Strict Mode, which runs every effect twice on mount: the
+  // second run saw the flag already set and focused "Choose what to share"
+  // on page load. Comparing against the last stage is true however many
+  // times the effect runs.
+  const lastStage = useRef(expanded);
   const pathname = usePathname();
 
   // Resolve the stored choice after mount, and keep it resolved.
@@ -346,10 +350,8 @@ export function ConsentShell({
     // the banner's button here would steal focus from whatever the visitor was
     // doing when the banner appeared — a 3.2.5 change-on-request failure, and
     // far more disruptive than the problem being solved.
-    if (!stageSwitched.current) {
-      stageSwitched.current = true;
-      return;
-    }
+    if (lastStage.current === expanded) return;
+    lastStage.current = expanded;
     if (expanded) {
       panelRef.current?.focus();
       return;
