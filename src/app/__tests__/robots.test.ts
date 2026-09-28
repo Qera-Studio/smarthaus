@@ -2,7 +2,6 @@
  * @jest-environment node
  */
 import robots from "../robots";
-import { TRAINING_CRAWLERS } from "../../content/crawler-policy";
 
 const env = process.env;
 afterEach(() => {
@@ -17,43 +16,37 @@ const withEnv = (value: string | undefined) => {
 };
 
 describe("robots", () => {
-  it("lets every crawler in on production except the training crawlers, and points at the sitemap", () => {
+  it("lets every crawler in on production, and points at the sitemap", () => {
     expect(withEnv("production")).toEqual({
-      rules: [
-        { userAgent: "*", allow: "/" },
-        { userAgent: [...TRAINING_CRAWLERS], disallow: "/" },
-      ],
+      rules: { userAgent: "*", allow: "/" },
       sitemap: "https://smarthaus.ae/sitemap.xml",
     });
   });
 
-  it("refuses exactly the six training crawlers SEO System §0a names", () => {
-    expect([...TRAINING_CRAWLERS].sort()).toEqual(
-      [
-        "Applebot-Extended",
-        "Bytespider",
-        "CCBot",
-        "ClaudeBot",
-        "GPTBot",
-        "meta-externalagent",
-      ].sort(),
-    );
+  // Decided 2026-09-28: AI crawlers are not refused, training ones included.
+  // One group for everyone means no crawler can be singled out by accident.
+  it("names no crawler, so none is treated differently from the rest", () => {
+    const rules = withEnv("production").rules;
+    const groups = Array.isArray(rules) ? rules : [rules];
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).not.toHaveProperty("disallow");
   });
 
   it.each([
+    "GPTBot",
+    "ClaudeBot",
+    "CCBot",
+    "Google-Extended",
     "OAI-SearchBot",
     "PerplexityBot",
-    "Google-Extended",
-    "Applebot",
     "ChatGPT-User",
     "Googlebot",
-  ])("never refuses %s, a search or user-directed crawler", (bot) => {
-    expect(TRAINING_CRAWLERS as readonly string[]).not.toContain(bot);
+  ])("does not refuse %s", (bot) => {
     const rules = withEnv("production").rules;
     const groups = Array.isArray(rules) ? rules : [rules];
     for (const group of groups) {
       const agents = ([] as string[]).concat(group.userAgent ?? []);
-      if (agents.includes(bot)) expect(group.disallow).toBeUndefined();
+      if (agents.includes(bot) || agents.includes("*")) expect(group.disallow).toBeUndefined();
     }
   });
 

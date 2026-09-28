@@ -16,7 +16,7 @@ Publish the rule, then note the date in `docs/launch-gate/blocked-on-input.md` a
 
 ## AI crawlers: the edge must agree with robots.txt
 
-`robots.txt` refuses the six training crawlers and allows every search and user-directed crawler (`src/content/crawler-policy.ts`, SEO System §0a). A firewall that blocks what robots.txt allows is a config that lies: answer engines are refused at the edge and no SEO tool shows it. In **Firewall**, check that no managed rule or bot-protection setting blocks OAI-SearchBot, PerplexityBot, ChatGPT-User, Applebot or Googlebot. Blocking the training six there as well is optional; robots.txt already asks them to stay out.
+`robots.txt` allows every crawler, AI training crawlers included (`src/app/robots.ts`, decided 2026-09-28). A firewall that blocks what robots.txt allows is a config that lies: answer engines are refused at the edge and no SEO tool shows it. In **Firewall**, check that no managed rule or bot-protection setting blocks AI crawlers, search crawlers or Googlebot.
 
 ## What the in-code limiter relies on
 

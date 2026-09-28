@@ -152,13 +152,9 @@ test.describe("files crawlers and researchers read", () => {
     const body = await (await request.get("/robots.txt")).text();
     expect(body).toMatch(/User-Agent: \*\s+Allow: \//i);
     expect(body).toContain("Sitemap: https://smarthaus.ae/sitemap.xml");
-    // The * group allows everything; only the training group is refused.
-    const groups = body.split(/\n\s*\n/);
-    const star = groups.find((group) => /^User-Agent: \*$/im.test(group))!;
-    expect(star).not.toMatch(/Disallow:/i);
-    const training = groups.find((group) => /User-Agent: GPTBot/i.test(group))!;
-    expect(training).toMatch(/User-Agent: ClaudeBot/i);
-    expect(training).toMatch(/Disallow: \/\s*$/im);
-    expect(body).not.toMatch(/User-Agent: (OAI-SearchBot|PerplexityBot|ChatGPT-User)/i);
+    // One group, for every crawler, AI training crawlers included
+    // (decided 2026-09-28). Nothing is disallowed anywhere.
+    expect(body).not.toMatch(/Disallow:/i);
+    expect(body.match(/User-Agent:/gi)).toHaveLength(1);
   });
 });
