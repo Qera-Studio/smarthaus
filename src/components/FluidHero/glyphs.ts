@@ -2,16 +2,16 @@ import { HARDWARE_ITEMS } from "@/content/hardware";
 
 /**
  * The layer the liquid reveals: the whole field as a grid of the hardware
- * icons, scrambled, every icon turning at its own speed and a few cells
- * reassigned every so often, so what shows through the pool is always
- * moving. Drawn on an offscreen 2D canvas that fluid.ts uploads as a
- * texture; the display shader reads its alpha and shows it only where the
- * liquid is dark, so the pool acts as a lamp.
+ * icons, and on every tick every cell flips to a different one of the eight,
+ * so what shows through the pool flickers like a character grid and no icon
+ * sits anywhere for longer than a tick. Drawn on an offscreen 2D canvas that
+ * fluid.ts uploads as a texture; the display shader reads its alpha and
+ * shows it only where the liquid is dark, so the pool acts as a lamp.
  *
  * The grid keeps clear of the copy: small icons under the headline would
  * cost it its contrast, so cells that touch a quiet rect stay empty.
  *
- * Nothing here touches WebGL. The scramble, the quiet mask and the shuffle
+ * Nothing here touches WebGL. The scramble, the quiet mask and the flip
  * are plain functions so `__tests__/glyphs.test.ts` can pin them without a
  * GPU or an image decoder.
  *
@@ -29,10 +29,7 @@ export interface GlyphLayer {
   readonly canvas: HTMLCanvasElement;
   /** Lay the grid out for a canvas of this size (device pixels). */
   resize(width: number, height: number, quiet: readonly Rect[]): void;
-  /**
-   * Advance the spin and, on a tick, reshuffle a few cells; redraw at most
-   * every FRAME_MS. True when the canvas changed.
-   */
+  /** On a new tick, flip every cell and redraw. True when the canvas changed. */
   update(now: number): boolean;
   dispose(): void;
 }
@@ -44,14 +41,8 @@ export interface GlyphLayer {
 export const CELL = 30;
 /** Icon size in CSS px, centred in its cell. */
 export const ICON = 18;
-/** How often cells are reassigned, in ms. */
-export const SHUFFLE_MS = 400;
-/** The share of cells reassigned per tick. */
-export const SHUFFLE_SHARE = 0.06;
-/** The fastest an icon turns, in radians per second, either way. */
-export const SPIN = 1.2;
-/** The shortest gap between redraws, in ms: about 30 a second. */
-export const FRAME_MS = 32;
+/** How often every cell flips, in ms. Nothing stays put longer than this. */
+export const TICK_MS = 50;
 
 export const ICON_URLS = HARDWARE_ITEMS.map((item) => `/hero/hardware/icons/${item.icon}`);
 
@@ -103,29 +94,17 @@ export function quietCells(
 }
 
 /**
- * Reassign `share` of the cells to a different icon each. Returns the
- * indices it changed, so a caller can tell a real change from a no-op.
+ * Give every cell a different icon from the one it has, chosen at random.
+ * Returns false when there is nothing to flip to (fewer than two icons).
  */
-export function shuffle(
-  cells: Uint8Array,
-  iconCount: number,
-  share: number,
-  random: () => number,
-): number[] {
-  if (iconCount < 2 || cells.length === 0) return [];
-  const changed: number[] = [];
-  const count = Math.max(1, Math.round(cells.length * share));
-  for (let i = 0; i < count; i += 1) {
-    const index = Math.floor(random() * cells.length);
-    // A cell picked twice in one tick could land back on its old icon.
-    if (changed.includes(index)) continue;
-    const current = cells[index] ?? 0;
+export function flip(cells: Uint8Array, iconCount: number, random: () => number): boolean {
+  if (iconCount < 2) return false;
+  for (let i = 0; i < cells.length; i += 1) {
+    const current = cells[i] ?? 0;
     // Any icon but the one already there.
-    const next = (current + 1 + Math.floor(random() * (iconCount - 1))) % iconCount;
-    cells[index] = next;
-    changed.push(index);
+    cells[i] = (current + 1 + Math.floor(random() * (iconCount - 1))) % iconCount;
   }
-  return changed;
+  return cells.length > 0;
 }
 
 export interface GlyphOptions {
@@ -146,36 +125,24 @@ export function createGlyphLayer(options: GlyphOptions): GlyphLayer | null {
 
   const cell = CELL * options.dpr;
   const icon = ICON * options.dpr;
+  const inset = (cell - icon) / 2;
   let cols = 0;
   let rows = 0;
   let cells: Uint8Array = new Uint8Array(0);
   let quiet: Uint8Array = new Uint8Array(0);
-  let spins: Float32Array = new Float32Array(0);
-  let phases: Float32Array = new Float32Array(0);
   let random = seeded(1);
   let lastTick = -1;
-  let lastDraw = -Infinity;
 
-  // Each icon is drawn about its own centre, turned by its phase plus its
-  // spin times the clock. setTransform rather than save/rotate/restore: it
-  // is one call per cell, and there are thousands of cells.
-  const draw = (now: number) => {
+  const draw = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const seconds = now / 1000;
     for (let row = 0; row < rows; row += 1) {
       for (let col = 0; col < cols; col += 1) {
         const index = row * cols + col;
         if (quiet[index]) continue;
         const image = options.icons[cells[index] ?? 0];
-        if (!image) continue;
-        const angle = (phases[index] ?? 0) + (spins[index] ?? 0) * seconds;
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        ctx.setTransform(cos, sin, -sin, cos, col * cell + cell / 2, row * cell + cell / 2);
-        ctx.drawImage(image, -icon / 2, -icon / 2, icon, icon);
+        if (image) ctx.drawImage(image, col * cell + inset, row * cell + inset, icon, icon);
       }
     }
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 
   return {
@@ -189,26 +156,16 @@ export function createGlyphLayer(options: GlyphOptions): GlyphLayer | null {
       random = seeded(width * 73856093 + height * 19349663);
       cells = scramble(cols * rows, options.icons.length, random);
       quiet = quietCells(cols, rows, cell, quietRects);
-      spins = new Float32Array(cols * rows);
-      phases = new Float32Array(cols * rows);
-      for (let i = 0; i < spins.length; i += 1) {
-        spins[i] = (random() * 2 - 1) * SPIN;
-        phases[i] = random() * Math.PI * 2;
-      }
       lastTick = -1;
-      lastDraw = -Infinity;
-      draw(0);
+      draw();
     },
 
     update(now) {
-      if (now - lastDraw < FRAME_MS) return false;
-      lastDraw = now;
-      const tick = Math.floor(now / SHUFFLE_MS);
-      if (tick !== lastTick) {
-        lastTick = tick;
-        shuffle(cells, options.icons.length, SHUFFLE_SHARE, random);
-      }
-      draw(now);
+      const tick = Math.floor(now / TICK_MS);
+      if (tick === lastTick) return false;
+      lastTick = tick;
+      if (!flip(cells, options.icons.length, random)) return false;
+      draw();
       return true;
     },
 

@@ -83,10 +83,9 @@ describe("CLAUDE.md records the glyph layer inside the same exception", () => {
 });
 
 describe("CLAUDE.md describes the layer as it is", () => {
-  test("a scrambled, reshuffled grid of the icons, not characters", () => {
+  test("a scrambled, flipping grid of the icons, not characters", () => {
     expect(section).toMatch(/scrambled grid/);
-    expect(section).toMatch(/reshuffles a few cells/);
-    expect(section).toMatch(/each icon turning at its own speed/);
+    expect(section).toMatch(/flips every cell to a different icon every 50ms/);
     expect(section).not.toMatch(/ASCII/);
   });
 });
