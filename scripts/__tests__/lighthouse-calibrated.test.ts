@@ -11,20 +11,23 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { isolatedEnv } from "../test-support/isolated-env";
 
 const SCRIPT = path.join(__dirname, "../lighthouse-calibrated.mjs");
 
 /** Evaluate an expression against the script's exports, returning JSON. */
 function run(expression: string): unknown {
-  const out = execFileSync(
-    process.execPath,
-    [
-      "--input-type=module",
-      "-e",
-      `import * as m from ${JSON.stringify(SCRIPT)}; let r; try { r = { ok: ${expression} }; } catch (e) { r = { error: e.message }; } console.log(JSON.stringify(r));`,
-    ],
-    { encoding: "utf8" },
-  );
+  // Built apart from the spawn: isolated-env.test.ts reads each spawn call up
+  // to its first ");", which this code string would otherwise contain.
+  const code = [
+    `import * as m from ${JSON.stringify(SCRIPT)};`,
+    `let r; try { r = { ok: ${expression} }; } catch (e) { r = { error: e.message }; }`,
+    "console.log(JSON.stringify(r))",
+  ].join(" ");
+  const out = execFileSync(process.execPath, ["--input-type=module", "-e", code], {
+    encoding: "utf8",
+    env: isolatedEnv(),
+  });
   return JSON.parse(out.trim().split("\n").at(-1)!);
 }
 
