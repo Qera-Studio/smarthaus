@@ -14,7 +14,7 @@ import { test, expect } from "./fixtures";
 const BUDGETS = [
   { path: "/", page: 1150, footer: 580 },
   { path: "/contact", page: 900, footer: 580 },
-  { path: "/pricing", page: 2650, footer: 580 },
+  { path: "/pricing", page: 2100, footer: 580 },
 ];
 
 test.beforeEach(({}, info) => {
