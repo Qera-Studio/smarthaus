@@ -9,7 +9,14 @@ import { mailFor, uniqueName } from "./mail";
  *
  * Each test pins its own address, per project and retry, because locally every
  * project shares one server and would otherwise share one bucket.
+ *
+ * Slow, by design: each test is six or seven full page loads and submits,
+ * hydration waited for every time, on WebKit in the iPhone project. Inside
+ * the default 30s budget that failed once and passed on retry on CI's loaded
+ * runner (2026-09-28, "another visitor is unaffected"), and the no-flaky rule
+ * made it a red required check. Three times the budget is the sends, not slack.
  */
+test.describe.configure({ timeout: 90_000 });
 
 async function sendShort(page: Page, name: string) {
   await page.goto("/");
