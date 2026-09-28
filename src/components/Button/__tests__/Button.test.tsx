@@ -60,6 +60,40 @@ describe("Button", () => {
       </Button>,
     );
     expect(screen.getByRole("link", { name: "Go" })).toHaveAttribute("data-variant", "outline");
+
+    rerender(
+      <Button href="/a" variant="soft">
+        Go
+      </Button>,
+    );
+    expect(screen.getByRole("link", { name: "Go" })).toHaveAttribute("data-variant", "soft");
+  });
+
+  it("defaults to the md size, so every existing call site is unchanged", () => {
+    render(<Button href="/a">Go</Button>);
+    expect(screen.getByRole("link", { name: "Go" })).toHaveAttribute("data-size", "md");
+  });
+
+  it("marks the sm size on both arms", () => {
+    const { rerender } = render(
+      <Button href="/a" size="sm">
+        Go
+      </Button>,
+    );
+    expect(screen.getByRole("link", { name: "Go" })).toHaveAttribute("data-size", "sm");
+
+    rerender(<Button size="sm">Go</Button>);
+    const button = screen.getByRole("button", { name: "Go" });
+    expect(button).toHaveAttribute("data-size", "sm");
+    // Size is presentation only: it must not change what the element is.
+    expect(button).toHaveAttribute("type", "button");
+  });
+
+  it("marks the soft variant on the button arm too", () => {
+    // The Maple banner uses it as a link; the button arm must carry it the
+    // same way, or a future form using it would render unstyled.
+    render(<Button variant="soft">Send</Button>);
+    expect(screen.getByRole("button", { name: "Send" })).toHaveAttribute("data-variant", "soft");
   });
 
   it("stays focusable while loading, announced as busy and unavailable", () => {
