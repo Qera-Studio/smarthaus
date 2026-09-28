@@ -315,7 +315,7 @@ No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget c
 **What it must always do** (and what to check if it is ever touched):
 
 - **Gate `prefers-reduced-motion` in JS.** Same trap as the two above: `_reset.scss` cannot stop a rAF loop.
-- **Gate Save-Data and 2g/3g before the import.** The chunk must not be fetched on a metered connection.
+- **Gate Save-Data before the import.** The chunk must not be fetched on a connection the visitor has marked as metered. The connection estimate (`effectiveType`) is deliberately not a gate, unlike the villa canvas: Chromium derives it from recent round-trip times, so a phone hotspot or a jittery Wi-Fi reads as "3g" at full throughput (seen 2026-09-28 on Shivanshu's own machine, hero static for no reason), and the chunk it would protect is about 9KB gzipped against the villa's 716KB model.
 - **Keep the CSS ground.** The section paints brown-100 with a hint of brown-800 from the stylesheet. Every gate, every WebGL failure, and every frame before the first draw shows that. The section never depends on the canvas.
 - **Cap the ink.** The display shader saturates at a 60% mix of brown-100 and brown-700, because `--color-text-primary` sits on top of the field: 4.7:1 at the cap, 4.2:1 at a 65% mix. Contrast is a floor; the effect is not.
 - **Run only on screen, in a visible tab, and while there is ink to move.** One IntersectionObserver, `visibilitychange`, and the simulation's own `active` flag each stop the loop.

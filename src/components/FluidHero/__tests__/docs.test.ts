@@ -32,7 +32,9 @@ describe("CLAUDE.md records the third exception", () => {
   test("lists every gate the island enforces", () => {
     expect(section).toMatch(/prefers-reduced-motion/);
     expect(section).toMatch(/Save-Data/);
-    expect(section).toMatch(/2g\/3g/);
+    // The connection estimate is deliberately not a gate; the record says why.
+    expect(section).toMatch(/effectiveType/);
+    expect(section).toMatch(/not a gate/);
     expect(section).toMatch(/IntersectionObserver/);
     expect(section).toMatch(/visibilitychange/);
     expect(section).toMatch(/`active` flag/);
