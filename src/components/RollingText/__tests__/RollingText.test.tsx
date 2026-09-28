@@ -65,4 +65,35 @@ describe("RollingText", () => {
     expect(container.firstElementChild!.className.split(" ")).toHaveLength(2);
     expect(container.firstElementChild).toHaveClass("extra");
   });
+
+  describe("by word", () => {
+    it("rolls the whole word as one piece: three elements plus one, whatever its length", () => {
+      const word = "Smart locks and access";
+      const { container } = render(<RollingText by="word">{word}</RollingText>);
+      const root = container.firstElementChild!;
+      expect(root.querySelectorAll("*").length + 1).toBe(4);
+      const animated = root.querySelector('[aria-hidden="true"]')!;
+      expect(animated.children).toHaveLength(1);
+      expect(animated.textContent).toBe(word);
+    });
+
+    it("still announces the word once, from the label", () => {
+      render(
+        <a href="/x">
+          <RollingText by="word">Care plans</RollingText>
+        </a>,
+      );
+      expect(screen.getByRole("link")).toHaveAccessibleName("Care plans");
+    });
+
+    it("keeps real spaces as spaces, since the word is one line of text", () => {
+      const { container } = render(<RollingText by="word">Care plans</RollingText>);
+      expect(container.querySelector('[aria-hidden="true"]')!.textContent).toBe("Care plans");
+    });
+  });
+
+  it("rolls by letter unless told otherwise", () => {
+    const { container } = render(<RollingText>Nav</RollingText>);
+    expect(container.querySelector('[aria-hidden="true"]')!.children).toHaveLength(3);
+  });
 });

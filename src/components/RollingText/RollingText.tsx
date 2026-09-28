@@ -4,6 +4,14 @@ type RollingTextProps = {
   children: string;
   /** Seconds between each character starting its roll. */
   stagger?: number;
+  /**
+   * `letter` rolls each character in turn; `word` rolls the whole word as one
+   * piece, in three elements instead of one per character. The footer uses
+   * `word`: its ~25 links were ~375 of the homepage's elements, and cutting
+   * them was what got blocking time on a mid-range phone under budget
+   * (decided by Shivanshu, 2026-09-28). The nav keeps `letter`.
+   */
+  by?: "letter" | "word";
   className?: string;
 };
 
@@ -23,7 +31,12 @@ type RollingTextProps = {
  * The animated copy is aria-hidden and the real text sits beside it, so
  * screen readers announce the word once, not letter by letter.
  */
-export function RollingText({ children, stagger = 0.02, className }: RollingTextProps) {
+export function RollingText({
+  children,
+  stagger = 0.02,
+  by = "letter",
+  className,
+}: RollingTextProps) {
   return (
     <span
       className={[styles.roll, className].filter(Boolean).join(" ")}
@@ -38,13 +51,17 @@ export function RollingText({ children, stagger = 0.02, className }: RollingText
       <span className={styles.label}>{children}</span>
 
       <span className={styles.animation} aria-hidden="true">
-        {[...children].map((char, i) => (
-          // Characters have no stable identity; index is the correct key.
-          <span key={i} className={styles.char}>
-            {/* Non-breaking space keeps the cell width for real spaces. */}
-            {char === " " ? " " : char}
-          </span>
-        ))}
+        {by === "word" ? (
+          <span className={styles.char}>{children}</span>
+        ) : (
+          [...children].map((char, i) => (
+            // Characters have no stable identity; index is the correct key.
+            <span key={i} className={styles.char}>
+              {/* Non-breaking space keeps the cell width for real spaces. */}
+              {char === " " ? " " : char}
+            </span>
+          ))
+        )}
       </span>
     </span>
   );

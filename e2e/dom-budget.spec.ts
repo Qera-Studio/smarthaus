@@ -6,15 +6,15 @@ import { test, expect } from "./fixtures";
  * On 2026-09-28 the footer alone was 1,284 of the homepage's 1,870 elements,
  * almost all of them RollingText's four spans per letter, and CI Lighthouse
  * measured 350-400ms of blocking time. One span per letter took the homepage
- * to 911. The budgets are the measured counts plus about a quarter, so growth
+ * to 911, and rolling the footer's links by whole word to 658. The budgets are the measured counts plus about a quarter, so growth
  * is a decision rather than a drift.
  *
  * Desktop Chrome only: the markup is the same on every device.
  */
 const BUDGETS = [
-  { path: "/", page: 1150, footer: 580 },
-  { path: "/contact", page: 900, footer: 580 },
-  { path: "/pricing", page: 2100, footer: 580 },
+  { path: "/", page: 820, footer: 260 },
+  { path: "/contact", page: 580, footer: 260 },
+  { path: "/pricing", page: 1800, footer: 260 },
 ];
 
 test.beforeEach(({}, info) => {

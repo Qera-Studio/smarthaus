@@ -47,6 +47,8 @@
   // into the window as the character leaves it.
   .char {
     display: block;
+    // A whole word in `word` mode must stay on one line, as the label does.
+    white-space: nowrap;
     text-shadow: 0 1lh currentColor;
     transition-property: transform;
     transition-duration: var(--roll-duration);
