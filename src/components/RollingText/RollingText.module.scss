@@ -36,51 +36,57 @@
     // .label is transparent to stay in the a11y tree, so the visible copy must
     // take the colour from the link itself.
     color: currentColor;
-  }
-
-  // Each character clips itself to one row.
-  .char {
-    display: block;
+    // The clip window for every character at once: one row. Each character
+    // used to clip itself, which took a wrapper span per character.
     overflow: hidden;
     block-size: 1lh;
   }
 
-  .charColumn {
-    display: flex;
-    flex-direction: column;
+  // One span per character. The incoming copy is its text-shadow, drawn one
+  // row below in the same ink, so moving the span up one row rolls the copy
+  // into the window as the character leaves it.
+  .char {
+    display: block;
+    text-shadow: 0 1lh currentColor;
     transition-property: transform;
     transition-duration: var(--roll-duration);
     transition-timing-function: var(--roll-ease);
-    // Per-character stagger, set inline by the component.
-    transition-delay: var(--char-delay, 0s);
+    transition-delay: calc(var(--char-index, 0) * var(--roll-stagger, 0.02s));
   }
 
-  .charIn,
-  .charOut {
-    // Two rows stacked: visible copy on top, replacement below. Hovering
-    // slides the column up by exactly one row.
-    display: block;
-    block-size: 1lh;
+  // The stagger, from position rather than an inline style on every span.
+  // Labels beyond this length share the last delay, which is imperceptible.
+  @for $i from 1 through 48 {
+    .char:nth-child(#{$i}) {
+      --char-index: #{$i - 1};
+    }
   }
 
   // Hover and focus both trigger it, so keyboard users get the same feedback.
   // :focus-visible on an ancestor link is matched via :focus-within.
-  .roll:hover,
-  .roll:focus-within {
-    .charColumn {
-      transform: translateY(-1lh);
-    }
+  .roll:hover .char,
+  .roll:focus-within .char {
+    transform: translateY(-1lh);
   }
 
   // _reset.scss zeroes transition-duration globally under reduced motion, so
-  // the column would jump rather than roll. Hold it at the top row instead:
-  // the text simply stays put.
+  // the characters would jump rather than roll. Hold them at the top row
+  // instead: the text simply stays put.
   @media (prefers-reduced-motion: reduce) {
-    .roll:hover,
-    .roll:focus-within {
-      .charColumn {
-        transform: none;
-      }
+    .roll:hover .char,
+    .roll:focus-within .char {
+      transform: none;
+    }
+  }
+
+  // Forced colours drops text-shadow, and with it the incoming copy: a roll
+  // there would slide the word out of its window and show nothing. The text
+  // stays put, and the link's own forced-colours focus and hover styling is
+  // the feedback.
+  @media (forced-colors: active) {
+    .roll:hover .char,
+    .roll:focus-within .char {
+      transform: none;
     }
   }
 }
