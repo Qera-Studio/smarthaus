@@ -168,6 +168,8 @@ Values owned by the system (via Owned Facts Register) — do not restate, point 
 
   **Measured, not simulated** (decided 2026-09-27). `lighthouserc.json` runs mobile with `throttlingMethod: "devtools"`: a genuinely slowed network and 4x CPU, timed as it happens. Lighthouse's default simulation reported LCP 4.7s on `/` while the trace showed the poster painted at 82ms, because it charges the page for JavaScript chunks that did not hold the paint. The measured run found the one real problem the simulation hid among false ones: the consent banner painted only after hydration and was `/contact`'s LCP at 4.1s on a first visit. It now paints from the server HTML (`src/lib/consent-boot.ts`), and `/contact` measures 1.7s. `/pricing` is noindex, so it is held to every SEO audit except `is-crawlable`; `src/app/__tests__/sitemap.test.ts` ties that exemption to the page's own metadata
 
+  **Calibrated, and two assertions temporarily warnings** (decided 2026-09-28). `scripts/lighthouse-calibrated.mjs` sets the CPU slowdown from each machine's benchmark so every run emulates one target phone, the slower GitHub runner at 4x; a fixed 4x passed or failed by which runner CI drew. On that phone blocking time measured `/` 269ms, `/pricing` 315ms, `/contact` 132ms against 200ms, so the performance score and TBT are warnings until Phase 5b, recorded in `docs/launch-gate/accepted-risks.md`. Every other assertion is an error, and a test fails if anything else is downgraded
+
 ---
 
 ## Accessibility — AA with free AAA upgrades

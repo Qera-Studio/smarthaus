@@ -84,6 +84,43 @@ describe("the Lighthouse gate", () => {
     expect(lhci.ci.collect.settings).toEqual({ throttlingMethod: "devtools" });
   });
 
+  it("errors on every assertion except the two the accepted-risk record names", () => {
+    // Phase 5 merged with performance and TBT as warnings (decided
+    // 2026-09-28); Phase 5b restores them. This fails if anything else is
+    // downgraded, and fails once the risk row is resolved while they are
+    // still warnings, so the downgrade cannot outlive its record.
+    const warns = groups.flatMap((group) =>
+      Object.entries(group.assertions)
+        .filter(([, value]) => Array.isArray(value) && value[0] === "warn")
+        .map(([id]) => id),
+    );
+    const risks = readFileSync(
+      join(__dirname, "../../../docs/launch-gate/accepted-risks.md"),
+      "utf8",
+    );
+    const open = risks
+      .split("\n")
+      .find((line) => line.includes("Total Blocking Time are warnings"));
+    if (warns.length > 0) {
+      expect(warns.sort()).toEqual(["categories:performance", "total-blocking-time"]);
+      expect(open).toBeDefined(); // an accepted-risk row must name the warnings
+      // The last cell is "Resolved": empty while the warnings stand.
+      expect(
+        open!
+          .trim()
+          .replace(/\|\s*$/, "")
+          .split("|")
+          .at(-1)!
+          .trim(),
+      ).toBe("");
+    }
+    for (const group of groups) {
+      for (const value of Object.values(group.assertions)) {
+        expect(["error", "warn"]).toContain((value as [string])[0]);
+      }
+    }
+  });
+
   it("holds every URL to the performance, accessibility and budget assertions", () => {
     for (const url of urls) {
       const ids = groupsFor(url).flatMap((group) => Object.keys(group.assertions));

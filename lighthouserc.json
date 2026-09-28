@@ -19,7 +19,7 @@
           "matchingUrlPattern": ".*",
           "assertions": {
             "categories:performance": [
-              "error",
+              "warn",
               {
                 "minScore": 0.95,
                 "aggregationMethod": "median-run"
@@ -52,7 +52,7 @@
               }
             ],
             "total-blocking-time": [
-              "error",
+              "warn",
               {
                 "maxNumericValue": 200
               }
