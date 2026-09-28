@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Image from "next/image";
 
 import {
@@ -89,6 +90,8 @@ export default function ContactPage() {
   return (
     <>
       <JsonLd data={pageGraph(PAGE)} />
+      {/* Sections as Suspense boundaries, so hydration yields between them;
+          see the note in layout.tsx. */}
       <div className={styles.page}>
         <header className={styles.header}>
           <h1 className={styles.title}>Book a site visit</h1>
@@ -98,94 +101,102 @@ export default function ContactPage() {
           </p>
         </header>
 
-        <section className={styles.section} aria-labelledby="book-a-visit">
-          <h2 className={styles.sectionTitle} id="book-a-visit">
-            Book a visit
-          </h2>
-          <div className={styles.sectionBody}>
-            <ContactForm />
-          </div>
-        </section>
+        <Suspense>
+          <section className={styles.section} aria-labelledby="book-a-visit">
+            <h2 className={styles.sectionTitle} id="book-a-visit">
+              Book a visit
+            </h2>
+            <div className={styles.sectionBody}>
+              <ContactForm />
+            </div>
+          </section>
+        </Suspense>
 
-        <section className={styles.section} aria-labelledby="get-in-touch">
-          <h2 className={styles.sectionTitle} id="get-in-touch">
-            Get In Touch
-          </h2>
-          <ul className={styles.channels}>
-            {CONTACT_ROWS.map(({ label, value, href, external }) => (
-              <li key={label} className={styles.channel}>
-                <span className={styles.channelLabel}>{label}</span>
-                <a
-                  className={styles.channelValue}
-                  href={href}
-                  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                >
-                  {value}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Suspense>
+          <section className={styles.section} aria-labelledby="get-in-touch">
+            <h2 className={styles.sectionTitle} id="get-in-touch">
+              Get In Touch
+            </h2>
+            <ul className={styles.channels}>
+              {CONTACT_ROWS.map(({ label, value, href, external }) => (
+                <li key={label} className={styles.channel}>
+                  <span className={styles.channelLabel}>{label}</span>
+                  <a
+                    className={styles.channelValue}
+                    href={href}
+                    {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  >
+                    {value}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </Suspense>
 
-        <section className={styles.section} aria-labelledby="location">
-          <h2 className={styles.sectionTitle} id="location">
-            Location
-          </h2>
-          <div className={styles.location}>
-            <div className={styles.locationImage}>
-              {/* Served through next/image so the 3024x4032 source is re-encoded
+        <Suspense>
+          <section className={styles.section} aria-labelledby="location">
+            <h2 className={styles.sectionTitle} id="location">
+              Location
+            </h2>
+            <div className={styles.location}>
+              <div className={styles.locationImage}>
+                {/* Served through next/image so the 3024x4032 source is re-encoded
                   to AVIF/WebP at the widths actually needed. sizes is explicit:
                   without it the largest candidate is picked at every viewport. */}
-              <Image
-                src="/contact-location.jpg"
-                alt="Downtown Dubai at dusk, looking along Sheikh Zayed Road towards the Burj Khalifa"
-                fill
-                sizes="(min-width: 1024px) 25vw, (min-width: 768px) 45vw, 90vw"
-                className={styles.locationPhoto}
-              />
-            </div>
+                <Image
+                  src="/contact-location.jpg"
+                  alt="Downtown Dubai at dusk, looking along Sheikh Zayed Road towards the Burj Khalifa"
+                  fill
+                  sizes="(min-width: 1024px) 25vw, (min-width: 768px) 45vw, 90vw"
+                  className={styles.locationPhoto}
+                />
+              </div>
 
-            {/* data-ground: this panel paints brown-900, where the default
+              {/* data-ground: this panel paints brown-900, where the default
                 brown-900 cursor dot is invisible. See globals.scss. */}
-            <div className={styles.locationCard} data-ground="dark">
-              <address className={styles.address}>
-                {ADDRESS_LINES.map((line) => (
-                  <span key={line} className={styles.addressLine}>
-                    {line}
-                  </span>
-                ))}
-              </address>
-              <a
-                className={styles.outlineCta}
-                href={MAPS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Get directions
-              </a>
+              <div className={styles.locationCard} data-ground="dark">
+                <address className={styles.address}>
+                  {ADDRESS_LINES.map((line) => (
+                    <span key={line} className={styles.addressLine}>
+                      {line}
+                    </span>
+                  ))}
+                </address>
+                <a
+                  className={styles.outlineCta}
+                  href={MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Get directions
+                </a>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </Suspense>
 
-        <section className={styles.section} aria-labelledby="faqs">
-          <h2 className={styles.sectionTitle} id="faqs">
-            Frequently Asked Questions
-          </h2>
-          <div className={styles.faqs}>
-            {FAQS.map(({ q, a }) => (
-              // Native details/summary: keyboard operable and open without JS for
-              // free, and it costs no client component. `name` makes them an
-              // exclusive accordion, which browsers implement natively.
-              <details key={q} className={styles.faq} name="contact-faq">
-                <summary className={styles.faqQuestion}>
-                  <span>{q}</span>
-                  <Chevron />
-                </summary>
-                <p className={styles.faqAnswer}>{a}</p>
-              </details>
-            ))}
-          </div>
-        </section>
+        <Suspense>
+          <section className={styles.section} aria-labelledby="faqs">
+            <h2 className={styles.sectionTitle} id="faqs">
+              Frequently Asked Questions
+            </h2>
+            <div className={styles.faqs}>
+              {FAQS.map(({ q, a }) => (
+                // Native details/summary: keyboard operable and open without JS for
+                // free, and it costs no client component. `name` makes them an
+                // exclusive accordion, which browsers implement natively.
+                <details key={q} className={styles.faq} name="contact-faq">
+                  <summary className={styles.faqQuestion}>
+                    <span>{q}</span>
+                    <Chevron />
+                  </summary>
+                  <p className={styles.faqAnswer}>{a}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+        </Suspense>
       </div>
     </>
   );

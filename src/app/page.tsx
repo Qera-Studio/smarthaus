@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Care } from "../components/Care";
 import { Hardware } from "../components/Hardware";
 import { Hero } from "../components/Hero";
@@ -23,20 +24,33 @@ const PAGE = {
 export const metadata = pageMetadata(PAGE);
 
 export default function Home() {
-  // The hero carries the page's h1.
+  // The hero carries the page's h1. Each section is its own Suspense
+  // boundary so hydration yields between them; see the note in layout.tsx.
   return (
     <>
       <JsonLd data={pageGraph(PAGE)} />
-      <Hero />
+      <Suspense>
+        <Hero />
+      </Suspense>
       {/* What the house is made of, then how it gets installed. */}
-      <Hardware />
-      <Process />
+      <Suspense>
+        <Hardware />
+      </Suspense>
+      <Suspense>
+        <Process />
+      </Suspense>
       {/* Price before maintenance: what a system costs, then what keeping it
           running costs, then the enquiry. */}
-      <Pricing />
-      <Care />
+      <Suspense>
+        <Pricing />
+      </Suspense>
+      <Suspense>
+        <Care />
+      </Suspense>
       {/* Last thing on the page, directly above the footer. */}
-      <HomeEnquiry />
+      <Suspense>
+        <HomeEnquiry />
+      </Suspense>
     </>
   );
 }
