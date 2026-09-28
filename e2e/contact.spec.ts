@@ -251,3 +251,28 @@ test("the required marker is visible text, not colour alone", async ({ page }) =
   // A required marker a colourblind visitor cannot perceive is not a marker.
   await expect(form(page).getByText("(required)")).toBeVisible();
 });
+
+// Validation is server-only. The form once imported three plain constants
+// from the Zod schema module, which shipped and ran all of Zod in the
+// browser at load (src/lib/contact-fields.ts). Nothing the browser runs may
+// contain it; Zod's class names survive minification as strings.
+test.describe("the browser's share of the form", () => {
+  for (const path of ["/contact", "/"]) {
+    test(`${path} loads no Zod`, async ({ page }) => {
+      const scripts: string[] = [];
+      page.on("response", async (response) => {
+        if (response.request().resourceType() === "script") scripts.push(response.url());
+      });
+      await page.goto(path);
+      await page.waitForLoadState("networkidle");
+      expect(scripts.length).toBeGreaterThan(0);
+      for (const url of scripts) {
+        const body = await (await page.request.get(url)).text();
+        expect({ url, zod: /ZodObject|ZodError|ZodString/.test(body) }).toEqual({
+          url,
+          zod: false,
+        });
+      }
+    });
+  }
+});

@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 
 import { Button } from "../../components/Button";
-import { HONEYPOT_FIELD, INTERESTS, MAX_LENGTH } from "../../lib/contact-schema";
+import { HONEYPOT_FIELD, INTERESTS, MAX_LENGTH } from "../../lib/contact-fields";
 import { CONSENT_FORM_COPY } from "../../content/consent";
 import { whatsappLink } from "../../lib/contact";
 import { submitEnquiry, submitShortEnquiry } from "./actions";

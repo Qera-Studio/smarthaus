@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { HONEYPOT_FIELD, INTERESTS, MAX_LENGTH } from "./contact-fields";
+
+// Re-exported so the server side reads the whole contract from one place.
+// The browser imports ./contact-fields directly and never loads Zod.
+export { HONEYPOT_FIELD, INTERESTS, MAX_LENGTH };
 
 /**
  * The enquiry form's contract. The server is the only validator that matters —
@@ -7,15 +12,6 @@ import { z } from "zod";
  * Error strings live here rather than in the component so the message a field
  * shows and the message the server produced cannot drift apart.
  */
-
-/** Verbatim from the brief. The value IS the label — there is no code to map. */
-export const INTERESTS = [
-  "Smart home for my villa",
-  "Cameras and security",
-  "Both",
-  "I'm a designer or project manager",
-  "Something else",
-] as const;
 
 /**
  * A UAE number, written the way people actually write it: `+971 54 375 5150`,
@@ -45,24 +41,6 @@ const normalisePhone = (value: string) =>
  * +44 number in the field is far more likely a typo than a real lead.
  */
 const UAE_PHONE = /^\+9715\d{8}$/;
-
-/**
- * Length caps (Security System §4: bound every input). Generous for a person,
- * useless for a script pasting a novel into the inbox. The form sets the same
- * numbers as `maxLength`, so a visitor can never type past one and meet this
- * error; the server check is for requests that did not come from the form.
- * The two count differently, in the safe direction: the browser's maxLength
- * counts UTF-16 units (an emoji is two), Zod counts code points (an emoji is
- * one). The browser is always the stricter, so the server never refuses what
- * the field allowed.
- */
-export const MAX_LENGTH = {
-  name: 120,
-  phone: 32,
-  email: 254,
-  community: 120,
-  message: 2000,
-} as const;
 
 const name = z
   .string()
@@ -195,9 +173,3 @@ export const shortContactSchema = baseSchema.omit({
 
 export type ContactInput = z.input<typeof contactSchema>;
 export type ContactData = z.infer<typeof contactSchema>;
-
-/**
- * The honeypot's field name. `company` rather than anything containing "honey"
- * or "hp" — a bot that reads field names should see a field it wants to fill.
- */
-export const HONEYPOT_FIELD = "company";
