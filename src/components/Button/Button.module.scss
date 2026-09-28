@@ -45,6 +45,28 @@
       cursor: default;
     }
 
+    // --- Sizes --------------------------------------------------------------
+
+    // Tighter padding, same face: --font-size-sm is already the smallest step
+    // in the type scale. The band drops below 44px, so an invisible ::before,
+    // centred and never smaller than the touch target, keeps the tap area
+    // where e2e/touch-targets.spec.ts requires it.
+    &[data-size="sm"] {
+      position: relative;
+      padding-block: $space-2;
+      padding-inline: $space-4;
+
+      &::before {
+        content: "";
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 50%;
+        inline-size: max(100%, var(--size-touch-target));
+        block-size: max(100%, var(--size-touch-target));
+        translate: -50% -50%;
+      }
+    }
+
     // --- Variants -----------------------------------------------------------
 
     &[data-variant="solid"] {
@@ -53,6 +75,17 @@
 
       &:hover:not(:disabled) {
         background-color: var(--color-hover);
+      }
+    }
+
+    // Bone on brown-800. --color-hover IS brown-800, so this one cannot share
+    // solid's hover: it steps darker to brown-900 instead.
+    &[data-variant="soft"] {
+      background-color: $brown-800;
+      color: var(--color-text-inverse);
+
+      &:hover:not(:disabled) {
+        background-color: var(--color-bg-inverse);
       }
     }
 
