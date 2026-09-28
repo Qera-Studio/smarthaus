@@ -295,7 +295,7 @@
     max-inline-size: 52ch;
   }
 
-  // A field's format or limit, stated before any error.
+  // A field's format or limit, under the control and before any error.
   .hint {
     margin-block-start: $space-1;
     font-size: var(--font-size-sm);
