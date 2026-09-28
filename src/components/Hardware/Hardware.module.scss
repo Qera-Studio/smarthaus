@@ -81,7 +81,6 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
     background: none;
     border: 0;
     color: var(--color-text-primary);
-    cursor: pointer;
     // Inactive tabs fade rather than recolour: the icons are filled in the
     // file, so opacity is the one knob that works on an <img>.
     opacity: 0.45;
