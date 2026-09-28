@@ -42,7 +42,7 @@ export const CELL = 30;
 /** Icon size in CSS px, centred in its cell. */
 export const ICON = 18;
 /** How often every cell flips, in ms. Nothing stays put longer than this. */
-export const TICK_MS = 50;
+export const TICK_MS = 100;
 
 export const ICON_URLS = HARDWARE_ITEMS.map((item) => `/hero/hardware/icons/${item.icon}`);
 

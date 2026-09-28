@@ -70,6 +70,30 @@ describe("FluidHero.module.scss", () => {
     expect(rule(/\.hero/)).not.toMatch(/background/);
   });
 
+  test("the dot grid is square dots of the ink token, over the canvas and under the copy", () => {
+    const dots = rule(/\.hero::after/);
+    // A conic gradient's top-left quadrant is a square; a radial one is a dot.
+    expect(dots).toMatch(
+      /background-image:\s*conic-gradient\(at var\(--hero-dot-size\) var\(--hero-dot-size\), transparent 75%,/,
+    );
+    expect(dots).toMatch(
+      /color-mix\(in srgb, var\(--brown-700\) var\(--hero-dot-ink\), transparent\) 0\)/,
+    );
+    expect(dots).toMatch(/background-size:\s*var\(--hero-dot-pitch\) var\(--hero-dot-pitch\)/);
+    // ::after at the canvas's level paints after it, so the liquid never
+    // covers the grid; .inner is positioned, so the copy paints over both.
+    expect(dots).toMatch(/z-index:\s*var\(--hero-behind\)/);
+    expect(dots).toMatch(/pointer-events:\s*none/);
+    // The section's height, not the bleed: it fades at both edges instead.
+    expect(dots).toMatch(/inset-block:\s*0\b/);
+    expect(dots).toMatch(/inset-inline:\s*calc\(50% - 50vw\)/);
+    expect(dots).toMatch(/mask-image:\s*linear-gradient\(to bottom, transparent,/);
+    const hero = rule(/\.hero/);
+    expect(hero).toMatch(/--hero-dot-size:\s*2px/);
+    expect(hero).toMatch(/--hero-dot-pitch:\s*24px/);
+    expect(hero).toMatch(/--hero-dot-ink:\s*18%/);
+  });
+
   test("the canvas bleeds past the section and sits under every in-flow box", () => {
     const canvas = rule(/\.canvas/);
     expect(canvas).toMatch(/inset-block-start:\s*calc\(-1 \* var\(--hero-bleed-block\)\)/);
@@ -129,8 +153,43 @@ describe("FluidHero.module.scss", () => {
     expect(css).toMatch(/\.primary:focus-visible/);
   });
 
-  test("carries no secondary CTA style: the class left with the button", () => {
-    expect(css).not.toMatch(/\.secondary/);
+  test("the secondary CTA is the primary's box, outlined, and fills on hover", () => {
+    const secondary = rule(/\.secondary/);
+    expect(secondary).toMatch(/background-color:\s*transparent/);
+    expect(secondary).toMatch(/border-color:\s*var\(--color-bg-inverse-strong\)/);
+    expect(secondary).toMatch(/color:\s*var\(--color-text-primary\)/);
+    expect(secondary).toMatch(/border-radius:\s*0/);
+    const hover = rule(/\.secondary:hover/);
+    expect(hover).toMatch(/background-color:\s*var\(--color-bg-inverse-strong\)/);
+    expect(hover).toMatch(/color:\s*var\(--color-text-inverse\)/);
+    expect(css).toMatch(/\.secondary:focus-visible/);
+  });
+
+  test("the rating pill is square and outlined in the 3:1 border token, with no fill", () => {
+    const rating = rule(/\.rating/);
+    expect(rating).toMatch(/border-radius:\s*0/);
+    expect(rating).toMatch(/border-style:\s*solid/);
+    expect(rating).toMatch(/border-color:\s*var\(--color-border-input\)/);
+    expect(rating).not.toMatch(/background/);
+  });
+
+  test("the CTAs are one size: grid tracks of equal width, stacked below the small breakpoint", () => {
+    const ctas = rule(/\.ctas/);
+    expect(ctas).toMatch(/display:\s*grid/);
+    expect(ctas).not.toMatch(/grid-auto-flow/);
+    expect(css).toMatch(
+      /@media \(min-width: 480px\)[^{]*\{[^}]*\.ctas\s*\{[^}]*grid-auto-flow:\s*column;[^}]*grid-auto-columns:\s*1fr/,
+    );
+    // Each button centres its label in the shared width.
+    expect(rule(/\.primary/)).toMatch(/justify-content:\s*center/);
+    expect(rule(/\.secondary/)).toMatch(/justify-content:\s*center/);
+    // A ghost: no underline, however the link is styled elsewhere.
+    expect(rule(/\.secondary/)).toMatch(/text-decoration:\s*none/);
+  });
+
+  test("the closing paragraph carries the auto margin, so the copy stays centred", () => {
+    expect(rule(/\.note/)).toMatch(/margin-block-start:\s*auto/);
+    expect(rule(/\.byline/)).not.toMatch(/margin-block-start:\s*auto/);
   });
 
   test("keeps the copy's type on the display and body tokens", () => {
@@ -160,9 +219,22 @@ describe("the class registry", () => {
     for (const name of defined) expect(used).toContain(name);
   });
 
-  test("the components read the eight classes the section is built from", () => {
+  test("the components read the classes the section is built from", () => {
     expect([...used].sort()).toEqual(
-      ["byline", "canvas", "copy", "ctas", "hero", "inner", "lede", "primary", "title"].sort(),
+      [
+        "byline",
+        "canvas",
+        "copy",
+        "ctas",
+        "hero",
+        "inner",
+        "lede",
+        "note",
+        "primary",
+        "rating",
+        "secondary",
+        "title",
+      ].sort(),
     );
   });
 });
@@ -171,7 +243,8 @@ describe("motion", () => {
   test("declares no animation: the only motion is the canvas fade, a transition", () => {
     expect(css).not.toMatch(/animation/);
     expect(css).not.toMatch(/@keyframes/);
-    expect(css.match(/transition-property/g)).toHaveLength(2);
+    // The canvas fade and the two CTAs' colour changes.
+    expect(css.match(/transition-property/g)).toHaveLength(3);
   });
 
   test("the fade is short enough that the reduced-motion reset is the only opt-out needed", () => {
@@ -214,6 +287,9 @@ describe("tokens", () => {
     expect([...local].sort()).toEqual([
       "--hero-behind",
       "--hero-bleed-block",
+      "--hero-dot-ink",
+      "--hero-dot-pitch",
+      "--hero-dot-size",
       "--hero-ground-ink",
       "--hero-nav-block",
     ]);

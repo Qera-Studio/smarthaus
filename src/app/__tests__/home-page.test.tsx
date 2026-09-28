@@ -74,9 +74,9 @@ describe("the homepage", () => {
     expect(markup.match(/aria-labelledby="hero-title"/g)).toHaveLength(1);
   });
 
-  test("marks the hero's copy and CTAs as quiet zones for the glyph layer", () => {
+  test("marks the hero's copy, CTAs and closing paragraph as quiet zones for the glyph layer", () => {
     const markup = html();
-    expect(markup.match(/data-hero-quiet/g)).toHaveLength(2);
+    expect(markup.match(/data-hero-quiet/g)).toHaveLength(3);
   });
 
   test("contains no em dash", () => {
