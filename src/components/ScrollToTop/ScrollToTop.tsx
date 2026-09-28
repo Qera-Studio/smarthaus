@@ -67,10 +67,14 @@ export function ScrollToTop() {
     const observe = () => {
       io?.disconnect();
       const box = button.getBoundingClientRect();
-      const top = Math.round(box.top);
-      const bottom = Math.round(window.innerHeight - box.bottom);
-      const left = Math.round(box.left);
-      const right = Math.round(document.documentElement.clientWidth - box.right);
+      // Never below zero: an edge the box has crossed (hidden, it is nudged
+      // down past the bottom on a short viewport) gave "--8px", which the
+      // browser refuses, and the constructor threw on the whole page.
+      const inset = (distance: number) => Math.max(0, Math.round(distance));
+      const top = inset(box.top);
+      const bottom = inset(window.innerHeight - box.bottom);
+      const left = inset(box.left);
+      const right = inset(document.documentElement.clientWidth - box.right);
       io = new IntersectionObserver(
         (entries) => {
           // Several dark sections are observed, and a callback carries entries
