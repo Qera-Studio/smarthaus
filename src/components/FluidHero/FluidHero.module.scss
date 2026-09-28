@@ -1,0 +1,155 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer blocks {
+  .hero {
+    // L2 component tokens.
+    //
+    // The desktop nav is in flow above this section, 67px tall (the tall bar;
+    // Nav.module.scss records the arithmetic). Same value as the villa hero.
+    --hero-nav-block: 67px;
+    // How much brown-800 the static ground carries. This is what reduced
+    // motion, Save-Data, and a device without float textures see, and what
+    // everyone sees before the first frame: a hint of the ink, so the field
+    // never reads as an empty page.
+    --hero-ground-ink: 14%;
+
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    // svh, never vh or dvh: Footer.module.scss:118 has the long version.
+    min-block-size: calc(
+      100svh - var(--nav-bar-block-size) - var(--nav-float-inset) - env(safe-area-inset-bottom)
+    );
+    background-color: var(--color-bg-canvas);
+    background-image: radial-gradient(
+      ellipse at 50% 60%,
+      color-mix(in srgb, var(--brown-800) var(--hero-ground-ink), transparent),
+      transparent 65%
+    );
+    // A vertical swipe still scrolls and a pinch still zooms; a sideways drag
+    // is the effect's to keep.
+    touch-action: pan-y pinch-zoom;
+
+    @include bp-lg {
+      min-block-size: calc(100svh - var(--hero-nav-block));
+    }
+  }
+
+  // Under the copy, edge to edge. Hidden until FluidCanvas has drawn a frame,
+  // so the CSS ground above is the first paint and the live field fades in
+  // over it rather than flashing black.
+  .canvas {
+    position: absolute;
+    inset: 0;
+    z-index: var(--z-base);
+    inline-size: 100%;
+    block-size: 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition-property: opacity;
+    transition-duration: var(--duration-slow);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .hero[data-ready] .canvas {
+    opacity: 1;
+  }
+
+  .inner {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-block: clamp(#{$space-8}, 6vh, #{$space-16}) $space-6;
+  }
+
+  .copy {
+    // Pushes the group down so it sits centred in the space above the byline,
+    // together with the auto margin on .byline.
+    margin-block-start: auto;
+    inline-size: 100%;
+  }
+
+  .title {
+    font-size: var(--type-display);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin-block-start: $space-4;
+    margin-inline: auto;
+    max-inline-size: 54rem;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-normal;
+    color: var(--color-text-primary);
+    text-wrap: pretty;
+  }
+
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $space-4;
+    margin-block-start: clamp(#{$space-8}, 5vh, #{$space-12});
+  }
+
+  .primary,
+  .secondary {
+    display: inline-flex;
+    align-items: center;
+    padding-block: $space-2;
+    padding-inline: $space-4;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 0;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-normal;
+    text-decoration: none;
+    white-space: nowrap;
+
+    transition-property: background-color, color, border-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    @include focus-ring;
+  }
+
+  .primary {
+    background-color: var(--color-bg-inverse-strong);
+    border-color: var(--color-bg-inverse-strong);
+    color: var(--color-text-inverse);
+
+    &:hover {
+      background-color: var(--color-hover);
+      border-color: var(--color-hover);
+    }
+  }
+
+  .secondary {
+    background-color: transparent;
+    border-color: var(--color-text-primary);
+    color: var(--color-text-primary);
+
+    &:hover {
+      background-color: var(--color-bg-inverse-strong);
+      border-color: var(--color-bg-inverse-strong);
+      color: var(--color-text-inverse);
+    }
+  }
+
+  .byline {
+    margin-block-start: auto;
+    padding-block-start: clamp(#{$space-8}, 6vh, #{$space-16});
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+  }
+}
