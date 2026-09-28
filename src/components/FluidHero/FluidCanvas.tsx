@@ -21,8 +21,12 @@ import styles from "./FluidHero.module.scss";
  *
  * 1. prefers-reduced-motion is gated HERE. The _reset.scss reduced-motion
  *    block zeroes CSS durations and does nothing to a rAF loop.
- * 2. Save-Data and slow connections keep the static gradient and load nothing:
- *    the simulation is its own chunk, fetched only past every gate.
+ * 2. Save-Data keeps the static gradient and loads nothing: the simulation
+ *    is its own chunk, fetched only past every gate. The connection estimate
+ *    (effectiveType) is NOT a gate here, unlike the villa: Chromium derives it
+ *    from recent round-trip times, a phone hotspot or a jittery Wi-Fi reads
+ *    as "3g" at full throughput (2026-09-28, Shivanshu's own machine), and
+ *    the chunk it would protect is about 9KB gzipped, not a 716KB model.
  * 3. The loop runs only while the section is on screen and the tab visible,
  *    and stops by itself once the ink has faded.
  * 4. Any failure keeps the CSS gradient. The section never depends on this.
@@ -35,7 +39,6 @@ import styles from "./FluidHero.module.scss";
 
 interface Connection {
   saveData?: boolean;
-  effectiveType?: string;
 }
 
 /** Above this the pixel cost doubles for no visible gain on a soft field. */
@@ -53,7 +56,7 @@ export function FluidCanvas() {
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const connection = (navigator as Navigator & { connection?: Connection }).connection;
-    if (connection?.saveData || /(^|[^4-9])[23]g$/.test(connection?.effectiveType ?? "")) return;
+    if (connection?.saveData) return;
 
     let disposed = false;
     let cleanup: (() => void) | undefined;
