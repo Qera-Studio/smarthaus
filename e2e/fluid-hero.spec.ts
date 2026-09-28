@@ -166,16 +166,21 @@ test.describe("live field", () => {
     expect(["H1", "none"]).toContain(lcp);
   });
 
-  test("keyboard focus reaches both CTAs over the canvas", async ({ page, isMobile }) => {
+  test("keyboard focus reaches the CTA over the canvas, and leaves the hero after it", async ({
+    page,
+    isMobile,
+  }) => {
     test.skip(isMobile, "Tab does not move focus in the mobile WebKit and Chromium profiles");
     await page.goto("/");
     await expect(page.locator("[data-hero][data-ready]")).toHaveCount(1, { timeout: 20_000 });
     const primary = hero(page).getByRole("link", { name: "Book a site visit" });
-    const secondary = hero(page).getByRole("link", { name: "Explore Villa" });
     await primary.focus();
     await expect(primary).toBeFocused();
+    // The only link in the section: the next Tab stop is outside it, and the
+    // canvas, which sits between, never takes focus.
     await page.keyboard.press("Tab");
-    await expect(secondary).toBeFocused();
+    expect(await page.evaluate(() => document.activeElement?.closest("[data-hero]"))).toBeNull();
+    await expect(hero(page).getByRole("link")).toHaveCount(1);
   });
 });
 
@@ -233,25 +238,22 @@ test.describe("with the field live, the page still works", () => {
 
 // Runs only in the forced-colors project (playwright.config.ts).
 test.describe("forced colours @forced-colors", () => {
-  test("the copy and both CTAs survive the OS palette", async ({ page }) => {
+  test("the copy and the CTA survive the OS palette", async ({ page }) => {
     await page.goto("/");
     expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
     await expect(hero(page).getByRole("heading", { level: 1 })).toBeVisible();
-    for (const name of ["Book a site visit", "Explore Villa"]) {
-      const cta = hero(page).getByRole("link", { name });
-      await expect(cta).toBeVisible();
-      expect(await cta.evaluate((el) => getComputedStyle(el).borderTopStyle)).toBe("solid");
-    }
+    const cta = hero(page).getByRole("link", { name: "Book a site visit" });
+    await expect(cta).toBeVisible();
+    expect(await cta.evaluate((el) => getComputedStyle(el).borderTopStyle)).toBe("solid");
   });
 });
 
 // Runs only in the zoom-200 project: a 1440px laptop at 200% zoom.
 test.describe("200% zoom @zoom", () => {
-  test("the hero fits the width and keeps both CTAs on screen", async ({ page }) => {
+  test("the hero fits the width and keeps the CTA on screen", async ({ page }) => {
     await page.goto("/");
     await expectNoHorizontalOverflow(page);
     await expect(hero(page).getByRole("link", { name: "Book a site visit" })).toBeInViewport();
-    await expect(hero(page).getByRole("link", { name: "Explore Villa" })).toBeInViewport();
   });
 });
 
@@ -319,12 +321,12 @@ test.describe("layout stability", () => {
 });
 
 test.describe("the glyph layer", () => {
-  test("the copy and the CTAs are marked quiet, and the h1 sits inside one", async ({ page }) => {
+  test("the copy and the CTA are marked quiet, and the h1 sits inside one", async ({ page }) => {
     await page.goto("/");
     const quiet = hero(page).locator("[data-hero-quiet]");
     await expect(quiet).toHaveCount(2);
     await expect(quiet.first().getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(quiet.nth(1).getByRole("link")).toHaveCount(2);
+    await expect(quiet.nth(1).getByRole("link")).toHaveCount(1);
   });
 
   test.describe("live", () => {

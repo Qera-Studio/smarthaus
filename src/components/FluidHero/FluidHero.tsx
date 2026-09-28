@@ -5,14 +5,14 @@ import styles from "./FluidHero.module.scss";
 
 /**
  * The homepage hero, fluid edition: a brown-100 field the pointer drags
- * brown-800 ink through, with the headline, one line of copy and two CTAs
+ * brown-800 ink through, with the headline, one line of copy and one CTA
  * over it. This stands in for the villa hero (src/components/Hero/, still in
  * the repo, unmounted) while the hero's content is being written.
  *
  * Server Component. The only client code is FluidCanvas. The copy below is
  * the villa hero's, kept word for word as a placeholder: the h1 is the page's
  * only one and its LCP element, and process.spec.ts and forced-colors.spec.ts
- * find the CTAs by their text.
+ * find the CTA by its text.
  */
 export function FluidHero() {
   return (
@@ -37,9 +37,6 @@ export function FluidHero() {
         <div className={styles.ctas} data-hero-quiet>
           <Link href="/contact" className={styles.primary} data-cursor="none">
             Book a site visit
-          </Link>
-          <Link href="/solutions" className={styles.secondary} data-cursor="none">
-            Explore Villa
           </Link>
         </div>
 

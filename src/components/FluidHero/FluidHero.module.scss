@@ -135,8 +135,7 @@
     margin-block-start: clamp(#{$space-8}, 5vh, #{$space-12});
   }
 
-  .primary,
-  .secondary {
+  .primary {
     display: inline-flex;
     align-items: center;
     padding-block: $space-2;
@@ -154,10 +153,6 @@
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out);
 
-    @include focus-ring;
-  }
-
-  .primary {
     background-color: var(--color-bg-inverse-strong);
     border-color: var(--color-bg-inverse-strong);
     color: var(--color-text-inverse);
@@ -166,18 +161,8 @@
       background-color: var(--color-hover);
       border-color: var(--color-hover);
     }
-  }
 
-  .secondary {
-    background-color: transparent;
-    border-color: var(--color-text-primary);
-    color: var(--color-text-primary);
-
-    &:hover {
-      background-color: var(--color-bg-inverse-strong);
-      border-color: var(--color-bg-inverse-strong);
-      color: var(--color-text-inverse);
-    }
+    @include focus-ring;
   }
 
   .byline {

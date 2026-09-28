@@ -48,10 +48,10 @@ describe("the homepage", () => {
     expect(markup).toMatch(/<h1[^>]*id="hero-title"[^>]*>Home at your fingertips<\/h1>/);
   });
 
-  test("keeps the two hero CTAs and their routes", () => {
+  test("keeps the hero CTA and its route, and no longer offers Explore Villa", () => {
     const markup = html();
     expect(markup).toMatch(/href="\/contact"[^>]*>Book a site visit</);
-    expect(markup).toMatch(/href="\/solutions"[^>]*>Explore Villa</);
+    expect(markup).not.toMatch(/Explore Villa/);
   });
 
   test("still composes every other section in order", () => {

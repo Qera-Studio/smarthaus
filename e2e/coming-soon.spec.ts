@@ -11,6 +11,9 @@ import { expectAccessible, expectNoEmDash } from "./checks";
 const PLACEHOLDER_ROUTES = [
   "/solutions",
   "/about",
+  // /designers and /developers still resolve but are linked from nowhere
+  // since 2026-09-28 (src/lib/nav-links.ts). Kept here so they stay 200 and
+  // noindex until they are either built or removed.
   "/designers",
   "/developers",
   // /contact is a real page now. Its own suite is e2e/contact.spec.ts.

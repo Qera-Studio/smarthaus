@@ -7,6 +7,10 @@
  * it. e2e/coming-soon.spec.ts guards the other direction, failing if a link is
  * added here without a page or a placeholder behind it.
  *
+ * /designers and /developers are not linked from anywhere since 2026-09-28
+ * (Shivanshu: only Solutions and About stay as coming-soon links). Their
+ * placeholder pages remain in src/app/ for when they come back.
+ *
  * Nav.tsx reads NAV_LINKS from here. It kept a local copy while the navbar was
  * being built on its own branch; that branch has merged and the copy is gone,
  * so this file is the single source and the nav and footer cannot drift.
@@ -29,8 +33,6 @@ export type NavLink = {
 export const NAV_LINKS: readonly NavLink[] = [
   { href: "/solutions", label: "Solutions" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/designers", label: "Designers" },
-  { href: "/developers", label: "Developers" },
   { href: "/about", label: "About" },
 ] as const;
 
@@ -39,8 +41,6 @@ export const PAGE_LINKS: readonly NavLink[] = [
   { href: "/solutions", label: "Solutions" },
   { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
-  { href: "/designers", label: "Designers" },
-  { href: "/developers", label: "Developers" },
   { href: "/faq", label: "FAQs" },
   { href: "/contact", label: "Contact" },
 ] as const;

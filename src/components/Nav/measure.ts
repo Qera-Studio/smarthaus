@@ -1,7 +1,7 @@
 /**
  * The desktop capsule is built from two widths that depend on how the platform
  * renders Manrope: the link row and the CTA. The stylesheet falls back to the
- * macOS measurements (384px and 129px); Chrome on Linux renders the row about
+ * macOS measurements (196px and 129px, three links); Chrome on Linux renders the row about
  * 10px wider, which took 5px out of each gap beside it. CSS cannot read an
  * element's width into calc(), so this writes the rendered widths where the
  * stylesheet reads them, and again whenever either changes: a web font

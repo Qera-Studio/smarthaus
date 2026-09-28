@@ -121,17 +121,16 @@ describe("FluidHero.module.scss", () => {
     }
   });
 
-  test("keeps the CTA styles the villa hero had, so the buttons do not change", () => {
+  test("keeps the primary CTA style the villa hero had, so the button does not change", () => {
     const primary = rule(/\.primary/);
     expect(primary).toMatch(/background-color:\s*var\(--color-bg-inverse-strong\)/);
     expect(primary).toMatch(/color:\s*var\(--color-text-inverse\)/);
-    // The standalone rule, not the ".primary,\n.secondary" one it shares.
-    const secondary = rule(/(?<=\}\s*)\.secondary/);
-    expect(secondary).toMatch(/background-color:\s*transparent/);
-    expect(secondary).toMatch(/border-color:\s*var\(--color-text-primary\)/);
     expect(css).toMatch(/\.primary:hover/);
-    expect(css).toMatch(/\.secondary:hover/);
     expect(css).toMatch(/\.primary:focus-visible/);
+  });
+
+  test("carries no secondary CTA style: the class left with the button", () => {
+    expect(css).not.toMatch(/\.secondary/);
   });
 
   test("keeps the copy's type on the display and body tokens", () => {
@@ -163,18 +162,7 @@ describe("the class registry", () => {
 
   test("the components read the eight classes the section is built from", () => {
     expect([...used].sort()).toEqual(
-      [
-        "byline",
-        "canvas",
-        "copy",
-        "ctas",
-        "hero",
-        "inner",
-        "lede",
-        "primary",
-        "secondary",
-        "title",
-      ].sort(),
+      ["byline", "canvas", "copy", "ctas", "hero", "inner", "lede", "primary", "title"].sort(),
     );
   });
 });

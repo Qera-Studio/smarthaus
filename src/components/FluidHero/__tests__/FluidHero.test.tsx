@@ -5,7 +5,7 @@ import { FluidHero } from "../FluidHero";
 /**
  * The server half. The canvas is stubbed to nothing: its behaviour has its
  * own file, and here the question is what the section promises the page and
- * the e2e suite: one h1, two CTAs by text, the data-hero hook, and a canvas
+ * the e2e suite: one h1, one CTA by text, the data-hero hook, and a canvas
  * the accessibility tree never sees.
  */
 
@@ -24,16 +24,18 @@ describe("FluidHero", () => {
     expect(section).toHaveAttribute("data-hero");
   });
 
-  test("keeps the two CTAs the e2e suite finds by text, with their routes", () => {
+  test("keeps the one CTA the e2e suite finds by text, with its route", () => {
     render(<FluidHero />);
     expect(screen.getByRole("link", { name: "Book a site visit" })).toHaveAttribute(
       "href",
       "/contact",
     );
-    expect(screen.getByRole("link", { name: "Explore Villa" })).toHaveAttribute(
-      "href",
-      "/solutions",
-    );
+  });
+
+  test("has no secondary CTA: Explore Villa left with the villa hero (2026-09-28)", () => {
+    render(<FluidHero />);
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByRole("link", { name: /explore/i })).toBeNull();
   });
 
   test("the canvas is the first child of the section and hidden from AT", () => {
@@ -72,11 +74,12 @@ describe("the copy keeps the brand's tone", () => {
     expect(text()).not.toMatch(/\b(19|20)\d\d\b|TIS|Fibaro|Lutron|KNX/);
   });
 
-  test("the CTAs opt out of the site's custom cursor, like every other button", () => {
+  test("the CTA opts out of the site's custom cursor, like every other button", () => {
     render(<FluidHero />);
-    for (const name of ["Book a site visit", "Explore Villa"]) {
-      expect(screen.getByRole("link", { name })).toHaveAttribute("data-cursor", "none");
-    }
+    expect(screen.getByRole("link", { name: "Book a site visit" })).toHaveAttribute(
+      "data-cursor",
+      "none",
+    );
   });
 
   test("renders as a section landmark with an accessible name", () => {
@@ -86,12 +89,12 @@ describe("the copy keeps the brand's tone", () => {
 });
 
 describe("the quiet zones", () => {
-  test("mark the copy and the CTAs, and nothing else", () => {
+  test("mark the copy and the CTA, and nothing else", () => {
     const { container } = render(<FluidHero />);
     const quiet = container.querySelectorAll("[data-hero-quiet]");
     expect(quiet).toHaveLength(2);
     expect(quiet[0]?.querySelector("h1")).not.toBeNull();
-    expect(quiet[1]?.querySelectorAll("a")).toHaveLength(2);
+    expect(quiet[1]?.querySelectorAll("a")).toHaveLength(1);
   });
 
   test("the byline is not quiet: it is small and sits where the pool rarely reaches", () => {
