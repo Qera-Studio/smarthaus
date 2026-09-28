@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import type { Locator } from "@playwright/test";
 import { expectAccessible } from "./checks";
 
 /**
@@ -134,20 +135,46 @@ test("the arrows step through the slides and wrap at both ends", async ({ page }
   await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
 });
 
+/**
+ * Both slides' offsets from the stage, taken once the push is under way.
+ *
+ * A fixed 270ms sleep after the click was the flaky part: on a loaded CI
+ * runner the leaving slide was still at 0 when sampled (2026-09-28, twice on
+ * iPhone 17), because the click's frame had not landed yet. The push takes
+ * 800ms, so this polls until both slides have left their start and returns
+ * that sample, which is mid-flight by construction.
+ */
+async function midFlight(s: Locator) {
+  type Offset = { dx: number; dy: number; h: number };
+  const sample = () =>
+    s.evaluate((el) =>
+      ["active", "leaving"].map((state) => {
+        const slide = el.querySelector(`[data-state="${state}"]`);
+        if (!slide) return null;
+        const stage = slide.parentElement!.getBoundingClientRect();
+        const r = slide.getBoundingClientRect();
+        return { dx: r.left - stage.left, dy: r.top - stage.top, h: stage.height };
+      }),
+    );
+  let last: (Offset | null)[] = [];
+  await expect
+    .poll(
+      async () => {
+        last = await sample();
+        const [incoming, outgoing] = last;
+        return Boolean(incoming && outgoing && incoming.dy !== 0 && outgoing.dy !== 0);
+      },
+      { timeout: 700, intervals: [20] },
+    )
+    .toBe(true);
+  return last as [Offset, Offset];
+}
+
 test("a switch moves both slides vertically, in opposite halves of the stage", async ({ page }) => {
   const s = section(page);
   await s.getByRole("button", { name: "Pause automatic advance" }).click();
   await s.getByRole("button", { name: "Next component" }).click();
-  // Sampled a third of the way through the 800ms push.
-  await page.waitForTimeout(270);
-  const [incoming, outgoing] = await s.evaluate((el) =>
-    ["active", "leaving"].map((state) => {
-      const slide = el.querySelector(`[data-state="${state}"]`)!;
-      const stage = slide.parentElement!.getBoundingClientRect();
-      const r = slide.getBoundingClientRect();
-      return { dx: r.left - stage.left, dy: r.top - stage.top, h: stage.height };
-    }),
-  );
+  const [incoming, outgoing] = await midFlight(s);
   // Next: the incoming slide rises from below, the outgoing one leaves upward.
   expect(incoming!.dy).toBeGreaterThan(0);
   expect(outgoing!.dy).toBeLessThan(0);
@@ -167,15 +194,9 @@ test("previous runs the push the other way", async ({ page }) => {
   const s = section(page);
   await s.getByRole("button", { name: "Pause automatic advance" }).click();
   await s.getByRole("button", { name: "Previous component" }).click();
-  await page.waitForTimeout(270);
-  const [incoming, outgoing] = await s.evaluate((el) =>
-    ["active", "leaving"].map((state) => {
-      const slide = el.querySelector(`[data-state="${state}"]`)!;
-      return slide.getBoundingClientRect().top - slide.parentElement!.getBoundingClientRect().top;
-    }),
-  );
-  expect(incoming).toBeLessThan(0);
-  expect(outgoing).toBeGreaterThan(0);
+  const [incoming, outgoing] = await midFlight(s);
+  expect(incoming.dy).toBeLessThan(0);
+  expect(outgoing.dy).toBeGreaterThan(0);
 });
 
 test("a sideways swipe on a phone steps the carousel", async ({ page, isMobile }) => {
