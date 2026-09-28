@@ -10,10 +10,27 @@ import { latestEntry } from "@/lib/observer";
 type Props = { items: readonly HardwareItem[] };
 
 /**
+ * How far a finger has to travel sideways before a swipe counts. Below this,
+ * and on any gesture more vertical than horizontal, it was a tap or a scroll.
+ */
+export const SWIPE_MIN_PX = 40;
+
+/**
  * A vertical carousel: the icon bar is an ARIA tablist, the slides stack in
- * one grid cell, and the incoming slide animates over the outgoing one from
- * below (next) or above (previous). The outgoing slide never moves; it is
- * covered.
+ * one grid cell, and a switch pushes one slide out while the next comes in:
+ * next rises from below as the outgoing one leaves upward, previous is the
+ * reverse. Both move on one curve, so the travel reads as one deliberate
+ * vertical motion rather than a cover.
+ *
+ * ## Navigation is horizontal, motion is vertical
+ *
+ * The arrow buttons at either end of the bar and a sideways swipe on the
+ * stage both step through the slides: left or a rightward swipe is previous,
+ * right or a leftward swipe is next, the way a phone reader expects. What they
+ * trigger is still the vertical push above. The swipe is read from pointer
+ * events for touch and pen only (a mouse drag on the image would start the
+ * browser's own image drag instead), and the stage's `touch-action: pan-y`
+ * leaves vertical scrolling to the page.
  *
  * ## The timer is a CSS animation
  *
@@ -46,6 +63,24 @@ export function HardwareStage({ items }: Props) {
   const [inView, setInView] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
+  const tabs = useRef<HTMLDivElement>(null);
+  const swipe = useRef<{ id: number; x: number; y: number } | null>(null);
+
+  // Keep the selected tab in view inside the strip, which scrolls sideways on
+  // a phone once the arrows take their share of the bar. Only the strip's own
+  // scrollLeft moves: scrollIntoView would also scroll the page, and would do
+  // it while the timer advances with the section half off screen.
+  useEffect(() => {
+    const strip = tabs.current;
+    const tab = strip?.querySelectorAll<HTMLElement>('[role="tab"]')[active];
+    if (!strip || !tab) return;
+    const s = strip.getBoundingClientRect();
+    const t = tab.getBoundingClientRect();
+    const left = strip.scrollLeft + (t.left - s.left) - (s.width - t.width) / 2;
+    // A JS smooth scroll ignores the reduced-motion reset, so gate it here.
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    strip.scrollTo({ left, behavior: still ? "auto" : "smooth" });
+  }, [active]);
 
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -73,6 +108,26 @@ export function HardwareStage({ items }: Props) {
     setDirection(dir ?? (next > active ? "next" : "prev"));
     setLeaving(active);
     setActive(next);
+  };
+
+  // One step either way, wrapping. The direction is explicit so the last
+  // slide's "next" still rises from below as it wraps to the first.
+  const step = (delta: 1 | -1) => select(active + delta, delta > 0 ? "next" : "prev");
+
+  const onPointerDown = (event: React.PointerEvent) => {
+    if (event.pointerType === "mouse") return;
+    swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
+  };
+
+  const onPointerUp = (event: React.PointerEvent) => {
+    const start = swipe.current;
+    swipe.current = null;
+    if (!start || start.id !== event.pointerId) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) <= Math.abs(dy)) return;
+    // Finger moving left pulls the next slide in, as on any phone.
+    step(dx < 0 ? 1 : -1);
   };
 
   const onKeyDown = (event: React.KeyboardEvent, index: number) => {
@@ -109,7 +164,22 @@ export function HardwareStage({ items }: Props) {
   return (
     <div ref={root} className={styles.stageRoot} data-direction={direction}>
       <div ref={bar} className={styles.bar}>
-        <div role="tablist" aria-label="Components" className={styles.tabs}>
+        {/* Outside the tablist: these are plain buttons that step, not tabs,
+            so they sit in the tab order on their own rather than in the
+            tablist's roving one. */}
+        <button
+          type="button"
+          className={styles.arrow}
+          data-edge="start"
+          aria-label="Previous component"
+          onClick={() => step(-1)}
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="currentColor">
+            <path d="M15.4 6.4 14 5l-7 7 7 7 1.4-1.4L9.8 12z" />
+          </svg>
+        </button>
+
+        <div ref={tabs} role="tablist" aria-label="Components" className={styles.tabs}>
           {items.map((item, i) => (
             <button
               key={item.id}
@@ -166,6 +236,18 @@ export function HardwareStage({ items }: Props) {
           </button>
         ) : null}
 
+        <button
+          type="button"
+          className={styles.arrow}
+          data-edge="end"
+          aria-label="Next component"
+          onClick={() => step(1)}
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="currentColor">
+            <path d="M8.6 17.6 10 19l7-7-7-7-1.4 1.4 5.6 5.6z" />
+          </svg>
+        </button>
+
         {autoplay ? (
           <span
             key={active}
@@ -177,7 +259,15 @@ export function HardwareStage({ items }: Props) {
         ) : null}
       </div>
 
-      <div className={styles.stage}>
+      <div
+        className={styles.stage}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        // The browser took the gesture (a vertical scroll): not a swipe.
+        onPointerCancel={() => {
+          swipe.current = null;
+        }}
+      >
         {items.map((item, i) => (
           <div
             key={item.id}
@@ -189,6 +279,8 @@ export function HardwareStage({ items }: Props) {
             // The outgoing slide is still painted while it is covered, but it
             // is no longer any tab's panel.
             aria-hidden={i === leaving ? true : undefined}
+            // Both slides animate now and end together; the incoming one's end
+            // is the one that releases the outgoing slide.
             onAnimationEnd={(event) => {
               if (event.target === event.currentTarget && i === active) setLeaving(null);
             }}

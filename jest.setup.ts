@@ -1,5 +1,15 @@
 import "@testing-library/jest-dom";
 
+// jsdom has no Element.scrollTo; every browser this site supports does.
+// HardwareStage scrolls its tab strip on every slide change, mount included,
+// so any test that renders it would throw without this. A no-op, not a fake:
+// a test that cares what was scrolled replaces it with its own spy. Suites
+// that run in the node environment have no Element at all, hence the first
+// check.
+if (typeof Element !== "undefined" && typeof Element.prototype.scrollTo !== "function") {
+  Element.prototype.scrollTo = function scrollTo() {};
+}
+
 // Console guard. A React warning in a test is a bug in the component or the
 // test: an act() warning, a key warning, a hydration mismatch, a prop on the
 // wrong element. Each fails the test that caused it instead of scrolling past.
