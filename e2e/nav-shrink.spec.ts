@@ -166,7 +166,7 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
   // and text width depends on the platform's font rendering (Linux Chrome draws
   // the row about 10px wider than macOS), so the expected geometry is derived
   // from what this browser rendered, measured here independently of how
-  // NavShell measures it. On macOS this is 708px wide with 77px gaps.
+  // NavShell measures it. On macOS this is 520px wide with 77px gaps.
   //
   // The equations: width = 2 * (cta + 24 + 8 + 1) + row, and each gap is
   // 24 + (cta - 23) / 2, where 23 is the mark the stylesheet assumes. A gap

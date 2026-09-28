@@ -1,80 +1,85 @@
-import { render } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import Home from "../page";
 
 /**
- * The homepage is an ordered list of sections, and the order is the argument:
- * who is behind the brand, what the house is made of, how it gets installed,
- * what it costs, what keeping it running costs, then the enquiry. Each
- * section has its own suite; this one only holds the sequence.
- *
- * Every section is stubbed to a marker. The real ones pull in three.js, scroll
- * timelines and observers that jsdom cannot run, and none of that is what is
- * under test here.
+ * The homepage rendered to the HTML the server sends. The hero swap of
+ * 2026-09-28 is what this pins: the fluid hero is mounted, the villa is not,
+ * the page still has exactly one h1, and the other sections are where they were. Rendering the whole tree also runs every server component the
+ * page composes, so a section that throws at render fails here, not in CI's
+ * production build.
  */
 
-// A function declaration, not a const: jest.mock is hoisted above every other
-// statement, and only a hoisted declaration is initialised by the time the
-// factories run. The `mock` prefix is what jest allows a factory to reference.
-function mockSection(name: string) {
-  function Section() {
-    return <div data-section={name} />;
-  }
-  return Section;
-}
+jest.mock("../../components/FluidHero/FluidCanvas", () => ({
+  FluidCanvas: () => <canvas data-testid="fluid" aria-hidden="true" />,
+}));
 
-jest.mock("../../components/Hero", () => ({ Hero: mockSection("hero") }));
-jest.mock("../../components/Maple", () => ({ Maple: mockSection("maple") }));
-jest.mock("../../components/Hardware", () => ({ Hardware: mockSection("hardware") }));
-jest.mock("../../components/Process", () => ({ Process: mockSection("process") }));
-jest.mock("../../components/Pricing", () => ({ Pricing: mockSection("pricing") }));
-jest.mock("../../components/Care", () => ({ Care: mockSection("care") }));
-jest.mock("../../components/HomeEnquiry", () => ({ HomeEnquiry: mockSection("enquiry") }));
+// The enquiry form imports the server action, which imports Resend, which
+// wants a TextEncoder jsdom does not have. The action is not under test here.
+jest.mock("../contact/actions", () => ({
+  submitEnquiry: jest.fn(),
+  submitShortEnquiry: jest.fn(),
+}));
 
-const order = (container: HTMLElement) =>
-  Array.from(container.querySelectorAll("[data-section]")).map((el) =>
-    el.getAttribute("data-section"),
-  );
+const html = () => renderToStaticMarkup(<Home />);
 
-describe("Home page", () => {
-  it("renders every section once, in the planned order", () => {
-    const { container } = render(<Home />);
-    expect(order(container)).toEqual([
-      "hero",
-      "maple",
-      "hardware",
-      "process",
-      "pricing",
-      "care",
-      "enquiry",
-    ]);
+describe("the homepage", () => {
+  test("renders the fluid hero as the first section, with its data-hero hook", () => {
+    const markup = html();
+    const heroAt = markup.indexOf("data-hero");
+    expect(heroAt).toBeGreaterThan(-1);
+    // Preload links may precede it; no content does.
+    const before = markup.slice(0, markup.lastIndexOf("<section", heroAt));
+    expect(before).not.toMatch(/<section|<h[1-6]|<p\b/);
   });
 
-  it("places the Maple banner directly after the hero", () => {
-    // The banner answers "who is behind this" before anything asks to be
-    // trusted. Anywhere later and the Hardware pitch arrives first.
-    const { container } = render(<Home />);
-    const sections = order(container);
-    expect(sections.indexOf("maple")).toBe(sections.indexOf("hero") + 1);
+  test("mounts the fluid canvas and not the villa", () => {
+    const markup = html();
+    expect(markup).toContain('data-testid="fluid"');
+    expect(markup).not.toContain("/hero/grid/");
+    expect(markup).not.toContain("villa.glb");
+    expect(markup).not.toContain("Explore the villa");
   });
 
-  it("places the Maple banner directly before the hardware carousel", () => {
-    const { container } = render(<Home />);
-    const sections = order(container);
-    expect(sections.indexOf("hardware")).toBe(sections.indexOf("maple") + 1);
+  test("has exactly one h1, the hero's", () => {
+    const markup = html();
+    const h1s = markup.match(/<h1\b/g) ?? [];
+    expect(h1s).toHaveLength(1);
+    expect(markup).toMatch(/<h1[^>]*id="hero-title"[^>]*>Home at your fingertips<\/h1>/);
   });
 
-  it("keeps the enquiry last, directly above the footer", () => {
-    const { container } = render(<Home />);
-    expect(order(container).at(-1)).toBe("enquiry");
+  test("keeps the hero CTA and its route, and no longer offers Explore Villa", () => {
+    const markup = html();
+    expect(markup).toMatch(/href="\/contact"[^>]*>Book a site visit</);
+    expect(markup).not.toMatch(/Explore Villa/);
   });
 
-  it("adds no wrapper of its own around the sections", () => {
-    // The layout's <main> is the parent every section styles against
-    // (Process's overlay pulls up over its previous sibling), so a wrapper
-    // here would break that without failing anything else.
-    const { container } = render(<Home />);
-    const markers = container.querySelectorAll("[data-section]");
-    markers.forEach((el) => expect(el.parentElement).toBe(container));
+  test("still composes every other section in order", () => {
+    const markup = html();
+    const order = ["data-hero", "data-process"].map((hook) => markup.indexOf(hook));
+    expect(order.every((at) => at > -1)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
+  test("the canvas precedes the copy inside the hero, so it paints underneath", () => {
+    const markup = html();
+    const canvasAt = markup.indexOf('data-testid="fluid"');
+    const titleAt = markup.indexOf('id="hero-title"');
+    expect(canvasAt).toBeGreaterThan(-1);
+    expect(canvasAt).toBeLessThan(titleAt);
+  });
+
+  test("the hero is a labelled section, once", () => {
+    const markup = html();
+    expect(markup.match(/aria-labelledby="hero-title"/g)).toHaveLength(1);
+  });
+
+  test("marks the hero's copy and CTAs as quiet zones for the glyph layer", () => {
+    const markup = html();
+    expect(markup.match(/data-hero-quiet/g)).toHaveLength(2);
+  });
+
+  test("contains no em dash", () => {
+    expect(html()).not.toContain("—");
   });
 });

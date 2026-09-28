@@ -1,6 +1,6 @@
 import { Care } from "../components/Care";
 import { Hardware } from "../components/Hardware";
-import { Hero } from "../components/Hero";
+import { FluidHero } from "../components/FluidHero";
 import { HomeEnquiry } from "../components/HomeEnquiry";
 import { Maple } from "../components/Maple";
 import { Pricing } from "../components/Pricing";
@@ -28,7 +28,7 @@ export default function Home() {
   return (
     <>
       <JsonLd data={pageGraph(PAGE)} />
-      <Hero />
+      <FluidHero />
       {/* Who is behind the brand, before anything asks to be trusted. */}
       <Maple />
       {/* What the house is made of, then how it gets installed. */}

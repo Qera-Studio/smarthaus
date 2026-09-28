@@ -33,8 +33,8 @@ test("html carries the dark dot", async ({ page }) => {
 test("the nav and hero CTAs show the dot, not a hand and not nothing", async ({ page }) => {
   for (const link of [
     page.locator("header").getByRole("link", { name: "Book a site visit" }),
+    // The hero's one CTA; Explore Villa left with the fluid hero (2026-09-28).
     page.locator("section[data-hero]").getByRole("link", { name: "Book a site visit" }),
-    page.getByRole("link", { name: "Explore Villa" }),
   ]) {
     expect(await cursorOf(link)).toContain(DARK_DOT);
   }

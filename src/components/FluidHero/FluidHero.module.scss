@@ -1,0 +1,174 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer blocks {
+  .hero {
+    // L2 component tokens.
+    //
+    // The desktop nav is in flow above this section, 67px tall (the tall bar;
+    // Nav.module.scss records the arithmetic). Same value as the villa hero.
+    --hero-nav-block: 67px;
+    // How much brown-700 the static ground carries. This is what reduced
+    // motion, Save-Data, and a device without float textures see, and what
+    // everyone sees before the first frame: a hint of the ink, so the field
+    // never reads as an empty page.
+    --hero-ground-ink: 14%;
+    // How far the field runs past the section above and below. The liquid
+    // is not clipped to the hero: it goes under the nav, off both sides of
+    // the screen, and under the next section if a drag carries it there. The
+    // pointer still only feeds it from inside the section (FluidCanvas.tsx
+    // listens on the section, not the canvas).
+    --hero-bleed-block: 40vh;
+    // Below every in-flow box of the page, so the overhang paints under the
+    // next section's ground rather than over it. A negative level is the one
+    // thing the z scale has no token for; it is the only one this needs.
+    --hero-behind: -1;
+
+    // Positioned for the canvas to size against, but NOT an isolated
+    // stacking context: the canvas sits at a negative level in the page's
+    // own context, which is what puts it under the sections after this one.
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    // svh, never vh or dvh: Footer.module.scss:118 has the long version.
+    min-block-size: calc(
+      100svh - var(--nav-bar-block-size) - var(--nav-float-inset) - env(safe-area-inset-bottom)
+    );
+    // A vertical swipe still scrolls and a pinch still zooms; a sideways drag
+    // is the effect's to keep.
+    touch-action: pan-y pinch-zoom;
+
+    @include bp-lg {
+      min-block-size: calc(100svh - var(--hero-nav-block));
+    }
+
+    // The static ground: the page canvas colour with a soft pool of the ink
+    // token, on the same bleed box as the canvas.
+    &::before {
+      content: "";
+      position: absolute;
+      inset-block: calc(-1 * var(--hero-bleed-block));
+      inset-inline: calc(50% - 50vw);
+      z-index: var(--hero-behind);
+      background-image: radial-gradient(
+        ellipse at 50% 50%,
+        color-mix(in srgb, var(--brown-700) var(--hero-ground-ink), transparent),
+        transparent 60%
+      );
+      pointer-events: none;
+    }
+  }
+
+  // Under the copy, the full viewport width and a bleed above and below.
+  // Hidden until FluidCanvas has drawn a frame, so the CSS ground above is the
+  // first paint and the live field fades in over it rather than flashing
+  // black. 50vw against the section, which is centred in the viewport, lands
+  // on the viewport edges; html carries overflow-x: clip (globals.scss), so
+  // the scrollbar's width cannot become sideways scroll.
+  .canvas {
+    position: absolute;
+    inset-block-start: calc(-1 * var(--hero-bleed-block));
+    inset-inline-start: calc(50% - 50vw);
+    // Stated, not implied by the insets: a canvas is a replaced element, and
+    // replaced elements keep their intrinsic 300x150 when only insets are
+    // set. Without these the backing-store resize in FluidCanvas.tsx changed
+    // the layout size too, the ResizeObserver saw that as a new size, and
+    // the two chased each other up in powers of two.
+    inline-size: 100vw;
+    // The reset caps replaced elements at their container's width; this one
+    // is meant to run past it to the viewport edges.
+    max-inline-size: none;
+    block-size: calc(100% + 2 * var(--hero-bleed-block));
+    z-index: var(--hero-behind);
+    opacity: 0;
+    pointer-events: none;
+    transition-property: opacity;
+    transition-duration: var(--duration-slow);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .hero[data-ready] .canvas {
+    opacity: 1;
+  }
+
+  .inner {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-block: clamp(#{$space-8}, 6vh, #{$space-16}) $space-6;
+  }
+
+  .copy {
+    // Pushes the group down so it sits centred in the space above the byline,
+    // together with the auto margin on .byline.
+    margin-block-start: auto;
+    inline-size: 100%;
+  }
+
+  .title {
+    font-size: var(--type-display);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin-block-start: $space-4;
+    margin-inline: auto;
+    max-inline-size: 54rem;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-normal;
+    color: var(--color-text-primary);
+    text-wrap: pretty;
+  }
+
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $space-4;
+    margin-block-start: clamp(#{$space-8}, 5vh, #{$space-12});
+  }
+
+  .primary {
+    display: inline-flex;
+    align-items: center;
+    padding-block: $space-2;
+    padding-inline: $space-4;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 0;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-normal;
+    text-decoration: none;
+    white-space: nowrap;
+
+    transition-property: background-color, color, border-color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    background-color: var(--color-bg-inverse-strong);
+    border-color: var(--color-bg-inverse-strong);
+    color: var(--color-text-inverse);
+
+    &:hover {
+      background-color: var(--color-hover);
+      border-color: var(--color-hover);
+    }
+
+    @include focus-ring;
+  }
+
+  .byline {
+    margin-block-start: auto;
+    padding-block-start: clamp(#{$space-8}, 6vh, #{$space-16});
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+  }
+}

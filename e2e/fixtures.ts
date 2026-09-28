@@ -28,6 +28,11 @@ export { expect, devices, type Locator, type Page } from "@playwright/test";
  *
  * Contexts a test creates itself (browser.newContext) do not get this; none of
  * them load the homepage today.
+ *
+ * 2026-09-28: the homepage now mounts the fluid hero (FluidHero/FluidCanvas),
+ * which honours the same Save-Data gate, so this fixture keeps it off in the
+ * same way and `villa: true` opts back in to whichever hero canvas is mounted.
+ * The option keeps its name: renaming it touches every spec for no behaviour.
  */
 type Options = { villa: boolean; clientAddress: string | undefined };
 

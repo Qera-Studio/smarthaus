@@ -215,13 +215,18 @@ test.describe("200% zoom @zoom", () => {
   }
 });
 
-// The villa default lives in e2e/fixtures.ts. Both halves are pinned here: off
-// unless asked, and on when asked, so the switch cannot rot into "always off".
-test.describe("the hero's villa in e2e", () => {
+// The hero-canvas default lives in e2e/fixtures.ts. Both halves are pinned
+// here: off unless asked, and on when asked, so the switch cannot rot into
+// "always off". The homepage hero is the fluid canvas; the villa's model and
+// decoder are watched too, because the villa is unmounted, not deleted, and a
+// stray import would fetch them again.
+test.describe("the hero's canvas in e2e", () => {
   test("is off by default: the page reports Save-Data and no canvas mounts", async ({ page }) => {
-    const villaRequests: string[] = [];
+    const heavyRequests: string[] = [];
     page.on("request", (request) => {
-      if (/\/hero\/villa\.glb|\/draco\//.test(request.url())) villaRequests.push(request.url());
+      if (/\/hero\/villa\.glb|\/draco\/|FluidHero_fluid/.test(request.url())) {
+        heavyRequests.push(request.url());
+      }
     });
     await page.goto("/");
     expect(
@@ -231,21 +236,22 @@ test.describe("the hero's villa in e2e", () => {
       ),
     ).toBe(true);
     // The gate runs in an effect at hydration and, when it passes, starts the
-    // load on a zero timeout. So: hydrated, then a window far longer than that
-    // timeout, and neither the model nor its decoder was ever asked for.
+    // import at once. So: hydrated, then a window far longer than that, and
+    // neither the simulation chunk nor the villa's files were ever asked for.
     await expect(page.locator("html[data-consent-ready]")).toBeAttached();
     await page.waitForTimeout(2_000);
-    expect(villaRequests).toEqual([]);
-    await expect(page.locator("canvas")).toHaveCount(0);
+    expect(heavyRequests).toEqual([]);
+    await expect(page.locator("[data-hero][data-ready]")).toHaveCount(0);
   });
 
   test.describe("when a spec opts in", () => {
     test.use({ villa: true });
 
-    test("mounts on a desktop pointer", async ({ page, isMobile }) => {
-      test.skip(isMobile, "touch devices never get the villa, by the product's own gate");
+    test("mounts on every device, touch included", async ({ page }) => {
       await page.goto("/");
-      await expect(page.locator("[data-ready] canvas")).toHaveCount(1, { timeout: 20_000 });
+      await expect(page.locator("[data-hero][data-ready] canvas")).toHaveCount(1, {
+        timeout: 20_000,
+      });
     });
   });
 });

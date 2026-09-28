@@ -26,7 +26,7 @@
     // rendering: Linux Chrome draws the row about 10px wider than macOS. These
     // fallbacks are the macOS measurements, used before hydration and
     // without JS. The mark is an SVG, so its 23px is the same everywhere.
-    --nav-links-row: 384px;
+    --nav-links-row: 196px;
     --nav-cta-width: 129px;
     // Half the link row plus one gap: the distance from the middle track's
     // centre to an edge track's inner boundary.
@@ -119,13 +119,13 @@
     // scale stops at 600ms and this surface sits just past it.
     --nav-collapse-duration: 650ms;
     // How long the collapse waits for the contents to fade out. The last item
-    // to leave starts at 5 * step-out and takes --nav-item-duration-out, so the
-    // fade-out window is (5 * step-out + duration-out); the panel starts moving
+    // to leave starts at 3 * step-out and takes --nav-item-duration-out, so the
+    // fade-out window is (3 * step-out + duration-out); the panel starts moving
     // at 90% of it — the same handover the opening uses in the other direction.
-    // The 5 is the link count; it and the two fallbacks in the stagger rules
+    // The 3 is the link count; it and the two fallbacks in the stagger rules
     // below move together with NAV_LINKS.
     --nav-collapse-hold: calc(
-      (5 * var(--nav-stagger-step-out) + var(--nav-item-duration-out)) * 0.9
+      (3 * var(--nav-stagger-step-out) + var(--nav-item-duration-out)) * 0.9
     );
     // How far each link travels as it fades in.
     --nav-link-rise: #{$space-3};
@@ -899,8 +899,8 @@
     // reverse stagger lives here and the forward one on [data-open] below.
     //
     // Closing runs bottom-up, the mirror of opening: the footer leaves first
-    // (--link-index falls back to 5, so 5 - 5 = 0), then About, Developers,
-    // Designers, Pricing, Solutions. The panel itself then waits for this to
+    // (--link-index falls back to 3, so 3 - 3 = 0), then About, Pricing,
+    // Solutions. The panel itself then waits for this to
     // be 90% done before collapsing — see the .panel rule below.
     .item,
     .panelFooter {
@@ -909,7 +909,7 @@
       transition-property: opacity, transform;
       transition-duration: var(--nav-item-duration-out);
       transition-timing-function: var(--nav-expand-ease);
-      transition-delay: calc((5 - var(--link-index, 5)) * var(--nav-stagger-step-out));
+      transition-delay: calc((3 - var(--link-index, 3)) * var(--nav-stagger-step-out));
     }
 
     .nav[data-open] .item,
@@ -922,7 +922,7 @@
       transition-duration: var(--nav-item-duration);
       // Hold until the expansion is 90% done, then one step per link.
       transition-delay: calc(
-        var(--nav-expand-duration) * 0.9 + var(--link-index, 5) * var(--nav-stagger-step)
+        var(--nav-expand-duration) * 0.9 + var(--link-index, 3) * var(--nav-stagger-step)
       );
     }
   }
