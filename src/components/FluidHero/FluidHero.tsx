@@ -22,7 +22,9 @@ export function FluidHero() {
     <section className={styles.hero} aria-labelledby="hero-title" data-hero>
       <FluidCanvas />
       <div className={styles.inner}>
-        <div className={styles.copy}>
+        {/* data-hero-quiet: the glyph layer under the liquid keeps clear of
+            these boxes, so nothing sits under the text (FluidCanvas.tsx). */}
+        <div className={styles.copy} data-hero-quiet>
           <h1 className={styles.title} id="hero-title">
             Home at your fingertips
           </h1>
@@ -32,7 +34,7 @@ export function FluidHero() {
           </p>
         </div>
 
-        <div className={styles.ctas}>
+        <div className={styles.ctas} data-hero-quiet>
           <Link href="/contact" className={styles.primary} data-cursor="none">
             Book a site visit
           </Link>

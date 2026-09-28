@@ -1,4 +1,4 @@
-import { createFluid, fit, type Fluid } from "../fluid";
+import { createFluid, fit, UNIFORMS, type Fluid } from "../fluid";
 import * as shaders from "../shaders";
 
 /**
@@ -245,7 +245,11 @@ function createFakeGl(options: Options = {}): FakeGl {
 
 // --- Tests --------------------------------------------------------------
 
-const COLOURS = { ground: [0.9, 0.8, 0.7] as const, ink: [0.2, 0.1, 0.05] as const };
+const COLOURS = {
+  ground: [0.9, 0.8, 0.7] as const,
+  ink: [0.2, 0.1, 0.05] as const,
+  glyph: [0.1, 0.05, 0.02] as const,
+};
 
 function make(options: Parameters<typeof createFakeGl>[0] = {}) {
   const fake = createFakeGl(options);
@@ -507,14 +511,14 @@ describe("active", () => {
     expect(fluid.active).toBe(true);
     for (let i = 0; i < 60 * 3; i += 1) fluid.step(1 / 60);
     expect(fluid.active).toBe(true);
-    for (let i = 0; i < 60 * 12; i += 1) fluid.step(1 / 60);
+    for (let i = 0; i < 60 * 6; i += 1) fluid.step(1 / 60);
     expect(fluid.active).toBe(false);
   });
 
   test("a splat while settling restarts the clock", () => {
     const { fluid } = ready();
     fluid.splat(0.5, 0.5, 0.01, 0);
-    for (let i = 0; i < 60 * 5; i += 1) fluid.step(1 / 60);
+    for (let i = 0; i < 60 * 4; i += 1) fluid.step(1 / 60);
     fluid.splat(0.5, 0.5, 0.01, 0);
     for (let i = 0; i < 60 * 2; i += 1) fluid.step(1 / 60);
     expect(fluid.active).toBe(true);
@@ -608,7 +612,7 @@ const UNIFORM_COUNTS = {
   divergence: 1,
   pressure: 2,
   gradientSubtract: 2,
-  display: 3,
+  display: 6,
 };
 
 describe("pass details", () => {
@@ -620,7 +624,7 @@ describe("pass details", () => {
     for (const uniforms of sim) {
       expect(uniforms["texelSize"]).toEqual([1 / 128, 1 / 64]);
     }
-    expect(fake.uniformsAtDraw.at(-1)?.["texelSize"]).toEqual([1 / 512, 1 / 256]);
+    expect(fake.uniformsAtDraw.at(-1)?.["texelSize"]).toEqual([1 / 768, 1 / 384]);
   });
 
   test("a portrait canvas gets portrait targets", () => {
@@ -777,7 +781,7 @@ describe("boundaries", () => {
   test("active flips exactly at the settle time", () => {
     const { fluid } = ready();
     fluid.splat(0.5, 0.5, 0.01, 0);
-    fluid.step(9.999);
+    fluid.step(4.999);
     expect(fluid.active).toBe(true);
     fluid.step(0.001);
     expect(fluid.active).toBe(false);
@@ -853,5 +857,122 @@ describe("fit, at the extremes", () => {
   test("rounds to the nearest texel rather than truncating", () => {
     // 128 / (1000/600) = 76.8, which rounds up.
     expect(fit(1000, 600, 128)).toEqual({ width: 128, height: 77 });
+  });
+});
+
+describe("setGlyphs", () => {
+  const source = { fake: "canvas" } as unknown as TexImageSource;
+
+  test("draw reports no glyphs until a layer is uploaded", () => {
+    const { fake, fluid } = ready();
+    fluid.draw();
+    expect(fake.uniformsAtDraw[0]?.["glyphs"]).toEqual([0]);
+    expect(fake.uniformsAtDraw[0]?.["uGlyphs"]).toEqual([1]);
+    expect(fake.uniformsAtDraw[0]?.["glyph"]).toEqual([0.1, 0.05, 0.02]);
+  });
+
+  test("the first upload allocates one texture; later uploads reuse it", () => {
+    const { fake, fluid } = ready();
+    const before = fake.created.textures;
+    const uploads = fake.calls.filter((call) => call === "texImage2D").length;
+    fluid.setGlyphs(source);
+    fluid.setGlyphs(source);
+    fluid.setGlyphs(source);
+    expect(fake.created.textures).toBe(before + 1);
+    expect(fake.calls.filter((call) => call === "texImage2D")).toHaveLength(uploads + 3);
+  });
+
+  test("once uploaded, draw binds it on unit 1 and turns the reveal on", () => {
+    const { fake, fluid } = ready();
+    fluid.setGlyphs(source);
+    fluid.draw();
+    expect(fake.uniformsAtDraw.at(-1)?.["glyphs"]).toEqual([1]);
+    expect(fake.uniformsAtDraw.at(-1)?.["uGlyphs"]).toEqual([1]);
+    expect(fake.draws.at(-1)?.inputs).toHaveLength(2);
+  });
+
+  test("the glyph texture is linear and clamped, like the field", () => {
+    const { fake, fluid } = ready();
+    const before = fake.calls.filter((call) => call === "texParameteri").length;
+    fluid.setGlyphs(source);
+    expect(fake.calls.filter((call) => call === "texParameteri")).toHaveLength(before + 4);
+  });
+
+  test("null removes the layer and frees the texture", () => {
+    const { fake, fluid } = ready();
+    fluid.setGlyphs(source);
+    const deleted = fake.deleted.textures;
+    fluid.setGlyphs(null);
+    expect(fake.deleted.textures).toBe(deleted + 1);
+    fluid.draw();
+    expect(fake.uniformsAtDraw.at(-1)?.["glyphs"]).toEqual([0]);
+    // A second null is a no-op, not a double free.
+    fluid.setGlyphs(null);
+    expect(fake.deleted.textures).toBe(deleted + 1);
+  });
+
+  test("dispose frees the glyph texture with everything else", () => {
+    const { fake, fluid } = ready();
+    fluid.setGlyphs(source);
+    fluid.dispose();
+    expect(fake.deleted.textures).toBe(fake.created.textures);
+  });
+
+  test("a resize keeps the glyph texture: it is not a field target", () => {
+    const { fake, fluid } = ready();
+    fluid.setGlyphs(source);
+    const created = fake.created.textures;
+    fluid.resize(640, 480);
+    fluid.draw();
+    expect(fake.created.textures).toBe(created + 7);
+    expect(fake.uniformsAtDraw.at(-1)?.["glyphs"]).toEqual([1]);
+  });
+
+  test("the simulation passes never read the glyph texture", () => {
+    const { fake, fluid } = ready();
+    fluid.setGlyphs(source);
+    const glyphTexture = fake.bound.get(1);
+    fake.draws.length = 0;
+    fluid.step(1 / 60);
+    for (const draw of fake.draws) expect(draw.inputs).not.toContain(glyphTexture);
+  });
+});
+
+describe("setGlyphs, ordering", () => {
+  const source = { fake: "canvas" } as unknown as TexImageSource;
+
+  test("may be called before resize, and the first draw then shows it", () => {
+    const { fake, fluid } = make();
+    if (!fluid) throw new Error("expected a fluid");
+    expect(() => fluid.setGlyphs(source)).not.toThrow();
+    fluid.resize(400, 200);
+    fake.uniformsAtDraw.length = 0;
+    fluid.draw();
+    expect(fake.uniformsAtDraw[0]?.["glyphs"]).toEqual([1]);
+  });
+
+  test("the display pass leaves the dye on unit 0 and the glyphs on unit 1", () => {
+    const { fake, fluid } = ready();
+    fluid.setGlyphs(source);
+    const glyphTexture = fake.bound.get(1);
+    fluid.draw();
+    expect(fake.bound.get(1)).toBe(glyphTexture);
+    expect(fake.bound.get(0)).not.toBe(glyphTexture);
+    expect(fake.draws.at(-1)?.inputs).toEqual([fake.bound.get(0), glyphTexture]);
+  });
+
+  test("UNIFORMS.display lists the glyph uniforms the shader declares", () => {
+    expect(UNIFORMS.display).toEqual(expect.arrayContaining(["uGlyphs", "glyphs", "glyph"]));
+  });
+});
+
+describe("setGlyphs, after dispose", () => {
+  test("a fresh upload after dispose allocates a fresh texture", () => {
+    const { fake, fluid } = ready();
+    fluid.setGlyphs({ fake: "canvas" } as unknown as TexImageSource);
+    fluid.dispose();
+    const created = fake.created.textures;
+    fluid.setGlyphs({ fake: "canvas" } as unknown as TexImageSource);
+    expect(fake.created.textures).toBe(created + 1);
   });
 });

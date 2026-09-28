@@ -145,8 +145,13 @@ void main () {
  * ink (brown-700) is approached but never reached. Both come in as uniforms
  * read from CSS, so this file holds no colour values.
  *
- * A smoothstep, not a linear ramp: it gives the liquid a body with an edge
- * rather than a smoke that thins forever. It saturates at 60%. The copy sits
+ * The glyph layer (glyphs.ts) rides on top: its alpha is the characters, and
+ * they show only where the dye is dense, so the liquid is the lamp that
+ * reveals them. `glyphs` is 0 until the layer exists, which also covers a
+ * sampler with nothing bound. The 2D canvas is y-down, hence the flip.
+ *
+ * A short smoothstep, not a linear ramp: it gives the liquid a body with a
+ * crisp edge rather than a smoke that thins forever. It saturates at 60%. The copy sits
  * on top of this field in --color-text-primary, and at a 60% mix of the two
  * tokens that text still measures 4.7:1 against the darkest the field can
  * get; at 65% it is 4.2:1 and at full brown-700 about 1.7:1. AA contrast is
@@ -159,11 +164,17 @@ precision highp sampler2D;
 in vec2 vUv;
 out vec4 fragColor;
 uniform sampler2D uDye;
+uniform sampler2D uGlyphs;
+uniform float glyphs;
 uniform vec3 ground;
 uniform vec3 ink;
+uniform vec3 glyph;
 void main () {
   float dye = max(texture(uDye, vUv).x, 0.0);
-  float d = 0.6 * smoothstep(0.02, 0.9, dye);
-  fragColor = vec4(mix(ground, ink, d), 1.0);
+  float d = 0.6 * smoothstep(0.06, 0.45, dye);
+  vec3 color = mix(ground, ink, d);
+  float reveal = smoothstep(0.5, 0.9, dye) * glyphs;
+  float mark = texture(uGlyphs, vec2(vUv.x, 1.0 - vUv.y)).a;
+  fragColor = vec4(mix(color, glyph, mark * reveal), 1.0);
 }
 `;

@@ -84,3 +84,19 @@ describe("the copy keeps the brand's tone", () => {
     expect(screen.getByRole("region", { name: "Home at your fingertips" })).toBeInTheDocument();
   });
 });
+
+describe("the quiet zones", () => {
+  test("mark the copy and the CTAs, and nothing else", () => {
+    const { container } = render(<FluidHero />);
+    const quiet = container.querySelectorAll("[data-hero-quiet]");
+    expect(quiet).toHaveLength(2);
+    expect(quiet[0]?.querySelector("h1")).not.toBeNull();
+    expect(quiet[1]?.querySelectorAll("a")).toHaveLength(2);
+  });
+
+  test("the byline is not quiet: it is small and sits where the pool rarely reaches", () => {
+    render(<FluidHero />);
+    const byline = screen.getByText("Smarthaus by Maple Technologies.");
+    expect(byline.closest("[data-hero-quiet]")).toBeNull();
+  });
+});

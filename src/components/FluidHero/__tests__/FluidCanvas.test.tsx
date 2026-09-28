@@ -20,6 +20,16 @@ jest.mock("../fluid", () => ({
   createFluid: (...args: unknown[]) => createFluid(...args),
 }));
 
+// The glyph layer has its own file (glyphs.test.ts). Here it is a stub that
+// resolves no icons unless a test hands it some.
+const loadIcons = jest.fn<Promise<unknown[]>, [readonly string[]]>(() => Promise.resolve([]));
+const createGlyphLayer = jest.fn();
+jest.mock("../glyphs", () => ({
+  ICON_URLS: ["/hero/hardware/icons/a.svg", "/hero/hardware/icons/b.svg"],
+  loadIcons: (...args: [readonly string[]]) => loadIcons(...args),
+  createGlyphLayer: (...args: unknown[]) => createGlyphLayer(...args),
+}));
+
 type IoCallback = (entries: { isIntersecting: boolean }[]) => void;
 
 let ioCallback: IoCallback | undefined;
@@ -32,6 +42,7 @@ let cancelled: number[] = [];
 const TOKENS: Record<string, string> = {
   "--brown-100": " #f0e9dd",
   "--brown-700": "#523c2a ",
+  "--brown-800": "#2b241d",
 };
 
 function stubEnvironment({
@@ -99,6 +110,7 @@ function fakeFluid(overrides: Partial<Fluid> = {}) {
     splat: jest.fn(),
     step: jest.fn(),
     draw: jest.fn(),
+    setGlyphs: jest.fn(),
     dispose: jest.fn(),
     get active() {
       return active;
@@ -141,6 +153,10 @@ beforeEach(() => {
   frames = [];
   cancelled = [];
   createFluid.mockReset();
+  loadIcons.mockReset();
+  loadIcons.mockImplementation(() => Promise.resolve([]));
+  createGlyphLayer.mockReset();
+  createGlyphLayer.mockReturnValue(null);
   jest.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
     frames.push(cb);
     return frames.length;
@@ -215,7 +231,9 @@ describe("gates", () => {
   });
 
   test("an unreadable token is a logged failure, not a wrong colour", async () => {
-    stubEnvironment({ tokens: { "--brown-100": "", "--brown-700": "#523c2a" } });
+    stubEnvironment({
+      tokens: { "--brown-100": "", "--brown-700": "#523c2a", "--brown-800": "#2b241d" },
+    });
     const spy = jest.spyOn(console, "error").mockImplementation(() => {});
     mount();
     await flush();
@@ -247,7 +265,7 @@ describe("once running", () => {
     await flush();
     expect(createFluid).toHaveBeenCalledWith(
       { fake: true },
-      { ground: parseHex("#f0e9dd"), ink: parseHex("#523c2a") },
+      { ground: parseHex("#f0e9dd"), ink: parseHex("#523c2a"), glyph: parseHex("#2b241d") },
     );
   });
 
@@ -735,5 +753,273 @@ describe("listeners", () => {
     expect(removed.mock.calls.map((call) => call[0]).sort()).toEqual(
       added.mock.calls.map((call) => call[0]).sort(),
     );
+  });
+});
+
+describe("the glyph layer", () => {
+  let fluid: ReturnType<typeof fakeFluid>;
+  let layer: {
+    canvas: HTMLCanvasElement;
+    resize: jest.Mock;
+    update: jest.Mock;
+    dispose: jest.Mock;
+  };
+
+  beforeEach(() => {
+    stubEnvironment();
+    fluid = fakeFluid();
+    createFluid.mockReturnValue(fluid);
+    layer = {
+      canvas: document.createElement("canvas"),
+      resize: jest.fn(),
+      update: jest.fn(() => false),
+      dispose: jest.fn(),
+    };
+  });
+
+  test("asks for the icon urls once the field is live, not before", async () => {
+    const { section } = mount();
+    await waitFor(() => expect(section).toHaveAttribute("data-ready"));
+    expect(loadIcons).toHaveBeenCalledWith([
+      "/hero/hardware/icons/a.svg",
+      "/hero/hardware/icons/b.svg",
+    ]);
+  });
+
+  test("the field runs without a layer when no icon loads", async () => {
+    const { section } = mount();
+    await waitFor(() => expect(section).toHaveAttribute("data-ready"));
+    await flush();
+    expect(createGlyphLayer).toHaveBeenCalledWith(expect.objectContaining({ icons: [], dpr: 2 }));
+    expect(fluid.setGlyphs).not.toHaveBeenCalled();
+    expect(fluid.resize).toHaveBeenCalledTimes(1);
+  });
+
+  test("once created, the layer is laid out, uploaded and drawn in one refit", async () => {
+    loadIcons.mockResolvedValue([{ fake: "icon" }]);
+    createGlyphLayer.mockReturnValue(layer);
+    const { section } = mount();
+    await waitFor(() => expect(fluid.setGlyphs).toHaveBeenCalled());
+    expect(layer.resize).toHaveBeenCalledWith(1600, 800, expect.any(Array));
+    expect(fluid.setGlyphs).toHaveBeenCalledWith(layer.canvas);
+    // The refit is forced: same size as before, and it still rebuilt.
+    expect(fluid.resize).toHaveBeenCalledTimes(2);
+    expect(fluid.draw).toHaveBeenCalledTimes(2);
+    expect(section).toHaveAttribute("data-ready");
+  });
+
+  test("the quiet rects are the marked boxes, in device pixels relative to the canvas", async () => {
+    loadIcons.mockResolvedValue([{ fake: "icon" }]);
+    createGlyphLayer.mockReturnValue(layer);
+    const utils = render(
+      <section data-hero>
+        <FluidCanvas />
+        <div data-hero-quiet />
+        <div data-hero-quiet />
+      </section>,
+    );
+    const canvas = utils.container.querySelector<HTMLCanvasElement>("canvas");
+    if (!canvas) throw new Error("no canvas");
+    Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 800 });
+    Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 400 });
+    canvas.getBoundingClientRect = () =>
+      ({ left: 100, top: 50, width: 800, height: 400 }) as DOMRect;
+    const quiet = [...utils.container.querySelectorAll<HTMLElement>("[data-hero-quiet]")];
+    const [first, second] = quiet;
+    if (!first || !second) throw new Error("no quiet boxes");
+    first.getBoundingClientRect = () =>
+      ({ left: 300, top: 150, width: 400, height: 100 }) as DOMRect;
+    second.getBoundingClientRect = () =>
+      ({ left: 500, top: 300, width: 200, height: 40 }) as DOMRect;
+    await waitFor(() => expect(layer.resize).toHaveBeenCalled());
+    expect(layer.resize).toHaveBeenLastCalledWith(1600, 800, [
+      { x: 400, y: 200, width: 800, height: 200 },
+      { x: 800, y: 500, width: 400, height: 80 },
+    ]);
+  });
+
+  test("each frame asks the layer to shimmer and uploads only when it changed", async () => {
+    loadIcons.mockResolvedValue([{ fake: "icon" }]);
+    createGlyphLayer.mockReturnValue(layer);
+    mount();
+    await waitFor(() => expect(fluid.setGlyphs).toHaveBeenCalled());
+    const uploads = (fluid.setGlyphs as jest.Mock).mock.calls.length;
+    show();
+    layer.update.mockReturnValueOnce(false);
+    act(() => frames[0]?.(16));
+    expect(layer.update).toHaveBeenCalledWith(16);
+    expect(fluid.setGlyphs).toHaveBeenCalledTimes(uploads);
+    layer.update.mockReturnValueOnce(true);
+    act(() => frames[1]?.(200));
+    expect(fluid.setGlyphs).toHaveBeenCalledTimes(uploads + 1);
+  });
+
+  test("a later resize lays the layer out again", async () => {
+    loadIcons.mockResolvedValue([{ fake: "icon" }]);
+    createGlyphLayer.mockReturnValue(layer);
+    const { canvas } = mount();
+    await waitFor(() => expect(layer.resize).toHaveBeenCalledTimes(1));
+    Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 400 });
+    act(() => roCallback?.());
+    act(() => frames.at(-1)?.(16));
+    expect(layer.resize).toHaveBeenLastCalledWith(800, 800, expect.any(Array));
+  });
+
+  test("unmount disposes the layer", async () => {
+    loadIcons.mockResolvedValue([{ fake: "icon" }]);
+    createGlyphLayer.mockReturnValue(layer);
+    const { unmount } = mount();
+    await waitFor(() => expect(layer.resize).toHaveBeenCalled());
+    unmount();
+    expect(layer.dispose).toHaveBeenCalledTimes(1);
+    expect(fluid.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  test("icons arriving after unmount create no layer", async () => {
+    let resolveIcons: (icons: unknown[]) => void = () => {};
+    loadIcons.mockReturnValue(
+      new Promise((resolve) => {
+        resolveIcons = resolve;
+      }),
+    );
+    const { section, unmount } = mount();
+    await waitFor(() => expect(section).toHaveAttribute("data-ready"));
+    unmount();
+    resolveIcons([{ fake: "icon" }]);
+    await flush();
+    expect(createGlyphLayer).not.toHaveBeenCalled();
+  });
+});
+
+describe("the glyph layer, timing and sizing", () => {
+  let fluid: ReturnType<typeof fakeFluid>;
+
+  beforeEach(() => {
+    stubEnvironment();
+    fluid = fakeFluid();
+    createFluid.mockReturnValue(fluid);
+  });
+
+  test("the icons are requested only after the field is ready", async () => {
+    let readyAtRequest: boolean | undefined;
+    loadIcons.mockImplementation(() => {
+      readyAtRequest = document.querySelector("[data-hero]")?.hasAttribute("data-ready");
+      return Promise.resolve([]);
+    });
+    mount();
+    await waitFor(() => expect(loadIcons).toHaveBeenCalled());
+    expect(readyAtRequest).toBe(true);
+  });
+
+  test("the layer is drawn at the capped pixel ratio, like the canvas", async () => {
+    Object.defineProperty(window, "devicePixelRatio", { configurable: true, value: 3 });
+    loadIcons.mockResolvedValue([{ fake: "icon" }]);
+    const layer = {
+      canvas: document.createElement("canvas"),
+      resize: jest.fn(),
+      update: jest.fn(() => false),
+      dispose: jest.fn(),
+    };
+    createGlyphLayer.mockReturnValue(layer);
+    mount();
+    await waitFor(() => expect(layer.resize).toHaveBeenCalled());
+    expect(createGlyphLayer).toHaveBeenCalledWith(expect.objectContaining({ dpr: 2 }));
+    expect(layer.resize).toHaveBeenCalledWith(1600, 800, expect.any(Array));
+  });
+
+  test("a section with no quiet boxes gives the layer an empty list", async () => {
+    loadIcons.mockResolvedValue([{ fake: "icon" }]);
+    const layer = {
+      canvas: document.createElement("canvas"),
+      resize: jest.fn(),
+      update: jest.fn(() => false),
+      dispose: jest.fn(),
+    };
+    createGlyphLayer.mockReturnValue(layer);
+    mount();
+    await waitFor(() => expect(layer.resize).toHaveBeenCalled());
+    expect(layer.resize).toHaveBeenLastCalledWith(1600, 800, []);
+  });
+
+  test("the shimmer is not asked for while the loop is asleep", async () => {
+    loadIcons.mockResolvedValue([{ fake: "icon" }]);
+    const layer = {
+      canvas: document.createElement("canvas"),
+      resize: jest.fn(),
+      update: jest.fn(() => true),
+      dispose: jest.fn(),
+    };
+    createGlyphLayer.mockReturnValue(layer);
+    mount();
+    await waitFor(() => expect(layer.resize).toHaveBeenCalled());
+    // Off screen: no frames, so no update calls, so no uploads.
+    expect(layer.update).not.toHaveBeenCalled();
+    const uploads = (fluid.setGlyphs as jest.Mock).mock.calls.length;
+    hide();
+    expect(fluid.setGlyphs).toHaveBeenCalledTimes(uploads);
+  });
+});
+
+describe("the glyph layer, in the frame", () => {
+  let fluid: ReturnType<typeof fakeFluid>;
+  let layer: {
+    canvas: HTMLCanvasElement;
+    resize: jest.Mock;
+    update: jest.Mock;
+    dispose: jest.Mock;
+  };
+
+  beforeEach(() => {
+    stubEnvironment();
+    fluid = fakeFluid();
+    createFluid.mockReturnValue(fluid);
+    layer = {
+      canvas: document.createElement("canvas"),
+      resize: jest.fn(),
+      update: jest.fn(() => true),
+      dispose: jest.fn(),
+    };
+    loadIcons.mockResolvedValue([{ fake: "icon" }]);
+    createGlyphLayer.mockReturnValue(layer);
+  });
+
+  test("uploads the shuffled layer before the step and the draw of the same frame", async () => {
+    mount();
+    await waitFor(() => expect(layer.resize).toHaveBeenCalled());
+    const order: string[] = [];
+    (fluid.setGlyphs as jest.Mock).mockImplementation(() => order.push("upload"));
+    (fluid.step as jest.Mock).mockImplementation(() => order.push("step"));
+    (fluid.draw as jest.Mock).mockImplementation(() => order.push("draw"));
+    show();
+    act(() => frames[0]?.(16));
+    expect(order).toEqual(["upload", "step", "draw"]);
+  });
+
+  test("the pointer still reaches the field after the layer arrives", async () => {
+    const { section } = mount();
+    await waitFor(() => expect(layer.resize).toHaveBeenCalled());
+    act(() => {
+      section.dispatchEvent(new MouseEvent("pointermove", { clientX: 300, clientY: 150 }));
+    });
+    expect(fluid.splat).toHaveBeenCalledWith(0.25, 0.75, 0, 0);
+  });
+
+  test("the layer's refit does not clear the ready flag or restart the loop", async () => {
+    const { section } = mount();
+    await waitFor(() => expect(section).toHaveAttribute("data-ready"));
+    show();
+    await waitFor(() => expect(layer.resize).toHaveBeenCalled());
+    expect(section).toHaveAttribute("data-ready");
+    expect(frames).toHaveLength(1);
+  });
+
+  test("the icon colour is one step lighter than the ink", async () => {
+    mount();
+    await flush();
+    const options = createFluid.mock.calls[0]?.[1] as { ink: number[]; glyph: number[] };
+    // brown-800 is darker than brown-700 on every channel.
+    for (let channel = 0; channel < 3; channel += 1) {
+      expect(options.glyph[channel]).toBeLessThan(options.ink[channel] ?? 0);
+    }
   });
 });

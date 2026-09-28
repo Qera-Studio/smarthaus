@@ -74,7 +74,7 @@ describe("uniforms", () => {
 });
 
 describe("the display cap keeps the copy readable", () => {
-  // The display curve: d = 0.6 * smoothstep(0.02, 0.9, dye), so d <= 0.6.
+  // The display curve: d = 0.6 * smoothstep(0.06, 0.45, dye), so d <= 0.6.
   const CAP = 0.6;
 
   const tokens = readFileSync(join(process.cwd(), "src/styles/_variables.scss"), "utf8");
@@ -97,7 +97,7 @@ describe("the display cap keeps the copy readable", () => {
   };
 
   test("the shader's curve is the one this test assumes", () => {
-    expect(shaders.DISPLAY).toMatch(/float d = 0\.6 \* smoothstep\(0\.02, 0\.9, dye\);/);
+    expect(shaders.DISPLAY).toMatch(/float d = 0\.6 \* smoothstep\(0\.06, 0\.45, dye\);/);
     expect(shaders.DISPLAY).toMatch(/mix\(ground, ink, d\)/);
   });
 
@@ -174,5 +174,40 @@ describe("GLSL hygiene", () => {
   test("the display shader holds no colour literal", () => {
     expect(shaders.DISPLAY).not.toMatch(/vec3\(\s*\d/);
     expect(shaders.DISPLAY).not.toMatch(/#[0-9a-f]{6}/i);
+  });
+});
+
+describe("the glyph reveal", () => {
+  test("the display shader samples the glyph layer flipped, since a 2D canvas is y-down", () => {
+    expect(shaders.DISPLAY).toMatch(/texture\(uGlyphs, vec2\(vUv\.x, 1\.0 - vUv\.y\)\)\.a/);
+  });
+
+  test("reveals only inside dense dye, and only when a layer exists", () => {
+    expect(shaders.DISPLAY).toMatch(/float reveal = smoothstep\(0\.5, 0\.9, dye\) \* glyphs;/);
+    expect(shaders.DISPLAY).toMatch(/mix\(color, glyph, mark \* reveal\)/);
+  });
+
+  test("the reveal starts past the point where the liquid has a body", () => {
+    // The body curve begins at 0.02 and the reveal at 0.5: characters sit
+    // inside the pool, never on its faint outer edge.
+    const body = /smoothstep\((\d+\.\d+), (\d+\.\d+), dye\)/.exec(shaders.DISPLAY);
+    const reveal = /reveal = smoothstep\((\d+\.\d+), (\d+\.\d+), dye\)/.exec(shaders.DISPLAY);
+    expect(Number(reveal?.[1])).toBeGreaterThan(Number(body?.[1]));
+  });
+
+  test("glyph colour is a uniform, so the shader still holds no colour", () => {
+    expect(declaredUniforms(shaders.DISPLAY)).toEqual(
+      expect.arrayContaining(["uGlyphs", "glyphs", "glyph"]),
+    );
+  });
+});
+
+describe("the glyph colour", () => {
+  test("enters only through the mark and the reveal, never the ground", () => {
+    expect(shaders.DISPLAY).toMatch(/vec3 color = mix\(ground, ink, d\);/);
+    expect(shaders.DISPLAY).toMatch(
+      /fragColor = vec4\(mix\(color, glyph, mark \* reveal\), 1\.0\);/,
+    );
+    expect(shaders.DISPLAY.match(/\bglyph\b/g)).toHaveLength(2);
   });
 });

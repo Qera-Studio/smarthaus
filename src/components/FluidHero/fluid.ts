@@ -27,8 +27,10 @@ export type Vec3 = readonly [number, number, number];
 export interface FluidOptions {
   /** The colour of the empty field (brown-100), 0 to 1 per channel. */
   ground: Vec3;
-  /** The colour the pointer trails (brown-800), 0 to 1 per channel. */
+  /** The colour the pointer trails (brown-700), 0 to 1 per channel. */
   ink: Vec3;
+  /** The colour of the revealed glyphs (brown-900), 0 to 1 per channel. */
+  glyph: Vec3;
   /** Long side of the velocity and pressure textures. */
   simSize?: number;
   /** Long side of the dye texture: what the viewer actually sees. */
@@ -48,6 +50,11 @@ export interface Fluid {
   /** Render the dye to the canvas. */
   draw(): void;
   /**
+   * Upload the glyph layer (glyphs.ts) to reveal under the liquid, or null
+   * to reveal nothing. One texture, re-uploaded on every call.
+   */
+  setGlyphs(source: TexImageSource | null): void;
+  /**
    * False once the field has had no input for long enough that the ink is
    * gone, so the caller can stop its frame loop. True again on the next splat.
    */
@@ -62,21 +69,21 @@ export interface Fluid {
 /** Sim texels on the long side. Coarse is right: it is the motion, not the look. */
 const SIM_SIZE = 128;
 /** Dye texels on the long side. What is drawn, so this one is worth pixels. */
-const DYE_SIZE = 512;
+const DYE_SIZE = 768;
 /** Jacobi iterations per step. More converges harder; 20 is the usual floor. */
 const PRESSURE_ITERATIONS = 20;
-/** Per-second decay of velocity. High: a thick liquid stops moving soon after the drag. */
-const VELOCITY_DISSIPATION = 0.8;
-/** Per-second decay of dye. Slower than the motion, so the ink outlives the swirl. */
-const DYE_DISSIPATION = 0.45;
+/** Per-second decay of velocity. High: the liquid stops soon after the drag, so it does not spread. */
+const VELOCITY_DISSIPATION = 2;
+/** Per-second decay of dye. Fast: the trail is gone in a couple of seconds. */
+const DYE_DISSIPATION = 1.6;
 /** Multiplies the pointer's uv delta into sim velocity. */
-const SPLAT_FORCE = 4000;
-/** Splat radius in uv space, squared-distance denominator. Wide: a body of liquid, not a wisp. */
-const SPLAT_RADIUS = 0.008;
+const SPLAT_FORCE = 2500;
+/** Splat radius in uv space, squared-distance denominator. Small: a finger's width, not a cloud. */
+const SPLAT_RADIUS = 0.0012;
 /** Ink deposited per splat. The display shader's curve caps what it can reach. */
-const INK_AMOUNT = 0.25;
+const INK_AMOUNT = 0.2;
 /** Seconds with no splat before `active` turns false. Past DYE_DISSIPATION's tail. */
-const SETTLE_SECONDS = 10;
+const SETTLE_SECONDS = 5;
 
 interface Program {
   program: WebGLProgram;
@@ -105,7 +112,7 @@ export const UNIFORMS = {
   divergence: ["uVelocity"],
   pressure: ["uPressure", "uDivergence"],
   gradientSubtract: ["uPressure", "uVelocity"],
-  display: ["uDye", "ground", "ink"],
+  display: ["uDye", "uGlyphs", "glyphs", "ground", "ink", "glyph"],
 } as const;
 
 /** Every fragment shader also gets the vertex shader's `texelSize`. */
@@ -159,6 +166,7 @@ export function createFluid(gl: WebGL2RenderingContext, options: FluidOptions): 
   let pressure: DoubleTarget | undefined;
   let divergence: Target | undefined;
   let quiet = SETTLE_SECONDS;
+  let glyphs: WebGLTexture | undefined;
 
   const targets = () => {
     if (!velocity || !dye || !pressure || !divergence) {
@@ -288,13 +296,38 @@ export function createFluid(gl: WebGL2RenderingContext, options: FluidOptions): 
       const display = programs.display;
       gl.useProgram(display.program);
       gl.uniform1i(loc(display, "uDye"), bind(t.dye.read.texture, 0));
+      gl.uniform1i(loc(display, "uGlyphs"), glyphs ? bind(glyphs, 1) : 1);
+      gl.uniform1f(loc(display, "glyphs"), glyphs ? 1 : 0);
       gl.uniform3f(loc(display, "ground"), ...options.ground);
       gl.uniform3f(loc(display, "ink"), ...options.ink);
+      gl.uniform3f(loc(display, "glyph"), ...options.glyph);
       blit(null, programs.display, t.dye.read);
+    },
+
+    setGlyphs(source) {
+      if (!source) {
+        if (glyphs) gl.deleteTexture(glyphs);
+        glyphs = undefined;
+        return;
+      }
+      if (!glyphs) {
+        const texture = gl.createTexture();
+        if (!texture) throw new Error("[fluid] could not allocate the glyph texture");
+        glyphs = texture;
+        bind(glyphs, 1);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      }
+      bind(glyphs, 1);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
     },
 
     dispose() {
       destroyTargets();
+      if (glyphs) gl.deleteTexture(glyphs);
+      glyphs = undefined;
       for (const { program } of Object.values(programs)) gl.deleteProgram(program);
       gl.deleteBuffer(quad);
       gl.deleteVertexArray(vao);

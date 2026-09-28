@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { latestEntry } from "@/lib/observer";
 
 import type { Fluid, Vec3 } from "./fluid";
+import type { GlyphLayer, Rect } from "./glyphs";
 import styles from "./FluidHero.module.scss";
 
 /**
@@ -25,6 +26,11 @@ import styles from "./FluidHero.module.scss";
  * 3. The loop runs only while the section is on screen and the tab visible,
  *    and stops by itself once the ink has faded.
  * 4. Any failure keeps the CSS gradient. The section never depends on this.
+ *
+ * The glyph layer (glyphs.ts) is part of the same exception, not a fourth:
+ * it draws text on a 2D canvas a few times a second and the loop above
+ * uploads it as one texture. It arrives after the icons load; the liquid
+ * runs without it until then, and forever if they never do.
  */
 
 interface Connection {
@@ -53,7 +59,10 @@ export function FluidCanvas() {
     let cleanup: (() => void) | undefined;
 
     const start = async () => {
-      const { createFluid } = await import("./fluid");
+      const [{ createFluid }, { createGlyphLayer, loadIcons, ICON_URLS }] = await Promise.all([
+        import("./fluid"),
+        import("./glyphs"),
+      ]);
       if (disposed) return;
 
       const gl = canvas.getContext("webgl2", {
@@ -70,10 +79,24 @@ export function FluidCanvas() {
       const fluid = createFluid(gl, {
         ground: parseHex(computed.getPropertyValue("--brown-100")),
         ink: parseHex(computed.getPropertyValue("--brown-700")),
+        // One step lighter than the ink, so the icons sit in the pool rather
+        // than on it.
+        glyph: parseHex(computed.getPropertyValue("--brown-800")),
       });
       if (!fluid) return;
 
-      cleanup = attach(canvas, section, fluid);
+      const layer: { current?: GlyphLayer } = {};
+      const attached = attach(canvas, section, fluid, layer);
+      cleanup = attached.dispose;
+
+      // The icons come from the network, so the layer lands after the field
+      // is already live. A resize lays it out and uploads it.
+      const icons = await loadIcons(ICON_URLS);
+      if (disposed) return;
+      const created = createGlyphLayer({ icons, dpr: pixelRatio() });
+      if (!created) return;
+      layer.current = created;
+      attached.refit();
     };
 
     start().catch((error: unknown) => {
@@ -91,29 +114,63 @@ export function FluidCanvas() {
   return <canvas ref={ref} className={styles.canvas} aria-hidden="true" />;
 }
 
-/** Listeners, observers and the loop. Returns the function that undoes all of it. */
-function attach(canvas: HTMLCanvasElement, section: HTMLElement, fluid: Fluid) {
+const pixelRatio = () => Math.min(window.devicePixelRatio || 1, MAX_DPR);
+
+/**
+ * The boxes the glyph layer must keep clear of, in the canvas's device
+ * pixels: the copy and the CTAs. Small dark characters under dark text would
+ * cost the headline its contrast, so they are laid out around it.
+ */
+function quietRects(canvas: HTMLCanvasElement, section: HTMLElement, dpr: number): Rect[] {
+  const origin = canvas.getBoundingClientRect();
+  return [...section.querySelectorAll("[data-hero-quiet]")].map((el) => {
+    const rect = el.getBoundingClientRect();
+    return {
+      x: (rect.left - origin.left) * dpr,
+      y: (rect.top - origin.top) * dpr,
+      width: rect.width * dpr,
+      height: rect.height * dpr,
+    };
+  });
+}
+
+/**
+ * Listeners, observers and the loop. Returns the function that undoes all
+ * of it, and one that lays the field out again (for when the glyph layer
+ * arrives).
+ */
+function attach(
+  canvas: HTMLCanvasElement,
+  section: HTMLElement,
+  fluid: Fluid,
+  layer: { current?: GlyphLayer },
+) {
   let frame = 0;
   let previous = 0;
   let visible = false;
   let last: { x: number; y: number } | undefined;
 
-  const fit = () => {
-    const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+  const fit = (force = false) => {
+    const dpr = pixelRatio();
     const width = Math.max(1, Math.round(canvas.clientWidth * dpr));
     const height = Math.max(1, Math.round(canvas.clientHeight * dpr));
     // A resize rebuilds every target and so wipes the field: only for a real
     // change, never for the notification ResizeObserver sends on observe().
-    if (width === canvas.width && height === canvas.height) return;
+    if (!force && width === canvas.width && height === canvas.height) return;
     canvas.width = width;
     canvas.height = height;
     fluid.resize(width, height);
+    if (layer.current) {
+      layer.current.resize(width, height, quietRects(canvas, section, dpr));
+      fluid.setGlyphs(layer.current.canvas);
+    }
     fluid.draw();
   };
 
   const tick = (now: number) => {
     const dt = Math.min((now - previous) / 1000, MAX_DT);
     previous = now;
+    if (layer.current?.update(now)) fluid.setGlyphs(layer.current.canvas);
     fluid.step(dt);
     fluid.draw();
     frame = fluid.active && visible && !document.hidden ? requestAnimationFrame(tick) : 0;
@@ -179,18 +236,23 @@ function attach(canvas: HTMLCanvasElement, section: HTMLElement, fluid: Fluid) {
   });
   io.observe(section);
 
-  return () => {
-    sleep();
-    cancelAnimationFrame(refit);
-    io.disconnect();
-    ro.disconnect();
-    section.removeEventListener("pointermove", onMove);
-    section.removeEventListener("pointerdown", onDown);
-    section.removeEventListener("pointerleave", onLeave);
-    section.removeEventListener("pointercancel", onLeave);
-    document.removeEventListener("visibilitychange", onVisibility);
-    delete section.dataset["ready"];
-    fluid.dispose();
+  return {
+    refit: () => fit(true),
+    dispose: () => {
+      sleep();
+      cancelAnimationFrame(refit);
+      io.disconnect();
+      ro.disconnect();
+      section.removeEventListener("pointermove", onMove);
+      section.removeEventListener("pointerdown", onDown);
+      section.removeEventListener("pointerleave", onLeave);
+      section.removeEventListener("pointercancel", onLeave);
+      document.removeEventListener("visibilitychange", onVisibility);
+      delete section.dataset["ready"];
+      layer.current?.dispose();
+      layer.current = undefined;
+      fluid.dispose();
+    },
   };
 }
 

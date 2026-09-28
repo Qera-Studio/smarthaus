@@ -317,3 +317,92 @@ test.describe("layout stability", () => {
     expect(under).not.toBe("canvas on top");
   });
 });
+
+test.describe("the glyph layer", () => {
+  test("the copy and the CTAs are marked quiet, and the h1 sits inside one", async ({ page }) => {
+    await page.goto("/");
+    const quiet = hero(page).locator("[data-hero-quiet]");
+    await expect(quiet).toHaveCount(2);
+    await expect(quiet.first().getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(quiet.nth(1).getByRole("link")).toHaveCount(2);
+  });
+
+  test.describe("live", () => {
+    test.use({ villa: true });
+
+    test("every hardware icon the layer asks for is served", async ({ page }) => {
+      const statuses = new Map<string, number>();
+      page.on("response", (response) => {
+        const url = new URL(response.url());
+        if (url.pathname.startsWith("/hero/hardware/icons/")) {
+          statuses.set(url.pathname, response.status());
+        }
+      });
+      await page.goto("/");
+      await expect(page.locator("[data-hero][data-ready]")).toHaveCount(1, { timeout: 20_000 });
+      await expect.poll(() => statuses.size, { timeout: 10_000 }).toBeGreaterThanOrEqual(8);
+      for (const [path, status] of statuses) expect(status, path).toBe(200);
+    });
+
+    test("a drag through the field changes pixels away from the copy", async ({
+      page,
+      isMobile,
+    }) => {
+      test.skip(isMobile, "the desktop drag covers this; the touch path is in the input test");
+      await page.goto("/");
+      await expect(page.locator("[data-hero][data-ready]")).toHaveCount(1, { timeout: 20_000 });
+      await page.waitForTimeout(1500);
+      const canvas = hero(page).locator("canvas");
+      const before = await canvas.screenshot();
+      const box = await hero(page).boundingBox();
+      if (!box) throw new Error("no box");
+      // Along the top band, where the icons can be and the copy is not.
+      const y = box.y + box.height * 0.12;
+      await page.mouse.move(box.x + 60, y);
+      await page.mouse.move(box.x + box.width - 60, y, { steps: 40 });
+      await page.waitForTimeout(300);
+      const after = await canvas.screenshot();
+      expect(after.equals(before)).toBe(false);
+    });
+  });
+});
+
+// Runs only in the zoom-200 project.
+test.describe("quiet zones at 200% zoom @zoom", () => {
+  test("the h1 is still inside a quiet box, and the boxes are inside the section", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const section = await hero(page).boundingBox();
+    const quiet = hero(page).locator("[data-hero-quiet]");
+    await expect(quiet).toHaveCount(2);
+    for (const box of await quiet.all()) {
+      const rect = await box.boundingBox();
+      if (!rect || !section) throw new Error("no box");
+      expect(rect.y).toBeGreaterThanOrEqual(section.y);
+      expect(rect.y + rect.height).toBeLessThanOrEqual(section.y + section.height + 1);
+    }
+    await expect(quiet.first().getByRole("heading", { level: 1 })).toBeVisible();
+  });
+});
+
+test.describe("the field is not clipped to the section", () => {
+  test.use({ villa: true });
+
+  test("a drag along the top edge changes pixels above the section", async ({ page, isMobile }) => {
+    test.skip(isMobile, "the desktop pointer drag covers this");
+    await page.goto("/");
+    await expect(page.locator("[data-hero][data-ready]")).toHaveCount(1, { timeout: 20_000 });
+    await page.waitForTimeout(1500);
+    const section = await hero(page).boundingBox();
+    if (!section) throw new Error("no box");
+    // The strip between the top of the viewport and the section: nav space.
+    const clip = { x: 0, y: 0, width: 400, height: Math.max(8, Math.floor(section.y)) };
+    const before = await page.screenshot({ clip });
+    await page.mouse.move(40, section.y + 4);
+    await page.mouse.move(360, section.y + 4, { steps: 30 });
+    await page.waitForTimeout(250);
+    const after = await page.screenshot({ clip });
+    expect(after.equals(before)).toBe(false);
+  });
+});

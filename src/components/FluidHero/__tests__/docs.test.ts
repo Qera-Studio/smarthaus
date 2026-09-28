@@ -66,3 +66,26 @@ describe("CLAUDE.md records the third exception", () => {
     expect(canvas).toMatch(/AGENTS\.md|CLAUDE\.md/);
   });
 });
+
+describe("CLAUDE.md records the glyph layer inside the same exception", () => {
+  test("names the file, the quiet marker and the fallback", () => {
+    expect(section).toMatch(/\*\*The glyph layer is part of this exception, not a fourth\.\*\*/);
+    expect(section).toContain("glyphs.ts");
+    expect(section).toContain("data-hero-quiet");
+    expect(section).toMatch(/If the icons never load, the liquid runs without it\./);
+  });
+
+  test("the marker in the doc is the marker in the markup", () => {
+    const hero = readFileSync(join(root, "src/components/FluidHero/FluidHero.tsx"), "utf8");
+    expect(hero.match(/data-hero-quiet/g)).toHaveLength(3);
+    expect(canvas).toContain('querySelectorAll("[data-hero-quiet]")');
+  });
+});
+
+describe("CLAUDE.md describes the layer as it is", () => {
+  test("a scrambled, reshuffled grid of the icons, not characters", () => {
+    expect(section).toMatch(/scrambled grid/);
+    expect(section).toMatch(/reshuffles a few cells/);
+    expect(section).not.toMatch(/ASCII/);
+  });
+});
