@@ -148,10 +148,21 @@ void main () {
  * The glyph layer (glyphs.ts) rides on top: its alpha is the characters, and
  * they show only where the dye is dense, so the liquid is the lamp that
  * reveals them. `glyphs` is 0 until the layer exists, which also covers a
- * sampler with nothing bound. The 2D canvas is y-down, hence the flip.
+ * sampler with nothing bound.
  *
- * A short smoothstep, not a linear ramp: it gives the liquid a body with a
- * crisp edge rather than a smoke that thins forever. It saturates at 60%. The copy sits
+ * The ink is drawn in blocks, not smooth: the screen is cut into
+ * `pixel`-sized squares counted from the top-left corner, and every fragment
+ * in a square reads the dye at that square's centre. The simulation
+ * underneath is untouched; only the drawing is quantised.
+ *
+ * The icons are not: they are sampled at full resolution, so they keep
+ * their own design. Only whether they show is per block, a hard step on the
+ * block's dye, so an icon at the pool's edge is clipped along a block line.
+ * The 2D canvas is y-down, hence the flip.
+ *
+ * Four stepped shades, not a ramp: a block is paper below 0.1 and then
+ * darkens a quarter of the cap every 0.125 of dye, so a fading trail lightens
+ * in visible steps before it disappears. It saturates at 60%. The copy sits
  * on top of this field in --color-text-primary, and at a 60% mix of the two
  * tokens that text still measures 4.7:1 against the darkest the field can
  * get; at 65% it is 4.2:1 and at full brown-700 about 1.7:1. AA contrast is
@@ -169,11 +180,15 @@ uniform float glyphs;
 uniform vec3 ground;
 uniform vec3 ink;
 uniform vec3 glyph;
+uniform float pixel;
+uniform vec2 resolution;
 void main () {
-  float dye = max(texture(uDye, vUv).x, 0.0);
-  float d = 0.6 * smoothstep(0.06, 0.45, dye);
+  vec2 down = vec2(vUv.x, 1.0 - vUv.y) * resolution;
+  vec2 centre = (floor(down / pixel) + 0.5) * pixel / resolution;
+  float dye = max(texture(uDye, vec2(centre.x, 1.0 - centre.y)).x, 0.0);
+  float d = 0.6 * ceil(clamp((dye - 0.1) / 0.5, 0.0, 1.0) * 4.0) / 4.0;
   vec3 color = mix(ground, ink, d);
-  float reveal = smoothstep(0.5, 0.9, dye) * glyphs;
+  float reveal = step(0.5, dye) * glyphs;
   float mark = texture(uGlyphs, vec2(vUv.x, 1.0 - vUv.y)).a;
   fragColor = vec4(mix(color, glyph, mark * reveal), 1.0);
 }

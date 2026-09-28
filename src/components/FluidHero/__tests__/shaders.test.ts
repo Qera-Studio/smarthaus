@@ -74,7 +74,7 @@ describe("uniforms", () => {
 });
 
 describe("the display cap keeps the copy readable", () => {
-  // The display curve: d = 0.6 * smoothstep(0.06, 0.45, dye), so d <= 0.6.
+  // The display curve: d = 0.6 * (a quarter step from 0 to 1), so d <= 0.6.
   const CAP = 0.6;
 
   const tokens = readFileSync(join(process.cwd(), "src/styles/_variables.scss"), "utf8");
@@ -97,8 +97,21 @@ describe("the display cap keeps the copy readable", () => {
   };
 
   test("the shader's curve is the one this test assumes", () => {
-    expect(shaders.DISPLAY).toMatch(/float d = 0\.6 \* smoothstep\(0\.06, 0\.45, dye\);/);
+    expect(shaders.DISPLAY).toMatch(
+      /float d = 0\.6 \* ceil\(clamp\(\(dye - 0\.1\) \/ 0\.5, 0\.0, 1\.0\) \* 4\.0\) \/ 4\.0;/,
+    );
     expect(shaders.DISPLAY).toMatch(/mix\(ground, ink, d\)/);
+  });
+
+  test("the stepped curve, run in JS, has four shades and never passes the cap", () => {
+    // The same expression as the GLSL line pinned above.
+    const shade = (dye: number) =>
+      (CAP * Math.ceil(Math.min(Math.max((dye - 0.1) / 0.5, 0), 1) * 4)) / 4;
+    const shades = new Set<number>();
+    for (let dye = 0; dye <= 3; dye += 0.001) shades.add(Number(shade(dye).toFixed(6)));
+    expect([...shades].sort()).toEqual([0, 0.15, 0.3, 0.45, 0.6]);
+    expect(shade(0.1)).toBe(0);
+    expect(shade(0.6)).toBe(CAP);
   });
 
   test("brown-900 text on the darkest possible field clears 4.5:1", () => {
@@ -177,21 +190,48 @@ describe("GLSL hygiene", () => {
   });
 });
 
-describe("the glyph reveal", () => {
-  test("the display shader samples the glyph layer flipped, since a 2D canvas is y-down", () => {
-    expect(shaders.DISPLAY).toMatch(/texture\(uGlyphs, vec2\(vUv\.x, 1\.0 - vUv\.y\)\)\.a/);
+describe("the block grid", () => {
+  // The display shader's block centre, run in JS on device pixels counted
+  // from the top-left (y-down), as the shader computes it.
+  const centre = (x: number, pixel: number) => (Math.floor(x / pixel) + 0.5) * pixel;
+
+  test("every fragment in a block reads the same centre", () => {
+    expect(shaders.DISPLAY).toMatch(
+      /vec2 centre = \(floor\(down \/ pixel\) \+ 0\.5\) \* pixel \/ resolution;/,
+    );
+    for (let x = 8; x < 16; x += 0.5) expect(centre(x, 8)).toBe(12);
+    expect(centre(16, 8)).toBe(20);
   });
 
-  test("reveals only inside dense dye, and only when a layer exists", () => {
-    expect(shaders.DISPLAY).toMatch(/float reveal = smoothstep\(0\.5, 0\.9, dye\) \* glyphs;/);
+  test("a pixel of 1 samples each device pixel at its own centre, which is smooth", () => {
+    for (const x of [0, 1, 7, 99]) expect(centre(x, 1)).toBe(x + 0.5);
+  });
+});
+
+describe("the glyph reveal", () => {
+  test("the icons are sampled at full resolution, flipped, since a 2D canvas is y-down", () => {
+    // Not at the block centre: blocks are for the ink, the icons keep their design.
+    expect(shaders.DISPLAY).toMatch(
+      /float mark = texture\(uGlyphs, vec2\(vUv\.x, 1\.0 - vUv\.y\)\)\.a;/,
+    );
+    expect(shaders.DISPLAY).not.toMatch(/texture\(uGlyphs, centre\)/);
+  });
+
+  test("the dye is read at the block centre, flipped back from y-down", () => {
+    expect(shaders.DISPLAY).toMatch(/vec2 down = vec2\(vUv\.x, 1\.0 - vUv\.y\) \* resolution;/);
+    expect(shaders.DISPLAY).toMatch(/texture\(uDye, vec2\(centre\.x, 1\.0 - centre\.y\)\)/);
+  });
+
+  test("reveals only inside dense dye, only when a layer exists, a whole block at a time", () => {
+    expect(shaders.DISPLAY).toMatch(/float reveal = step\(0\.5, dye\) \* glyphs;/);
     expect(shaders.DISPLAY).toMatch(/mix\(color, glyph, mark \* reveal\)/);
   });
 
   test("the reveal starts past the point where the liquid has a body", () => {
-    // The body curve begins at 0.02 and the reveal at 0.5: characters sit
-    // inside the pool, never on its faint outer edge.
-    const body = /smoothstep\((\d+\.\d+), (\d+\.\d+), dye\)/.exec(shaders.DISPLAY);
-    const reveal = /reveal = smoothstep\((\d+\.\d+), (\d+\.\d+), dye\)/.exec(shaders.DISPLAY);
+    // The first shade starts at 0.1 and the reveal at 0.5: icons sit inside
+    // the pool, never on its faint outer edge.
+    const body = shaders.DISPLAY.match(/clamp\(\(dye - (\d+\.\d+)\)/);
+    const reveal = shaders.DISPLAY.match(/reveal = step\((\d+\.\d+), dye\)/);
     expect(Number(reveal?.[1])).toBeGreaterThan(Number(body?.[1]));
   });
 

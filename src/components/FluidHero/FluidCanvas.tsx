@@ -43,6 +43,8 @@ interface Connection {
 
 /** Above this the pixel cost doubles for no visible gain on a soft field. */
 const MAX_DPR = 2;
+/** Edge of the square blocks the ink is drawn in, in CSS px. */
+const PIXEL = 12;
 /** Longest frame the simulation is asked to integrate, in seconds. */
 const MAX_DT = 1 / 30;
 
@@ -85,6 +87,8 @@ export function FluidCanvas() {
         // One step lighter than the ink, so the icons sit in the pool rather
         // than on it.
         glyph: parseHex(computed.getPropertyValue("--brown-800")),
+        // The ink is drawn in square blocks of this size, in device pixels.
+        pixel: PIXEL * pixelRatio(),
       });
       if (!fluid) return;
 

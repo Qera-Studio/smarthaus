@@ -612,7 +612,7 @@ const UNIFORM_COUNTS = {
   divergence: 1,
   pressure: 2,
   gradientSubtract: 2,
-  display: 6,
+  display: 8,
 };
 
 describe("pass details", () => {
@@ -959,6 +959,23 @@ describe("setGlyphs, ordering", () => {
     expect(fake.bound.get(1)).toBe(glyphTexture);
     expect(fake.bound.get(0)).not.toBe(glyphTexture);
     expect(fake.draws.at(-1)?.inputs).toEqual([fake.bound.get(0), glyphTexture]);
+  });
+
+  test("draws in blocks of the given size, over the canvas's full resolution", () => {
+    const fake = createFakeGl();
+    const fluid = createFluid(fake.gl, { ...COLOURS, pixel: 8 });
+    if (!fluid) throw new Error("expected a fluid");
+    fluid.resize(1000, 500);
+    fluid.draw();
+    const uniforms = fake.uniformsAtDraw.at(-1);
+    expect(uniforms?.["pixel"]).toEqual([8]);
+    expect(uniforms?.["resolution"]).toEqual([1000, 500]);
+  });
+
+  test("without a block size, draws smooth: one device pixel per block", () => {
+    const { fake, fluid } = ready();
+    fluid.draw();
+    expect(fake.uniformsAtDraw.at(-1)?.["pixel"]).toEqual([1]);
   });
 
   test("UNIFORMS.display lists the glyph uniforms the shader declares", () => {
