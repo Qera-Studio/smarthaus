@@ -154,6 +154,17 @@
   .section {
     interpolate-size: allow-keywords;
 
+    // Lay out and paint a system only as it nears the viewport. The table is
+    // eleven systems long and mostly below the fold on a phone, and its first
+    // layout and paint were the longest task on /pricing (CI Lighthouse,
+    // 2026-09-28: 216ms of blocking time against a 200ms budget). The rows
+    // stay in the DOM, in the accessibility tree and in find-in-page; `auto`
+    // in the intrinsic size remembers each section's real height once it has
+    // rendered, so scrolling back never jumps.
+    content-visibility: auto;
+    // 320px: measured sections average 295px on desktop and 342px on a phone.
+    contain-intrinsic-size: auto 320px;
+
     // Air between systems. Without it the last row of one section and the
     // title of the next sat one rule apart and the eleven groups read as one
     // long list. On the section rather than the rows, so a collapsed one

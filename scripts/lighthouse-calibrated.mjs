@@ -32,14 +32,21 @@ export function cpuMultiplier(benchmark, target = TARGET_BENCHMARK) {
   return Math.round(Math.min(MAX_MULTIPLIER, Math.max(MIN_MULTIPLIER, raw)) * 100) / 100;
 }
 
-/** The benchmarkIndex of every report in a .lighthouseci folder, averaged. */
-export function averageBenchmark(dir) {
+/**
+ * The highest benchmarkIndex among the reports in a .lighthouseci folder.
+ *
+ * Highest, not average: the first run on a cold machine scores low (measured
+ * 2,074 against 2,490 for the real runs on the same runner), and a low reading
+ * means a smaller slowdown and a faster phone than the target. Erring high
+ * errs strict.
+ */
+export function highestBenchmark(dir) {
   const reports = readdirSync(dir).filter((name) => /^lhr-.*\.json$/.test(name));
   if (reports.length === 0) throw new Error(`no Lighthouse reports in ${dir}`);
   const values = reports.map(
     (name) => JSON.parse(readFileSync(join(dir, name), "utf8")).environment.benchmarkIndex,
   );
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+  return Math.max(...values);
 }
 
 function lhci(args) {
@@ -49,8 +56,9 @@ function lhci(args) {
 function main() {
   const dir = ".lighthouseci";
   rmSync(dir, { recursive: true, force: true });
-  lhci(["collect", "--url=http://localhost:3210/", "--numberOfRuns=1"]);
-  const benchmark = averageBenchmark(dir);
+  // Two runs: the first warms the server and the browser.
+  lhci(["collect", "--url=http://localhost:3210/", "--numberOfRuns=2"]);
+  const benchmark = highestBenchmark(dir);
   const multiplier = cpuMultiplier(benchmark);
   console.log(
     `lighthouse-calibrated: benchmarkIndex ${Math.round(benchmark)}, CPU slowdown ${multiplier}x (target ${TARGET_BENCHMARK})`,

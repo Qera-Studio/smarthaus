@@ -61,14 +61,14 @@ describe("cpuMultiplier", () => {
   });
 });
 
-describe("averageBenchmark", () => {
+describe("highestBenchmark", () => {
   let dir = "";
   beforeEach(() => {
     dir = mkdtempSync(path.join(tmpdir(), "lhci-"));
   });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-  it("averages the benchmarkIndex of every report, ignoring other files", () => {
+  it("takes the highest benchmarkIndex, since a cold first run reads low, ignoring other files", () => {
     writeFileSync(
       path.join(dir, "lhr-1.json"),
       JSON.stringify({ environment: { benchmarkIndex: 2400 } }),
@@ -78,11 +78,11 @@ describe("averageBenchmark", () => {
       JSON.stringify({ environment: { benchmarkIndex: 2600 } }),
     );
     writeFileSync(path.join(dir, "assertion-results.json"), "[]");
-    expect(run(`m.averageBenchmark(${JSON.stringify(dir)})`)).toEqual({ ok: 2500 });
+    expect(run(`m.highestBenchmark(${JSON.stringify(dir)})`)).toEqual({ ok: 2600 });
   });
 
   it("refuses an empty folder rather than calibrating to nothing", () => {
-    expect(run(`m.averageBenchmark(${JSON.stringify(dir)})`)).toEqual({
+    expect(run(`m.highestBenchmark(${JSON.stringify(dir)})`)).toEqual({
       error: expect.stringContaining("no Lighthouse reports"),
     });
   });
