@@ -11,6 +11,14 @@ class FakeIO {
     public callback: (entries: Entry[]) => void,
     public options: IntersectionObserverInit = {},
   ) {
+    // What the browser does with a margin it cannot parse: throw from the
+    // constructor. "--8px" was one, and it took the whole page down.
+    const margin = options.rootMargin ?? "0px";
+    if (!/^(-?\d+(px|%))( -?\d+(px|%)){0,3}$/.test(margin)) {
+      throw new SyntaxError(
+        "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent.",
+      );
+    }
     FakeIO.all.push(this);
   }
   observe(target: Element) {
@@ -131,6 +139,25 @@ describe("ScrollToTop", () => {
     FakeRO.all[0]!.fire();
     expect(darkIO.disconnected).toBe(true);
     expect(FakeIO.all.at(-1)!.options.rootMargin).toBe("-500px -1220px -180px -20px");
+  });
+
+  it("clamps the band at the viewport edge when the button's box is past it", () => {
+    // Hidden, the button is nudged down; on a short viewport its box ends
+    // below the bottom edge, and the bottom inset came out negative. The
+    // margin then read "--8px", which the constructor refuses (2026-09-28,
+    // seen on latest as a runtime SyntaxError that blanked the homepage).
+    rect = { top: 700, bottom: 728, left: 1200, right: 1340 };
+    const { darkIO } = renderWithDarkGrounds();
+    expect(darkIO.options.rootMargin).toBe("-700px -40px -0px -1200px");
+  });
+
+  it("clamps every side, and survives a rebuild while the box is off screen", () => {
+    rect = { top: -10, bottom: 30, left: -5, right: 1400 };
+    const { darkIO } = renderWithDarkGrounds();
+    expect(darkIO.options.rootMargin).toBe("-0px -0px -690px -0px");
+    rect = { top: 600, bottom: 760, left: 1200, right: 1340 };
+    expect(() => FakeRO.all[0]!.fire()).not.toThrow();
+    expect(FakeIO.all.at(-1)!.options.rootMargin).toBe("-600px -40px -0px -1200px");
   });
 
   it("builds no band when the page has no dark ground", () => {
