@@ -74,12 +74,11 @@ describe("the copy keeps the brand's tone", () => {
     expect(text()).not.toMatch(/\b(19|20)\d\d\b|TIS|Fibaro|Lutron|KNX/);
   });
 
-  test("the CTA opts out of the site's custom cursor, like every other button", () => {
-    render(<FluidHero />);
-    expect(screen.getByRole("link", { name: "Book a site visit" })).toHaveAttribute(
-      "data-cursor",
-      "none",
-    );
+  test("opts nothing out of the site's dot cursor (src/styles/__tests__/cursor.test.ts)", () => {
+    // data-cursor="none" hid the pointer over buttons; removed at the client's
+    // request in the same week this hero landed.
+    const { container } = render(<FluidHero />);
+    expect(container.querySelector("[data-cursor]")).toBeNull();
   });
 
   test("renders as a section landmark with an accessible name", () => {

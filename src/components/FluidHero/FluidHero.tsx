@@ -35,7 +35,7 @@ export function FluidHero() {
         </div>
 
         <div className={styles.ctas} data-hero-quiet>
-          <Link href="/contact" className={styles.primary} data-cursor="none">
+          <Link href="/contact" className={styles.primary}>
             Book a site visit
           </Link>
         </div>
