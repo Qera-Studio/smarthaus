@@ -66,7 +66,7 @@ export function HeroStage() {
             through the optimiser for nothing.
 
             Intrinsic size stated so the box is reserved before the bytes
-            arrive — the crop is 2112 x 544, see scripts/hero-grid.sh.
+            arrive — the crop is 2112 x 544.
           */
           // eslint-disable-next-line @next/next/no-img-element
           <img

@@ -5,6 +5,7 @@ import { PricingComparison } from "../../components/PricingComparison";
 import { PricingTiers } from "../../components/PricingTiers";
 import { PRICING_FAQS } from "../../content/pricing";
 import styles from "./page.module.scss";
+import { pageMetadata } from "../../lib/metadata";
 
 /**
  * LAUNCH GATE. Same mechanism as /faq.
@@ -18,13 +19,13 @@ import styles from "./page.module.scss";
  */
 const PRICING_IS_PUBLISHABLE = false;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Pricing",
   description:
     "Four levels of Smarthaus automation, from a single room to a fully engineered residence, with every feature compared side by side.",
-  alternates: { canonical: "/pricing" },
-  robots: PRICING_IS_PUBLISHABLE ? undefined : { index: false, follow: true },
-};
+  path: "/pricing",
+  index: PRICING_IS_PUBLISHABLE,
+});
 
 /**
  * The pricing page: the four tier cards, then the full comparison.

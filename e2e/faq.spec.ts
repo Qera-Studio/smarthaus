@@ -184,7 +184,13 @@ test.describe("/faq", () => {
     // Structured data on a noindex page is a contradictory signal, and these
     // answers still contain figures that must not be quoted back by an answer
     // engine. Invert both assertions in the change that clears the placeholders.
-    await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
+    // The site-wide business and website block is on every page; what must not
+    // be here is the FAQPage, or a page node for a page that refuses indexing.
+    const blocks = await page
+      .locator('script[type="application/ld+json"]')
+      .evaluateAll((els) => els.map((el) => el.textContent ?? ""));
+    expect(blocks.join("")).not.toContain('"FAQPage"');
+    expect(blocks.join("")).not.toContain('"WebPage"');
     await expect(page.locator("[data-placeholder]").first()).toBeAttached();
   });
 });

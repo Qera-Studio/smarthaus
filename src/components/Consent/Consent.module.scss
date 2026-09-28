@@ -2,6 +2,18 @@
 @use "../../styles/mixins" as *;
 
 @layer components {
+  // Before hydration, the banner shows only when the consent boot script has
+  // said a choice is needed (src/lib/consent-boot.ts). "decided" hides it, so a
+  // returning visitor never sees it flash; no attribute means JavaScript is
+  // off, and it stays hidden because its buttons cannot work. Once React has
+  // mounted (data-consent-ready) this stops applying and state decides.
+  // The standalone panel on /cookie-preferences is never gated. :where() keeps
+  // the html half at zero specificity, inside the 0,3,0 cap.
+  :global(:where(html:not([data-consent-ready]):not([data-consent="ask"])))
+    .consent:not([data-standalone]) {
+    display: none;
+  }
+
   .consent {
     // L2 component tokens.
     //

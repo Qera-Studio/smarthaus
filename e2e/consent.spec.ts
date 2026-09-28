@@ -50,8 +50,16 @@ const readCookie = async (page: Page) => {
  * the first paint agree, and the cookie is read in an effect — so the banner
  * appears a tick after load rather than in the initial markup.
  */
+/**
+ * The banner is on screen AND React owns it. Since the banner paints from the
+ * server HTML (src/lib/consent-boot.ts), being visible no longer means the
+ * page has hydrated, and a key or tap before hydration reaches nothing: on
+ * CI's Galaxy S24 an Escape pressed on the visible, not-yet-live banner was
+ * lost (2026-09-28). data-consent-ready is set by the shell's mount effect.
+ */
 const waitForBanner = async (page: Page) => {
   await expect(region(page)).toBeVisible();
+  await expect(page.locator("html[data-consent-ready]")).toBeAttached();
 };
 
 test.describe("the consent banner", () => {

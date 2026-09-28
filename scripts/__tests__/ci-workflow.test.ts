@@ -206,6 +206,16 @@ describe("e2e", () => {
 });
 
 describe("lighthouse", () => {
+  it("uploads the reports, which v4 skips as a hidden folder unless told", () => {
+    expect(job("lighthouse")).toContain("path: .lighthouseci/");
+    expect(job("lighthouse")).toContain("include-hidden-files: true");
+  });
+
+  it("runs the calibrated script, so every runner emulates the same phone", () => {
+    const pkg = JSON.parse(readFileSync(path.join(__dirname, "../../package.json"), "utf8"));
+    expect(pkg.scripts["test:lhci"]).toBe("node scripts/lighthouse-calibrated.mjs");
+  });
+
   it("builds before auditing, because lhci starts the built server", () => {
     const l = job("lighthouse");
     expect(l.indexOf("pnpm build")).toBeGreaterThan(0);

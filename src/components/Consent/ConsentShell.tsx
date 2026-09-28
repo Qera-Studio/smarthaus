@@ -112,9 +112,16 @@ export function ConsentShell({
   idPrefix,
   standalone = false,
 }: ConsentShellProps) {
-  // `null` means "not yet known". Distinct from a resolved state so the banner
-  // cannot flash before the cookie has been read.
-  const [state, setState] = useState<ConsentState | null>(null);
+  // Before the cookie is read, the banner renders as if it will ask, so it is
+  // in the server HTML and paints with the page rather than after hydration:
+  // on a phone's first visit it is the largest thing on screen, and waiting for
+  // hydration made it the LCP element at about 4s (2026-09-27). Whether it
+  // actually SHOWS before hydration is decided by the consent boot script and
+  // Consent.module.scss, so a visitor who has already chosen never sees it
+  // flash. The mount effect below then resolves the real state.
+  const [state, setState] = useState<ConsentState | null>(
+    standalone ? null : { ask: true, analytics: false },
+  );
   const [expanded, setExpanded] = useState(standalone);
   // What the Analytics switch currently says, which is not yet a decision —
   // `Save preferences` is what commits it.
@@ -185,6 +192,9 @@ export function ConsentShell({
       const next = readConsentState(readConsentCookie(document.cookie));
       setState(force ? { ...next, ask: true } : next);
       if (!touched.current) setAnalyticsOn(next.analytics);
+      // React owns the banner from here: the pre-hydration CSS gate stops
+      // applying. Also the e2e suite's hydration witness (e2e/checks.ts).
+      document.documentElement.setAttribute("data-consent-ready", "");
     };
 
     // NODE_ENV is inlined by the bundler, so in a production build this is
@@ -385,9 +395,9 @@ export function ConsentShell({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [standalone, state?.ask, expanded]);
 
-  // Nothing to show until the cookie has been read, and nothing to show once a
-  // choice is on file — unless the panel was opened from the footer, which is
-  // the way back in after a choice. The preferences page always renders.
+  // Nothing to show once a choice is on file, unless the panel was opened from
+  // the footer, which is the way back in after a choice. The preferences page
+  // always renders.
   if (!standalone && (state === null || (!state.ask && !expanded))) return null;
 
   // The banner does not appear on the preferences page.

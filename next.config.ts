@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
+import { CONSENT_BOOT_HASH } from "./src/lib/consent-boot";
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env["ANALYZE"] === "true",
@@ -41,7 +42,12 @@ const nextConfig: NextConfig = {
     // Revisit if the site ever adds authentication or renders user-generated content.
     //
     // One builder for both policies so they cannot drift: `strict` drops
-    // 'unsafe-inline' from script-src and style-src and nothing else.
+    // 'unsafe-inline' from script-src and style-src, and allows the consent
+    // boot script (src/lib/consent-boot.ts) by its hash instead.
+    //
+    // The hash is in the STRICT policy only, and must stay out of the enforced
+    // one: a policy that lists a hash makes browsers ignore its
+    // 'unsafe-inline', which would block every inline script Next emits.
     const csp = (strict: boolean) =>
       [
         "default-src 'self'",
@@ -67,7 +73,7 @@ const nextConfig: NextConfig = {
         //
         // React's dev-only debugging (callstack reconstruction) needs
         // full 'unsafe-eval'. Dev server only — never in production.
-        `script-src 'self'${strict ? "" : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+        `script-src 'self'${strict ? ` ${CONSENT_BOOT_HASH}` : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
         // DRACOLoader builds its decoder worker from a Blob, so the
         // worker's URL is blob: rather than a file on our origin.
         // Without this directive workers fall back to script-src, which
@@ -105,6 +111,19 @@ const nextConfig: NextConfig = {
         "report-uri /api/csp-report",
         "report-to csp-endpoint",
       ].join("; ");
+
+    // The public/ assets: the hero model and poster, the Draco decoder, the
+    // logos and icons. A day, then a week of serving the cached copy while
+    // it revalidates in the background (Performance System §8).
+    //
+    // Not `immutable`, which §8 reserves for fingerprinted files: these keep
+    // their names when they change, so a year-long immutable cache would serve
+    // a replaced villa.glb to returning visitors for a year. Next's own hashed
+    // files under /_next/static are already immutable and cannot be changed.
+    const publicAssetCache = {
+      key: "Cache-Control",
+      value: "public, max-age=86400, stale-while-revalidate=604800",
+    };
 
     return [
       {
@@ -215,6 +234,10 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      { source: "/hero/:path*", headers: [publicAssetCache] },
+      { source: "/draco/:path*", headers: [publicAssetCache] },
+      { source: "/brand/:path*", headers: [publicAssetCache] },
+      { source: "/icons/:path*", headers: [publicAssetCache] },
     ];
   },
 };

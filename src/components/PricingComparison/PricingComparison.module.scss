@@ -323,26 +323,27 @@
     line-height: $line-height-snug;
     color: var(--color-text-secondary);
     text-align: center;
+    // For the text levels ("Basic", "Standard"), which sit in the cell itself.
+    text-wrap: balance;
   }
 
   // The card lists' tick, in the page's ink rather than green: the site has
-  // no green, and the brand rule is quiet confidence.
-  .tick {
+  // no green, and the brand rule is quiet confidence. Drawn by the cell
+  // itself, so a cell is two elements rather than four.
+  .cell[data-value="yes"]::before {
+    content: "";
     display: block;
     color: var(--color-text-primary);
     @include tick-mark;
   }
 
   // "Not included". A short rule drawn here, not a dash character.
-  .none {
+  .cell[data-value="no"]::before {
+    content: "";
     display: block;
     inline-size: 1em;
     block-size: 1px;
     background-color: var(--color-text-muted);
-  }
-
-  .level {
-    text-wrap: balance;
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -80,15 +80,13 @@ export function PricingComparison() {
                     </details>
                   </div>
 
-                  {row.values.map((value, i) => {
-                    const tier = PRICING_TIERS[i];
-                    return (
-                      <div key={tier?.id ?? i} className={styles.cell}>
-                        <span className="visually-hidden">{tier?.name}: </span>
-                        <Cell value={value} />
-                      </div>
-                    );
-                  })}
+                  {row.values.map((value, i) => (
+                    <Cell
+                      key={PRICING_TIERS[i]?.id ?? i}
+                      tier={PRICING_TIERS[i]?.name}
+                      value={value}
+                    />
+                  ))}
                 </div>
               ))}
             </div>
@@ -100,29 +98,27 @@ export function PricingComparison() {
 }
 
 /**
- * One cell. A tick and a rule are both drawn in CSS with hidden text beside
- * them, so what a screen reader hears is a word and what a sighted reader sees
- * is a mark. The rule is not a dash character: the copy guards forbid em
- * dashes, and a lone "-" reads as a typo rather than as "no".
+ * One cell: the wrapper and one hidden label, nothing else. A tick or a rule
+ * is drawn by the wrapper's own ::before (data-value), with the words beside
+ * it in the label, so a screen reader hears "Essential: Included" and a
+ * sighted reader sees a mark. The rule is not a dash character: the copy
+ * guards forbid em dashes, and a lone "-" reads as a typo rather than "no".
+ *
+ * It was four elements a cell, a wrapper, the tier name, the mark and the
+ * words, across roughly sixty rows of four tiers, on a page whose main
+ * thread was over budget on a mid-range phone (CI Lighthouse, 2026-09-28).
  */
-function Cell({ value }: { value: CellValue }) {
-  if (value === true) {
-    return (
-      <>
-        <span className={styles.tick} aria-hidden="true" />
-        <span className="visually-hidden">Included</span>
-      </>
-    );
-  }
-  if (value === false) {
-    return (
-      <>
-        <span className={styles.none} aria-hidden="true" />
-        <span className="visually-hidden">Not included</span>
-      </>
-    );
-  }
-  return <span className={styles.level}>{value}</span>;
+function Cell({ tier, value }: { tier: string | undefined; value: CellValue }) {
+  const mark = value === true ? "yes" : value === false ? "no" : undefined;
+  const words = value === true ? "Included" : value === false ? "Not included" : "";
+  return (
+    <div className={styles.cell} data-value={mark}>
+      <span className="visually-hidden">
+        {tier}: {words}
+      </span>
+      {typeof value === "string" ? value : null}
+    </div>
+  );
 }
 
 /**

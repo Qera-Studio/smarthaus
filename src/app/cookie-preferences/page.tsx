@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Consent } from "../../components/Consent";
 import styles from "./page.module.scss";
+import { pageMetadata } from "../../lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Cookie Preferences",
   description:
     "Turn analytics cookies on or off, and see exactly what each category does. Analytics is off until you turn it on.",
-  alternates: { canonical: "/cookie-preferences" },
+  path: "/cookie-preferences",
   // STILL noindex, and for a different reason than the placeholder was.
   //
   // The placeholder's own comment said to flip this to indexable in the change
@@ -24,8 +25,8 @@ export const metadata: Metadata = {
   // TO PUBLISH: drop this and add /cookie-preferences to src/app/sitemap.ts, in
   // the same change that clears the noindex from /privacy and /terms. All three
   // move together.
-  robots: { index: false, follow: true },
-};
+  index: false,
+});
 
 /**
  * The permanent home of the cookie controls.

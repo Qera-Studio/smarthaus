@@ -26,21 +26,21 @@ export const MAX_REPORT_BYTES = 16 * 1024;
 
 const text = z.string().max(2048);
 
-const reportingApi = z
-  .array(
-    z.object({
-      type: z.string(),
-      body: z
-        .object({
-          documentURL: text.optional(),
-          blockedURL: text.optional(),
-          effectiveDirective: text.optional(),
-          disposition: z.enum(["enforce", "report"]).optional(),
-        })
-        .passthrough(),
-    }),
-  )
-  .max(50);
+/** One Reporting API report. */
+const apiReport = z.object({
+  type: z.string(),
+  body: z
+    .object({
+      documentURL: text.optional(),
+      blockedURL: text.optional(),
+      effectiveDirective: text.optional(),
+      disposition: z.enum(["enforce", "report"]).optional(),
+    })
+    .passthrough(),
+});
+
+/** A batch, as Chromium sends it: always an array. */
+const reportingApi = z.array(apiReport).max(50);
 
 const legacy = z.object({
   "csp-report": z
@@ -73,10 +73,8 @@ export function trimUrl(value: string | undefined): string {
  */
 export function parseReport(contentType: string, body: unknown): Violation[] | null {
   const type = contentType.split(";")[0]!.trim().toLowerCase();
-  if (type === "application/reports+json") {
-    const parsed = reportingApi.safeParse(body);
-    if (!parsed.success) return null;
-    return parsed.data
+  const fromApi = (reports: z.infer<typeof apiReport>[]): Violation[] =>
+    reports
       .filter((report) => report.type === "csp-violation")
       .map(({ body: b }) => ({
         directive: b.effectiveDirective ?? "unknown",
@@ -84,8 +82,17 @@ export function parseReport(contentType: string, body: unknown): Violation[] | n
         document: trimUrl(b.documentURL),
         disposition: b.disposition ?? "enforce",
       }));
+
+  if (type === "application/reports+json") {
+    const parsed = reportingApi.safeParse(body);
+    return parsed.success ? fromApi(parsed.data) : null;
   }
   if (type === "application/csp-report") {
+    // Safari sends one Reporting API report under this legacy content type:
+    // {"type":"csp-violation","body":{...}}, not {"csp-report":{...}}. Every
+    // Safari report was refused with a 400 until 2026-09-28.
+    const modern = apiReport.safeParse(body);
+    if (modern.success) return fromApi([modern.data]);
     const parsed = legacy.safeParse(body);
     if (!parsed.success) return null;
     const r = parsed.data["csp-report"];
