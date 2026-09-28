@@ -416,7 +416,7 @@ function Field({
   id: string;
   label: string;
   error?: string | undefined;
-  /** Format or limit stated before any error (WCAG 3.3.2). */
+  /** Format or limit, under the control and before any error (WCAG 3.3.2). */
   hint?: string | undefined;
   children: React.ReactNode;
 }) {
@@ -425,16 +425,20 @@ function Field({
       <label htmlFor={id} className={styles.label}>
         {label}
       </label>
-      {hint && (
-        <p id={`${id}-hint`} className={styles.hint}>
-          {hint}
-        </p>
-      )}
       {/* The focus ring lives on this wrapper, not the input: the phone row is
           two elements that read as one control, and two rings look like a bug. */}
       <div className={styles.control} data-invalid={error ? "true" : undefined}>
         {children}
       </div>
+      {/* Under the control, not between label and control: a hint above
+          pushed one input of a pair lower than its neighbour (the home
+          enquiry's Phone beside Email). Still before the error in reading
+          order and in aria-describedby. */}
+      {hint && (
+        <p id={`${id}-hint`} className={styles.hint}>
+          {hint}
+        </p>
+      )}
       {error && (
         <p id={`${id}-error`} className={styles.fieldError}>
           {error}

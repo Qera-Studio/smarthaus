@@ -97,12 +97,12 @@ export function Footer() {
             <ul className={styles.contactList}>
               <li>
                 <a className={styles.contactItem} href="tel:+971543755150">
-                  <RollingText by="word">+971 54 375 5150</RollingText>
+                  <RollingText>+971 54 375 5150</RollingText>
                 </a>
               </li>
               <li>
                 <a className={styles.contactItem} href="mailto:contact@mapletech.ae">
-                  <RollingText by="word">contact@mapletech.ae</RollingText>
+                  <RollingText>contact@mapletech.ae</RollingText>
                 </a>
               </li>
               <li className={styles.contactItem}>Dubai, U.A.E.</li>
@@ -162,11 +162,11 @@ export function Footer() {
                       its no-JS fallback. Every other legal link is a page. */}
                   {href === PREFERENCES_ROUTE ? (
                     <PreferencesLink className={styles.legalLink}>
-                      <RollingText by="word">{label}</RollingText>
+                      <RollingText>{label}</RollingText>
                     </PreferencesLink>
                   ) : (
                     <Link className={styles.legalLink} href={href}>
-                      <RollingText by="word">{label}</RollingText>
+                      <RollingText>{label}</RollingText>
                     </Link>
                   )}
                 </li>
@@ -181,7 +181,7 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <RollingText by="word">Built by Qera Studio</RollingText>
+              <RollingText>Built by Qera Studio</RollingText>
             </a>
           </p>
         </div>
@@ -233,7 +233,7 @@ function LinkColumn({
         {links.map(({ href, label }) => (
           <li key={label}>
             <Link className={styles.link} href={href}>
-              <RollingText by="word">{label}</RollingText>
+              <RollingText>{label}</RollingText>
             </Link>
           </li>
         ))}

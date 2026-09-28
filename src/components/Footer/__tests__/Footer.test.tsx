@@ -59,3 +59,33 @@ describe("Footer", () => {
     }
   });
 });
+
+describe("the footer's hover roll", () => {
+  // Per letter, at Shivanshu's request (2026-09-28): the whole-word roll that
+  // briefly replaced it cut elements but read as the word flipping at once.
+  // A roll is a label span followed by its aria-hidden animated copy; a
+  // per-letter copy spells spaces as non-breaking ones.
+  const text = (el: Element) => (el.textContent ?? "").replace(/\u00a0/g, " ");
+  const rolls = () =>
+    Array.from(screen.getByRole("contentinfo").querySelectorAll('span[aria-hidden="true"]')).filter(
+      (el) => {
+        const label = el.previousElementSibling;
+        return label?.tagName === "SPAN" && text(label) !== "" && text(label) === text(el);
+      },
+    );
+
+  it("rolls every link label one letter at a time", () => {
+    const animated = rolls();
+    expect(animated.length).toBeGreaterThan(10);
+    for (const el of animated) {
+      expect(el.children).toHaveLength([...text(el)].length);
+    }
+  });
+
+  it("rolls the phone number and the address by letter too", () => {
+    const labels = rolls().map(text);
+    expect(labels).toEqual(expect.arrayContaining(["+971 54 375 5150", "contact@mapletech.ae"]));
+    const phone = rolls().find((el) => text(el) === "+971 54 375 5150")!;
+    expect(phone.children.length).toBeGreaterThan(1);
+  });
+});
