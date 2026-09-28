@@ -30,8 +30,18 @@ import styles from "./Button.module.scss";
  * - `inverse` — bone ground, brown-900 text. For sitting on a dark section.
  * - `outline` — transparent, a 1px border in the inherited ink. For sitting on
  *   a tinted card where a filled band would be too loud.
+ * - `soft` — brown-800 ground, bone text. A filled band one step lighter than
+ *   solid, for a light section where brown-950 read as too heavy (the Maple
+ *   banner).
  */
-type Variant = "solid" | "inverse" | "outline";
+type Variant = "solid" | "inverse" | "outline" | "soft";
+
+/**
+ * - `md` — the default band, every existing call site.
+ * - `sm` — tighter padding, for a secondary action inside a compact card (the
+ *   Maple banner). The tap area stays at --size-touch-target regardless.
+ */
+type Size = "md" | "sm";
 
 /**
  * `href` decides the element: present renders a Link, absent a button.
@@ -41,13 +51,14 @@ type Variant = "solid" | "inverse" | "outline";
  * attributes.
  */
 type ButtonProps =
-  | ({ href: string; variant?: Variant } & Omit<
+  | ({ href: string; variant?: Variant; size?: Size } & Omit<
       ComponentPropsWithoutRef<typeof Link>,
       "className" | "href"
     >)
   | ({
       href?: never;
       variant?: Variant;
+      size?: Size;
       /**
        * Working: announced as busy and unavailable, but still focusable. A
        * `disabled` button drops focus to the page, so a keyboard or screen
@@ -57,11 +68,11 @@ type ButtonProps =
       loading?: boolean;
     } & Omit<ComponentPropsWithoutRef<"button">, "className">);
 
-export function Button({ variant = "solid", ...props }: ButtonProps) {
+export function Button({ variant = "solid", size = "md", ...props }: ButtonProps) {
   const className = styles.button;
 
   if (props.href !== undefined) {
-    return <Link {...props} className={className} data-variant={variant} />;
+    return <Link {...props} className={className} data-variant={variant} data-size={size} />;
   }
 
   // `href` is absent, so this is the button arm. Deleted rather than spread,
@@ -75,6 +86,7 @@ export function Button({ variant = "solid", ...props }: ButtonProps) {
       type={type}
       className={className}
       data-variant={variant}
+      data-size={size}
       aria-busy={loading || undefined}
       aria-disabled={loading || rest["aria-disabled"] || undefined}
     />
