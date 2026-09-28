@@ -72,7 +72,9 @@ describe("Nav", () => {
     render(<Nav />);
     const cta = within(slot("cta")).getByRole("link", { name: "Book a site visit" });
     expect(cta).toHaveAttribute("href", "/contact");
-    expect(cta).toHaveAttribute("data-cursor", "none");
+    // It used to carry data-cursor="none", which hid the pointer over it.
+    // Removed at the client's request: the cursor now shows on every control.
+    expect(cta).not.toHaveAttribute("data-cursor");
   });
 
   it("signs the open panel as by MapleTech", () => {

@@ -84,7 +84,6 @@
     // Generous, per the design — the rows are the page's rhythm and a tight
     // band makes 34 of them read as a table rather than a conversation.
     padding-block: $space-5;
-    cursor: pointer;
     // The default disclosure triangle, removed in favour of the chevron. Both
     // are needed: ::-webkit-details-marker for Safari, list-style for the rest.
     list-style: none;

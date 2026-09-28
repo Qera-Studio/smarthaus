@@ -27,7 +27,6 @@
     font-weight: $font-weight-semibold;
     text-align: center;
     text-decoration: none;
-    cursor: pointer;
 
     // Longhands, never the `transition` shorthand: var() substitution happens
     // before the shorthand is parsed, so one missing token would silently
@@ -42,7 +41,6 @@
     &:disabled,
     &[aria-disabled="true"] {
       opacity: 0.6;
-      cursor: default;
     }
 
     // --- Sizes --------------------------------------------------------------

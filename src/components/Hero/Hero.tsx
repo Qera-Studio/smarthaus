@@ -44,7 +44,7 @@ export function Hero() {
         </div>
 
         <div className={styles.ctas}>
-          <Link href="/contact" className={styles.primary} data-cursor="none">
+          <Link href="/contact" className={styles.primary}>
             Book a site visit
           </Link>
           {/*
@@ -54,7 +54,7 @@ export function Hero() {
             explorer trigger when that lands; do not remove the button — the
             landing composition is designed around two.
           */}
-          <Link href="/solutions" className={styles.secondary} data-cursor="none">
+          <Link href="/solutions" className={styles.secondary}>
             Explore Villa
           </Link>
         </div>

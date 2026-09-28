@@ -185,7 +185,6 @@
     justify-content: space-between;
     gap: $space-5;
     padding-block: $space-5;
-    cursor: pointer;
     list-style: none;
 
     &::-webkit-details-marker {
@@ -260,7 +259,6 @@
     display: flex;
     align-items: start;
     gap: $space-2;
-    cursor: pointer;
     list-style: none;
     font-size: var(--type-body);
     font-weight: $font-weight-medium;

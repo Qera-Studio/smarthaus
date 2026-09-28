@@ -42,7 +42,7 @@ export function Nav() {
         </ul>
       }
       cta={
-        <Link href="/contact" className={styles.cta} data-cursor="none">
+        <Link href="/contact" className={styles.cta}>
           Book a site visit
         </Link>
       }
