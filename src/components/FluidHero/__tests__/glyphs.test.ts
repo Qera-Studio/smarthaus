@@ -11,8 +11,10 @@ import {
   scramble,
   seeded,
   shuffle,
+  FRAME_MS,
   SHUFFLE_MS,
   SHUFFLE_SHARE,
+  SPIN,
   type Rect,
 } from "../glyphs";
 import { HARDWARE_ITEMS } from "@/content/hardware";
@@ -182,13 +184,18 @@ describe("createGlyphLayer", () => {
   interface FakeContext {
     clearRect: jest.Mock;
     drawImage: jest.Mock;
+    setTransform: jest.Mock;
   }
   let contexts: FakeContext[];
 
   beforeEach(() => {
     contexts = [];
     HTMLCanvasElement.prototype.getContext = jest.fn(() => {
-      const ctx: FakeContext = { clearRect: jest.fn(), drawImage: jest.fn() };
+      const ctx: FakeContext = {
+        clearRect: jest.fn(),
+        drawImage: jest.fn(),
+        setTransform: jest.fn(),
+      };
       contexts.push(ctx);
       return ctx as unknown as RenderingContext;
     }) as typeof HTMLCanvasElement.prototype.getContext;
@@ -204,8 +211,32 @@ describe("createGlyphLayer", () => {
       width: 24,
       height: 24,
     })) as unknown as HTMLImageElement[];
-  const draws = (ctx: FakeContext | undefined) =>
-    (ctx?.drawImage.mock.calls ?? []) as [{ id: number }, number, number, number, number][];
+
+  /** One record per drawn icon: which image, its centre, and its angle. */
+  const drawn = (ctx: FakeContext | undefined) => {
+    const transforms = (ctx?.setTransform.mock.calls ?? []) as number[][];
+    const images = (ctx?.drawImage.mock.calls ?? []) as [
+      { id: number },
+      number,
+      number,
+      number,
+      number,
+    ][];
+    // The last setTransform is the reset; the rest pair with the draws.
+    return images.map(([image, x, y, w, h], i) => {
+      const [a, b, , , cx, cy] = transforms[i] ?? [];
+      return {
+        id: image.id,
+        cx: cx ?? -1,
+        cy: cy ?? -1,
+        angle: Math.atan2(b ?? 0, a ?? 1),
+        x,
+        y,
+        w,
+        h,
+      };
+    });
+  };
 
   test("is null without icons, and allocates nothing", () => {
     expect(createGlyphLayer({ icons: [], dpr: 1 })).toBeNull();
@@ -219,31 +250,44 @@ describe("createGlyphLayer", () => {
     expect(createGlyphLayer({ icons: icons(2), dpr: 1 })).toBeNull();
   });
 
-  test("resize sizes the canvas and draws one icon per cell, centred, at the icon size", () => {
+  test("resize sizes the canvas and draws one icon per cell, about the cell's centre", () => {
     const layer = createGlyphLayer({ icons: icons(8), dpr: 2 });
     if (!layer) throw new Error("no layer");
     layer.resize(1120, 560, []);
     expect(layer.canvas.width).toBe(1120);
     expect(layer.canvas.height).toBe(560);
     const cell = CELL * 2;
-    const drawn = draws(contexts[0]);
-    expect(drawn).toHaveLength(Math.ceil(1120 / cell) * Math.ceil(560 / cell));
+    const records = drawn(contexts[0]);
+    expect(records).toHaveLength(Math.ceil(1120 / cell) * Math.ceil(560 / cell));
     expect(contexts[0]?.clearRect).toHaveBeenCalledWith(0, 0, 1120, 560);
-    for (const [, x, y, w, h] of drawn) {
-      expect(w).toBe(ICON * 2);
-      expect(h).toBe(ICON * 2);
-      expect((x - (cell - ICON * 2) / 2) % cell).toBe(0);
-      expect((y - (cell - ICON * 2) / 2) % cell).toBe(0);
+    for (const r of records) {
+      expect(r.w).toBe(ICON * 2);
+      expect(r.h).toBe(ICON * 2);
+      // Drawn about the origin of a transform placed at the cell's centre.
+      expect(r.x).toBe(-ICON);
+      expect(r.y).toBe(-ICON);
+      expect((r.cx - cell / 2) % cell).toBe(0);
+      expect((r.cy - cell / 2) % cell).toBe(0);
     }
+    // The transform is put back after the pass.
+    expect(contexts[0]?.setTransform).toHaveBeenLastCalledWith(1, 0, 0, 1, 0, 0);
   });
 
   test("uses every icon, scrambled rather than in order", () => {
     const layer = createGlyphLayer({ icons: icons(8), dpr: 1 });
     if (!layer) throw new Error("no layer");
     layer.resize(1120, 560, []);
-    const ids = draws(contexts[0]).map(([image]) => image.id);
+    const ids = drawn(contexts[0]).map((r) => r.id);
     expect(new Set(ids).size).toBe(8);
     expect(ids.slice(0, 8)).not.toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  test("every icon starts at its own angle", () => {
+    const layer = createGlyphLayer({ icons: icons(8), dpr: 1 });
+    if (!layer) throw new Error("no layer");
+    layer.resize(600, 300, []);
+    const angles = drawn(contexts[0]).map((r) => r.angle.toFixed(3));
+    expect(new Set(angles).size).toBeGreaterThan(angles.length / 2);
   });
 
   test("leaves the cells under a quiet rect empty", () => {
@@ -251,15 +295,17 @@ describe("createGlyphLayer", () => {
     if (!layer) throw new Error("no layer");
     const quiet: Rect = { x: 200, y: 100, width: 300, height: 150 };
     layer.resize(1120, 560, [quiet]);
-    const drawn = draws(contexts[0]);
+    const records = drawn(contexts[0]);
     const total = Math.ceil(1120 / CELL) * Math.ceil(560 / CELL);
-    expect(drawn.length).toBeLessThan(total);
-    for (const [, x, y, w, h] of drawn) {
+    expect(records.length).toBeLessThan(total);
+    for (const r of records) {
+      const x = r.cx - CELL / 2;
+      const y = r.cy - CELL / 2;
       const touches =
         x < quiet.x + quiet.width &&
-        x + w > quiet.x &&
+        x + CELL > quiet.x &&
         y < quiet.y + quiet.height &&
-        y + h > quiet.y;
+        y + CELL > quiet.y;
       expect(touches).toBe(false);
     }
   });
@@ -268,44 +314,82 @@ describe("createGlyphLayer", () => {
     const layer = createGlyphLayer({ icons: icons(8), dpr: 1 });
     if (!layer) throw new Error("no layer");
     layer.resize(600, 400, []);
-    const first = draws(contexts[0]).map(([image, x, y]) => [image.id, x, y]);
+    const first = drawn(contexts[0]);
     contexts[0]?.drawImage.mockClear();
+    contexts[0]?.setTransform.mockClear();
     layer.resize(600, 400, []);
-    expect(draws(contexts[0]).map(([image, x, y]) => [image.id, x, y])).toEqual(first);
+    expect(drawn(contexts[0])).toEqual(first);
   });
 
-  test("update reshuffles once per tick and reports it", () => {
+  test("update redraws at most every FRAME_MS and reports it", () => {
     const layer = createGlyphLayer({ icons: icons(8), dpr: 1 });
     if (!layer) throw new Error("no layer");
     layer.resize(600, 400, []);
     const ctx = contexts[0];
     ctx?.clearRect.mockClear();
-    expect(layer.update(SHUFFLE_MS * 0.5)).toBe(true);
-    expect(ctx?.clearRect).toHaveBeenCalledTimes(1);
-    expect(layer.update(SHUFFLE_MS * 0.9)).toBe(false);
-    expect(layer.update(SHUFFLE_MS * 1.2)).toBe(true);
+    expect(layer.update(100)).toBe(true);
+    expect(layer.update(100 + FRAME_MS / 2)).toBe(false);
+    expect(layer.update(100 + FRAME_MS)).toBe(true);
     expect(ctx?.clearRect).toHaveBeenCalledTimes(2);
   });
 
-  test("a tick changes a few icons and no positions", () => {
+  test("between draws the icons turn, each at its own speed, and none moves", () => {
+    const layer = createGlyphLayer({ icons: icons(8), dpr: 1 });
+    if (!layer) throw new Error("no layer");
+    layer.resize(600, 400, []);
+    const ctx = contexts[0];
+    ctx?.drawImage.mockClear();
+    ctx?.setTransform.mockClear();
+    layer.update(1000);
+    const at1 = drawn(ctx);
+    ctx?.drawImage.mockClear();
+    ctx?.setTransform.mockClear();
+    layer.update(2000);
+    const at2 = drawn(ctx);
+    expect(at2.map((r) => [r.cx, r.cy])).toEqual(at1.map((r) => [r.cx, r.cy]));
+    const deltas = at2.map((r, i) => {
+      let delta = r.angle - (at1[i]?.angle ?? 0);
+      while (delta > Math.PI) delta -= 2 * Math.PI;
+      while (delta < -Math.PI) delta += 2 * Math.PI;
+      return delta;
+    });
+    // One second on: every delta is within the spin limit, and they differ.
+    for (const delta of deltas) expect(Math.abs(delta)).toBeLessThanOrEqual(SPIN + 1e-6);
+    expect(new Set(deltas.map((d) => d.toFixed(2))).size).toBeGreaterThan(deltas.length / 2);
+    // Some turn one way and some the other.
+    expect(deltas.some((d) => d > 0.05)).toBe(true);
+    expect(deltas.some((d) => d < -0.05)).toBe(true);
+  });
+
+  test("a shuffle tick changes a few icons; a plain frame changes none", () => {
     const layer = createGlyphLayer({ icons: icons(8), dpr: 1 });
     if (!layer) throw new Error("no layer");
     layer.resize(1120, 560, []);
-    const before = draws(contexts[0]).map(([image, x, y]) => [image.id, x, y]);
-    contexts[0]?.drawImage.mockClear();
-    layer.update(SHUFFLE_MS * 3);
-    const after = draws(contexts[0]).map(([image, x, y]) => [image.id, x, y]);
-    expect(after.map((d) => d.slice(1))).toEqual(before.map((d) => d.slice(1)));
-    const changed = after.filter((d, i) => d[0] !== before[i]?.[0]).length;
+    const ctx = contexts[0];
+    ctx?.drawImage.mockClear();
+    ctx?.setTransform.mockClear();
+    layer.update(10);
+    const cellCount = Math.ceil(1120 / CELL) * Math.ceil(560 / CELL);
+    const before = drawn(ctx).map((r) => r.id);
+    ctx?.drawImage.mockClear();
+    ctx?.setTransform.mockClear();
+    layer.update(10 + FRAME_MS);
+    const sameTick = drawn(ctx).map((r) => r.id);
+    expect(sameTick).toEqual(before);
+    ctx?.drawImage.mockClear();
+    ctx?.setTransform.mockClear();
+    layer.update(SHUFFLE_MS + 10);
+    const nextTick = drawn(ctx).map((r) => r.id);
+    const changed = nextTick.filter((id, i) => id !== before[i]).length;
     expect(changed).toBeGreaterThan(0);
-    expect(changed).toBeLessThanOrEqual(Math.round(before.length * SHUFFLE_SHARE) + 1);
+    expect(changed).toBeLessThanOrEqual(Math.round(cellCount * SHUFFLE_SHARE) + 1);
   });
 
-  test("with one icon there is nothing to shuffle, and update says so", () => {
+  test("with one icon the field still turns", () => {
     const layer = createGlyphLayer({ icons: icons(1), dpr: 1 });
     if (!layer) throw new Error("no layer");
     layer.resize(600, 400, []);
-    expect(layer.update(SHUFFLE_MS * 2)).toBe(false);
+    expect(layer.update(SHUFFLE_MS * 2)).toBe(true);
   });
 
   test("dispose releases the canvas", () => {
@@ -321,7 +405,51 @@ describe("createGlyphLayer", () => {
     const layer = createGlyphLayer({ icons: icons(2), dpr: 1 });
     if (!layer) throw new Error("no layer");
     layer.resize(10, 10, []);
-    expect(draws(contexts[0])).toHaveLength(1);
+    expect(drawn(contexts[0])).toHaveLength(1);
+  });
+
+  test("a resize restarts the clock, so the next update draws at once", () => {
+    const layer = createGlyphLayer({ icons: icons(4), dpr: 1 });
+    if (!layer) throw new Error("no layer");
+    layer.resize(300, 200, []);
+    expect(layer.update(5000)).toBe(true);
+    expect(layer.update(5000)).toBe(false);
+    layer.resize(300, 200, []);
+    expect(layer.update(5000)).toBe(true);
+  });
+
+  test("every icon's centre is inside the canvas", () => {
+    const layer = createGlyphLayer({ icons: icons(4), dpr: 2 });
+    if (!layer) throw new Error("no layer");
+    layer.resize(500, 300, []);
+    for (const r of drawn(contexts[0])) {
+      expect(r.cx).toBeGreaterThan(0);
+      expect(r.cy).toBeGreaterThan(0);
+      expect(r.cx).toBeLessThan(Math.ceil(500 / (CELL * 2)) * CELL * 2);
+      expect(r.cy).toBeLessThan(Math.ceil(300 / (CELL * 2)) * CELL * 2);
+    }
+  });
+
+  test("quiet cells stay quiet through shuffles and turns", () => {
+    const layer = createGlyphLayer({ icons: icons(4), dpr: 1 });
+    if (!layer) throw new Error("no layer");
+    const quiet: Rect = { x: 100, y: 50, width: 120, height: 60 };
+    layer.resize(400, 200, [quiet]);
+    for (let tick = 1; tick <= 5; tick += 1) {
+      contexts[0]?.drawImage.mockClear();
+      contexts[0]?.setTransform.mockClear();
+      layer.update(SHUFFLE_MS * tick + 1);
+      for (const r of drawn(contexts[0])) {
+        const x = r.cx - CELL / 2;
+        const y = r.cy - CELL / 2;
+        const touches =
+          x < quiet.x + quiet.width &&
+          x + CELL > quiet.x &&
+          y < quiet.y + quiet.height &&
+          y + CELL > quiet.y;
+        expect(touches).toBe(false);
+      }
+    }
   });
 });
 
@@ -453,77 +581,6 @@ describe("shuffle, over many ticks", () => {
   });
 });
 
-describe("createGlyphLayer, ticks across a resize", () => {
-  interface FakeContext {
-    clearRect: jest.Mock;
-    drawImage: jest.Mock;
-  }
-  let contexts: FakeContext[];
-
-  beforeEach(() => {
-    contexts = [];
-    HTMLCanvasElement.prototype.getContext = jest.fn(() => {
-      const ctx: FakeContext = { clearRect: jest.fn(), drawImage: jest.fn() };
-      contexts.push(ctx);
-      return ctx as unknown as RenderingContext;
-    }) as typeof HTMLCanvasElement.prototype.getContext;
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  const icons = (n: number) =>
-    Array.from({ length: n }, (_, i) => ({
-      id: i,
-      width: 24,
-      height: 24,
-    })) as unknown as HTMLImageElement[];
-
-  test("a resize resets the tick, so the next update after it draws", () => {
-    const layer = createGlyphLayer({ icons: icons(4), dpr: 1 });
-    if (!layer) throw new Error("no layer");
-    layer.resize(300, 200, []);
-    expect(layer.update(SHUFFLE_MS * 5)).toBe(true);
-    expect(layer.update(SHUFFLE_MS * 5)).toBe(false);
-    layer.resize(300, 200, []);
-    expect(layer.update(SHUFFLE_MS * 5)).toBe(true);
-  });
-
-  test("every icon drawn is inside the canvas", () => {
-    const layer = createGlyphLayer({ icons: icons(4), dpr: 2 });
-    if (!layer) throw new Error("no layer");
-    layer.resize(500, 300, []);
-    for (const call of contexts[0]?.drawImage.mock.calls ?? []) {
-      const [, x, y, w, h] = call as [unknown, number, number, number, number];
-      expect(x).toBeGreaterThanOrEqual(0);
-      expect(y).toBeGreaterThanOrEqual(0);
-      expect(x + w).toBeLessThanOrEqual(Math.ceil(500 / (CELL * 2)) * CELL * 2);
-      expect(y + h).toBeLessThanOrEqual(Math.ceil(300 / (CELL * 2)) * CELL * 2);
-    }
-  });
-
-  test("quiet cells stay quiet through shuffles", () => {
-    const layer = createGlyphLayer({ icons: icons(4), dpr: 1 });
-    if (!layer) throw new Error("no layer");
-    const quiet: Rect = { x: 100, y: 50, width: 120, height: 60 };
-    layer.resize(400, 200, [quiet]);
-    for (let tick = 1; tick <= 5; tick += 1) {
-      contexts[0]?.drawImage.mockClear();
-      layer.update(SHUFFLE_MS * tick + 1);
-      for (const call of contexts[0]?.drawImage.mock.calls ?? []) {
-        const [, x, y, w, h] = call as [unknown, number, number, number, number];
-        const touches =
-          x < quiet.x + quiet.width &&
-          x + w > quiet.x &&
-          y < quiet.y + quiet.height &&
-          y + h > quiet.y;
-        expect(touches).toBe(false);
-      }
-    }
-  });
-});
-
 describe("shuffle, re-picked cells", () => {
   test("a cell picked twice in one tick is changed once and reported once", () => {
     // A generator that keeps landing on the same cell (3 of 20), and on a
@@ -547,5 +604,75 @@ describe("ICON_URLS and the carousel content", () => {
 
   test("every item's icon name is a plain svg filename", () => {
     for (const item of HARDWARE_ITEMS) expect(item.icon).toMatch(/^[A-Za-z]+\.svg$/);
+  });
+});
+
+describe("the spin", () => {
+  interface FakeContext {
+    clearRect: jest.Mock;
+    drawImage: jest.Mock;
+    setTransform: jest.Mock;
+  }
+  let contexts: FakeContext[];
+
+  beforeEach(() => {
+    contexts = [];
+    HTMLCanvasElement.prototype.getContext = jest.fn(() => {
+      const ctx: FakeContext = {
+        clearRect: jest.fn(),
+        drawImage: jest.fn(),
+        setTransform: jest.fn(),
+      };
+      contexts.push(ctx);
+      return ctx as unknown as RenderingContext;
+    }) as typeof HTMLCanvasElement.prototype.getContext;
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const icons = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: i,
+      width: 24,
+      height: 24,
+    })) as unknown as HTMLImageElement[];
+
+  test("FRAME_MS is about thirty frames a second, and SPIN under a turn every few seconds", () => {
+    expect(FRAME_MS).toBeGreaterThanOrEqual(1000 / 40);
+    expect(FRAME_MS).toBeLessThanOrEqual(1000 / 25);
+    expect(SPIN).toBeGreaterThan(0);
+    expect(SPIN).toBeLessThan(Math.PI);
+  });
+
+  test.each([
+    [300, 200],
+    [1120, 560],
+    [402, 900],
+  ])("at %sx%s, every transform is a pure rotation about the cell centre", (w, h) => {
+    const layer = createGlyphLayer({ icons: icons(8), dpr: 1 });
+    if (!layer) throw new Error("no layer");
+    layer.resize(w, h, []);
+    layer.update(700);
+    const transforms = (contexts[0]?.setTransform.mock.calls ?? []) as number[][];
+    for (const [a, b, c, d] of transforms) {
+      // cos, sin, -sin, cos: a unit rotation, no scale or shear.
+      expect((a ?? 0) * (a ?? 0) + (b ?? 0) * (b ?? 0)).toBeCloseTo(1, 5);
+      expect(c).toBeCloseTo(-(b ?? 0), 5);
+      expect(d).toBeCloseTo(a ?? 0, 5);
+    }
+  });
+
+  test("a frame without a shuffle tick still redraws, so the turn is continuous", () => {
+    const layer = createGlyphLayer({ icons: icons(8), dpr: 1 });
+    if (!layer) throw new Error("no layer");
+    layer.resize(300, 200, []);
+    const ctx = contexts[0];
+    ctx?.clearRect.mockClear();
+    layer.update(10);
+    layer.update(10 + FRAME_MS);
+    layer.update(10 + FRAME_MS * 2);
+    expect(ctx?.clearRect).toHaveBeenCalledTimes(3);
   });
 });

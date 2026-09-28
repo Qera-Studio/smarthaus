@@ -86,6 +86,7 @@ describe("CLAUDE.md describes the layer as it is", () => {
   test("a scrambled, reshuffled grid of the icons, not characters", () => {
     expect(section).toMatch(/scrambled grid/);
     expect(section).toMatch(/reshuffles a few cells/);
+    expect(section).toMatch(/each icon turning at its own speed/);
     expect(section).not.toMatch(/ASCII/);
   });
 });

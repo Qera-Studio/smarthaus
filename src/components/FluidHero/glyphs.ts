@@ -2,10 +2,11 @@ import { HARDWARE_ITEMS } from "@/content/hardware";
 
 /**
  * The layer the liquid reveals: the whole field as a grid of the hardware
- * icons, scrambled, with a few cells reassigned every so often so the field
- * shuffles under the pool. Drawn on an offscreen 2D canvas that fluid.ts
- * uploads as a texture; the display shader reads its alpha and shows it only
- * where the liquid is dark, so the pool acts as a lamp.
+ * icons, scrambled, every icon turning at its own speed and a few cells
+ * reassigned every so often, so what shows through the pool is always
+ * moving. Drawn on an offscreen 2D canvas that fluid.ts uploads as a
+ * texture; the display shader reads its alpha and shows it only where the
+ * liquid is dark, so the pool acts as a lamp.
  *
  * The grid keeps clear of the copy: small icons under the headline would
  * cost it its contrast, so cells that touch a quiet rect stay empty.
@@ -28,7 +29,10 @@ export interface GlyphLayer {
   readonly canvas: HTMLCanvasElement;
   /** Lay the grid out for a canvas of this size (device pixels). */
   resize(width: number, height: number, quiet: readonly Rect[]): void;
-  /** Shuffle a few cells if a tick has passed. True when the canvas changed. */
+  /**
+   * Advance the spin and, on a tick, reshuffle a few cells; redraw at most
+   * every FRAME_MS. True when the canvas changed.
+   */
   update(now: number): boolean;
   dispose(): void;
 }
@@ -40,10 +44,14 @@ export interface GlyphLayer {
 export const CELL = 30;
 /** Icon size in CSS px, centred in its cell. */
 export const ICON = 18;
-/** How often cells are reassigned, in ms. Slow: a shuffle, not a flicker. */
-export const SHUFFLE_MS = 700;
+/** How often cells are reassigned, in ms. */
+export const SHUFFLE_MS = 400;
 /** The share of cells reassigned per tick. */
-export const SHUFFLE_SHARE = 0.04;
+export const SHUFFLE_SHARE = 0.06;
+/** The fastest an icon turns, in radians per second, either way. */
+export const SPIN = 1.2;
+/** The shortest gap between redraws, in ms: about 30 a second. */
+export const FRAME_MS = 32;
 
 export const ICON_URLS = HARDWARE_ITEMS.map((item) => `/hero/hardware/icons/${item.icon}`);
 
@@ -138,24 +146,36 @@ export function createGlyphLayer(options: GlyphOptions): GlyphLayer | null {
 
   const cell = CELL * options.dpr;
   const icon = ICON * options.dpr;
-  const inset = (cell - icon) / 2;
   let cols = 0;
   let rows = 0;
   let cells: Uint8Array = new Uint8Array(0);
   let quiet: Uint8Array = new Uint8Array(0);
+  let spins: Float32Array = new Float32Array(0);
+  let phases: Float32Array = new Float32Array(0);
   let random = seeded(1);
   let lastTick = -1;
+  let lastDraw = -Infinity;
 
-  const draw = () => {
+  // Each icon is drawn about its own centre, turned by its phase plus its
+  // spin times the clock. setTransform rather than save/rotate/restore: it
+  // is one call per cell, and there are thousands of cells.
+  const draw = (now: number) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const seconds = now / 1000;
     for (let row = 0; row < rows; row += 1) {
       for (let col = 0; col < cols; col += 1) {
         const index = row * cols + col;
         if (quiet[index]) continue;
         const image = options.icons[cells[index] ?? 0];
-        if (image) ctx.drawImage(image, col * cell + inset, row * cell + inset, icon, icon);
+        if (!image) continue;
+        const angle = (phases[index] ?? 0) + (spins[index] ?? 0) * seconds;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        ctx.setTransform(cos, sin, -sin, cos, col * cell + cell / 2, row * cell + cell / 2);
+        ctx.drawImage(image, -icon / 2, -icon / 2, icon, icon);
       }
     }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 
   return {
@@ -169,16 +189,26 @@ export function createGlyphLayer(options: GlyphOptions): GlyphLayer | null {
       random = seeded(width * 73856093 + height * 19349663);
       cells = scramble(cols * rows, options.icons.length, random);
       quiet = quietCells(cols, rows, cell, quietRects);
+      spins = new Float32Array(cols * rows);
+      phases = new Float32Array(cols * rows);
+      for (let i = 0; i < spins.length; i += 1) {
+        spins[i] = (random() * 2 - 1) * SPIN;
+        phases[i] = random() * Math.PI * 2;
+      }
       lastTick = -1;
-      draw();
+      lastDraw = -Infinity;
+      draw(0);
     },
 
     update(now) {
+      if (now - lastDraw < FRAME_MS) return false;
+      lastDraw = now;
       const tick = Math.floor(now / SHUFFLE_MS);
-      if (tick === lastTick) return false;
-      lastTick = tick;
-      if (shuffle(cells, options.icons.length, SHUFFLE_SHARE, random).length === 0) return false;
-      draw();
+      if (tick !== lastTick) {
+        lastTick = tick;
+        shuffle(cells, options.icons.length, SHUFFLE_SHARE, random);
+      }
+      draw(now);
       return true;
     },
 
