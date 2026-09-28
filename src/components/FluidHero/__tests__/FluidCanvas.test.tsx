@@ -176,9 +176,6 @@ describe("gates", () => {
   test.each([
     ["prefers-reduced-motion", { reducedMotion: true }],
     ["Save-Data", { saveData: true }],
-    ["a 2g connection", { effectiveType: "2g" }],
-    ["a 3g connection", { effectiveType: "3g" }],
-    ["a slow-2g connection", { effectiveType: "slow-2g" }],
   ])("%s keeps the static ground and never imports the simulation", async (_name, env) => {
     stubEnvironment(env);
     const { section } = mount();
@@ -188,11 +185,20 @@ describe("gates", () => {
     expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
   });
 
-  test("a 4g connection passes", async () => {
-    stubEnvironment({ effectiveType: "4g" });
+  test.each([
+    ["4g", "4g"],
+    ["3g", "3g"],
+    ["2g", "2g"],
+    ["slow-2g", "slow-2g"],
+  ])("a %s connection estimate is not a gate: the field loads", async (_name, effectiveType) => {
+    // Chromium's effectiveType is a guess from recent round-trip times. On a
+    // phone hotspot it read "3g" at full throughput and kept the hero static
+    // (2026-09-28). The chunk is about 9KB; Save-Data is the real signal.
+    stubEnvironment({ effectiveType });
     createFluid.mockReturnValue(fakeFluid());
     const { section } = mount();
     await waitFor(() => expect(section).toHaveAttribute("data-ready"));
+    expect(createFluid).toHaveBeenCalledTimes(1);
   });
 
   test("no WebGL2 context keeps the static ground after the import", async () => {
@@ -624,7 +630,8 @@ describe("gate combinations", () => {
     ["5g", { effectiveType: "5g" }, true],
     ["reduce + 4g", { reducedMotion: true, effectiveType: "4g" }, false],
     ["saveData + 4g", { saveData: true, effectiveType: "4g" }, false],
-    ["3g alone", { effectiveType: "3g" }, false],
+    ["3g alone", { effectiveType: "3g" }, true],
+    ["saveData + 3g", { saveData: true, effectiveType: "3g" }, false],
     ["reduce + saveData + 2g", { reducedMotion: true, saveData: true, effectiveType: "2g" }, false],
     ["saveData false, explicitly", { saveData: false }, true],
     ["an unknown effectiveType", { effectiveType: "wifi" }, true],
