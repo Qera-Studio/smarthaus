@@ -239,7 +239,7 @@ WCAG 1.2.5 applies to "prerecorded video content in synchronized media" — vide
 
 Server Components first. `'use client'` limited to:
 
-- Fluid hero canvas (`FluidHero/FluidCanvas.tsx` — raw WebGL2, dynamically imported; keeps the CSS ground and loads nothing under reduced motion, Save-Data, slow connections, or any WebGL failure. Touch is in. See the third motion-stack exception below)
+- Fluid hero canvas (`FluidHero/FluidCanvas.tsx` — raw WebGL2, dynamically imported; keeps the CSS ground and loads nothing under reduced motion, Save-Data, slow connections, or any WebGL failure. Touch is in. The canvas bleeds past the section on all four sides at a negative z level, so the liquid runs under the nav and the next section; the pointer feeds it only from inside the section. See the third motion-stack exception below)
 - Hero villa canvas (`Hero/VillaCanvas.tsx` — three.js, dynamically imported; falls back to the server-rendered poster and loads no three.js on touch, reduced motion, Save-Data, slow connections or any WebGL failure). **Unmounted, not deleted:** the homepage renders `FluidHero` in its place while the hero's content is written. `src/components/Hero/` stays intact so the villa can come back
 - Hero service tabs (`Hero/ServiceTabs.tsx` — ARIA tablist, selection state). Unmounted with the villa
 - Hardware carousel (`Hardware/HardwareStage.tsx` — ARIA tablist, active slide, one IntersectionObserver; the timer is a CSS animation whose `animationend` advances the slide, and it never starts under reduced motion)
@@ -307,7 +307,7 @@ No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget c
 
 **Why it was allowed:**
 
-- **The documented stack cannot express this.** The brief is brown-800 ink that swirls and dissipates behind the pointer like dye in water. That is a velocity field advecting itself and a pressure solve every frame, a computation, not a transition between two states. CSS transitions on lagged gradients were considered and read as a soft glow, not as water.
+- **The documented stack cannot express this.** The brief is brown-700 ink that swirls and dissipates behind the pointer like dye in water. That is a velocity field advecting itself and a pressure solve every frame, a computation, not a transition between two states. CSS transitions on lagged gradients were considered and read as a soft glow, not as water.
 - **Zero dependencies.** Raw WebGL2, about 300 lines of TypeScript and GLSL. three.js was not used: it is still the villa's, and the "one consumer" condition in AGENTS.md stands.
 - **Off the initial load.** The simulation is a dynamic import behind every gate, so it never counts against the JS budget, and the h1 is the LCP element. There is no poster image.
 - **Bounded work per frame.** A fixed number of full-screen passes at 128 and 512 texels, on the GPU. The main thread does one `step` and one `draw` call. No layout reads in the loop.
@@ -317,7 +317,7 @@ No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget c
 - **Gate `prefers-reduced-motion` in JS.** Same trap as the two above: `_reset.scss` cannot stop a rAF loop.
 - **Gate Save-Data and 2g/3g before the import.** The chunk must not be fetched on a metered connection.
 - **Keep the CSS ground.** The section paints brown-100 with a hint of brown-800 from the stylesheet. Every gate, every WebGL failure, and every frame before the first draw shows that. The section never depends on the canvas.
-- **Cap the ink.** The display shader saturates at a 50% mix of the two tokens, because `--color-text-primary` sits on top of the field: 5.3:1 at the cap, 4.0:1 at a 60% mix. Contrast is a floor; the effect is not.
+- **Cap the ink.** The display shader saturates at a 60% mix of brown-100 and brown-700, because `--color-text-primary` sits on top of the field: 4.7:1 at the cap, 4.2:1 at a 65% mix. Contrast is a floor; the effect is not.
 - **Run only on screen, in a visible tab, and while there is ink to move.** One IntersectionObserver, `visibilitychange`, and the simulation's own `active` flag each stop the loop.
 - **One consumer.** A second fluid surface is a new decision.
 

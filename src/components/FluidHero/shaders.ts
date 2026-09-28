@@ -142,14 +142,16 @@ void main () {
 /**
  * The only pass that reaches the screen. Dye density in the red channel is
  * the mix between the two brand tokens: 0 is the ground (brown-100), and the
- * ink (brown-800) is approached but never reached. Both come in as uniforms
+ * ink (brown-700) is approached but never reached. Both come in as uniforms
  * read from CSS, so this file holds no colour values.
  *
- * The curve saturates at half way. The copy sits on top of this field in
- * --color-text-primary, and at a 50% mix of the two tokens that text still
- * measures 5.3:1 against the darkest the field can get; at 60% it is 4.0:1
- * and at full brown-800 about 1.5:1. AA contrast is a floor, so the cap is
- * in the shader rather than left to the tuning constants in fluid.ts.
+ * A smoothstep, not a linear ramp: it gives the liquid a body with an edge
+ * rather than a smoke that thins forever. It saturates at 60%. The copy sits
+ * on top of this field in --color-text-primary, and at a 60% mix of the two
+ * tokens that text still measures 4.7:1 against the darkest the field can
+ * get; at 65% it is 4.2:1 and at full brown-700 about 1.7:1. AA contrast is
+ * a floor, so the cap is in the shader rather than left to the tuning
+ * constants in fluid.ts.
  */
 export const DISPLAY = `#version 300 es
 precision highp float;
@@ -161,7 +163,7 @@ uniform vec3 ground;
 uniform vec3 ink;
 void main () {
   float dye = max(texture(uDye, vUv).x, 0.0);
-  float d = 0.5 * (1.0 - exp(-2.0 * dye));
+  float d = 0.6 * smoothstep(0.02, 0.9, dye);
   fragColor = vec4(mix(ground, ink, d), 1.0);
 }
 `;

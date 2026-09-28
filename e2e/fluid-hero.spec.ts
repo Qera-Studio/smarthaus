@@ -39,7 +39,9 @@ test.describe("static ground (the default, Save-Data reported)", () => {
     const canvas = hero(page).locator("canvas");
     await expect(canvas).toHaveAttribute("aria-hidden", "true");
     await expect(canvas).toHaveCSS("opacity", "0");
-    const background = await hero(page).evaluate((el) => getComputedStyle(el).backgroundImage);
+    const background = await hero(page).evaluate(
+      (el) => getComputedStyle(el, "::before").backgroundImage,
+    );
     expect(background).toContain("radial-gradient");
   });
 
@@ -281,14 +283,37 @@ test.describe("layout stability", () => {
     expect(images).toEqual([]);
   });
 
-  test("the canvas fills the section exactly", async ({ page }) => {
+  test("the canvas runs edge to edge and past the section above and below", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("[data-hero][data-ready]")).toHaveCount(1, { timeout: 20_000 });
     const section = await hero(page).boundingBox();
     const canvas = await hero(page).locator("canvas").boundingBox();
-    expect(canvas?.x).toBeCloseTo(section?.x ?? -1, 0);
-    expect(canvas?.y).toBeCloseTo(section?.y ?? -1, 0);
-    expect(canvas?.width).toBeCloseTo(section?.width ?? -1, 0);
-    expect(canvas?.height).toBeCloseTo(section?.height ?? -1, 0);
+    const viewport = page.viewportSize();
+    if (!section || !canvas || !viewport) throw new Error("no boxes");
+    expect(canvas.x).toBeLessThanOrEqual(0);
+    expect(canvas.x + canvas.width).toBeGreaterThanOrEqual(viewport.width);
+    expect(canvas.y).toBeLessThan(section.y);
+    expect(canvas.y + canvas.height).toBeGreaterThan(section.y + section.height);
+    // And none of that overhang became sideways scroll.
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("the overhang paints under the next section, not over it", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("[data-hero][data-ready]")).toHaveCount(1, { timeout: 20_000 });
+    await page.evaluate(() => window.scrollTo(0, window.innerHeight * 0.6));
+    const under = await hero(page)
+      .locator("canvas")
+      .evaluate((el) => {
+        const canvas = el as HTMLCanvasElement;
+        const section = canvas.closest("[data-hero]") as HTMLElement;
+        // A point inside the canvas's bottom overhang, past the section's end.
+        const y = section.getBoundingClientRect().bottom + 20;
+        if (y > canvas.getBoundingClientRect().bottom || y > window.innerHeight)
+          return "out of view";
+        const hit = document.elementFromPoint(window.innerWidth / 2, y);
+        return hit === canvas ? "canvas on top" : "something else on top";
+      });
+    expect(under).not.toBe("canvas on top");
   });
 });

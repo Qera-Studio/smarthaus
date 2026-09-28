@@ -65,18 +65,18 @@ const SIM_SIZE = 128;
 const DYE_SIZE = 512;
 /** Jacobi iterations per step. More converges harder; 20 is the usual floor. */
 const PRESSURE_ITERATIONS = 20;
-/** Per-second decay of velocity. Low, so a drag keeps swirling after it ends. */
-const VELOCITY_DISSIPATION = 0.25;
-/** Per-second decay of dye. The ink is gone in a few seconds. */
-const DYE_DISSIPATION = 0.9;
+/** Per-second decay of velocity. High: a thick liquid stops moving soon after the drag. */
+const VELOCITY_DISSIPATION = 0.8;
+/** Per-second decay of dye. Slower than the motion, so the ink outlives the swirl. */
+const DYE_DISSIPATION = 0.45;
 /** Multiplies the pointer's uv delta into sim velocity. */
-const SPLAT_FORCE = 6000;
-/** Splat radius in uv space, squared-distance denominator. */
-const SPLAT_RADIUS = 0.0025;
+const SPLAT_FORCE = 4000;
+/** Splat radius in uv space, squared-distance denominator. Wide: a body of liquid, not a wisp. */
+const SPLAT_RADIUS = 0.008;
 /** Ink deposited per splat. The display shader's curve caps what it can reach. */
-const INK_AMOUNT = 0.16;
+const INK_AMOUNT = 0.25;
 /** Seconds with no splat before `active` turns false. Past DYE_DISSIPATION's tail. */
-const SETTLE_SECONDS = 6;
+const SETTLE_SECONDS = 10;
 
 interface Program {
   program: WebGLProgram;

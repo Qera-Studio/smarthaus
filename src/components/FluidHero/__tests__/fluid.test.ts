@@ -438,9 +438,10 @@ describe("step", () => {
     expect(dye?.["dt"]).toEqual([0.02]);
     const velocityDissipation = velocity?.["dissipation"]?.[0] ?? 0;
     const dyeDissipation = dye?.["dissipation"]?.[0] ?? 0;
-    // Ink must fade faster than motion, or the trail outlives the swirl.
-    expect(dyeDissipation).toBeGreaterThan(velocityDissipation);
-    expect(velocityDissipation).toBeGreaterThan(0);
+    // A thick liquid: the motion damps before the ink fades, so a drag
+    // settles into a body of colour rather than trailing smoke.
+    expect(velocityDissipation).toBeGreaterThan(dyeDissipation);
+    expect(dyeDissipation).toBeGreaterThan(0);
   });
 
   test("the velocity advection reads and writes velocity, the dye advection reads dye", () => {
@@ -506,7 +507,7 @@ describe("active", () => {
     expect(fluid.active).toBe(true);
     for (let i = 0; i < 60 * 3; i += 1) fluid.step(1 / 60);
     expect(fluid.active).toBe(true);
-    for (let i = 0; i < 60 * 10; i += 1) fluid.step(1 / 60);
+    for (let i = 0; i < 60 * 12; i += 1) fluid.step(1 / 60);
     expect(fluid.active).toBe(false);
   });
 
@@ -776,7 +777,7 @@ describe("boundaries", () => {
   test("active flips exactly at the settle time", () => {
     const { fluid } = ready();
     fluid.splat(0.5, 0.5, 0.01, 0);
-    fluid.step(5.999);
+    fluid.step(9.999);
     expect(fluid.active).toBe(true);
     fluid.step(0.001);
     expect(fluid.active).toBe(false);

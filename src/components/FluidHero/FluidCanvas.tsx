@@ -69,7 +69,7 @@ export function FluidCanvas() {
       const computed = getComputedStyle(section);
       const fluid = createFluid(gl, {
         ground: parseHex(computed.getPropertyValue("--brown-100")),
-        ink: parseHex(computed.getPropertyValue("--brown-800")),
+        ink: parseHex(computed.getPropertyValue("--brown-700")),
       });
       if (!fluid) return;
 

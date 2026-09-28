@@ -39,9 +39,9 @@ describe("CLAUDE.md records the third exception", () => {
   });
 
   test("records the contrast cap and its reason", () => {
-    expect(section).toMatch(/50% mix/);
+    expect(section).toMatch(/60% mix/);
     expect(section).toMatch(/--color-text-primary/);
-    expect(section).toMatch(/4\.0:1/);
+    expect(section).toMatch(/4\.2:1/);
   });
 
   test("keeps three.js out of it and the one-consumer rule intact", () => {

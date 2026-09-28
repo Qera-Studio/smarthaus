@@ -40,7 +40,6 @@ describe("FluidHero.module.scss", () => {
     expect(canvas).toMatch(/opacity:\s*0\b/);
     expect(canvas).toMatch(/pointer-events:\s*none/);
     expect(canvas).toMatch(/position:\s*absolute/);
-    expect(canvas).toMatch(/inset:\s*0/);
     const ready = rule(/\.hero\[data-ready\]\s+\.canvas/);
     expect(ready).toMatch(/opacity:\s*1\b/);
   });
@@ -57,20 +56,37 @@ describe("FluidHero.module.scss", () => {
     expect(rule(/\.hero/)).toMatch(/touch-action:\s*pan-y pinch-zoom/);
   });
 
-  test("the section paints its own ground from the two tokens", () => {
-    const hero = rule(/\.hero/);
-    expect(hero).toMatch(/background-color:\s*var\(--color-bg-canvas\)/);
-    expect(hero).toMatch(/background-image:\s*radial-gradient\(/);
-    expect(hero).toMatch(
-      /color-mix\(in srgb, var\(--brown-800\) var\(--hero-ground-ink\), transparent\)/,
+  test("the static ground is a pool of the ink token on the same bleed box", () => {
+    const ground = rule(/\.hero::before/);
+    expect(ground).toMatch(/background-image:\s*radial-gradient\(/);
+    expect(ground).toMatch(
+      /color-mix\(in srgb, var\(--brown-700\) var\(--hero-ground-ink\), transparent\)/,
     );
-    expect(hero).toMatch(/isolation:\s*isolate/);
-    expect(hero).toMatch(/position:\s*relative/);
+    expect(ground).toMatch(/inset-block:\s*calc\(-1 \* var\(--hero-bleed-block\)\)/);
+    expect(ground).toMatch(/inset-inline:\s*calc\(50% - 50vw\)/);
+    expect(ground).toMatch(/z-index:\s*var\(--hero-behind\)/);
+    expect(rule(/\.hero/)).toMatch(/position:\s*relative/);
+    // No ground on the section itself: it would hide the canvas underneath.
+    expect(rule(/\.hero/)).not.toMatch(/background/);
   });
 
-  test("the copy sits above the canvas", () => {
+  test("the canvas bleeds past the section and sits under every in-flow box", () => {
+    const canvas = rule(/\.canvas/);
+    expect(canvas).toMatch(/inset-block-start:\s*calc\(-1 \* var\(--hero-bleed-block\)\)/);
+    expect(canvas).toMatch(/inset-inline-start:\s*calc\(50% - 50vw\)/);
+    // A replaced element does not stretch to its insets: the size is stated.
+    // Measured 2026-09-28: without it the canvas stayed 300x150 and the
+    // backing-store resize and the ResizeObserver chased each other.
+    expect(canvas).toMatch(/inline-size:\s*100vw/);
+    // _reset.scss caps replaced elements at 100% of their container.
+    expect(canvas).toMatch(/max-inline-size:\s*none/);
+    expect(canvas).toMatch(/block-size:\s*calc\(100% \+ 2 \* var\(--hero-bleed-block\)\)/);
+    expect(canvas).toMatch(/z-index:\s*var\(--hero-behind\)/);
+    expect(rule(/\.hero/)).toMatch(/--hero-behind:\s*-1/);
+    // Not an isolated stacking context: that would trap the negative level
+    // inside the section and paint the overhang over the next section.
+    expect(rule(/\.hero/)).not.toMatch(/isolation/);
     expect(rule(/\.inner/)).toMatch(/position:\s*relative/);
-    expect(rule(/\.canvas/)).toMatch(/z-index:\s*var\(--z-base\)/);
   });
 
   test("fills the viewport under the nav on both layouts", () => {
@@ -187,11 +203,9 @@ describe("tokens", () => {
 
   test("reads at least the tokens the design depends on", () => {
     for (const token of [
-      "--color-bg-canvas",
-      "--brown-800",
+      "--brown-700",
       "--duration-slow",
       "--ease-out",
-      "--z-base",
       "--type-display",
       "--type-body-lg",
       "--color-text-primary",
@@ -209,7 +223,12 @@ describe("tokens", () => {
   });
 
   test("defines its local tokens on the section, where the canvas can inherit them", () => {
-    expect([...local].sort()).toEqual(["--hero-ground-ink", "--hero-nav-block"]);
+    expect([...local].sort()).toEqual([
+      "--hero-behind",
+      "--hero-bleed-block",
+      "--hero-ground-ink",
+      "--hero-nav-block",
+    ]);
     expect(rule(/\.hero/)).toMatch(/--hero-ground-ink:\s*14%/);
   });
 });

@@ -31,7 +31,7 @@ let cancelled: number[] = [];
 
 const TOKENS: Record<string, string> = {
   "--brown-100": " #f0e9dd",
-  "--brown-800": "#2b241d ",
+  "--brown-700": "#523c2a ",
 };
 
 function stubEnvironment({
@@ -215,7 +215,7 @@ describe("gates", () => {
   });
 
   test("an unreadable token is a logged failure, not a wrong colour", async () => {
-    stubEnvironment({ tokens: { "--brown-100": "", "--brown-800": "#2b241d" } });
+    stubEnvironment({ tokens: { "--brown-100": "", "--brown-700": "#523c2a" } });
     const spy = jest.spyOn(console, "error").mockImplementation(() => {});
     mount();
     await flush();
@@ -247,7 +247,7 @@ describe("once running", () => {
     await flush();
     expect(createFluid).toHaveBeenCalledWith(
       { fake: true },
-      { ground: parseHex("#f0e9dd"), ink: parseHex("#2b241d") },
+      { ground: parseHex("#f0e9dd"), ink: parseHex("#523c2a") },
     );
   });
 

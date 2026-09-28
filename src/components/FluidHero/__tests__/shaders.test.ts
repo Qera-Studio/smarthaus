@@ -74,8 +74,8 @@ describe("uniforms", () => {
 });
 
 describe("the display cap keeps the copy readable", () => {
-  // The display curve: d = 0.5 * (1 - exp(-2 * dye)), so d < 0.5 always.
-  const CAP = 0.5;
+  // The display curve: d = 0.6 * smoothstep(0.02, 0.9, dye), so d <= 0.6.
+  const CAP = 0.6;
 
   const tokens = readFileSync(join(process.cwd(), "src/styles/_variables.scss"), "utf8");
   const token = (name: string) => {
@@ -92,12 +92,12 @@ describe("the display cap keeps the copy readable", () => {
   const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
   const mixed = (amount: number) => {
     const ground = rgb(token("brown-100"));
-    const ink = rgb(token("brown-800"));
+    const ink = rgb(token("brown-700"));
     return ground.map((g, i) => g + ((ink[i] ?? 0) - g) * amount) as [number, number, number];
   };
 
   test("the shader's curve is the one this test assumes", () => {
-    expect(shaders.DISPLAY).toMatch(/float d = 0\.5 \* \(1\.0 - exp\(-2\.0 \* dye\)\);/);
+    expect(shaders.DISPLAY).toMatch(/float d = 0\.6 \* smoothstep\(0\.02, 0\.9, dye\);/);
     expect(shaders.DISPLAY).toMatch(/mix\(ground, ink, d\)/);
   });
 
@@ -107,9 +107,9 @@ describe("the display cap keeps the copy readable", () => {
     expect(contrast(luminance(text), luminance(mixed(CAP)))).toBeGreaterThanOrEqual(4.5);
   });
 
-  test("and would not at a 60% cap, which is why the cap is where it is", () => {
+  test("and would not at a 65% cap, which is why the cap is where it is", () => {
     const text = rgb(token("brown-900"));
-    expect(contrast(luminance(text), luminance(mixed(0.6)))).toBeLessThan(4.5);
+    expect(contrast(luminance(text), luminance(mixed(0.65)))).toBeLessThan(4.5);
   });
 });
 
