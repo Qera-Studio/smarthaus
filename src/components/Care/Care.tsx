@@ -1,6 +1,3 @@
-import { Fragment } from "react";
-
-import { Placeholder } from "../LegalPage";
 import styles from "./Care.module.scss";
 
 /**
@@ -17,16 +14,15 @@ import styles from "./Care.module.scss";
  *
  * ## Claims status
  *
- * The Premium Care response window is BRACED and carries a pending note, the
- * same convention faq.ts uses: it renders through <Placeholder> so a reader
- * sees it is provisional. faq.ts "support-response" holds the same {4} and the
- * same note, so the two must be cleared in one change or they will drift.
+ * The Premium Care response window is six hours, confirmed by Shivanshu on
+ * 2026-09-28 and printed plainly. faq.ts "support-response" states the same
+ * figure; change both together or they will drift.
  *
  * The two PRICES are printed plainly and are NOT independently sourced in this
  * repo. They came from the design reference, not from a package sheet. If they
- * turn out to be provisional they need the same brace-and-note treatment, and
- * this section emits no structured data until every placeholder here is clear
- * — the reason /faq withholds its FAQPage schema.
+ * turn out to be provisional they need the brace-and-note treatment faq.ts
+ * uses, and this section emits no structured data until every figure in it is
+ * confirmed.
  */
 
 const PACKAGES = [
@@ -39,14 +35,8 @@ const PACKAGES = [
   },
   {
     name: "Premium Care",
-    // The response window is the one figure here that is not yet confirmed.
-    // Braced and paired with a pending note, the same convention faq.ts uses,
-    // and rendered through <Placeholder> so it is visibly provisional rather
-    // than quietly wrong. faq.ts "support-response" carries the same {4} and
-    // the same note: clear both in one change, not one at a time.
     description:
-      "Everything in Standard Care, plus priority response within {4} hours, seven days a week, including evenings and weekends. One number, a named engineer who knows your installation, and no triage queue.",
-    pending: "Premium Care response window to be confirmed with Sunil.",
+      "Everything in Standard Care, plus priority response within 6 hours, seven days a week, including evenings and weekends. One number, a named engineer who knows your installation, and no triage queue.",
     price: "AED 8,000/year",
     tone: "dark",
   },
@@ -79,8 +69,7 @@ export function Care() {
               {...(pkg.tone === "dark" ? { "data-ground": "dark" } : {})}
             >
               <h4 className={styles.packageName}>{pkg.name}</h4>
-              <p className={styles.packageDescription}>{renderPlaceholders(pkg.description)}</p>
-              {"pending" in pkg ? <Placeholder>{pkg.pending}</Placeholder> : null}
+              <p className={styles.packageDescription}>{pkg.description}</p>
               <p className={styles.packagePrice}>{pkg.price}</p>
             </li>
           ))}
@@ -88,23 +77,4 @@ export function Care() {
       </div>
     </section>
   );
-}
-
-/**
- * Splits `{braced}` spans out of a string and wraps each in <Placeholder>.
- *
- * Same shape as FaqAccordion's own renderPlaceholders, restated rather than
- * imported: that one is defined inside a client component, and pulling it in
- * would drag that chunk onto the homepage for a four-line function.
- *
- * The brace is a render-time marker, never content — it must not reach a
- * string that gets quoted, which is why this section emits no structured data
- * while any placeholder remains.
- */
-function renderPlaceholders(text: string) {
-  return text
-    .split(/\{([^}]+)\}/g)
-    .map((part, i) =>
-      i % 2 === 1 ? <Placeholder key={i}>{part}</Placeholder> : <Fragment key={i}>{part}</Fragment>,
-    );
 }
