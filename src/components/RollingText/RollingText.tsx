@@ -6,10 +6,11 @@ type RollingTextProps = {
   stagger?: number;
   /**
    * `letter` rolls each character in turn; `word` rolls the whole word as one
-   * piece, in three elements instead of one per character. The footer uses
-   * `word`: its ~25 links were ~375 of the homepage's elements, and cutting
-   * them was what got blocking time on a mid-range phone under budget
-   * (decided by Shivanshu, 2026-09-28). The nav keeps `letter`.
+   * piece, in three elements instead of one per character. The footer used
+   * `word` for a morning on 2026-09-28 to cut ~375 elements off the homepage;
+   * Shivanshu asked for the per-letter roll back the same day, so nothing
+   * uses `word` now and e2e/dom-budget.spec.ts carries the cost. The option
+   * stays for the day the budget matters more than the roll.
    */
   by?: "letter" | "word";
   className?: string;
