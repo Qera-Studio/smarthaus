@@ -21,13 +21,15 @@ $card-max: 1200px;
     }
   }
 
-  // brown-800 at 5%, as color-mix rather than opacity on the element, which
-  // would fade the text and logo with it. Square, per the brand's edges.
+  // The same glass as the nav capsule and the hardware carousel's bar, on the
+  // client's call, so the three read as one surface. Square, per the brand's
+  // edges. Positioned because the mixin's grain layer sizes against it.
   .card {
+    position: relative;
     display: grid;
     gap: $space-4;
     padding: $space-4;
-    background-color: color-mix(in srgb, #{$brown-800} 5%, transparent);
+    @include glass(0);
 
     // Capped and centred, on the client's call: full width read as a band
     // across the page rather than a card.
@@ -87,9 +89,12 @@ $card-max: 1200px;
     padding-block-start: $space-6;
   }
 
-  // The page's own ground, so the logo sits on a cut-out of the page rather
-  // than on the tint.
+  // A faint lift of the page's own ground over the glass, on the client's
+  // call: enough to mark the logo's area, low enough that it does not read
+  // as a white cut-out, which the full brown-100 did.
   .logoPanel {
+    --maple-logo-ground: 30%;
+
     display: grid;
     place-items: center;
     // These two are 1.5x the spacing-scale step they were scaled from, on the
@@ -98,7 +103,11 @@ $card-max: 1200px;
     // padding below is the exception.
     padding-block: $space-8 * 1.5;
     padding-inline: $space-12 * 1.5;
-    background-color: var(--color-bg-canvas);
+    background-color: color-mix(
+      in srgb,
+      var(--color-bg-canvas) var(--maple-logo-ground),
+      transparent
+    );
 
     // 96px either side on desktop, not the 1.5x 144px: at 144px the panel took
     // two thirds of the capped card and the title broke onto two lines in a

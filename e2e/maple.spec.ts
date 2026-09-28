@@ -48,28 +48,46 @@ test("loads the logo at its intrinsic ratio", async ({ page }) => {
   expect(box.width / box.height).toBeCloseTo(10261 / 3654, 1);
 });
 
-test("paints the card at brown-800 5% and the logo panel on the page ground", async ({ page }) => {
-  const logo = section(page).getByRole("img", { name: "Maple Technologies" });
-  const [card, panel] = await logo.evaluate((img) => {
-    const panel = img.closest("div")!;
-    const card = panel.parentElement!;
-    const bg = (el: Element) => getComputedStyle(el).backgroundColor;
-    return [bg(card), bg(panel)];
+test("paints the card in the nav's glass and the logo panel in a faint canvas wash", async ({
+  page,
+}) => {
+  // The hardware carousel's bar wears the same glass() as the stuck nav
+  // capsule, and is always glass (the capsule only once scrolled), so it is
+  // the reference. Compared as computed values, so a change to the glass
+  // tokens moves all three together and this still passes.
+  const { card, bar, panel } = await page.evaluate(() => {
+    const surface = (el: Element) => {
+      const s = getComputedStyle(el);
+      return {
+        background: s.backgroundColor,
+        backdrop: s.backdropFilter || s.getPropertyValue("-webkit-backdrop-filter"),
+        border: `${s.borderTopWidth} ${s.borderTopStyle} ${s.borderTopColor}`,
+        shadow: s.boxShadow,
+        radius: s.borderTopLeftRadius,
+      };
+    };
+    const logo = document.querySelector('img[alt="Maple Technologies"]')!;
+    const logoPanel = logo.closest("div")!;
+    const tabs = document.querySelector('[role="tablist"][aria-label="Components"]')!;
+    return {
+      card: surface(logoPanel.parentElement!),
+      bar: surface(tabs.parentElement!),
+      panel: getComputedStyle(logoPanel).backgroundColor,
+    };
   });
-  // brown-800 is #2b241d; color-mix at 5% resolves to it at alpha 0.05.
-  // Engines serialise it as rgba() or as color(srgb ...) in 0-1 channels, so
-  // compare the numbers rather than the string.
-  const nums = card.match(/[\d.]+/g)?.map(Number) ?? [];
-  expect(nums, card).toHaveLength(4);
+  expect(card).toEqual(bar);
+  // The glass, not a flat tint: the frosted backdrop is what makes it glass
+  // wherever the engine supports it (all three device profiles do).
+  expect(card.backdrop).toContain("blur(");
+  // brown-100 (240, 233, 221) at 30%: a faint lift over the glass, not the
+  // opaque cut-out it was. Engines serialise color-mix as rgba() or as
+  // color(srgb ...) in 0-1 channels, so compare the numbers.
+  const nums = panel.match(/[\d.]+/g)?.map(Number) ?? [];
+  expect(nums, panel).toHaveLength(4);
   const [r = 0, g = 0, b = 0, a = 0] = nums;
   const scale = r > 1 || g > 1 || b > 1 ? 1 : 255;
-  expect(Math.round(r * scale)).toBe(43);
-  expect(Math.round(g * scale)).toBe(36);
-  expect(Math.round(b * scale)).toBe(29);
-  expect(a).toBeCloseTo(0.05, 2);
-  // brown-100, the page's canvas. Asserted as the value rather than compared
-  // with body: body is transparent and the ground is painted on <html>.
-  expect(panel).toBe("rgb(240, 233, 221)");
+  expect([r, g, b].map((c) => Math.round(c * scale))).toEqual([240, 233, 221]);
+  expect(a).toBeCloseTo(0.3, 2);
 });
 
 test("sets the title and CTA in brown-800, one step lighter than the site default", async ({
