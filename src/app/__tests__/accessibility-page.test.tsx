@@ -124,7 +124,15 @@ describe("findability (WCAG 2.4.5 Multiple Ways)", () => {
   });
 
   it("is indexable, with its own canonical", () => {
-    expect(metadata.robots).toBeUndefined();
+    // Indexable in full: SEO System §2's large-preview line, not just "index".
+    expect(metadata.robots).toEqual({
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    });
     expect(metadata.alternates).toEqual({ canonical: "/accessibility" });
+    expect(metadata.openGraph).toMatchObject({ url: "/accessibility" });
   });
 });

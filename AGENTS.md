@@ -349,7 +349,7 @@ One more `../` per directory level below these. Every file named here exists; `s
 
 The CSP in `next.config.ts` is `default-src 'self'` plus the few widenings recorded below, each with its reason (the Draco decoder's `'wasm-unsafe-eval'` and `blob:` worker, and `'unsafe-inline'` for scripts and styles, which is an accepted risk in `docs/launch-gate/accepted-risks.md`). No third-party origin is allowed. As third parties are added, update the CSP **in the same PR that adds the dependency**. Never leave a CSP update for later — it will break in production.
 
-The policy is built once, by `csp(strict)` in `next.config.ts`, and sent twice: enforced, and as a `Content-Security-Policy-Report-Only` twin that drops `'unsafe-inline'` from `script-src` and `style-src` and nothing else. Both report to `/api/csp-report` (`report-uri` for Firefox and Safari, `report-to csp-endpoint` via `Reporting-Endpoints` for Chromium). The endpoint is rate-limited, capped at 16KB, schema-checked, strips query strings, and logs each distinct violation once an hour as one `csp-violation` JSON line. `e2e/headers.spec.ts` asserts the two policies differ only by `'unsafe-inline'`.
+The policy is built once, by `csp(strict)` in `next.config.ts`, and sent twice: enforced, and as a `Content-Security-Policy-Report-Only` twin that drops `'unsafe-inline'` from `script-src` and `style-src`, and allows the one inline script of our own, the consent boot script (`src/lib/consent-boot.ts`), by its SHA-256 hash. The hash is in the strict policy only: a policy that lists a hash makes browsers ignore its `'unsafe-inline'`, which in the enforced policy would block every inline script Next emits. Both report to `/api/csp-report` (`report-uri` for Firefox and Safari, `report-to csp-endpoint` via `Reporting-Endpoints` for Chromium). The endpoint is rate-limited, capped at 16KB, schema-checked, strips query strings, and logs each distinct violation once an hour as one `csp-violation` JSON line. `e2e/headers.spec.ts` asserts the two policies differ only by `'unsafe-inline'` and that hash, and `e2e/consent-boot.spec.ts` that the hash matches the script the page serves.
 
 ### Planned CSP changes (update when implementing)
 
@@ -489,6 +489,14 @@ No client photography exists and none will be sourced. Client privacy makes it p
 - The brand's visual identity
 
 ---
+
+## Metadata, structured data and crawlers
+
+- **Every page's metadata goes through `pageMetadata()`** (`src/lib/metadata.ts`). Next merges metadata shallowly, so a page's own `openGraph` replaces the layout's whole object; before the helper, pages set none and all inherited the layout's `og:url` of `/`. The helper sets canonical and og:url from one `path`, carries the card images, writes the robots line, and throws at build when an indexable page's title or description is outside SEO System §2's ranges. The layout's metadata is only a fallback for the 404 and error pages, and names no URL.
+- **The sitemap is the indexable pages, exactly.** Their dates live in `src/content/last-modified.ts`, fixed, and move when content changes. `src/app/__tests__/sitemap.test.ts` derives the indexable set from every page's metadata and fails on any difference.
+- **JSON-LD** (`src/components/Schema/`): the business and website once in the layout, a `WebPage` and `BreadcrumbList` on each indexable page, `FAQPage` on `/faq` once it is publishable. Confirmed facts only; no `sameAs`, `geo`, opening hours or ratings until each is real.
+- **Crawlers:** every crawler is allowed, AI training crawlers included (decided by Shivanshu, 2026-09-28; SEO System §0a makes it a per-client call). `src/app/robots.ts` has one allow-all group, and its tests fail if any crawler is singled out. The Vercel Firewall must not block what robots.txt allows.
+- **Metadata routes export only what Next allows**, like pages. Data they read lives in `src/content/`.
 
 ## Locale routing — no `/en` prefix at V1
 
@@ -656,7 +664,7 @@ The CI jobs, which are the required status checks:
 - `unit`: Jest with coverage, the coverage gate, the ratio gate
 - `e2e (Desktop Chrome)`, `e2e (iPhone 17)`, `e2e (Galaxy S24)`: the Playwright suite per device, with axe. iPhone 17 is the current base iPhone width (402 CSS px, WebKit); Galaxy S24 is the narrow Android width (360 CSS px, Chromium). A project name sets screen size, density, user agent and touch only; the engine is Playwright's current build
 - `e2e-extra`: specs tagged `@forced-colors` and `@zoom`, in the `forced-colors` and `zoom-200` projects
-- `lighthouse`: `lighthouserc.json` against the production build
+- `lighthouse`: `lighthouserc.json` against the production build: `/`, `/pricing` and `/contact`, mobile, measured throttling (see the Lighthouse note in CLAUDE.md)
 
 Not required, and visible on every PR: `delivery`, one real email through Resend.
 

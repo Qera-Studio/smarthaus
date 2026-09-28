@@ -52,10 +52,11 @@ test.describe("the e2e server", () => {
 
   test("hydrates, which the loopback address exists to guarantee", async ({ page }) => {
     // If WebKit upgraded to https, Server Components would still render and
-    // every client island would be dead. The consent banner only exists once
-    // React has hydrated and read the cookie, so it is a hydration witness.
+    // every client island would be dead. The consent shell marks
+    // data-consent-ready on <html> only once React has hydrated, so the mark
+    // is the hydration witness.
     await page.goto("/");
-    await expect(page.getByRole("region", { name: "Cookie preferences" })).toBeVisible();
+    await expect(page.locator("html[data-consent-ready]")).toBeAttached();
   });
 
   // Named for what it guards. On CI the image optimizer once stopped answering
@@ -73,7 +74,7 @@ test.describe("the e2e server", () => {
       if (pending.delete(request)) failed.push(`${request.url()}: ${request.failure()?.errorText}`);
     });
     await page.goto("/");
-    await expect(page.getByRole("region", { name: "Cookie preferences" })).toBeVisible();
+    await expect(page.locator("html[data-consent-ready]")).toBeAttached();
     const stuck = await expect
       .poll(() => [...pending].map((request) => request.url()), { timeout: 15_000 })
       .toEqual([])
@@ -232,7 +233,7 @@ test.describe("the hero's villa in e2e", () => {
     // The gate runs in an effect at hydration and, when it passes, starts the
     // load on a zero timeout. So: hydrated, then a window far longer than that
     // timeout, and neither the model nor its decoder was ever asked for.
-    await expect(page.getByRole("region", { name: "Cookie preferences" })).toBeVisible();
+    await expect(page.locator("html[data-consent-ready]")).toBeAttached();
     await page.waitForTimeout(2_000);
     expect(villaRequests).toEqual([]);
     await expect(page.locator("canvas")).toHaveCount(0);

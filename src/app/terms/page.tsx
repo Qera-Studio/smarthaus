@@ -9,6 +9,7 @@ import {
 } from "../../components/LegalPage";
 import { ADDRESS, EMAIL, PHONE_DISPLAY } from "../../lib/contact";
 import { TERMS_VERSION } from "../../content/legal/versions";
+import { pageMetadata } from "../../lib/metadata";
 
 // ---------------------------------------------------------------------------
 // DRAFT — pending the counsel review this document requires.
@@ -26,16 +27,16 @@ import { TERMS_VERSION } from "../../content/legal/versions";
 
 const LAST_UPDATED = "Draft, not yet effective";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Terms and Conditions",
   description:
     "The terms governing your use of the Smarthaus website, including what is and is not a binding offer.",
-  alternates: { canonical: "/terms" },
+  path: "/terms",
   // Draft: states liability and governing-law positions that are not settled.
   // Flip to indexable in the same change that clears the placeholders and
   // records counsel sign-off.
-  robots: { index: false, follow: true },
-};
+  index: false,
+});
 
 const ENTITY_ROWS = [
   { label: "Legal entity", value: "Maple Technologies Security Systems LLC" },

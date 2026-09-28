@@ -14,11 +14,14 @@ export default function robots(): MetadataRoute.Robots {
   if (env && env !== "production") {
     return { rules: { userAgent: "*", disallow: "/" } };
   }
+  // Every crawler is allowed, AI training crawlers included: decided by
+  // Shivanshu on 2026-09-28 (SEO System §0a makes it a per-client call; a
+  // refusal list shipped briefly in Phase 5 and was taken out). Search,
+  // answer-engine and user-directed crawlers are how the site is found and
+  // cited. The Vercel Firewall must not block what this allows
+  // (docs/runbooks/vercel-firewall.md).
   return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-    },
+    rules: { userAgent: "*", allow: "/" },
     sitemap: "https://smarthaus.ae/sitemap.xml",
   };
 }

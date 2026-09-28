@@ -126,7 +126,7 @@ function sample(
               frames,
               settled: false,
               // The consent region is client-only: present means React hydrated.
-              why: `stuck=${header.hasAttribute("data-stuck")} want=${wantStuck} scrollY=${window.scrollY} hydrated=${Boolean(document.querySelector('[aria-label="Cookie preferences"]'))} sentinelTop=${(header.previousElementSibling as HTMLElement | null)?.getBoundingClientRect().top} running=[${live.join(", ")}]`,
+              why: `stuck=${header.hasAttribute("data-stuck")} want=${wantStuck} scrollY=${window.scrollY} hydrated=${document.documentElement.hasAttribute("data-consent-ready")} sentinelTop=${(header.previousElementSibling as HTMLElement | null)?.getBoundingClientRect().top} running=[${live.join(", ")}]`,
             });
           } else requestAnimationFrame(loop);
         };

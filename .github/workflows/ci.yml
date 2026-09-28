@@ -229,4 +229,7 @@ jobs:
         with:
           name: lighthouse
           path: .lighthouseci/
+          # The folder starts with a dot, and v4 skips hidden files unless
+          # told not to: the reports were never uploaded before this line.
+          include-hidden-files: true
           retention-days: 14
