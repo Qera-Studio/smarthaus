@@ -382,7 +382,8 @@ test.describe("quiet zones at 200% zoom @zoom", () => {
     await page.goto("/");
     const section = await hero(page).boundingBox();
     const quiet = hero(page).locator("[data-hero-quiet]");
-    await expect(quiet).toHaveCount(2);
+    // The copy, the CTAs and the closing paragraph.
+    await expect(quiet).toHaveCount(3);
     for (const box of await quiet.all()) {
       const rect = await box.boundingBox();
       if (!rect || !section) throw new Error("no box");
