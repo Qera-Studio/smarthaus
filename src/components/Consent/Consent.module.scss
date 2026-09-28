@@ -262,7 +262,6 @@
     color: #{rgba($brown-200, 0.5)};
     font-size: var(--font-size-sm);
     line-height: 1;
-    cursor: pointer;
 
     transition-property: color;
     transition-duration: var(--duration-fast);
@@ -394,7 +393,6 @@
     font-weight: $font-weight-semibold;
     text-align: center;
     text-wrap: balance;
-    cursor: pointer;
 
     transition-property: background-color;
     transition-duration: var(--duration-fast);
@@ -432,7 +430,6 @@
     font-weight: $font-weight-medium;
     text-align: center;
     white-space: nowrap;
-    cursor: pointer;
 
     transition-property: color;
     transition-duration: var(--duration-fast);
@@ -609,7 +606,6 @@
     border-color: #{rgba($brown-100, 0.45)};
     background-color: #{rgba($brown-100, 0.08)};
     position: relative;
-    cursor: pointer;
 
     transition-property: background-color, border-color;
     transition-duration: var(--duration-fast);
@@ -655,7 +651,6 @@
     // of a greyed-out Decline, where the same treatment would be a dark
     // pattern.
     &:disabled {
-      cursor: default;
       opacity: 0.55;
     }
 
@@ -728,7 +723,6 @@
     font-size: var(--font-size-sm);
     font-weight: $font-weight-semibold;
     text-align: center;
-    cursor: pointer;
 
     transition-property: background-color, border-color, color;
     transition-duration: var(--duration-fast);
@@ -783,7 +777,6 @@
     color: var(--consent-ink-muted);
     font-size: var(--font-size-sm);
     font-weight: $font-weight-medium;
-    cursor: pointer;
 
     transition-property: color;
     transition-duration: var(--duration-fast);

@@ -159,11 +159,20 @@
     outline-offset: 2px;
   }
 
-  // Links and buttons default to `pointer`, which would override the dot from
-  // html. Inherit instead so the cursor stays consistent everywhere.
+  // The dot is the cursor everywhere, controls included, on the client's
+  // call: no hand over links and buttons, no arrow or I-beam over form
+  // fields, and never hidden. Every control inherits it from html (or the
+  // light dot from a [data-ground="dark"] ancestor). No component stylesheet
+  // sets a cursor of its own; src/styles/__tests__/cursor.test.ts fails if
+  // one does, since a components-layer rule would beat this one.
   a,
   button,
-  [role="button"] {
+  [role="button"],
+  summary,
+  label,
+  select,
+  input,
+  textarea {
     cursor: inherit;
   }
 
@@ -201,25 +210,6 @@
 }
 
 @layer utilities {
-  // Nothing over a button. The dot is the cursor everywhere else; over a
-  // control the control's own hover state does the signalling, so the cursor
-  // simply hides. Client decision, after a frame that morphed out of the dot
-  // was tried and rejected. In utilities because Button.module.scss sets
-  // `cursor: pointer` in components, which would otherwise win.
-  //
-  // `a[data-variant]` is the Button component as a link; the hero's CTAs and
-  // the nav's are links styled as buttons in their own modules and opt in
-  // with data-cursor="none". The hero's stage button is the whole render,
-  // not a control the reader aims at, so it keeps the dot with
-  // data-cursor="keep".
-  @media (hover: hover) and (pointer: fine) {
-    :is(button, [role="button"], a[data-variant], [data-cursor="none"]):not([data-cursor="keep"]),
-    :is(button, [role="button"], a[data-variant], [data-cursor="none"]):not([data-cursor="keep"])
-      * {
-      cursor: none;
-    }
-  }
-
   .visually-hidden {
     @include visually-hidden;
   }

@@ -219,7 +219,6 @@
     background-repeat: no-repeat;
     background-position: right center;
     background-size: 16px 16px;
-    cursor: pointer;
 
     // The open list. Chrome 135+ and Edge render it from CSS once the control
     // opts in via appearance: base-select; Safari and Firefox ignore the whole
@@ -548,7 +547,6 @@
     padding-block: $space-4;
     font-size: var(--type-body-lg);
     color: var(--color-text-primary);
-    cursor: pointer;
     list-style: none;
 
     // Safari still paints the disclosure triangle without this.
@@ -682,7 +680,6 @@
     border-color: var(--color-text-secondary);
     border-radius: 0;
     background-color: var(--color-bg-surface);
-    cursor: pointer;
 
     transition-property: background-color, border-color;
     transition-duration: var(--duration-fast);
@@ -706,7 +703,6 @@
     font-size: var(--font-size-sm);
     line-height: $line-height-relaxed;
     color: var(--color-text-primary);
-    cursor: pointer;
   }
 
   // Visible text, never colour alone.

@@ -37,7 +37,6 @@
     border-radius: 0;
     background-color: var(--color-bg-canvas);
     color: var(--color-text-primary);
-    cursor: pointer;
 
     // Hidden by default, faded and nudged down. `visibility` rather than
     // `display` so the transition has something to run on; the JS `inert`
