@@ -79,7 +79,9 @@ describe("CLAUDE.md records the glyph layer inside the same exception", () => {
 
   test("the marker in the doc is the marker in the markup", () => {
     const hero = readFileSync(join(root, "src/components/FluidHero/FluidHero.tsx"), "utf8");
-    expect(hero.match(/data-hero-quiet/g)).toHaveLength(3);
+    // Three attributes and the comment that explains them.
+    expect(hero.match(/data-hero-quiet/g)).toHaveLength(4);
+    expect(section).toMatch(/`data-hero-quiet` on the copy, the CTAs and the closing paragraph/);
     expect(canvas).toContain('querySelectorAll("[data-hero-quiet]")');
   });
 });
@@ -87,7 +89,7 @@ describe("CLAUDE.md records the glyph layer inside the same exception", () => {
 describe("CLAUDE.md describes the layer as it is", () => {
   test("a scrambled, flipping grid of the icons, not characters", () => {
     expect(section).toMatch(/scrambled grid/);
-    expect(section).toMatch(/flips every cell to a different icon every 50ms/);
+    expect(section).toMatch(/flips every cell to a different icon every 100ms/);
     expect(section).not.toMatch(/ASCII/);
   });
 });

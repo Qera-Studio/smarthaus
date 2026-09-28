@@ -176,11 +176,13 @@ test.describe("live field", () => {
     const primary = hero(page).getByRole("link", { name: "Book a site visit" });
     await primary.focus();
     await expect(primary).toBeFocused();
-    // The only link in the section: the next Tab stop is outside it, and the
-    // canvas, which sits between, never takes focus.
+    // Then the WhatsApp CTA, the section's last link: the next Tab stop is
+    // outside it, and the canvas, which sits between, never takes focus.
+    await page.keyboard.press("Tab");
+    await expect(hero(page).getByRole("link", { name: "Message on WhatsApp" })).toBeFocused();
     await page.keyboard.press("Tab");
     expect(await page.evaluate(() => document.activeElement?.closest("[data-hero]"))).toBeNull();
-    await expect(hero(page).getByRole("link")).toHaveCount(1);
+    await expect(hero(page).getByRole("link")).toHaveCount(2);
   });
 });
 
@@ -321,12 +323,15 @@ test.describe("layout stability", () => {
 });
 
 test.describe("the glyph layer", () => {
-  test("the copy and the CTA are marked quiet, and the h1 sits inside one", async ({ page }) => {
+  test("the copy, the CTAs and the closing paragraph are quiet, the h1 inside one", async ({
+    page,
+  }) => {
     await page.goto("/");
     const quiet = hero(page).locator("[data-hero-quiet]");
-    await expect(quiet).toHaveCount(2);
+    await expect(quiet).toHaveCount(3);
     await expect(quiet.first().getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(quiet.nth(1).getByRole("link")).toHaveCount(1);
+    await expect(quiet.nth(1).getByRole("link")).toHaveCount(2);
+    await expect(quiet.nth(2)).toContainText("A good system is one you stop noticing.");
   });
 
   test.describe("live", () => {
@@ -377,7 +382,8 @@ test.describe("quiet zones at 200% zoom @zoom", () => {
     await page.goto("/");
     const section = await hero(page).boundingBox();
     const quiet = hero(page).locator("[data-hero-quiet]");
-    await expect(quiet).toHaveCount(2);
+    // The copy, the CTAs and the closing paragraph.
+    await expect(quiet).toHaveCount(3);
     for (const box of await quiet.all()) {
       const rect = await box.boundingBox();
       if (!rect || !section) throw new Error("no box");

@@ -35,6 +35,11 @@ export interface FluidOptions {
   simSize?: number;
   /** Long side of the dye texture: what the viewer actually sees. */
   dyeSize?: number;
+  /**
+   * Edge of the square blocks the field is drawn in, in device pixels. Every
+   * block is one flat shade, sampled at its centre. 1 draws the field smooth.
+   */
+  pixel?: number;
 }
 
 export interface Fluid {
@@ -73,13 +78,13 @@ const DYE_SIZE = 768;
 /** Jacobi iterations per step. More converges harder; 20 is the usual floor. */
 const PRESSURE_ITERATIONS = 20;
 /** Per-second decay of velocity. High: the liquid stops soon after the drag, so it does not spread. */
-const VELOCITY_DISSIPATION = 2;
-/** Per-second decay of dye. Fast: the trail is gone in a couple of seconds. */
-const DYE_DISSIPATION = 1.6;
-/** Multiplies the pointer's uv delta into sim velocity. */
-const SPLAT_FORCE = 2500;
-/** Splat radius in uv space, squared-distance denominator. Small: a finger's width, not a cloud. */
-const SPLAT_RADIUS = 0.0012;
+const VELOCITY_DISSIPATION = 4;
+/** Per-second decay of dye. Fast: the trail is gone in about a second. */
+const DYE_DISSIPATION = 3;
+/** Multiplies the pointer's uv delta into sim velocity. Low: the ink stays near the pointer. */
+const SPLAT_FORCE = 1800;
+/** Splat radius in uv space, squared-distance denominator. Small: a fingertip, not a cloud. */
+const SPLAT_RADIUS = 0.0005;
 /** Ink deposited per splat. The display shader's curve caps what it can reach. */
 const INK_AMOUNT = 0.2;
 /** Seconds with no splat before `active` turns false. Past DYE_DISSIPATION's tail. */
@@ -112,7 +117,7 @@ export const UNIFORMS = {
   divergence: ["uVelocity"],
   pressure: ["uPressure", "uDivergence"],
   gradientSubtract: ["uPressure", "uVelocity"],
-  display: ["uDye", "uGlyphs", "glyphs", "ground", "ink", "glyph"],
+  display: ["uDye", "uGlyphs", "glyphs", "ground", "ink", "glyph", "pixel", "resolution"],
 } as const;
 
 /** Every fragment shader also gets the vertex shader's `texelSize`. */
@@ -137,6 +142,7 @@ export function createFluid(gl: WebGL2RenderingContext, options: FluidOptions): 
 
   const simSize = options.simSize ?? SIM_SIZE;
   const dyeSize = options.dyeSize ?? DYE_SIZE;
+  const pixel = options.pixel ?? 1;
 
   const vertex = compile(gl, gl.VERTEX_SHADER, VERTEX);
   const programs = {
@@ -301,6 +307,8 @@ export function createFluid(gl: WebGL2RenderingContext, options: FluidOptions): 
       gl.uniform3f(loc(display, "ground"), ...options.ground);
       gl.uniform3f(loc(display, "ink"), ...options.ink);
       gl.uniform3f(loc(display, "glyph"), ...options.glyph);
+      gl.uniform1f(loc(display, "pixel"), pixel);
+      gl.uniform2f(loc(display, "resolution"), canvasWidth, canvasHeight);
       blit(null, programs.display, t.dye.read);
     },
 

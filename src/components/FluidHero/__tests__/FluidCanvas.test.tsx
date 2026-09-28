@@ -271,7 +271,13 @@ describe("once running", () => {
     await flush();
     expect(createFluid).toHaveBeenCalledWith(
       { fake: true },
-      { ground: parseHex("#f0e9dd"), ink: parseHex("#523c2a"), glyph: parseHex("#2b241d") },
+      {
+        ground: parseHex("#f0e9dd"),
+        ink: parseHex("#523c2a"),
+        glyph: parseHex("#2b241d"),
+        // 12px blocks at the test's device pixel ratio of 2.
+        pixel: 24,
+      },
     );
   });
 
