@@ -1,6 +1,5 @@
 import { OG_IMAGES, SITE_NAME } from "../lib/metadata";
 import type { Metadata, Viewport } from "next";
-import { Suspense } from "react";
 import { Manrope } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -123,27 +122,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
-        {/*
-          Each region in its own Suspense boundary. Nothing here suspends, so
-          the server HTML is unchanged; what changes is hydration. React
-          hydrates every boundary as its own unit and yields to the browser
-          between them, where one boundary-less tree was hydrated in a few
-          long tasks: 350-400ms of Total Blocking Time on a mid-range phone
-          (CI Lighthouse, 2026-09-28). A tap on a region not yet hydrated is
-          replayed once it is, rather than lost.
-        */}
-        <Suspense>
-          <Nav />
-        </Suspense>
-        <main id="main-content">
-          <Suspense>{children}</Suspense>
-        </main>
+        <Nav />
+        <main id="main-content">{children}</main>
         {/* Sibling of main, not inside it: contentinfo is only a landmark as a
             direct child of body. The footer reserves the mobile nav's height
             itself, since the reservation on main does not reach it. */}
-        <Suspense>
-          <Footer />
-        </Suspense>
+        <Footer />
         {/*
           After the footer, so it is last in the tab order rather than standing
           between a keyboard visitor and the page.
@@ -160,9 +144,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           ScrollToTop.module.scss moves the button above the banner while it is
           up, keyed off a height the banner publishes as --consent-block-size.
         */}
-        <Suspense>
-          <ScrollToTop />
-        </Suspense>
+        <ScrollToTop />
         {/*
           Last in the body, after the footer.
 
@@ -185,9 +167,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           indefinitely. See Consent.tsx for why, and for what it does not do
           (it loads no analytics).
         */}
-        <Suspense>
-          <Consent />
-        </Suspense>
+        <Consent />
         {/*
           Vercel Web Analytics and Speed Insights.
 
