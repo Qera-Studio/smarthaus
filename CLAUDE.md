@@ -10,7 +10,7 @@
 
 `qera-system/` is a git submodule containing Qera's nine master documents. They govern every decision on this project.
 
-**Precedence order** (lower number wins):
+**Precedence order**, owned by the System Charter (`qera-system/charter/system-charter.md`) and replicated here for convenience; the charter wins if they ever differ. Lower number wins:
 
 1. Legal & Compliance
 2. Security
@@ -88,6 +88,8 @@ Where the Design System covers something (tokens, spacing, component conventions
 
 ## The Blender hero
 
+> **Partly superseded.** Phase 1 (the landing) shipped as real-time WebGL, not a pre-rendered clip: `src/components/Hero/VillaCanvas.tsx` renders `public/hero/villa.glb` with three.js. The reasoning below against runtime 3D did not hold for the scene we actually have; AGENTS.md ("three.js — the ban, and why it was lifted for the hero only") records why and on what conditions. Phases 2 and 3 are unbuilt and their description here still stands.
+
 The homepage hero is a **pre-rendered 3D scene** — not real-time WebGL. Blender renders frames or video; the site plays them.
 
 **Why pre-rendered:** No runtime 3D library, no shader compilation, no GPU requirement on the client. A 10MB WebGL bundle would blow the JS budget on page one and exclude every mid-range phone in Dubai. Pre-rendered video is a fraction of the code cost and works on every device.
@@ -152,17 +154,21 @@ Arabic is planned but not shipping at launch. English only (`lang="en"`, `dir="l
 Values owned by the system (via Owned Facts Register) — do not restate, point only:
 
 - **LCP, INP, CLS** → Performance System §1
-- **CSS budget** → Performance System (< 40KB gzipped, on the register)
+- **CSS budget** → Performance System, on the owned-facts register
 
 **Project-specific targets** (these are ours, not the system's):
 
-- **CLS < 0.05** — tighter than the system's 0.1 because the scroll-driven hero and motion-heavy design create more CLS risk. Project decision, not a system change
+- **CLS < 0.05** — tighter than the system's CLS threshold (Performance System §1, on the register) because the scroll-driven hero and motion-heavy design create more CLS risk. Project decision, not a system change
 - **TBT < 200ms** — lab metric (Lighthouse CI), complementary to the system's INP (field metric). Different measurements, not conflicting
-- **First-load JS: ≤ 640KB uncompressed** on marketing pages — set in `lighthouserc.json` as `resource-summary:script:size`. The system says JS budgets are per-project; this is ours. Does not apply to the `/studio` route (Sanity Studio is its own bundle). Turnstile and Zod load only on the contact page, not homepage.
+- **First-load JS: ≤ 640KB uncompressed** on marketing pages — set in `lighthouserc.json` as `resource-summary:script:size`. The system says JS budgets are per-project; this is ours. Does not apply to the `/studio` route (Sanity Studio is its own bundle). Zod never reaches the browser: validation is server-only, and the form's constants live in the Zod-free `src/lib/contact-fields.ts` (`e2e/contact.spec.ts` checks every script `/` and `/contact` load). Turnstile, when it lands, loads only on the pages with a form.
 
   This was originally 100KB, described as gzipped. That was wrong twice over: Lighthouse's `resource-summary:script:size` counts **uncompressed** bytes, and the React 19 + Next 16 baseline alone is ~575KB uncompressed before a single line of our own code — so the gate failed from the day it was written and never once passed. A permanently-red gate is worse than none, because a real regression looks identical to the standing failure. 640KB is the measured baseline plus roughly 10% headroom, so it now catches what it was meant to catch: our code growing, not the framework existing. Re-baseline it on any major Next or React upgrade.
 
 - **Lighthouse mobile: ≥ 0.95** — project floor for Premium tier. The system does not set a Lighthouse threshold; it says "lab scores are a proxy, field data is the truth." We use this as a CI gate to catch regressions. A mostly-static Server Components site with optimised media has no excuse for scoring below 95
+
+  **Measured, not simulated** (decided 2026-09-27). `lighthouserc.json` runs mobile with `throttlingMethod: "devtools"`: a genuinely slowed network and 4x CPU, timed as it happens. Lighthouse's default simulation reported LCP 4.7s on `/` while the trace showed the poster painted at 82ms, because it charges the page for JavaScript chunks that did not hold the paint. The measured run found the one real problem the simulation hid among false ones: the consent banner painted only after hydration and was `/contact`'s LCP at 4.1s on a first visit. It now paints from the server HTML (`src/lib/consent-boot.ts`), and `/contact` measures 1.7s. `/pricing` is noindex, so it is held to every SEO audit except `is-crawlable`; `src/app/__tests__/sitemap.test.ts` ties that exemption to the page's own metadata
+
+  **Calibrated, and two assertions temporarily warnings** (decided 2026-09-28). `scripts/lighthouse-calibrated.mjs` sets the CPU slowdown from each machine's benchmark so every run emulates one target phone, the slower GitHub runner at 4x; a fixed 4x passed or failed by which runner CI drew. On that phone blocking time measured `/` 269ms, `/pricing` 315ms, `/contact` 132ms against 200ms, so the performance score and TBT are warnings until Phase 5b, recorded in `docs/launch-gate/accepted-risks.md`. Every other assertion is an error, and a test fails if anything else is downgraded
 
 ---
 
@@ -170,21 +176,28 @@ Values owned by the system (via Owned Facts Register) — do not restate, point 
 
 Build target is **WCAG 2.2 Level AA** (Accessibility System default). The following AAA criteria are adopted where the design meets them for free or near-free. The rest are explicitly declined with reasoning.
 
+### AA criteria this table used to list as AAA
+
+Three rows here were Level AA, not AAA, so they are required by the build target rather than adopted as extras. Corrected 2026-09-27:
+
+| Criterion                     | How it is met                                                                                                                                                         |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1.4.12 Text Spacing**       | No fixed heights on text containers; fluid type and logical properties                                                                                                |
+| **2.4.5 Multiple Ways**       | The primary nav, and the footer, which links every page and serves as the site map. There are no breadcrumbs and no search; `sitemap.xml` is for crawlers, not people |
+| **2.4.6 Headings and Labels** | Content discipline, and every form field has a visible label                                                                                                          |
+
 ### AAA criteria we adopt (zero or trivial extra cost)
 
-| Criterion                         | What it asks                                          | Why it's free                                                                                                 |
-| --------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **1.4.12 Text Spacing**           | Content readable when user overrides spacing          | Free if CSS doesn't use fixed heights on text containers. Fluid type + logical properties already handle this |
-| **2.4.5 Multiple Ways**           | Two+ ways to locate a page                            | Nav + sitemap + breadcrumbs. We're building all three anyway                                                  |
-| **2.4.6 Headings and Labels**     | Descriptive headings and labels                       | Free with good content discipline                                                                             |
-| **2.4.8 Location**                | User's location within the site is available          | Breadcrumbs on inner pages. Trivial                                                                           |
-| **2.4.10 Section Headings**       | Content organised with headings                       | Free — we'd never ship a page without heading structure                                                       |
-| **2.1.3 Keyboard (No Exception)** | All functionality operable by keyboard, no exceptions | Four client components, all simple. No keyboard traps possible                                                |
-| **2.2.3 No Timing**               | No time limits on content                             | Marketing site — nothing is timed                                                                             |
-| **2.2.4 Interruptions**           | User can postpone/suppress interruptions              | No interruptions, no pop-ups, no auto-playing modals                                                          |
-| **3.2.5 Change on Request**       | Context changes only on user action                   | No auto-redirects, no surprise navigation                                                                     |
-| **3.3.6 Error Prevention (All)**  | User submissions: review, confirm, reversible         | Contact form gets a confirmation step. One form, low cost                                                     |
-| **1.3.6 Identify Purpose**        | Programmatic purpose of UI components                 | Semantic HTML + `autocomplete` attributes on form fields. Free                                                |
+| Criterion                         | What it asks                                          | How it is met                                                                                                                                                                                                                                                                |
+| --------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **2.4.8 Location**                | User's location within the site is available          | **Partly.** The nav marks the current page (`aria-current="page"`, `Nav/NavLink.tsx`; W3C technique G128). Programmatic only: the visible rule under it was removed 2026-09-28 at Shivanshu's request. Pages reached only from the footer are not marked yet. No breadcrumbs |
+| **2.4.10 Section Headings**       | Content organised with headings                       | Every page has a heading structure                                                                                                                                                                                                                                           |
+| **2.1.3 Keyboard (No Exception)** | All functionality operable by keyboard, no exceptions | Every client component in the list below is keyboard operable; the hero tablist, hardware carousel and consent panel have their own keyboard tests                                                                                                                           |
+| **2.2.3 No Timing**               | No time limits on content                             | Nothing is timed. The hardware carousel advances on its own but is not a time limit: it has a pause control and never starts under reduced motion                                                                                                                            |
+| **2.2.4 Interruptions**           | User can postpone/suppress interruptions              | No pop-ups or auto-playing modals. The consent banner is non-modal and can be ignored                                                                                                                                                                                        |
+| **3.2.5 Change on Request**       | Context changes only on user action                   | No auto-redirects, no surprise navigation                                                                                                                                                                                                                                    |
+| **3.3.6 Error Prevention (All)**  | User submissions: reversible, checked, or confirmed   | By "checked": the server validates every field and the error summary lets the visitor correct them before anything is sent. There is no confirmation step, and 3.3.6 does not require one                                                                                    |
+| **1.3.6 Identify Purpose**        | Programmatic purpose of UI components                 | Semantic HTML + `autocomplete` attributes on form fields                                                                                                                                                                                                                     |
 
 ### AAA criteria explicitly declined
 
@@ -201,11 +214,11 @@ Build target is **WCAG 2.2 Level AA** (Accessibility System default). The follow
 
 - `prefers-reduced-motion` honoured on all significant motion (`[Floor]`)
 - Keyboard access to all functionality (`[Floor]`)
-- 4.5:1 body text contrast, 3:1 large text / UI (`[Floor]`, AA)
+- Text and UI contrast at the AA thresholds on the owned-facts register (`[Floor]`)
 - No keyboard traps (`[Floor]`)
 - All form fields labelled (`[Floor]`)
 - All meaningful images have alt text (`[Floor]`)
-- Automated tools catch ~30–40% of issues — manual + AT testing required for the rest
+- Automated tools catch only a minority of issues (the figure is on the owned-facts register) — manual + AT testing required for the rest
 
 ### Hero and WCAG 1.2.5 (Audio Description) — resolved
 
@@ -226,13 +239,16 @@ WCAG 1.2.5 applies to "prerecorded video content in synchronized media" — vide
 
 Server Components first. `'use client'` limited to:
 
-- Hero villa canvas (`Hero/VillaCanvas.tsx` — three.js, dynamically imported; falls back to the server-rendered poster and loads no three.js on touch, reduced motion, Save-Data, slow connections or any WebGL failure)
-- Hero service tabs (`Hero/ServiceTabs.tsx` — ARIA tablist, selection state)
+- Fluid hero canvas (`FluidHero/FluidCanvas.tsx` — raw WebGL2, dynamically imported; keeps the CSS ground and loads nothing under reduced motion, Save-Data, slow connections, or any WebGL failure. Touch is in. The canvas bleeds past the section on all four sides at a negative z level, so the liquid runs under the nav and the next section; the pointer feeds it only from inside the section. See the third motion-stack exception below)
+- Hero villa canvas (`Hero/VillaCanvas.tsx` — three.js, dynamically imported; falls back to the server-rendered poster and loads no three.js on touch, reduced motion, Save-Data, slow connections or any WebGL failure). **Unmounted, not deleted:** the homepage renders `FluidHero` in its place while the hero's content is written. `src/components/Hero/` stays intact so the villa can come back
+- Hero service tabs (`Hero/ServiceTabs.tsx` — ARIA tablist, selection state). Unmounted with the villa
+- Hardware carousel (`Hardware/HardwareStage.tsx` — ARIA tablist, active slide, one IntersectionObserver; the timer is a CSS animation whose `animationend` advances the slide, and it never starts under reduced motion)
 - Wireframe/scene reveal (Web Animations API)
 - Contact form (form state, Turnstile widget)
-- Mobile navigation (toggle state)
+- Mobile navigation (toggle state), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
+- Process portal handoff (`Process/ProcessHandoff.tsx` — one IntersectionObserver that sets `data-portal-open` and the transition's duration from the measured scroll speed; a CSS transition finishes the zoom's second half)
 - Process rail fallback (requestAnimationFrame — see the second motion-stack exception below). Renders nothing, and never starts in a browser that supports scroll-driven animations
 
 Everything else is a Server Component. If you're reaching for `'use client'`, a Server Component with a small client island probably works instead.
@@ -265,7 +281,7 @@ No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget c
 
 ### The second exception: the Process rail fallback
 
-`src/components/Process/ProcessFallback.tsx` runs a `requestAnimationFrame` loop that writes one custom property, `--process-progress`, on the Process section. It is the second and last place in the codebase animating outside the stack above.
+`src/components/Process/ProcessFallback.tsx` runs a `requestAnimationFrame` loop that writes one custom property, `--process-progress`, on the Process section. It is the second place in the codebase animating outside the stack above.
 
 **Why it was allowed:**
 
@@ -283,7 +299,30 @@ No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget c
 
 `src/components/Process/__tests__/ProcessFallback.test.tsx` asserts the first three.
 
-**This still does not license a third.**
+**This still does not license a fourth.** The third is below, and it is the last.
+
+### The third exception: the fluid hero
+
+`src/components/FluidHero/FluidCanvas.tsx` runs a `requestAnimationFrame` loop that drives a GPU fluid simulation (`fluid.ts`, `shaders.ts`) on a `<canvas>` under the hero's copy. It replaced the villa hero on the homepage on 2026-09-28, as a temporary hero while the content is written, and it is the third and last place in the codebase animating outside the stack above.
+
+**Why it was allowed:**
+
+- **The documented stack cannot express this.** The brief is brown-700 ink that swirls and dissipates behind the pointer like dye in water. That is a velocity field advecting itself and a pressure solve every frame, a computation, not a transition between two states. CSS transitions on lagged gradients were considered and read as a soft glow, not as water.
+- **Zero dependencies.** Raw WebGL2, about 300 lines of TypeScript and GLSL. three.js was not used: it is still the villa's, and the "one consumer" condition in AGENTS.md stands.
+- **Off the initial load.** The simulation is a dynamic import behind every gate, so it never counts against the JS budget, and the h1 is the LCP element. There is no poster image.
+- **Bounded work per frame.** A fixed number of full-screen passes at 128 and 512 texels, on the GPU. The main thread does one `step` and one `draw` call. No layout reads in the loop.
+
+**What it must always do** (and what to check if it is ever touched):
+
+- **Gate `prefers-reduced-motion` in JS.** Same trap as the two above: `_reset.scss` cannot stop a rAF loop.
+- **Gate Save-Data before the import.** The chunk must not be fetched on a connection the visitor has marked as metered. The connection estimate (`effectiveType`) is deliberately not a gate, unlike the villa canvas: Chromium derives it from recent round-trip times, so a phone hotspot or a jittery Wi-Fi reads as "3g" at full throughput (seen 2026-09-28 on Shivanshu's own machine, hero static for no reason), and the chunk it would protect is about 9KB gzipped against the villa's 716KB model.
+- **Keep the CSS ground.** The section paints brown-100 with a hint of brown-800 from the stylesheet. Every gate, every WebGL failure, and every frame before the first draw shows that. The section never depends on the canvas.
+- **Cap the ink.** The display shader saturates at a 60% mix of brown-100 and brown-700, because `--color-text-primary` sits on top of the field: 4.7:1 at the cap, 4.2:1 at a 65% mix. Contrast is a floor; the effect is not.
+- **Run only on screen, in a visible tab, and while there is ink to move.** One IntersectionObserver, `visibilitychange`, and the simulation's own `active` flag each stop the loop.
+- **The glyph layer is part of this exception, not a fourth.** `glyphs.ts` draws the hardware icons as a scrambled grid over the whole field on an offscreen 2D canvas, flips every cell to a different icon every 100ms while the loop runs, so nothing sits still under the pool, and the loop above uploads it as one texture; the display shader shows it only where the liquid is dark. It keeps clear of the copy (`data-hero-quiet` on the copy, the CTAs and the closing paragraph), because dark characters under dark text would cost the headline its contrast. If the icons never load, the liquid runs without it.
+- **One consumer.** A second fluid surface is a new decision.
+
+`src/components/FluidHero/__tests__/FluidCanvas.test.tsx` asserts the gates and the loop's lifecycle; `shaders.test.ts` asserts the cap against the tokens in `_variables.scss`.
 
 ---
 
@@ -293,5 +332,5 @@ No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget c
 - **qera-system is read-only from this repo.** If a system document needs updating, say so — don't edit it here.
 - **No co-author attribution on commits or PRs.**
 - **Commit messages:** imperative mood, lowercase, concise. The diff tells what changed; the message tells why.
-- **Branch strategy:** `feature/*` branches off `main`. One concern per branch.
+- **Branch strategy:** `feature/*` branches off `latest`, the staging branch; `main` is production and is updated from `latest`. One concern per branch.
 - **Push back.** If something is wrong, smells wrong, or could be better — say it immediately with the fix. Don't wait to be asked. Don't soften it.

@@ -70,8 +70,11 @@ export const CONSENT_COPY = {
       /** Lowercase "on", as the deck specifies. */
       state: "Always on",
       // Deck em dash ("no choice to offer — we would rather") reworked to a
-      // colon. Same sentence, same claim.
-      body: "Remembering your cookie choice, keeping the site secure, and rejecting spam submissions. The site cannot work without these, so there is no choice to offer: we would rather say that than present a switch that does nothing.",
+      // colon. "Keeping the site secure" and "rejecting spam submissions" were
+      // cut on 2026-09-26: the only cookie the site sets is this consent
+      // record, and the honeypot that rejects spam sets none. Deck §4 and the
+      // design brief carry the same cut.
+      body: "Remembering your cookie choice. The site cannot work without it, so there is no choice to offer: we would rather say that than present a switch that does nothing.",
     },
 
     analytics: {

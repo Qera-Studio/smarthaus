@@ -52,30 +52,10 @@
     text-wrap: pretty;
   }
 
-  .cta {
-    display: inline-flex;
-    align-items: center;
+  // The band itself is the Button component. This only places it: a button
+  // that carries its own outer margin positions itself differently in every
+  // layout it lands in.
+  .ctaRow {
     margin-block-start: $space-16;
-    padding-block: $space-3;
-    padding-inline: $space-6;
-    border-radius: 0;
-    background-color: var(--color-bg-inverse-strong);
-    color: var(--color-text-inverse);
-    font-size: var(--font-size-sm);
-    font-weight: $font-weight-semibold;
-    text-decoration: none;
-
-    // Longhands, never the `transition` shorthand: var() substitution happens
-    // before the shorthand is parsed, so one missing token would silently
-    // invalidate the whole declaration.
-    transition-property: background-color;
-    transition-duration: var(--duration-fast);
-    transition-timing-function: var(--ease-out);
-
-    &:hover {
-      background-color: var(--color-hover);
-    }
-
-    @include focus-ring;
   }
 }

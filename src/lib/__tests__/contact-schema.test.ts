@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { contactSchema, shortContactSchema, INTERESTS } from "@/lib/contact-schema";
+import { contactSchema, shortContactSchema, INTERESTS, MAX_LENGTH } from "@/lib/contact-schema";
 
 /**
  * The error strings are asserted verbatim, not by shape. They are the copy the
@@ -239,5 +239,93 @@ describe("short contact schema", () => {
     const withoutConsent = valid();
     delete withoutConsent.contactConsent;
     expect(contactSchema.safeParse(withoutConsent).success).toBe(false);
+  });
+});
+
+describe("length caps", () => {
+  const issue = (field: string, value: string) => {
+    const result = contactSchema.safeParse({ ...valid(), [field]: value });
+    return result.success
+      ? undefined
+      : result.error.issues.find((i) => i.path[0] === field)?.message;
+  };
+  const letters = (n: number) => "a".repeat(n);
+
+  it("publishes the caps the form uses", () => {
+    expect(MAX_LENGTH).toEqual({ name: 120, phone: 32, email: 254, community: 120, message: 2000 });
+  });
+
+  it.each([
+    ["name", MAX_LENGTH.name, "Keep the name to 120 characters or fewer."],
+    ["community", MAX_LENGTH.community, "Keep the community to 120 characters or fewer."],
+    [
+      "message",
+      MAX_LENGTH.message,
+      "Keep the message to 2,000 characters or fewer. We can cover the rest on the call.",
+    ],
+  ])("accepts %s at exactly its cap and refuses one more", (field, max, message) => {
+    expect(issue(field, letters(max))).toBeUndefined();
+    expect(issue(field, letters(max + 1))).toBe(message);
+  });
+
+  it.each(["name", "community", "message"])(
+    "measures %s after trimming, so surrounding spaces never push it over",
+    (field) => {
+      const max = MAX_LENGTH[field as "name" | "community" | "message"];
+      expect(issue(field, `   ${letters(max)}   `)).toBeUndefined();
+    },
+  );
+
+  it("counts an emoji as one character, more leniently than the browser's two", () => {
+    // The browser's maxLength would stop 119 letters and an emoji (121 UTF-16
+    // units) at the field. The server counts code points, so it accepts it:
+    // whatever the field let through, the server takes.
+    expect(issue("name", `${letters(119)}\u{1F3E0}`)).toBeUndefined();
+    expect(issue("name", `${letters(120)}\u{1F3E0}`)).toBe(
+      "Keep the name to 120 characters or fewer.",
+    );
+  });
+
+  it("accepts an email of exactly 254 characters and refuses 255", () => {
+    // The local part of a real address caps at 64, so build the length in the
+    // domain instead and keep the address valid apart from its length.
+    const long = (length: number) => {
+      const domain = `${letters(length - "a@".length - ".com".length)}.com`;
+      return `a@${domain}`;
+    };
+    expect(long(254)).toHaveLength(254);
+    expect(issue("email", long(255))).toBe("Check the email address.");
+  });
+
+  it("accepts a 32-character phone as typed, spaces and all, and refuses 33", () => {
+    const spaced = "+971 54 375 5150".padEnd(32, " ");
+    expect(spaced).toHaveLength(32);
+    expect(issue("phone", "+971  54  375  5150            ")).toBeUndefined();
+    expect(issue("phone", `+971${"5".repeat(29)}`)).toBe(
+      "Check the number. It should start with +971 or 05.",
+    );
+  });
+
+  it("applies the name, phone, email and message caps to the short form too", () => {
+    const short = (field: string, value: string) => {
+      const result = shortContactSchema.safeParse({
+        name: "James",
+        phone: "0501234567",
+        [field]: value,
+      });
+      return result.success;
+    };
+    expect(short("name", letters(121))).toBe(false);
+    expect(short("message", letters(2001))).toBe(false);
+    expect(short("message", letters(2000))).toBe(true);
+  });
+
+  it("still treats an empty optional field as absent, not as zero-length text", () => {
+    const result = contactSchema.safeParse({ ...valid(), community: "", message: "   " });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.community).toBeUndefined();
+      expect(result.data.message).toBeUndefined();
+    }
   });
 });

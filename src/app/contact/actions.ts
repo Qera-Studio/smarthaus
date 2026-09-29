@@ -1,9 +1,16 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { headers } from "next/headers";
 import { Resend } from "resend";
 import type { z } from "zod";
 
 import { contactSchema, shortContactSchema, HONEYPOT_FIELD } from "../../lib/contact-schema";
+import { PRIVACY_POLICY_VERSION } from "../../content/legal/versions";
+import { enquiryDedupe, enquiryKey } from "../../lib/dedupe";
+import { clientKey, enquiryLimiter } from "../../lib/rate-limit";
 import { submittedValues } from "./state";
 import type { ContactState, FieldErrors } from "./state";
 
@@ -70,7 +77,21 @@ type Enquiry = {
   community?: string | undefined;
   message?: string | undefined;
   interest?: string | undefined;
+  /** Absent on the short form, which asks for neither: see consentLine. */
+  contactConsent?: boolean | undefined;
+  marketingConsent?: boolean | undefined;
 };
+
+/**
+ * How one consent answer reads in the lead email. Three states, not two: the
+ * short homepage form shows a notice instead of ticks (consent deck §6.4), so
+ * "not asked" is a different fact from "declined" and the record must not
+ * collapse it into either.
+ */
+function consentLine(answer: boolean | undefined): string {
+  if (answer === undefined) return "not asked (short form, notice only)";
+  return answer ? "yes, ticked" : "no";
+}
 
 /** The parts both actions share: honeypot, error shaping, delivery. */
 async function handle(
@@ -102,8 +123,27 @@ async function handle(
     return { status: "invalid", fieldErrors, values };
   }
 
+  // The ceiling on sends (Security System §11). Checked after validation, on
+  // purpose: a send is what costs something (an email in the inbox, a unit of
+  // the Resend quota, which ran out on 2026-09-26), while a failed validation
+  // costs nothing, and counting those would lock out a visitor who mistyped
+  // their number a few times. The honeypot above still answers bots first.
+  //
+  // A duplicate of an enquiry already sent (or sending) is not a new send, so
+  // it is answered before the limiter and costs no allowance: a refresh that
+  // re-posts the confirmation must not count against the visitor.
+  const key = enquiryKey(parsed.data);
+  if (!enquiryDedupe.has(key)) {
+    const verdict = enquiryLimiter.take(clientKey(await headers()));
+    if (!verdict.ok) {
+      return { status: "failed", reason: "rate-limited", values };
+    }
+  }
+
   try {
-    await deliver(parsed.data);
+    // One email per identical enquiry in two minutes (lib/dedupe.ts). A
+    // duplicate gets the same confirmation the first did.
+    await enquiryDedupe.once(key, () => deliver(parsed.data));
   } catch (error) {
     // Logged server-side, never surfaced: the message could carry the API key
     // or the lead's own data, and neither belongs in a browser.
@@ -130,10 +170,6 @@ async function deliver(data: Enquiry): Promise<void> {
   const to = process.env.LEAD_EMAIL;
   const from = process.env.LEAD_FROM_EMAIL;
 
-  if (!apiKey || !to || !from) {
-    throw new Error("[contact] RESEND_API_KEY, LEAD_EMAIL or LEAD_FROM_EMAIL is not set");
-  }
-
   const lines = [
     `Name:      ${data.name}`,
     `Phone:     ${data.phone}`,
@@ -143,9 +179,18 @@ async function deliver(data: Enquiry): Promise<void> {
     "",
     "Message:",
     data.message ?? "not given",
+    "",
+    // The consent record. The inbox is the system of record for leads, so what
+    // the visitor agreed to, under which policy and when, is kept with the lead
+    // itself rather than nowhere.
+    "Consent, as recorded when this was sent:",
+    `Contact about this enquiry: ${consentLine(data.contactConsent)}`,
+    `Marketing:                  ${consentLine(data.marketingConsent)}`,
+    `Privacy policy shown:       ${PRIVACY_POLICY_VERSION}`,
+    `Sent at:                    ${new Date().toISOString()}`,
   ];
 
-  const { error } = await new Resend(apiKey).emails.send({
+  const email = {
     from: `Smarthaus enquiries <${from}>`,
     to,
     subject: `New enquiry — ${data.name}`,
@@ -153,11 +198,57 @@ async function deliver(data: Enquiry): Promise<void> {
     // So a reply from the inbox goes to the lead, not to the send-only address.
     // Only set when they gave one; the schema makes email optional.
     ...(data.email ? { replyTo: data.email } : {}),
-  });
+  };
+
+  // The e2e mail sink. Every form test used to send real email, and on
+  // 2026-09-26 that exhausted the Resend account's monthly quota. Under
+  // Playwright the email is written to a file the tests read back instead, so
+  // they can assert its exact content. Both variables are required: PLAYWRIGHT
+  // is set only by playwright.config.ts's web server, never by a deployment, so
+  // a stray E2E_MAIL_SINK in production cannot divert a lead. One test per CI
+  // run still sends for real (e2e/delivery.spec.ts).
+  const sink = process.env.PLAYWRIGHT === "1" ? process.env.E2E_MAIL_SINK : undefined;
+  if (sink) {
+    await mkdir(sink, { recursive: true });
+    await writeFile(join(sink, `${Date.now()}-${randomUUID()}.json`), JSON.stringify(email));
+    return;
+  }
+
+  if (!apiKey || !to || !from) {
+    throw new Error("[contact] RESEND_API_KEY, LEAD_EMAIL or LEAD_FROM_EMAIL is not set");
+  }
+
+  const { error } = await withTimeout(
+    new Resend(apiKey).emails.send({ ...email, to, from: email.from }),
+    SEND_TIMEOUT_MS,
+  );
 
   // The SDK returns errors in the payload instead of rejecting, so a non-2xx
   // is silent unless it is checked and rethrown here.
   if (error) {
     throw new Error(`[contact] resend rejected the send: ${error.name} — ${error.message}`);
   }
+}
+
+/**
+ * How long a visitor waits on Resend before seeing the WhatsApp fallback.
+ * Without a ceiling a hung API holds the form's pending state indefinitely,
+ * which reads as a broken site. Eight seconds is well past Resend's normal
+ * answer and short of a visitor giving up.
+ *
+ * A race, not an abort signal: the SDK's typed options do not accept one. The
+ * cost is that a send answering after the ceiling can still arrive, and the
+ * visitor, told it failed, may send again. A duplicate lead is the lesser harm.
+ */
+const SEND_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const ceiling = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`[contact] resend did not answer within ${ms}ms`)),
+      ms,
+    );
+  });
+  return Promise.race([work, ceiling]).finally(() => clearTimeout(timer));
 }

@@ -85,6 +85,12 @@
     // overflow their slot on a wide screen and every page after the first would
     // land short of where it should.
     --process-travel: calc(100% * (var(--process-pages) - 1) / var(--process-pages));
+    // A little past the last page. At exactly (pages - 1) / pages the rail
+    // stopped with the last page's image a hair short of its slot and the pin
+    // let go the same instant, which read as the rail quitting early. The
+    // overrun keeps it moving past full for this much; the ground shows on
+    // the right for that last stretch, on the client's call.
+    --process-overrun: 8vw;
     // --process-portal-ratio, --process-rail-ratio, --process-portal-stages and
     // --process-portal-end are declared on <main>, not here: the hero is a
     // SIBLING of this section and needs them too. See that rule for why.
@@ -99,6 +105,12 @@
     // The spacer's height: one stage to pin against, plus the portal, plus the
     // rail.
     --process-scroll-block: calc(var(--process-portal-block) + var(--process-rail-block));
+    // How much further the reader scrolls past the previous section's last
+    // screen before the slab starts rising. See the overlay margin below.
+    // A share of the stage rather than a fixed length, so it scales with the
+    // screen. 96px was tried and the slab still arrived under the carousel's
+    // image; three tenths of a screen is the client's call.
+    --process-portal-delay: calc(var(--process-stage-block) * 0.3);
     // The square's size at the very start of the portal, as a fraction of the
     // full stage. 0.1 is what the client asked for and is small enough to read
     // as an object rather than as a shrunken page.
@@ -124,6 +136,23 @@
     // the right origin, because the slab then rises off the bottom edge of the
     // screen and climbs over what is already there.
     --process-portal-anchor: 100%;
+    // WHERE SCROLL LETS GO OF THE ZOOM. Scroll grows the slab from
+    // --process-portal-scale up to this, and a timed transition on .grow takes
+    // it the rest of the way, so the reader does not have to scroll the whole
+    // second half by hand. Scrolling back above the point runs it back down.
+    //
+    // It works by composition, not by handing one property between two
+    // drivers: .grow holds this scale and .portal inside it animates to 1, so
+    // the rendered size is the product. The scroll animation and the
+    // transition never write the same property, which is what an animation
+    // would otherwise win outright.
+    --process-portal-handoff: 0.5;
+    // Its inline axis, which follows the same rule as --process-portal-scale-x:
+    // 1 below lg where only the block axis zooms.
+    --process-portal-handoff-x: 1;
+    // What .portal starts at so the PRODUCT starts at --process-portal-scale.
+    --process-portal-from: calc(var(--process-portal-scale) / var(--process-portal-handoff));
+    --process-portal-from-x: calc(var(--process-portal-scale-x) / var(--process-portal-handoff-x));
     // The image is 124% of its frame and sits at -12%, so it has 12% of the
     // FRAME of slack at each edge — just under 10% as a fraction of the image's
     // own height. 4.5% therefore sits at roughly half the available travel and
@@ -161,21 +190,46 @@
     // choice of origin removes it, because the space is reserved whether or not
     // anything is drawn in it.
     //
-    // Pulled up, that space is no longer reserved at all. The slab rises off
-    // the bottom of the screen over the hero, which stays put and visible until
-    // it is covered, and the page below starts immediately after the rail. The
-    // reader never sees an empty stage because there is never an empty stage.
+    // Pulled up, that space is no longer reserved at all. The slab opens over
+    // the previous section, which stays put and visible until it is covered,
+    // and the page below starts immediately after the rail. The reader never
+    // sees an empty stage because there is never an empty stage.
     //
-    // The section's own pin engages at its top, which is now one portal higher
+    // BY A WHOLE STAGE, not by the portal's scroll. The overlap was the
+    // portal's 270px first, which happened to work while the hero was the
+    // previous section: the hero is one screen tall, so its last 270px was
+    // also its last screen. With the hardware carousel in front, 1256px tall,
+    // the same overlap left only the carousel's foot on screen when the pin
+    // engaged and the slab grew over blank canvas below it. Measured: the
+    // previous section's bottom sat at y270 for the whole zoom. What the
+    // pin needs under it is the previous section's LAST SCREEN, and that is a
+    // stage of overlap whatever the section before this one is.
+    //
+    // The section's own pin engages at its top, which is now one stage higher
     // than it was. Holding the section BEFORE it still is a separate job, and
-    // the :has() rule below does it: this margin alone would let the hero
-    // scroll out from under the rising slab. Measured: it moved from y-293 to
-    // y-844 over the zoom.
-    margin-block-start: calc(-1 * var(--process-portal-block));
+    // the :has() rule below does it: this margin alone would let it scroll
+    // out from under the growing slab. Measured on the hero: it moved from
+    // y-293 to y-844 over the zoom.
+    //
+    // Less --process-portal-delay: the pin engaged the instant the previous
+    // section's last screen filled the viewport, which put the rising slab
+    // over the carousel's controls before the reader had finished with them.
+    // The delay is that much more scroll before the slab starts, on the
+    // client's call; the previous section's bottom then sits that far above
+    // the viewport's during the zoom, and the slab covers the strip as it
+    // grows.
+    margin-block-start: calc(-1 * (var(--process-stage-block) - var(--process-portal-delay)));
 
     // The timeline lives on the spacer and is consumed by its descendants.
     view-timeline-name: --process-scroll;
     view-timeline-axis: block;
+
+    // Zero, stated. The initial value is `auto`, which means "the scroller's
+    // scroll-padding", and html carries scroll-padding to keep focus clear of
+    // the fixed nav (globals.scss, WCAG 2.4.11). Left at auto, that padding
+    // shifted the whole pin window by the nav's height: measured 2026-09-27,
+    // the section above moved 4.9px during the zoom on Galaxy S24.
+    view-timeline-inset: 0px;
 
     // Above the section it overlaps, so the growing slab paints over the hero
     // rather than under it.
@@ -224,6 +278,7 @@
       --process-stage-inset: 0px;
       // Enough width for the square to read as an object, so both axes scale.
       --process-portal-scale-x: var(--process-portal-scale);
+      --process-portal-handoff-x: var(--process-portal-handoff);
     }
   }
 
@@ -288,7 +343,12 @@
     // arrive rather than creep. The rail wants the opposite, because each page
     // carries a heading, a paragraph and photographs that have to be readable
     // as they pass, and at 0.6 they flicked by.
-    --process-portal-ratio: 0.6;
+    //
+    // The portal's is 0.3, half its original 0.6, because scroll now drives
+    // only the first half of the zoom (see --process-portal-handoff). The
+    // rate per pixel is unchanged; keeping 0.6 would have left the reader
+    // scrolling through a stretch where nothing moved.
+    --process-portal-ratio: 0.3;
     --process-rail-ratio: 2;
     // How many stages of scroll the portal gets before the rail starts.
     --process-portal-stages: 1;
@@ -331,6 +391,11 @@
   }
 
   :global(main) > :has(+ .process) {
+    // No padding reserved for the overlap. It was 270px of empty canvas at
+    // this section's foot, added so the tenth-size square would not paint
+    // over the carousel's copy; with the overlap now a whole stage, that
+    // padding was exactly the blank band the slab grew over.
+
     // A stacking position BELOW the process section, which states z-index: 1.
     // `relative` is what makes z-index apply at all; without it the hero would
     // paint by document order and sit on top of the very slab meant to cover
@@ -415,6 +480,45 @@
   }
 
   // --- The portal -----------------------------------------------------------
+
+  // The timed half of the zoom. Holds the slab at --process-portal-handoff
+  // until ProcessHandoff reports the scroll has passed that point, then
+  // transitions to full size; and back again when it is scrolled above it.
+  // Same origin as .portal, so the two scales compose about one point.
+  //
+  // The duration is set by ProcessHandoff from the speed the reader was
+  // scrolling, so the transition opens at the rate scroll had been growing
+  // the slab and eases out from there. --duration-slow is the fallback before
+  // it has measured anything. The easing is not the --ease-out token: that
+  // curve starts at four and a half times its average rate, which is the
+  // lurch this replaces. This one starts at twice, and ProcessHandoff's
+  // EASE_START is that number; change them together.
+  .grow {
+    block-size: 100%;
+    transform-origin: 50% var(--process-portal-anchor);
+    scale: var(--process-portal-handoff-x) var(--process-portal-handoff);
+    transition-property: scale;
+    transition-duration: var(--process-grow-duration, var(--duration-slow));
+    transition-timing-function: cubic-bezier(0.5, 1, 0.89, 1);
+  }
+
+  .process[data-portal-open] .grow {
+    scale: 1 1;
+  }
+
+  // ProcessHandoff's marker. Its BOTTOM edge is the handoff: one portal's
+  // scroll below the section's top, where the scroll-driven half ends. It is a
+  // viewport tall so "scrolled past" is simply "entirely above the viewport",
+  // and so a jump from anywhere past it back to the top of the page lands the
+  // marker on screen and fires the observer rather than skipping over it.
+  .handoff {
+    position: absolute;
+    inset-block-start: calc(var(--process-portal-block) - 100svh);
+    inset-inline-start: 0;
+    inline-size: 1px;
+    block-size: 100svh;
+    pointer-events: none;
+  }
   //
   // Everything the pin holds lives inside this box, and this box is what
   // scales. The title bar and the rail therefore grow together as one unit,
@@ -474,7 +578,8 @@
     // column. Scaling both axes on a phone left the hero's CTAs and the
     // back-to-top button showing down either side of the slab and overlapping
     // its copy: legible in a 1440 screenshot, unreadable on an iPhone.
-    scale: var(--process-portal-scale-x) var(--process-portal-scale);
+    // The FROM values, not the scale tokens: .grow multiplies them back down.
+    scale: var(--process-portal-from-x) var(--process-portal-from);
     // NO border-radius, and that is a decision rather than an omission.
     //
     // `scale` multiplies the rendered corner along with everything else, so a
@@ -888,7 +993,7 @@
     from {
       // Both axes, matching the base rule. Below lg the x is 1 throughout, so
       // only the block axis animates and the slab rises as a full-width band.
-      scale: var(--process-portal-scale-x) var(--process-portal-scale);
+      scale: var(--process-portal-from-x) var(--process-portal-from);
     }
     to {
       scale: 1 1;
@@ -897,7 +1002,7 @@
 
   @keyframes process-slide {
     to {
-      translate: calc(-1 * var(--process-travel)) 0;
+      translate: calc(-1 * var(--process-travel) - var(--process-overrun)) 0;
     }
   }
 
@@ -1024,11 +1129,11 @@
       // Both axes, matching the animated path. Below lg the x term starts at 1
       // and stays there, so this reduces to a vertical-only grow.
       scale: calc(
-          var(--process-portal-scale-x) + (1 - var(--process-portal-scale-x)) *
+          var(--process-portal-from-x) + (1 - var(--process-portal-from-x)) *
             var(--process-portal-progress)
         )
         calc(
-          var(--process-portal-scale) + (1 - var(--process-portal-scale)) *
+          var(--process-portal-from) + (1 - var(--process-portal-from)) *
             var(--process-portal-progress)
         );
     }
@@ -1048,7 +1153,8 @@
       // calc() cannot multiply a percentage by a unitless var here, so the
       // progress scales the page count instead and the percentage stays whole.
       translate: calc(
-          -100% * var(--process-rail-progress) * (var(--process-pages) - 1) / var(--process-pages)
+          -100% * var(--process-rail-progress) * (var(--process-pages) - 1) /
+            var(--process-pages) - var(--process-overrun) * var(--process-rail-progress)
         )
         0;
     }
@@ -1075,6 +1181,16 @@
   @media (prefers-reduced-motion: reduce) {
     .process {
       block-size: auto;
+      // No overlay. There is no zoom to pay for, and the section is a static
+      // full-size slab here: pulled up a stage it simply covered the previous
+      // section's last screen, tabs included. Measured: the carousel's tabs
+      // reported this section as the hit target.
+      margin-block-start: 0;
+    }
+
+    // Nor a hold on the previous section, for the same reason.
+    :global(main) > :has(+ .process) {
+      animation-name: none;
     }
 
     .pin {
@@ -1123,6 +1239,12 @@
     // margins in this mode, so the dark band still runs edge to edge while the
     // rail is a plain horizontal scroller.
     .portal {
+      scale: none;
+      block-size: auto;
+    }
+
+    // Same trap one level up: .grow's handoff scale is static too.
+    .grow {
       scale: none;
       block-size: auto;
     }

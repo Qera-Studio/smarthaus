@@ -1,0 +1,116 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  // One band, three grounds. The shape, weight and motion are shared; only the
+  // two colours change per variant, which is what keeps them reading as one
+  // control rather than three buttons that happen to sit near each other.
+  //
+  // No margin: spacing is the parent's, so this sits where its layout puts it.
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-block: $space-3;
+    padding-inline: $space-6;
+
+    // Square, per the brand's architectural edges.
+    border-radius: 0;
+    // Declared on every variant so the outline's 1px does not shift it half a
+    // pixel out of line with a solid one sitting beside it.
+    border-style: solid;
+    border-width: 1px;
+    border-color: transparent;
+
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    text-align: center;
+    text-decoration: none;
+
+    // Longhands, never the `transition` shorthand: var() substitution happens
+    // before the shorthand is parsed, so one missing token would silently
+    // invalidate the whole declaration.
+    transition-property: background-color, color, border-color, opacity;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+
+    @include focus-ring;
+
+    // Only reachable on the <button> arm; a link cannot be disabled.
+    &:disabled,
+    &[aria-disabled="true"] {
+      opacity: 0.6;
+    }
+
+    // --- Sizes --------------------------------------------------------------
+
+    // Tighter padding, same face: --font-size-sm is already the smallest step
+    // in the type scale. The band drops below 44px, so an invisible ::before,
+    // centred and never smaller than the touch target, keeps the tap area
+    // where e2e/touch-targets.spec.ts requires it.
+    &[data-size="sm"] {
+      position: relative;
+      padding-block: $space-2;
+      padding-inline: $space-4;
+
+      &::before {
+        content: "";
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 50%;
+        inline-size: max(100%, var(--size-touch-target));
+        block-size: max(100%, var(--size-touch-target));
+        translate: -50% -50%;
+      }
+    }
+
+    // --- Variants -----------------------------------------------------------
+
+    &[data-variant="solid"] {
+      background-color: var(--color-bg-inverse-strong);
+      color: var(--color-text-inverse);
+
+      &:hover:not(:disabled) {
+        background-color: var(--color-hover);
+      }
+    }
+
+    // Bone on brown-800. --color-hover IS brown-800, so this one cannot share
+    // solid's hover: it steps darker to brown-900 instead.
+    &[data-variant="soft"] {
+      background-color: $brown-800;
+      color: var(--color-text-inverse);
+
+      &:hover:not(:disabled) {
+        background-color: var(--color-bg-inverse);
+      }
+    }
+
+    // Bone on a dark ground. The hover goes *down* to brown-200 rather than up,
+    // because there is nothing lighter than bone in the palette to go to.
+    &[data-variant="inverse"] {
+      background-color: var(--color-bg-surface);
+      color: var(--color-text-primary);
+
+      &:hover:not(:disabled) {
+        background-color: var(--color-bg-muted);
+      }
+    }
+
+    // Inherits the card's ink for both border and text, so one rule works on
+    // any ground. Hover fills with the same ink and flips the text to the
+    // surface colour, which is the only pair guaranteed to contrast with it.
+    &[data-variant="outline"] {
+      background-color: transparent;
+      border-color: currentcolor;
+      color: inherit;
+
+      &:hover:not(:disabled) {
+        background-color: var(--color-bg-inverse-strong);
+        border-color: var(--color-bg-inverse-strong);
+        color: var(--color-text-inverse);
+      }
+    }
+  }
+}

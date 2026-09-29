@@ -2,14 +2,18 @@
  * Shared link registry.
  *
  * Most of these routes do not exist yet and 404 until each page lands. That is
- * deliberate, and matches the choice already documented in Nav.tsx: the site
- * ships its real information architecture rather than a stub, and the dev
- * overlay surfaces each missing route as a reminder to build it.
+ * deliberate: the site ships its real information architecture rather than a
+ * stub, and the dev overlay surfaces each missing route as a reminder to build
+ * it. e2e/coming-soon.spec.ts guards the other direction, failing if a link is
+ * added here without a page or a placeholder behind it.
  *
- * Nav.tsx keeps its own local copy of the page links for now — it is being
- * edited on feature/navbar and must not be touched from here. It adopts this
- * module in a follow-up once that branch merges, at which point this file
- * becomes the single source and the two cannot drift.
+ * /designers and /developers are not linked from anywhere since 2026-09-28
+ * (Shivanshu: only Solutions and About stay as coming-soon links). Their
+ * placeholder pages remain in src/app/ for when they come back.
+ *
+ * Nav.tsx reads NAV_LINKS from here. It kept a local copy while the navbar was
+ * being built on its own branch; that branch has merged and the copy is gone,
+ * so this file is the single source and the nav and footer cannot drift.
  */
 
 import { PREFERENCES_ROUTE } from "./consent";
@@ -19,32 +23,56 @@ export type NavLink = {
   readonly label: string;
 };
 
+/**
+ * The primary nav, in its own order. Pricing sits second: after what we
+ * install, the next question a visitor has is what it costs.
+ *
+ * Nav.module.scss measures this row by hand for the scrolled capsule (see
+ * --nav-links-half there). Adding or renaming a link means re-measuring.
+ */
+export const NAV_LINKS: readonly NavLink[] = [
+  { href: "/solutions", label: "Solutions" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/about", label: "About" },
+] as const;
+
 /** Primary pages. Order follows the footer design, not the nav's. */
 export const PAGE_LINKS: readonly NavLink[] = [
   { href: "/solutions", label: "Solutions" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
-  { href: "/designers", label: "Designers" },
-  { href: "/developers", label: "Developers" },
   { href: "/faq", label: "FAQs" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
 /**
- * Service lines. These are anchors into the single Solutions page rather than
- * seven separate routes — CLAUDE.md specifies Solutions is "one page or towns,
- * not five thin pages", and seven thin service pages would be exactly that.
+ * Service lines. These become anchors into the single Solutions page rather
+ * than seven separate routes — CLAUDE.md specifies Solutions is "one page or
+ * towns, not five thin pages", and seven thin service pages would be exactly
+ * that.
  *
  * Every label here is a capability Maple Technologies has actually delivered.
  * Per AGENTS.md's claims audit, nothing speculative goes in this list.
  */
-export const INSTALL_LINKS: readonly NavLink[] = [
-  { href: "/solutions#smart-home-automation", label: "Smart home automation" },
-  { href: "/solutions#cctv-and-cameras", label: "CCTV and cameras" },
-  { href: "/solutions#video-intercom", label: "Video Intercom" },
-  { href: "/solutions#smart-locks-and-access", label: "Smart locks and access" },
-  { href: "/solutions#multiroom-audio", label: "Multiroom audio" },
-  { href: "/solutions#cabling-and-networks", label: "Cabling and networks" },
-  { href: "/solutions#care-plans", label: "Care plans" },
+export type InstallLink = NavLink & {
+  /**
+   * The id of this service's section on /solutions. Pending: /solutions is a
+   * coming-soon page with no sections, so every link lands on its top rather
+   * than on a fragment that does not exist (they did, until 2026-09-27).
+   * src/lib/__tests__/nav-links.test.ts fails once the real page ships, so
+   * the fragments are restored on purpose, as `/solutions#${section}`.
+   */
+  readonly section: string;
+};
+
+export const INSTALL_LINKS: readonly InstallLink[] = [
+  { href: "/solutions", section: "smart-home-automation", label: "Smart home automation" },
+  { href: "/solutions", section: "cctv-and-cameras", label: "CCTV and cameras" },
+  { href: "/solutions", section: "video-intercom", label: "Video Intercom" },
+  { href: "/solutions", section: "smart-locks-and-access", label: "Smart locks and access" },
+  { href: "/solutions", section: "multiroom-audio", label: "Multiroom audio" },
+  { href: "/solutions", section: "cabling-and-networks", label: "Cabling and networks" },
+  { href: "/solutions", section: "care-plans", label: "Care plans" },
 ] as const;
 
 /**
@@ -56,6 +84,21 @@ export const INSTALL_LINKS: readonly NavLink[] = [
 export const LEGAL_LINKS: readonly NavLink[] = [
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
+  { href: "/accessibility", label: "Accessibility" },
   { href: PREFERENCES_ROUTE, label: "Cookie Preferences" },
   { href: "/sitemap.xml", label: "Sitemap" },
 ] as const;
+
+/**
+ * Whether a nav link points at the page being viewed, for aria-current
+ * (Accessibility System §8, WCAG 2.4.8 Location, adopted at AAA). A section
+ * link stays current on its sub-pages (/solutions on /solutions/lighting);
+ * home is current only on home, or it would be current everywhere. A trailing
+ * slash, a query or a hash never changes the answer.
+ */
+export function isCurrentPath(pathname: string, href: string): boolean {
+  const path = pathname.split(/[?#]/)[0]!.replace(/\/+$/, "") || "/";
+  const target = href.split(/[?#]/)[0]!.replace(/\/+$/, "") || "/";
+  if (target === "/") return path === "/";
+  return path === target || path.startsWith(`${target}/`);
+}

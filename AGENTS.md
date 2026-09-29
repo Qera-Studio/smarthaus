@@ -25,14 +25,14 @@ Before guessing a rule, check the owning document.
 | Concern                                       | Document                                                    | Key sections                                                |
 | --------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
 | Legal, privacy, PDPL, breach clocks           | `qera-system/systems/1-legal-system.md`                     | §6 (consent/cookies), §8 (breach)                           |
-| Security headers, CSP, deps, SSRF             | `qera-system/systems/2-security-system.md`                  | §1 (auth), §5 (headers), §13 (deps)                         |
-| WCAG conformance, contrast, motion, a11y      | `qera-system/systems/3-accessibility-system.md`             | §4 (contrast), §5 (keyboard), §7 (motion)                   |
-| TypeScript, deps policy, AI code, testing     | `qera-system/systems/4-engineering-system.md`               | Part A (TS), Part C (deps), Part E (AI)                     |
-| CWV, budgets, fonts, images, animation        | `qera-system/systems/5-performance-system.md`               | §0 (budgets), §1 (CWV), §3 (images)                         |
+| Security headers, CSP, deps, SSRF             | `qera-system/systems/2-security-system.md`                  | §1 (auth), §8 (headers), §12 (deps)                         |
+| WCAG conformance, contrast, motion, a11y      | `qera-system/systems/3-accessibility-system.md`             | §4 (contrast), §5 (keyboard), §16 (motion)                  |
+| TypeScript, deps policy, AI code, testing     | `qera-system/systems/4-engineering-system.md`               | §16 (types), §17 (testing), §20 (AI coding), §24 (deps)     |
+| CWV, budgets, fonts, images, animation        | `qera-system/systems/5-performance-system.md`               | §0 (budgets), §1 (CWV), §2 (images)                         |
 | Meta, schema, crawl, AEO/GEO, AI crawlers     | `qera-system/systems/6-seo-system.md`                       | §0a (AI crawlers), §2 (meta), §9 (schema), §18-19 (AEO/GEO) |
-| Tokens, typography, spacing, dark patterns    | `qera-system/systems/7-design-system.md`                    | §12a (dark patterns), §7 (spacing)                          |
-| Kill List (every deploy), Full Sweep (launch) | `qera-system/gates/launch-gate.md`                          | Kill List = 12 items, 2 minutes                             |
-| Token architecture, layers, components, SCSS  | `qera-system/implementations/design-system-architecture.md` | §1 (layers), §2 (tokens), §10 (SCSS)                        |
+| Tokens, typography, spacing, dark patterns    | `qera-system/systems/7-design-system.md`                    | §9 (tokens), §12a (dark patterns), §15 (spacing)            |
+| Kill List (every deploy), Full Sweep (launch) | `qera-system/gates/launch-gate.md`                          | The Kill List section: its size is the gate's to state      |
+| Token architecture, layers, components, SCSS  | `qera-system/implementations/design-system-architecture.md` | §1 (layers), §2 (tokens), §9 (enforcement)                  |
 | Thresholds that cross documents               | `qera-system/charter/owned-facts-register.md`               | Check before writing any number                             |
 
 ---
@@ -92,7 +92,7 @@ manifest = {
 
 ### Implementation
 
-- **`src/lib/manifest.ts`** — Zod schema + typed loader. A malformed manifest fails the **build**, not the browser
+- **`src/lib/manifest.ts`** — Zod schema + typed loader. **Not yet imported by any page**: it is the contract for hero phases 2 and 3, which are unbuilt, so today it is enforced only by `src/lib/__tests__/manifest.test.ts`. Once `HeroStage` reads it, a malformed manifest fails the **build**, not the browser
 - **`src/content/scene-manifest.json`** — the manifest file itself. Committed to git. Updated by the Blender Python export module
 - **Asset directory:** `public/hero/landing/`, `public/hero/approach/`, `public/hero/explorer/{serviceId}/`
 
@@ -138,7 +138,7 @@ Front-view villa on warm background with **mouse-driven parallax**. Heading, sub
 - Front-facing villa, camera slightly elevated (~8° above horizontal)
 - Render at **110% of display area** — desktop: 2112×1320 minimum (1920×1200 × 1.1); mobile portrait: 1188×1584 minimum (1080×1440 × 1.1)
 - The extra 10% on each edge provides the parallax travel range
-- PNG 16-bit for the conversion pipeline (→ AVIF primary + WebP fallback via `scripts/optimise-images.sh`)
+- PNG 16-bit for the conversion pipeline (→ AVIF primary + WebP fallback via the planned optimise-images script)
 - Warm afternoon lighting, palette consistent with brand (brown-100 bg tones, brown-400 bronze warmth in the light)
 
 ### Phase 2 — Approach
@@ -212,10 +212,12 @@ Four things that are load-bearing and easy to break:
 
 The section opens with a zoom reveal before the rail moves: the stage starts at a tenth of its size near the **top** of the viewport and grows downward to fill it. Both phases run on **one timeline**, split at `--process-portal-end`, which is a ratio of stage counts and therefore survives any change to the scroll ratio or the breakpoint.
 
-- **The direction is not animated.** `transform-origin` sits at `--process-portal-anchor` (10%), so scaling about it opens the box downward. One property, which cannot drift out of phase with itself and stays on the compositor. The anchor was 90% first, opening upward from the bottom — the same effect mirrored, but the square then arrived at the bottom edge, so the reader scrolled past most of an empty screen before anything appeared and the growth pushed into space they had already passed.
+- **The direction is not animated.** `transform-origin` sits at `--process-portal-anchor` (100%), so scaling about it makes the slab rise off the bottom edge of the screen. One property, which cannot drift out of phase with itself and stays on the compositor. The anchor was 90%, then 10% opening downward, and both left an empty stage on one side of the square; the overlay below is what removed that, and with it dead bottom is the reviewed direction. Do not move it back to the top: that has been rejected in review.
+- **The overlay is a whole stage.** `.process` pulls itself up over the previous section by `--process-stage-block`, so when the pin engages that section's last screen is under the slab and there is never blank canvas below it. It was the portal's own scroll (270px) at first, which worked only while the one-screen hero was the previous section; a taller section in front left only its foot on screen. The previous section is held still for the zoom by the `process-hold` animation on `main > :has(+ .process)`. Reduced motion drops both.
 - **The header keeps the page gutter.** `.pin` bleeds past body's padding so the ground can reach the viewport edge, which carries the title and its progress rule out with it unless `.titleBar` puts them back with `padding-inline`. It reserves half the nav height above itself, not all of it: the capsule floats and is centred, so it only covers the middle of that row.
 - **The ground belongs to the slab.** `background-color` is on `.portal` because the brown-950 panel is the thing that grows. On the spacer — which is what shipped first — the dark field is already full-bleed and stationary, and the zoom reads as text scaling up on a background that never moved. `data-ground="dark"` is on the portal for the same reason: it marks the dark pixels, and those now move.
 - **The bleed is one level above the ground.** `.pin` carries the negative margins that escape body's 1440px cap, not `.portal`. The pin has `overflow: hidden`, and a clip beats a child's escape however that child is positioned: with the margins on the portal, the grown slab carried a 24px light border down every edge. Widening the clipper is the only fix that keeps the clip.
+- **Scroll drives only the first half of the zoom.** It grows the slab to `--process-portal-handoff` (0.5); past that point `ProcessHandoff.tsx` sets `data-portal-open` and a transition on `.grow` finishes it, and runs it back down when scrolled above. The two scales compose (`.grow` wraps `.portal`), so the scroll animation and the transition never write the same property. The portal's scroll ratio was halved to 0.3 in the same change, or the second half would have been dead scroll. The transition's duration is not fixed: the observer measures the scroll speed as its marker leaves and sets `--process-grow-duration` so the timed half opens at the rate scroll had been growing the slab. A fixed 400ms ease-out started about three times faster than a wheel scroll and read as a lurch at the join.
 - **Per-page parallax ranges are offset past the portal.** They divide the rail's share of the window, not the whole thing, or every page's drift runs a portal early.
 - **Reduced motion must reset the scale explicitly.** `.portal` carries `scale: 0.1` statically so the square is right before the animation attaches; removing the animation does not undo it, and the section then renders as an unreadable tenth-size square.
 
@@ -272,11 +274,16 @@ Mobile bottom nav must account for `env(safe-area-inset-bottom)` — iOS home in
 
 ### Scripts (in `scripts/`)
 
-| Script                       | Purpose                                               |
-| ---------------------------- | ----------------------------------------------------- |
-| `scripts/render-export.sh`   | Wraps Blender CLI render → raw frames/clips           |
-| `scripts/encode-video.sh`    | ffmpeg: raw → AV1 (`.mp4` container) + H.264 fallback |
-| `scripts/optimise-images.sh` | Sharp: raw stills → AVIF primary + WebP fallback      |
+The three pipeline scripts for hero phases 2 and 3 are **planned, not written**: they arrive with those phases, and nothing in the build calls them yet.
+
+| Script                                 | Purpose                                                      | Status  |
+| -------------------------------------- | ------------------------------------------------------------ | ------- |
+| `scripts/export-villa.py`              | Blender: export the villa to `public/hero/villa.glb` (Draco) | Exists  |
+| `scripts/optimise-process-images.mjs`  | One-shot: shrink the Process photographs in place            | Exists  |
+| `scripts/optimise-hardware-images.mjs` | One-shot: shrink the hardware renders in place               | Exists  |
+| render-export.sh                       | Wraps Blender CLI render → raw frames/clips                  | Planned |
+| encode-video.sh                        | ffmpeg: raw → AV1 (`.mp4` container) + H.264 fallback        | Planned |
+| optimise-images.sh                     | Sharp: raw stills → AVIF primary + WebP fallback             | Planned |
 
 ### Asset naming
 
@@ -314,13 +321,14 @@ Turbopack does not support `sassOptions.includePaths` or `sassOptions.additional
 
 ### Import depth table
 
-| File location                                     | Import path for `_variables.scss`       |
-| ------------------------------------------------- | --------------------------------------- |
-| `src/styles/globals.scss`                         | `@use 'variables' as *`                 |
-| `src/app/page.module.scss`                        | `@use '../styles/variables' as *`       |
-| `src/app/about/page.module.scss`                  | `@use '../../styles/variables' as *`    |
-| `src/components/Button/Button.module.scss`        | `@use '../../styles/variables' as *`    |
-| `src/components/Hero/Chapter/Chapter.module.scss` | `@use '../../../styles/variables' as *` |
+| File location                              | Import path for `_variables.scss`    |
+| ------------------------------------------ | ------------------------------------ |
+| `src/styles/globals.scss`                  | `@use 'variables' as *`              |
+| `src/app/error.module.scss`                | `@use '../styles/variables' as *`    |
+| `src/app/contact/page.module.scss`         | `@use '../../styles/variables' as *` |
+| `src/components/Button/Button.module.scss` | `@use '../../styles/variables' as *` |
+
+One more `../` per directory level below these. Every file named here exists; `src/__tests__/docs-consistency.test.ts` fails if one is moved.
 
 ### No stale compiled CSS
 
@@ -339,7 +347,9 @@ Turbopack does not support `sassOptions.includePaths` or `sassOptions.additional
 
 ## CSP and third-party domains
 
-The current CSP in `next.config.ts` is `default-src 'self'` everywhere. As third parties are added, update the CSP **in the same PR that adds the dependency**. Never leave a CSP update for later — it will break in production.
+The CSP in `next.config.ts` is `default-src 'self'` plus the few widenings recorded below, each with its reason (the Draco decoder's `'wasm-unsafe-eval'` and `blob:` worker, and `'unsafe-inline'` for scripts and styles, which is an accepted risk in `docs/launch-gate/accepted-risks.md`). No third-party origin is allowed. As third parties are added, update the CSP **in the same PR that adds the dependency**. Never leave a CSP update for later — it will break in production.
+
+The policy is built once, by `csp(strict)` in `next.config.ts`, and sent twice: enforced, and as a `Content-Security-Policy-Report-Only` twin that drops `'unsafe-inline'` from `script-src` and `style-src`, and allows the one inline script of our own, the consent boot script (`src/lib/consent-boot.ts`), by its SHA-256 hash. The hash is in the strict policy only: a policy that lists a hash makes browsers ignore its `'unsafe-inline'`, which in the enforced policy would block every inline script Next emits. Both report to `/api/csp-report` (`report-uri` for Firefox and Safari, `report-to csp-endpoint` via `Reporting-Endpoints` for Chromium). The endpoint is rate-limited, capped at 16KB, schema-checked, strips query strings, and logs each distinct violation once an hour as one `csp-violation` JSON line. `e2e/headers.spec.ts` asserts the two policies differ only by `'unsafe-inline'` and that hash, and `e2e/consent-boot.spec.ts` that the hash matches the script the page serves.
 
 ### Planned CSP changes (update when implementing)
 
@@ -360,7 +370,7 @@ The corollary is that those paths are served by the **platform**, not by this ap
 
 **Each addition must be checked against:**
 
-1. Security System §5 (headers) — new origins expand the attack surface
+1. Security System §8 (headers) — new origins expand the attack surface
 2. Engineering System Part C (dependency policy) — is there a data flow? does it send PII?
 3. Legal System §6 (consent, cookies & tracking) — does it set cookies? does it track users?
 
@@ -480,6 +490,14 @@ No client photography exists and none will be sourced. Client privacy makes it p
 
 ---
 
+## Metadata, structured data and crawlers
+
+- **Every page's metadata goes through `pageMetadata()`** (`src/lib/metadata.ts`). Next merges metadata shallowly, so a page's own `openGraph` replaces the layout's whole object; before the helper, pages set none and all inherited the layout's `og:url` of `/`. The helper sets canonical and og:url from one `path`, carries the card images, writes the robots line, and throws at build when an indexable page's title or description is outside SEO System §2's ranges. The layout's metadata is only a fallback for the 404 and error pages, and names no URL.
+- **The sitemap is the indexable pages, exactly.** Their dates live in `src/content/last-modified.ts`, fixed, and move when content changes. `src/app/__tests__/sitemap.test.ts` derives the indexable set from every page's metadata and fails on any difference.
+- **JSON-LD** (`src/components/Schema/`): the business and website once in the layout, a `WebPage` and `BreadcrumbList` on each indexable page, `FAQPage` on `/faq` once it is publishable. Confirmed facts only; no `sameAs`, `geo`, opening hours or ratings until each is real.
+- **Crawlers:** every crawler is allowed, AI training crawlers included (decided by Shivanshu, 2026-09-28; SEO System §0a makes it a per-client call). `src/app/robots.ts` has one allow-all group, and its tests fail if any crawler is singled out. The Vercel Firewall must not block what robots.txt allows.
+- **Metadata routes export only what Next allows**, like pages. Data they read lives in `src/content/`.
+
 ## Locale routing — no `/en` prefix at V1
 
 The brief suggested building `/en` routing now. **This is deferred.** Rationale:
@@ -495,12 +513,12 @@ The brief suggested building `/en` routing now. **This is deferred.** Rationale:
 
 ## Git workflow
 
-- **Branch:** `feature/*` off `main`. One concern per branch
+- **Branch:** `feature/*` off `latest`. One concern per branch. `latest` is staging; `main` is production and is updated from `latest`
 - **Commits:** imperative mood, lowercase, concise. The diff tells what; the message tells why
 - **No co-author attribution** on commits or PRs
 - **Pre-commit:** Husky runs `lint-staged` — ESLint fix + Prettier + typecheck on staged `.ts`/`.tsx` files
 - **PR:** one concern per PR. Title under 70 characters. Body has summary bullets + test plan
-- **Deploy:** merge to `main` triggers Vercel production deploy. Kill List runs on every deploy
+- **Deploy:** merge to `main` triggers Vercel production deploy. The Kill List is run by hand after every deploy, not automatically: see `docs/runbooks/deploy-and-rollback.md`. The other runbooks are in `docs/runbooks/`
 
 ---
 
@@ -582,11 +600,18 @@ motion`, `Save-Data`, 2g/3g and any WebGL failure keep the poster and load
     Blob, so the worker URL is `blob:`. Scoped to workers alone; it does not
     allow `blob:` as a script or frame source.
 
-  Both are reviewed against Security System §5. The decoder is **self-hosted**
+  Both are reviewed against Security System §8. The decoder is **self-hosted**
   under `public/draco/`, never a public CDN, so the only wasm module that can be
   compiled is one this repo ships. That self-hosting is the condition the
   exception rests on — if the decoder ever moves to a CDN, this decision is
   reopened.
+
+  The decoder is Google's Draco under Apache-2.0, so `public/draco/` carries
+  `LICENSE` (the full text) and `NOTICE` (upstream, copyright, and the three.js
+  version it was copied from). The two decoder files are byte-identical to
+  `three/examples/jsm/libs/draco/gltf/`; `src/components/Hero/__tests__/draco.test.ts`
+  fails when a three.js upgrade leaves them stale, and when anything unlicensed
+  lands beside them.
 
 - **One consumer.** If a second component wants three.js, that is a new
   decision, not a precedent.
@@ -597,42 +622,90 @@ re-baseline deliberately and record why — see the budget note in CLAUDE.md.
 
 ---
 
-## Testing
+## Testing policy: 1:3, enforced
 
-### Unit (Jest + RTL)
+**Every line of code carries three lines of test.** This is a standing rule, set by Shivanshu on 2026-09-26, and it is enforced by machines rather than by review. Missing it is not an option under any condition, including a deadline.
 
-- Behaviour only. Never assert appearance — jsdom doesn't apply CSS Modules
-- Test components in isolation: does the button call the handler? does the form validate? does the manifest loader reject bad input?
-- The manifest Zod schema gets its own test: valid manifest passes, every invalid variant fails
+### What is counted
 
-### E2E (Playwright + axe)
+`scripts/test-ratio.mjs` is the only place the counting rules live. In short:
 
-- Smoke test on every page: loads, has `<h1>`, passes axe accessibility scan
-- Three device profiles: Desktop Chrome, iPhone 14, Pixel 7
-- Hero: landing poster loads, service tabs are keyboard-navigable, reduced-motion shows stills only
-- Contact form: submit with valid data, submit with invalid data, honeypot rejection
+- **Code** is the non-blank lines of `src/**/*.{ts,tsx}`, excluding tests, `index.ts` barrels and `.d.ts` files. `src/content/*.ts` counts as code, because copy and tables ship to users and can be wrong.
+- **Tests** are the non-blank lines of `src/**/__tests__/**`, `src/**/*.test.{ts,tsx}` and everything under `e2e/`, fixtures and helpers included.
+- Blank lines are dropped on both sides. Finder duplicates (`name 2.ts`) are skipped.
 
-### Performance (Lighthouse CI)
+Run it with `pnpm test:ratio`.
 
-- Runs against `http://localhost:3000/` (homepage)
-- Thresholds in `lighthouserc.json`: performance ≥ 0.95, accessibility = 1.0, best-practices ≥ 0.95, SEO = 1.0
-- JS budget: ≤ 100KB (102,400 bytes resource size)
-- LCP < 2500ms, TBT < 200ms, CLS < 0.05
+### The two gates
 
-### Pre-commit
+**Ratio** (`scripts/test-ratio.mjs --base <ref>`). The repo started at 0.43:1, so an absolute 3:1 check would be red on every PR until the backlog is paid, including the PRs that pay it. A permanently red gate hides real regressions (see the JS budget note in CLAUDE.md). So until the tree reaches 3:1, a PR passes only when both hold:
 
-Husky + lint-staged: ESLint fix, Prettier format, TypeScript typecheck on staged files. Catches errors before they enter the branch, not in CI.
+1. its new code carries three times its lines in new tests;
+2. the overall ratio did not fall.
+
+Once the tree is at 3:1 the absolute check applies and the ratchet no longer matters.
+
+**Coverage** (`scripts/coverage-gate.mjs --base <ref>`). Line counts alone can be padded, so coverage proves the tests exercise the code:
+
+1. **Floor:** global line and statement coverage may not fall below `coverage-baseline.json`. Raise it with `pnpm coverage:raise` after adding tests, and commit it. It only ever goes up. Functions and branches are reported but not floored: Jest counts them only in files a test loads, so the first test for an untested file lowers their percentage (measured: lines 30% to 45%, branches 77.9% to 76.7%, in a change that only added tests).
+2. **Changed lines:** every executable line a PR adds or changes must be run by a test, and at least 90% of the branch arms on those lines must be taken. Blank and comment-only lines are exempt. Untested old lines in the same file are backlog, measured by the ratio, not a condition on the fix (decided 2026-09-26: holding a one-line fix to the coverage of the whole file around it turned every bug fix into a backfill project).
+
+### What runs where
+
+| Where                           | What                                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Pre-commit                      | ESLint, Prettier, whole-project `tsc` on staged files (`lint-staged`)                             |
+| Pre-push (`.husky/pre-push`)    | Typecheck, Jest with coverage, both gates against `origin/latest` (override with `PRE_PUSH_BASE`) |
+| CI (`.github/workflows/ci.yml`) | Everything, on every PR into `latest` or `main` and every push to them                            |
+
+The CI jobs, which are the required status checks:
+
+- `static`: lint, typecheck, production build, cascade layer order in every CSS chunk (`scripts/assert-layer-order.mjs`)
+- `unit`: Jest with coverage, the coverage gate, the ratio gate
+- `e2e (Desktop Chrome)`, `e2e (iPhone 17)`, `e2e (Galaxy S24)`: the Playwright suite per device, with axe. iPhone 17 is the current base iPhone width (402 CSS px, WebKit); Galaxy S24 is the narrow Android width (360 CSS px, Chromium). A project name sets screen size, density, user agent and touch only; the engine is Playwright's current build
+- `e2e-extra`: specs tagged `@forced-colors` and `@zoom`, in the `forced-colors` and `zoom-200` projects
+- `lighthouse`: `lighthouserc.json` against the production build: `/`, `/pricing` and `/contact`, mobile, measured throttling (see the Lighthouse note in CLAUDE.md)
+
+Not required, and visible on every PR: `delivery`, one real email through Resend.
+
+`scripts/__tests__/ci-workflow.test.ts` fails if any of these jobs is renamed, removed, or allowed to fail quietly.
+
+### Branch protection
+
+A repository ruleset, "protect latest and main" (Settings, then Rules, then Rulesets), set 2026-09-26. A ruleset rather than classic branch protection: one ruleset covers both branches, the bypass list is explicit, and each required check is pinned to the GitHub Actions app so nothing else can report it green.
+
+- Enforcement active, bypass list empty: nobody, the owner included, skips it.
+- Targets `latest` and `main`.
+- Deletions and force pushes blocked.
+- Pull request required, 0 approvals (a sole author cannot approve their own PR), conversation resolution required.
+- Every check listed above required, source GitHub Actions, and the branch must be up to date before merging.
+
+Required checks are matched by job name. Renaming a job or a Playwright project leaves the ruleset waiting for a check that never reports, and nothing can merge. Change the ruleset in the same sitting as the rename, once the renamed checks have run on the PR.
+
+Repository secrets `RESEND_API_KEY`, `LEAD_EMAIL`, `LEAD_FROM_EMAIL` go to the `delivery` job only. `QERA_SYSTEM_DEPLOY_KEY`, the private half of a read-only deploy key on the private `qera-system` repo, goes to the `unit` job only, so it can check out the submodule that `src/__tests__/docs-consistency.test.ts` reads. Every other e2e job writes the emails its form tests produce to a mail sink (`.e2e-mail/`, read back by `e2e/mail.ts`), because sending them all for real exhausted the Resend account's monthly quota on 2026-09-26. The sink needs both `PLAYWRIGHT=1` and `E2E_MAIL_SINK`, and no deployment sets `PLAYWRIGHT`. The `delivery` job sends one real email per run (`e2e/delivery.spec.ts`, `E2E_REAL_MAIL=1`). It is deliberately not a required check: it fails when Resend refuses a send, which is a fact about the account, not the code. It is visible on every PR.
+
+### When a test fails
+
+**A failing test is a finding, reported to Shivanshu with its output.** It is never fixed by weakening, skipping, retrying or deleting the assertion. If the test is right and the code is wrong, fix the code. If the test encodes a decision that has changed, say which decision and ask. A test that only passes on retry is flaky, and flaky is a failure: CI runs with `failOnFlakyTests`, so a flaky pass blocks the merge.
+
+### Writing tests
+
+- **Unit (Jest + RTL):** behaviour only; jsdom does not apply CSS Modules, so never assert appearance. CSS Module class lookups go through a strict proxy (`__mocks__/strictStyleProxy.js`) that throws on an impossible key.
+- **Console guard:** `jest.setup.ts` fails any test that writes `console.error` or `console.warn`. A test that expects a log spies on `console` and asserts on it.
+- **E2E (Playwright + axe):** every route loads, has one `<h1>`, and passes axe, on all three devices. The shared checks live in `e2e/checks.ts`: `expectAccessible` (axe with every rule, no tag filter), `expectNoHorizontalOverflow` (against `clientWidth`, no slack) and `expectNoEmDash` (`textContent`, so a closed `<details>` is read too). Specs import axe only through it; ESLint enforces that. Workers are fixed at three locally and two in CI: at the default count WebKit timed out under load, and the CI runner is smaller.
+- **Lighthouse:** thresholds live in `lighthouserc.json` and nowhere else.
+- **Placeholders:** content carrying a `pending` marker has a test that fails once the marker is cleared, so publishing is a deliberate act.
 
 ---
 
 ## Known tech debt and open items
 
-| Item                                           | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Action                                                                                                                                                                                                                                                                                                                                                           |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `_reset.scss` reduced-motion uses `!important` | Works but fights the token system. Design-system architecture spec says zero the duration tokens instead                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Refactor when token architecture is implemented. The `!important` override will conflict with component-level duration tokens                                                                                                                                                                                                                                    |
-| CSP is restrictive for current scope only      | All `'self'` — will break when third parties are added                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Update per the CSP table above, in the same PR that adds each service                                                                                                                                                                                                                                                                                            |
-| Per-page OG images not built                   | Site-wide cards only (`public/og-image.png` 1200×630 + `public/og-image-square.png` 1200×1200, declared in `layout.tsx`). Inner pages need dynamic OG via `opengraph-image.tsx` (ImageResponse API) or static Blender renders                                                                                                                                                                                                                                                                                                                                 | Part of launch gate. Being handled separately                                                                                                                                                                                                                                                                                                                    |
-| `twitter:site` / `twitter:creator` not set     | Both need a real @handle and the brand has no X account yet — the footer's X link is a bare `https://x.com/` placeholder. Omitted rather than invented: X silently drops an invalid handle, and a non-resolving claim is worse than none. Affects X only; no other platform reads these tags, and neither renders as visible text on a modern card                                                                                                                                                                                                            | Post-launch. Add `site: "@handle"` to the `twitter` block in `src/app/layout.tsx` once the account exists. Skip `creator` unless Journal posts get named authors — it is for bylined content                                                                                                                                                                     |
-| Social profile links are placeholders          | `src/components/Footer/socials.ts` points WhatsApp at a real number but Instagram, Facebook, X and LinkedIn at bare domains (`https://x.com/`, etc.), so they land on each platform's homepage rather than on Smarthaus                                                                                                                                                                                                                                                                                                                                       | Replace with real profile URLs before launch. User-facing, not just metadata                                                                                                                                                                                                                                                                                     |
-| Sitemap is static                              | `src/app/sitemap.ts` is a hardcoded list. Needs to query Sanity for journal posts and projects                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Convert to dynamic when Sanity integration is implemented                                                                                                                                                                                                                                                                                                        |
-| `/faq` unconfirmed facts, noindex + no schema  | Six answers in `src/content/faq.ts` carry `pending` notes and `{braced}` values: the founding year, the AED 1,500 assessment fee, the AED 18,000–60,000 range, the payment split, the Premium Care response window, and the three designer commitments. Each renders through the `<Placeholder>` marker. `FAQ_IS_PUBLISHABLE` in `src/app/faq/page.tsx` is `false`, so the page ships `noindex` and emits no FAQPage JSON-LD — structured data on a noindex page is a contradictory signal, and these are exactly the figures an answer engine must not quote | **Launch gate.** Confirm each with Sunil, clear every `pending` and every `{brace}` in `faq.ts`, flip `FAQ_IS_PUBLISHABLE` to `true`, and add `/faq` to `src/app/sitemap.ts` — all in one change. Then invert the two assertions in `e2e/faq.spec.ts:78`. The unit suite (`src/content/__tests__/faq.test.ts`) fails if a brace is left without a `pending` note |
+| Item                                           | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Action                                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_reset.scss` reduced-motion uses `!important` | Works but fights the token system. Design-system architecture spec says zero the duration tokens instead                                                                                                                                                                                                                                                                                                                                                                                                                     | Refactor when token architecture is implemented. The `!important` override will conflict with component-level duration tokens                                                                                                                                                                                                                                    |
+| CSP is restrictive for current scope only      | All `'self'` — will break when third parties are added                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Update per the CSP table above, in the same PR that adds each service                                                                                                                                                                                                                                                                                            |
+| Per-page OG images not built                   | Site-wide cards only (`public/og-image.png` 1200×630 + `public/og-image-square.png` 1200×1200, declared in `layout.tsx`). Inner pages need dynamic OG via `opengraph-image.tsx` (ImageResponse API) or static Blender renders                                                                                                                                                                                                                                                                                                | Part of launch gate. Being handled separately                                                                                                                                                                                                                                                                                                                    |
+| `twitter:site` / `twitter:creator` not set     | Both need a real @handle and the brand has no X account yet — the footer's X link is a bare `https://x.com/` placeholder. Omitted rather than invented: X silently drops an invalid handle, and a non-resolving claim is worse than none. Affects X only; no other platform reads these tags, and neither renders as visible text on a modern card                                                                                                                                                                           | Post-launch. Add `site: "@handle"` to the `twitter` block in `src/app/layout.tsx` once the account exists. Skip `creator` unless Journal posts get named authors — it is for bylined content                                                                                                                                                                     |
+| Social profile links are placeholders          | `src/components/Footer/socials.ts` points WhatsApp at a real number but Instagram, Facebook, X and LinkedIn at bare domains (`https://x.com/`, etc.), so they land on each platform's homepage rather than on Smarthaus. Each carries `pending` and an accessible name ending "(profile coming soon)", so a screen reader is not told it is the Smarthaus profile                                                                                                                                                            | Replace with real profile URLs before launch. User-facing, not just metadata                                                                                                                                                                                                                                                                                     |
+| Sitemap is static                              | `src/app/sitemap.ts` is a hardcoded list. Needs to query Sanity for journal posts and projects                                                                                                                                                                                                                                                                                                                                                                                                                               | Convert to dynamic when Sanity integration is implemented                                                                                                                                                                                                                                                                                                        |
+| `/faq` unconfirmed facts, noindex + no schema  | Five answers in `src/content/faq.ts` carry `pending` notes and `{braced}` values: the founding year, the AED 1,500 assessment fee, the AED 18,000–60,000 range, the payment split, and the three designer commitments. Each renders through the `<Placeholder>` marker. `FAQ_IS_PUBLISHABLE` in `src/app/faq/page.tsx` is `false`, so the page ships `noindex` and emits no FAQPage JSON-LD — structured data on a noindex page is a contradictory signal, and these are exactly the figures an answer engine must not quote | **Launch gate.** Confirm each with Sunil, clear every `pending` and every `{brace}` in `faq.ts`, flip `FAQ_IS_PUBLISHABLE` to `true`, and add `/faq` to `src/app/sitemap.ts` — all in one change. Then invert the two assertions in `e2e/faq.spec.ts:78`. The unit suite (`src/content/__tests__/faq.test.ts`) fails if a brace is left without a `pending` note |

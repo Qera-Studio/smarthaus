@@ -1,15 +1,42 @@
 import { Care } from "../components/Care";
-import { Hero } from "../components/Hero";
+import { Hardware } from "../components/Hardware";
+import { FluidHero } from "../components/FluidHero";
 import { HomeEnquiry } from "../components/HomeEnquiry";
+import { Maple } from "../components/Maple";
+import { Pricing } from "../components/Pricing";
 import { Process } from "../components/Process";
+import { JsonLd, pageGraph } from "../components/Schema";
+import { pageMetadata } from "../lib/metadata";
+
+// The homepage's own metadata. Without it the page inherited the layout's
+// defaults, which is how every other page ended up with og:url "/" too.
+// The description is the hero's published sentence, so it claims nothing the
+// page does not (AGENTS.md, claims audit).
+const PAGE = {
+  path: "/",
+  title: "Smarthaus | Home Automation and Security in Dubai",
+  absolute: true,
+  description:
+    "Cameras, entry, audio and home automation for Dubai villas, installed, connected and looked after by one licensed team. Book a site visit.",
+  index: true,
+} as const;
+
+export const metadata = pageMetadata(PAGE);
 
 export default function Home() {
-  // The hero carries the page's h1. The sections between it and Process are
-  // still to come.
+  // The hero carries the page's h1.
   return (
     <>
-      <Hero />
+      <JsonLd data={pageGraph(PAGE)} />
+      <FluidHero />
+      {/* Who is behind the brand, before anything asks to be trusted. */}
+      <Maple />
+      {/* What the house is made of, then how it gets installed. */}
+      <Hardware />
       <Process />
+      {/* Price before maintenance: what a system costs, then what keeping it
+          running costs, then the enquiry. */}
+      <Pricing />
       <Care />
       {/* Last thing on the page, directly above the footer. */}
       <HomeEnquiry />

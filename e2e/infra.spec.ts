@@ -1,0 +1,257 @@
+import { expect, test } from "./fixtures";
+import type { Request } from "@playwright/test";
+
+// The e2e server is not the production server: next.config.ts drops two
+// headers when PLAYWRIGHT is set, because WebKit on plain-HTTP loopback aborts
+// every asset under them. These tests pin that difference to exactly those two,
+// so the test server cannot quietly drift into testing a different site.
+
+test.describe("the e2e server", () => {
+  test("serves HSTS with max-age=0, so WebKit does not upgrade loopback to https", async ({
+    request,
+  }) => {
+    const res = await request.get("/");
+    expect(res.status()).toBe(200);
+    expect(res.headers()["strict-transport-security"]).toBe("max-age=0");
+  });
+
+  test("omits upgrade-insecure-requests from the CSP and keeps every other directive", async ({
+    request,
+  }) => {
+    const csp = (await request.get("/")).headers()["content-security-policy"] ?? "";
+    expect(csp).not.toContain("upgrade-insecure-requests");
+    for (const directive of [
+      "default-src 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ]) {
+      expect(csp).toContain(directive);
+    }
+  });
+
+  test("sends the rest of the production header set unchanged", async ({ request }) => {
+    const headers = (await request.get("/")).headers();
+    expect(headers["x-frame-options"]).toBe("DENY");
+    expect(headers["x-content-type-options"]).toBe("nosniff");
+    expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+    expect(headers["cross-origin-resource-policy"]).toBe("same-origin");
+    expect(headers["permissions-policy"]).toContain("camera=()");
+    expect(headers["x-powered-by"]).toBeUndefined();
+  });
+
+  test("the image optimizer answers a browser that accepts AVIF with WebP", async ({ request }) => {
+    // AVIF is off on purpose (next.config.ts): its encode hung on CI.
+    const res = await request.get("/_next/image?url=%2Fhero%2Fprocess%2F1.2.jpg&w=640&q=75", {
+      headers: { accept: "image/avif,image/webp,*/*" },
+    });
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toBe("image/webp");
+  });
+
+  test("hydrates, which the loopback address exists to guarantee", async ({ page }) => {
+    // If WebKit upgraded to https, Server Components would still render and
+    // every client island would be dead. The consent shell marks
+    // data-consent-ready on <html> only once React has hydrated, so the mark
+    // is the hydration witness.
+    await page.goto("/");
+    await expect(page.locator("html[data-consent-ready]")).toBeAttached();
+  });
+
+  // Named for what it guards. On CI the image optimizer once stopped answering
+  // one cache key for the rest of the run, and the only symptom was three
+  // unrelated tests timing out on networkidle. A hung image now fails here.
+  test("every image the homepage requests is answered", async ({ page }) => {
+    // Request objects, not URLs: the same image can be asked for twice.
+    const pending = new Set<Request>();
+    const failed: string[] = [];
+    page.on("request", (request) => {
+      if (request.resourceType() === "image") pending.add(request);
+    });
+    page.on("requestfinished", (request) => pending.delete(request));
+    page.on("requestfailed", (request) => {
+      if (pending.delete(request)) failed.push(`${request.url()}: ${request.failure()?.errorText}`);
+    });
+    await page.goto("/");
+    await expect(page.locator("html[data-consent-ready]")).toBeAttached();
+    const stuck = await expect
+      .poll(() => [...pending].map((request) => request.url()), { timeout: 15_000 })
+      .toEqual([])
+      .then(
+        () => [],
+        () => [...pending].map((request) => request.url()),
+      );
+    // What the visitor sees decides it. On CI's Linux Chromium the network
+    // layer sometimes never reports a lazy image's request as finished, while
+    // the server answers the same URL in milliseconds (probed: 200 in 13-65ms).
+    // If the <img> itself has loaded with real pixels, the picture reached the
+    // screen and only the event is missing: recorded on the report, not
+    // failed. An image that is stuck AND not loaded is the real failure.
+    const loaded = await page.evaluate(
+      (urls) =>
+        urls.filter((url) =>
+          Array.from(document.images).some(
+            (img) => img.currentSrc === url && img.complete && img.naturalWidth > 0,
+          ),
+        ),
+      stuck,
+    );
+    for (const url of loaded) {
+      test.info().annotations.push({
+        type: "request event missing",
+        description: `${url}: the image loaded and has pixels, but the browser never reported its request finished`,
+      });
+    }
+    // A request still open here is, on CI's Linux Chromium, a lazy image far
+    // below the fold that the browser started and then parked: measured
+    // 2026-09-26, the first Process image at y=1830 in a 720px viewport, 57x69
+    // inside the portal's 0.1 scale, no timing entry, no source chosen, while
+    // the server answered the URL in 14ms. What a visitor can notice is only
+    // whether it appears once they reach it, so scroll each one into view, as
+    // a visitor would, and require real pixels. An image that stays blank on
+    // screen is the failure; one that loads on arrival is recorded.
+    const stillOpen = stuck.filter((url) => !loaded.includes(url));
+    const loadedOnArrival: string[] = [];
+    for (const url of stillOpen) {
+      const source = encodeURIComponent(new URL(url).searchParams.get("url") ?? url);
+      const img = page.locator(`img[srcset*="${source}"]`).first();
+      if ((await img.count()) === 0) continue;
+      await img.evaluate((el) => el.scrollIntoView({ block: "center" }));
+      const arrived = await expect
+        .poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0), {
+          timeout: 10_000,
+        })
+        .toBe(true)
+        .then(
+          () => true,
+          () => false,
+        );
+      if (arrived) {
+        loadedOnArrival.push(url);
+        test.info().annotations.push({
+          type: "lazy image parked until reached",
+          description: `${url}: its request stalled while it was off screen, and it loaded with pixels once scrolled into view`,
+        });
+      }
+    }
+    const unanswered = stillOpen.filter((url) => !loadedOnArrival.includes(url));
+    // When one hangs, ask the server for it directly, outside the browser, so
+    // the report says which side is holding it: an answer here means the
+    // browser never finished a response the server can give.
+    //
+    // And say what the page itself knows about it: the <img> that asked for it
+    // (matched by source file, since the browser may have switched to another
+    // srcset width), and whether a resource timing entry exists, which is the
+    // browser's own record of having received a response.
+    const pageSide = await page.evaluate(
+      (urls) =>
+        urls.map((url) => {
+          const source = new URL(url).searchParams.get("url") ?? url;
+          const imgs = Array.from(document.images)
+            .filter((img) =>
+              (img.getAttribute("srcset") ?? img.src).includes(encodeURIComponent(source)),
+            )
+            .map((img) => {
+              const rect = img.getBoundingClientRect();
+              return `img{currentSrc=${img.currentSrc.slice(-60)} complete=${img.complete} naturalWidth=${img.naturalWidth} loading=${img.loading} rect=${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)}x${Math.round(rect.height)}}`;
+            });
+          const timing = performance.getEntriesByName(url).length;
+          return `timing entries=${timing}; ${imgs.join(" ") || "no <img> references it"}`;
+        }),
+      unanswered,
+    );
+    // Asked twice, because the optimizer keys its cache on the format it
+    // negotiates: with the browser's Accept the answer is AVIF, with */* it is
+    // the source JPEG, a different cache entry. On 2026-09-26 the */* probe got
+    // a JPEG in 81ms while the browser waited on the AVIF, which could not say
+    // whether the server or the browser was holding it. The AVIF probe can.
+    const probe = async (url: string, accept: string) => {
+      const started = Date.now();
+      const verdict = await page.request.get(url, { timeout: 10_000, headers: { accept } }).then(
+        (response) => `server answered ${response.status()} ${response.headers()["content-type"]}`,
+        (error: Error) => `server did not answer: ${error.message.split("\n")[0]}`,
+      );
+      return `${verdict} after ${Date.now() - started}ms`;
+    };
+    const probes = await Promise.all(
+      unanswered.map(async (url, index) => {
+        const asBrowser = await probe(url, "image/avif,image/webp,*/*");
+        const asAny = await probe(url, "*/*");
+        return `${url}: as the browser asks, ${asBrowser}; with */*, ${asAny}; ${pageSide[index]}`;
+      }),
+    );
+    expect(probes, "images the browser requested and never got").toEqual([]);
+    expect(failed).toEqual([]);
+  });
+});
+
+// Runs only in the forced-colors project (playwright.config.ts). A smoke check
+// that the mode is live and the page survives it; per-component checks land
+// with the forced-colors work (plan Phase 2 and Phase 6).
+test.describe("forced colours @forced-colors", () => {
+  test("the page sees forced colours and still renders its heading and primary action", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
+    await expect(page.locator("h1")).toBeVisible();
+    await expect(
+      page.locator("header").getByRole("link", { name: "Book a site visit" }),
+    ).toBeVisible();
+  });
+});
+
+// Runs only in the zoom-200 project: a 1440px laptop at 200% zoom.
+test.describe("200% zoom @zoom", () => {
+  for (const route of ["/contact", "/privacy", "/terms", "/faq", "/pricing"]) {
+    test(`${route} fits the width at 200% zoom`, async ({ page }) => {
+      await page.goto(route);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `${route} scrolls sideways by ${overflow}px`).toBeLessThanOrEqual(1);
+    });
+  }
+});
+
+// The hero-canvas default lives in e2e/fixtures.ts. Both halves are pinned
+// here: off unless asked, and on when asked, so the switch cannot rot into
+// "always off". The homepage hero is the fluid canvas; the villa's model and
+// decoder are watched too, because the villa is unmounted, not deleted, and a
+// stray import would fetch them again.
+test.describe("the hero's canvas in e2e", () => {
+  test("is off by default: the page reports Save-Data and no canvas mounts", async ({ page }) => {
+    const heavyRequests: string[] = [];
+    page.on("request", (request) => {
+      if (/\/hero\/villa\.glb|\/draco\/|FluidHero_fluid/.test(request.url())) {
+        heavyRequests.push(request.url());
+      }
+    });
+    await page.goto("/");
+    expect(
+      await page.evaluate(
+        () =>
+          (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData,
+      ),
+    ).toBe(true);
+    // The gate runs in an effect at hydration and, when it passes, starts the
+    // import at once. So: hydrated, then a window far longer than that, and
+    // neither the simulation chunk nor the villa's files were ever asked for.
+    await expect(page.locator("html[data-consent-ready]")).toBeAttached();
+    await page.waitForTimeout(2_000);
+    expect(heavyRequests).toEqual([]);
+    await expect(page.locator("[data-hero][data-ready]")).toHaveCount(0);
+  });
+
+  test.describe("when a spec opts in", () => {
+    test.use({ villa: true });
+
+    test("mounts on every device, touch included", async ({ page }) => {
+      await page.goto("/");
+      await expect(page.locator("[data-hero][data-ready] canvas")).toHaveCount(1, {
+        timeout: 20_000,
+      });
+    });
+  });
+});

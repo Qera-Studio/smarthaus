@@ -1,5 +1,5 @@
-import { test, expect, devices } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { test, expect, devices } from "./fixtures";
+import { expectAccessible } from "./checks";
 
 // Any unrouted path renders not-found, so this doubles as a routing check.
 const MISSING = "/this-page-does-not-exist";
@@ -27,8 +27,7 @@ test.describe("404", () => {
 
   test("passes axe accessibility checks", async ({ page }) => {
     await page.goto(MISSING);
-    const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations).toEqual([]);
+    await expectAccessible(page);
   });
 
   test("the home link works", async ({ page }) => {
@@ -215,8 +214,8 @@ test.describe("404 particle physics", () => {
   });
 });
 
-// Runs on the touch device profiles the config already declares (iPhone 14 and
-// Pixel 7) rather than pinning one here: `devices[...]` carries
+// Runs on the touch device profiles the config already declares (iPhone 17 and
+// Galaxy S24) rather than pinning one here: `devices[...]` carries
 // `defaultBrowserType`, which Playwright refuses inside a describe group, and
 // gating on `isMobile` covers both engines instead of just WebKit.
 test.describe("404 particle physics on touch", () => {
@@ -268,32 +267,49 @@ test.describe("404 particle physics on touch", () => {
    * *stream* of pointermove with `pointerType: "touch"`, and the touchscreen
    * API emits a tap rather than a sustained drag with intermediate moves.
    */
+  // One drag, run inside the page on its own frame clock: a move every 28ms,
+  // as a finger reports. It used to be fifteen page.evaluate round trips with
+  // a 28ms wait between them, which only approximates 28ms where a round trip
+  // is free. On the CI runner each trip cost far more, the finger moved at a
+  // fraction of the intended speed, and a speed-driven field barely moved
+  // (11 and 21px against ~66px locally). The assertions did not change.
   const drag = async (
     page: import("@playwright/test").Page,
     box: { x: number; y: number; width: number; height: number },
     opts: { down: boolean },
   ) => {
-    const y = box.y + box.height / 2;
-    for (let i = 0; i <= 14; i++) {
-      const x = box.x + 8 + ((box.width - 16) * i) / 14;
-      await page.evaluate(
-        ([x, y, first, down]) => {
-          const mk = (type: string) =>
+    await page.evaluate(
+      ([bx, by, bw, bh, down]) =>
+        new Promise<void>((resolve) => {
+          const STEPS = 14;
+          const INTERVAL = 28;
+          const y = by + bh / 2;
+          const mk = (type: string, x: number) =>
             new PointerEvent(type, {
-              clientX: x as number,
-              clientY: y as number,
+              clientX: x,
+              clientY: y,
               pointerType: "touch",
               isPrimary: true,
               bubbles: true,
               pointerId: 1,
             });
-          if (first && down) window.dispatchEvent(mk("pointerdown"));
-          window.dispatchEvent(mk("pointermove"));
-        },
-        [x, y, i === 0, opts.down] as const,
-      );
-      await page.waitForTimeout(28);
-    }
+          let i = 0;
+          let last = -Infinity;
+          const tick = (now: number) => {
+            if (now - last >= INTERVAL) {
+              const x = bx + 8 + ((bw - 16) * i) / STEPS;
+              if (i === 0 && down) window.dispatchEvent(mk("pointerdown", x));
+              window.dispatchEvent(mk("pointermove", x));
+              last = now;
+              i += 1;
+            }
+            if (i <= STEPS) requestAnimationFrame(tick);
+            else resolve();
+          };
+          requestAnimationFrame(tick);
+        }),
+      [box.x, box.y, box.width, box.height, opts.down] as const,
+    );
   };
 
   test("a finger drag deforms the field, and lifting it lets the field recover", async ({
@@ -430,7 +446,7 @@ test.describe("404 motion gates", () => {
     // to orbit. But a finger drag reports the same pointermove stream a mouse
     // does, so the field is drivable on touch — it just has to be driven only
     // while a finger is down, which is what the drag gating below covers.
-    const context = await browser.newContext({ ...devices["iPhone 14"] });
+    const context = await browser.newContext({ ...devices["iPhone 17"] });
     const page = await context.newPage();
     await page.goto(MISSING);
     await page.locator("canvas").waitFor({ state: "attached" });
@@ -447,7 +463,7 @@ test.describe("404 motion gates", () => {
     // Relaxing the pointer gate must not have relaxed the motion gate with it:
     // reduced-motion is a hard floor, and a rAF loop ignores the CSS reset.
     const context = await browser.newContext({
-      ...devices["iPhone 14"],
+      ...devices["iPhone 17"],
       reducedMotion: "reduce",
     });
     const page = await context.newPage();

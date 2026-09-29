@@ -89,7 +89,7 @@ export type Shot = {
  * from rather than head-on, because a flat-on shot of a garage door has no
  * depth in it.
  */
-export const SHOTS: readonly Shot[] = [
+export const SHOTS: readonly [Shot, ...Shot[]] = [
   {
     id: "landing",
     label: "Overview",
@@ -169,7 +169,7 @@ export const SHOTS: readonly Shot[] = [
   },
 ] as const;
 
-export const LANDING = SHOTS[0] as Shot;
+export const LANDING: Shot = SHOTS[0];
 
 /** Every shot that appears in the tab rail, i.e. everything but the landing. */
 export const SERVICE_SHOTS: readonly Shot[] = SHOTS.slice(1);

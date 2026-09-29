@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { test, expect, type Page } from "./fixtures";
+import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
 
 /**
  * Cookie consent: the banner, the preferences panel, and /cookie-preferences.
@@ -50,8 +50,16 @@ const readCookie = async (page: Page) => {
  * the first paint agree, and the cookie is read in an effect — so the banner
  * appears a tick after load rather than in the initial markup.
  */
+/**
+ * The banner is on screen AND React owns it. Since the banner paints from the
+ * server HTML (src/lib/consent-boot.ts), being visible no longer means the
+ * page has hydrated, and a key or tap before hydration reaches nothing: on
+ * CI's Galaxy S24 an Escape pressed on the visible, not-yet-live banner was
+ * lost (2026-09-28). data-consent-ready is set by the shell's mount effect.
+ */
 const waitForBanner = async (page: Page) => {
   await expect(region(page)).toBeVisible();
+  await expect(page.locator("html[data-consent-ready]")).toBeAttached();
 };
 
 test.describe("the consent banner", () => {
@@ -341,6 +349,40 @@ test.describe("the choice", () => {
     expect(days).toBeLessThan(370);
   });
 
+  test("an Escape pressed the instant the banner appears is not lost", async ({ page }) => {
+    // The banner used to attach its Escape listener in a passive effect, which
+    // runs after paint. On a slow device a visitor could press Escape while the
+    // banner was already on screen and not yet listening (CI's iPhone project
+    // did, intermittently). This makes that timing exact instead of lucky: a
+    // MutationObserver fires in the microtask right after React inserts the
+    // region, before any paint, and presses Escape there. A listener attached
+    // in the same commit (a layout effect) receives it; a passive one never
+    // does, so the old code fails this every time.
+    await page.addInitScript(() => {
+      const watch = new MutationObserver(() => {
+        if (!document.querySelector('[aria-label="Cookie preferences"]')) return;
+        watch.disconnect();
+        (window as unknown as { __bannerSeen?: boolean }).__bannerSeen = true;
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+      document.addEventListener("DOMContentLoaded", () =>
+        watch.observe(document.body, { childList: true, subtree: true }),
+      );
+    });
+    await page.goto("/");
+    // The poll is the hydration witness: the flag is set only once React has
+    // inserted the region. It did appear, so "hidden" below means dismissed,
+    // not never shown. Not networkidle: one slow image elsewhere on the page
+    // held that open on CI and timed this out without testing anything.
+    await expect
+      .poll(() =>
+        page.evaluate(() => (window as unknown as { __bannerSeen?: boolean }).__bannerSeen),
+      )
+      .toBe(true);
+    await expect(region(page)).toBeHidden();
+    expect(await readCookie(page)).toBeNull();
+  });
+
   test("Escape dismisses without storing anything", async ({ page }) => {
     await page.goto("/");
     await waitForBanner(page);
@@ -357,8 +399,9 @@ test.describe("the choice", () => {
     // timeout: the banner resolves in an effect after hydration, so on a
     // fresh navigation under parallel load the first poll can land before the
     // cookie has been read. That made this flake on the iPhone project while
-    // passing in isolation — a slow assertion, not a wrong one.
-    await page.goto("/", { waitUntil: "networkidle" });
+    // passing in isolation — a slow assertion, not a wrong one. The explicit
+    // wait is the whole settle; networkidle also waited on unrelated images.
+    await page.goto("/");
     await expect(region(page)).toBeVisible({ timeout: 15_000 });
   });
 });
@@ -533,6 +576,32 @@ test.describe("the preferences panel", () => {
     expect(record.analytics).toBe(true);
   });
 
+  test("a switch turned on before the page's JavaScript arrives stays on, and saves", async ({
+    page,
+  }) => {
+    // Found by the keyboard test above failing on CI's slow WebKit runner: the
+    // switch is server-rendered here, the browser flipped it, and React set it
+    // back to off when it arrived. Made deterministic by holding the scripts.
+    await page.route("**/_next/static/chunks/**", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      await route.continue();
+    });
+    await page.goto("/cookie-preferences", { waitUntil: "commit" });
+    const analytics = page.getByRole("switch", { name: "Analytics" });
+    await analytics.waitFor({ state: "attached" });
+    await analytics.focus();
+    await page.keyboard.press("Space");
+    expect(await analytics.isChecked()).toBe(true);
+
+    await page.waitForLoadState("load");
+    // Well past hydration, the choice is still the visitor's.
+    await expect(page.getByRole("button", { name: "Save preferences" })).toBeEnabled();
+    await expect(analytics).toBeChecked();
+    await page.getByRole("button", { name: "Save preferences" }).click();
+    const record = JSON.parse(decodeURIComponent((await readCookie(page))!.value));
+    expect(record.analytics).toBe(true);
+  });
+
   test("keeps the Clarity session-recording disclosure visible and separate", async ({ page }) => {
     await page.goto("/cookie-preferences");
 
@@ -563,8 +632,7 @@ test.describe("/cookie-preferences", () => {
 
   test("passes axe accessibility checks", async ({ page }) => {
     await page.goto("/cookie-preferences");
-    const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations).toEqual([]);
+    await expectAccessible(page);
   });
 
   test("the footer link opens the panel in place once a choice is on file", async ({
@@ -629,16 +697,12 @@ test.describe("/cookie-preferences", () => {
     // The house rule every other page suite asserts. textContent, not
     // innerText: the panel's copy must be checked even where a container is
     // clipped.
-    const copy = await page.locator("main").textContent();
-    expect(copy).not.toContain("—");
+    await expectNoEmDash(page.locator("main"));
   });
 
   test("does not overflow horizontally", async ({ page }) => {
     await page.goto("/cookie-preferences");
-    const overflows = await page.evaluate(
-      () => document.documentElement.scrollWidth > window.innerWidth + 1,
-    );
-    expect(overflows).toBe(false);
+    await expectNoHorizontalOverflow(page);
   });
 });
 

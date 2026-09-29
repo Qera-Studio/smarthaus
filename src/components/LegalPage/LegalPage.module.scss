@@ -258,7 +258,14 @@
       // not a whole viewport. Sizing against 100vh overflowed the bottom edge
       // on shorter windows (measured: 178..770 in a 720px viewport) and hid the
       // last ToC entries until the reader scrolled.
-      max-block-size: calc(100vh - #{$space-24} - #{$space-16 * 2});
+      //
+      // Less the consent banner while it shows (it publishes its height as
+      // --consent-block-size). It sits on the rail's side at the bottom, and
+      // the last entries were measured entirely under it when tabbed to: WCAG
+      // 2.4.11 Focus Not Obscured. The list scrolls inside the shorter rail.
+      max-block-size: calc(
+        100vh - #{$space-24} - #{$space-16 * 2} - var(--consent-block-size, 0px)
+      );
       justify-content: flex-start;
       // Width is inherited from the reserved column rather than restated, so
       // the rail and its column cannot drift apart.
@@ -284,7 +291,9 @@
     // Never taller than what is left on screen below the page's top padding and
     // the rail's sticky inset. Matches the cap on .toc, minus the heading above
     // this list, so the two cannot disagree about where the bottom edge is.
-    max-block-size: calc(100vh - #{$space-24} - #{$space-16 * 2} - #{$space-10});
+    max-block-size: calc(
+      100vh - #{$space-24} - #{$space-16 * 2} - #{$space-10} - var(--consent-block-size, 0px)
+    );
     // Momentum scrolling inside the rail must not chain to the page once the
     // list hits its end — otherwise reaching the bottom of the ToC starts
     // scrolling the document underneath it.

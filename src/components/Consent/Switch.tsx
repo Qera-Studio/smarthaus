@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import styles from "./Consent.module.scss";
 
 type SwitchProps = {
@@ -40,6 +41,14 @@ type SwitchProps = {
  * There is no `aria-checked`: the native `checked` state already populates it,
  * and setting both is how the two drift apart.
  */
+/**
+ * A toggle made before hydration is kept. The switch is server-rendered on
+ * /cookie-preferences, so a visitor on a slow phone can flip it before React
+ * arrives; the browser flips the checkbox, and React, which believes its own
+ * state, would then set it back. Measured: pressed on, rendered off, on both
+ * engines. At mount the DOM still holds the visitor's value, so a disagreement
+ * there is theirs, and it is reported through onChange like any other change.
+ */
 export function Switch({
   id,
   labelId,
@@ -48,8 +57,17 @@ export function Switch({
   disabled = false,
   describedBy,
 }: SwitchProps) {
+  const input = useRef<HTMLInputElement>(null);
+  useLayoutEffect(() => {
+    const element = input.current;
+    if (element && onChange && !disabled && element.checked !== checked) onChange(element.checked);
+    // Mount only: after hydration the input is controlled and cannot drift.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <input
+      ref={input}
       type="checkbox"
       role="switch"
       id={id}

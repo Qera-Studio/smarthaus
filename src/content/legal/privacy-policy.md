@@ -1,10 +1,10 @@
 ---
 title: Privacy Policy
 slug: privacy
-version: 0.1.0-draft
+version: 0.2.0-draft
 status: DRAFT — NOT FOR PUBLICATION. Requires review by a UAE-admitted lawyer before launch.
 effectiveDate: null # set on counsel sign-off, not on merge
-lastUpdated: 2026-09-13
+lastUpdated: 2026-09-26
 governingRegime: UAE Federal PDPL (Decree-Law 45/2021) — ASSUMED, see Drafting Notes
 noindex: false
 ---
@@ -48,15 +48,18 @@ unactivated entry left in the live table is an inaccurate policy, and so is an
 installed one left in the planned table.
 
 INSTALLED AND LIVE: next, react, react-dom, zod, @vercel/analytics,
-@vercel/speed-insights.
+@vercel/speed-insights, resend.
 
 STILL PLANNED: Sanity, Turnstile.
 
-NEEDS ATTENTION: `resend` is in package.json and src/app/contact/actions.ts
-sends through it, but its row is still in §4.2. That is this gate failing in the
-direction it was written to prevent. Move it in the change that confirms the
-lead mailbox — it belongs to that work, not to the analytics change that
-noticed it.
+0.2.0-draft (2026-09-26) corrected three statements the build contradicted:
+Resend moved from §4.2 to §4.1 (it had delivered every enquiry since the
+contact form shipped); the essential-cookie sentence no longer claims a cookie
+rejects spam (the honeypot sets none, and the only cookie is the consent
+record); and §3.1 no longer says unrequired fields are "marked optional" (the
+form marks required ones) or that the phone number is optional (both forms
+require it). Resend's sending region is a placeholder until the account's
+region is confirmed.
 
 PLACEHOLDERS: every [PLACEHOLDER: …] is collated in the final section. The policy
 is not valid without a real controller identity and a monitored rights channel —
@@ -124,12 +127,12 @@ When you submit an enquiry form on this site, we collect:
 | ------------------------------------------------ | ---------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | Your name                                        | To address you properly and identify your enquiry                                  | Consent, and the performance of a contract or steps toward one |
 | Email address                                    | To reply to your enquiry                                                           | Consent, and steps toward a contract                           |
-| Phone number                                     | To call or message you about your enquiry, where you provide it                    | Consent                                                        |
+| Phone number                                     | To call or message you about your enquiry. Every enquiry form requires it          | Consent, and steps toward a contract                           |
 | Property location or area                        | To tell you whether we serve your area and to scope a site visit                   | Consent, and steps toward a contract                           |
 | Project details you describe                     | To understand what you are asking for and prepare a useful response                | Consent, and steps toward a contract                           |
 | Whether you are an owner, designer, or developer | To route your enquiry to the right person and respond in the right level of detail | Consent                                                        |
 
-We ask for the minimum needed to respond usefully. Fields that are not required are marked optional, and leaving them blank does not stop us replying.
+We ask for the minimum needed to respond usefully. The fields we need are marked required; leaving any other field blank does not stop us replying.
 
 **We do not ask for and do not want:** your identity documents, passport or Emirates ID numbers, bank or card details, salary or financial information, or health information. Do not send these through the website. If a project later requires any such document, we will tell you how to provide it securely and why it is needed.
 
@@ -164,7 +167,7 @@ We use this for security, fraud and abuse prevention, and to diagnose faults. Th
   The rest is §7.1 as written. Keep in step with src/app/privacy/page.tsx.
 -->
 
-**Essential cookies** keep the site working: they remember your cookie choice and help us reject spam submissions. These are always active.
+**Essential cookies** keep the site working. There is one: it remembers your cookie choice. It is always active.
 
 **Analytics cookies are off until you turn them on.** We are preparing to use Google Analytics and Microsoft Clarity to understand which pages are read and where people get stuck. Neither is installed yet, and neither will load unless you accept it.
 
@@ -198,15 +201,17 @@ We use a small number of service providers who process information on our instru
 
 ### 4.1 Currently in use
 
-| Provider                                | What it does                                | What it sees                                                                                | Where                                    |
-| --------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Vercel Inc.                             | Hosts and serves this website               | Server log data in section 3.2                                                              | [PLACEHOLDER: confirm deployment region] |
-| Vercel Web Analytics and Speed Insights | Aggregate page performance and visit counts | Aggregated, non-identifying usage data. No cookies, and no identifier that survives a visit | [PLACEHOLDER: confirm deployment region] |
+| Provider                                | What it does                                  | What it sees                                                                                | Where                                    |
+| --------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Vercel Inc.                             | Hosts and serves this website                 | Server log data in section 3.2                                                              | [PLACEHOLDER: confirm deployment region] |
+| Resend                                  | Delivers each enquiry you send to our mailbox | Everything you submit in an enquiry form                                                    | United States (US East, Virginia)        |
+| Vercel Web Analytics and Speed Insights | Aggregate page performance and visit counts   | Aggregated, non-identifying usage data. No cookies, and no identifier that survives a visit | [PLACEHOLDER: confirm deployment region] |
 
 <!-- ACCURACY GATE — Legal System §5 requires the policy to name every third party
      that receives data, and to describe only what the build actually does. The
      table above reflects package.json as of this draft: next, react, react-dom,
-     zod. Nothing else is installed.
+     zod, the two Vercel packages, and resend. Nothing else that receives data
+     is installed.
 
      MOVE A ROW FROM 4.2 TO 4.1 IN THE SAME PR THAT ADDS ITS DEPENDENCY.
      Each also needs: the new-tool intake gate (Legal System §16), a CSP update
@@ -218,7 +223,6 @@ The following are planned but **not currently operating on this site**. We list 
 
 | Provider             | Planned purpose                                                 | What it would see                                  |
 | -------------------- | --------------------------------------------------------------- | -------------------------------------------------- |
-| Resend               | Delivering enquiry emails to our team                           | Everything you submit in an enquiry form           |
 | Sanity               | Managing website content                                        | Nothing you submit — content only, no enquiry data |
 | Cloudflare Turnstile | Spam protection on the enquiry form, if spam volume requires it | Technical signals about your browser session       |
 
@@ -389,7 +393,8 @@ IDENTITY
   [x] Trade licence number — 897839
   [x] SIRA licence number — SSP202210037219
   [ ] Licensing authority — THIS ALSO SETTLES THE REGIME QUESTION (federal vs DIFC/ADGM)
-  [ ] Registered address
+  [x] Registered address — The Iridium, 2nd Floor, Office 225, Umm Suqeim St,
+      Al Barsha First, Dubai (confirmed 2026-09-26 against the trade licence)
   [ ] Exact corporate relationship to the parent company
 
 REGULATED SECTOR — NEW, TRIGGERED BY THE SIRA LICENCE
@@ -423,6 +428,10 @@ TRANSFERS
   [ ] Vercel deployment region
   [ ] PDPL transfer mechanism for that corridor, documented in writing
   [ ] Vercel sub-processor list reviewed for onward transfers
+  [ ] Resend sending region — reported as US East (Virginia) on 2026-09-26 and
+      entered in §4.1; confirm in the Resend dashboard (Domains, Region column)
+  [ ] PDPL transfer mechanism for the UAE to US corridor, for Resend
+  [ ] Resend sub-processor list reviewed for onward transfers
 
 RIGHTS
   [ ] Statutory response window (proposed 30 days — verify, do not assume)

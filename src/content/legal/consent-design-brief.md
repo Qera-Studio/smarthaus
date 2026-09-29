@@ -156,21 +156,21 @@ Opened by `Choose what to share`, and from the footer link on any page.
 
 ### Content inventory
 
-| Slot            | Text                                                                                                                                                                                                                              |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Heading         | `Cookie preferences`                                                                                                                                                                                                              |
-| Intro           | `Analytics is off until you turn it on, and you can change this at any time. Declining changes nothing about how the site works for you.`                                                                                         |
-| **Row 1 label** | `Essential`                                                                                                                                                                                                                       |
-| Row 1 control   | `Always on` — a **disabled, visibly-on** state. Not an interactive toggle                                                                                                                                                         |
-| Row 1 body      | `Remembering your cookie choice, keeping the site secure, and rejecting spam submissions. The site cannot work without these, so there is no choice to offer — we would rather say that than present a switch that does nothing.` |
-| **Row 2 label** | `Analytics`                                                                                                                                                                                                                       |
-| Row 2 control   | Toggle, **default OFF**                                                                                                                                                                                                           |
-| Row 2 body      | `Google Analytics and Microsoft Clarity. These tell us which pages people read, where they scroll, and where they give up — so we can fix the parts that are not working.`                                                        |
-| Row 2 detail    | `Clarity records how a page is used, including clicks and scrolling. Anything typed into a form is masked and never recorded.`                                                                                                    |
-| Row 2 retention | `Stored for up to 14 months. Neither tool is used to advertise to you.`                                                                                                                                                           |
-| Button 1        | `Save preferences`                                                                                                                                                                                                                |
-| Button 2        | `Accept analytics`                                                                                                                                                                                                                |
-| Withdrawal note | `Changed your mind? Open cookie preferences from the footer of any page. Turning analytics off stops it immediately.`                                                                                                             |
+| Slot            | Text                                                                                                                                                                       |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Heading         | `Cookie preferences`                                                                                                                                                       |
+| Intro           | `Analytics is off until you turn it on, and you can change this at any time. Declining changes nothing about how the site works for you.`                                  |
+| **Row 1 label** | `Essential`                                                                                                                                                                |
+| Row 1 control   | `Always on` — a **disabled, visibly-on** state. Not an interactive toggle                                                                                                  |
+| Row 1 body      | `Remembering your cookie choice. The site cannot work without it, so there is no choice to offer — we would rather say that than present a switch that does nothing.`      |
+| **Row 2 label** | `Analytics`                                                                                                                                                                |
+| Row 2 control   | Toggle, **default OFF**                                                                                                                                                    |
+| Row 2 body      | `Google Analytics and Microsoft Clarity. These tell us which pages people read, where they scroll, and where they give up — so we can fix the parts that are not working.` |
+| Row 2 detail    | `Clarity records how a page is used, including clicks and scrolling. Anything typed into a form is masked and never recorded.`                                             |
+| Row 2 retention | `Stored for up to 14 months. Neither tool is used to advertise to you.`                                                                                                    |
+| Button 1        | `Save preferences`                                                                                                                                                         |
+| Button 2        | `Accept analytics`                                                                                                                                                         |
+| Withdrawal note | `Changed your mind? Open cookie preferences from the footer of any page. Turning analytics off stops it immediately.`                                                      |
 
 ### Two rows. That is the whole model.
 
@@ -190,11 +190,10 @@ mislabelling.
 │  ────────────────────────────────────────────────────  │
 │                                                        │
 │  Essential                              [ Always on ]  │
-│  Remembering your cookie choice, keeping the site      │
-│  secure, and rejecting spam submissions. The site      │
-│  cannot work without these, so there is no choice      │
-│  to offer — we would rather say that than present      │
-│  a switch that does nothing.                           │
+│  Remembering your cookie choice. The site cannot       │
+│  work without it, so there is no choice to offer —     │
+│  we would rather say that than present a switch        │
+│  that does nothing.                                    │
 │                                                        │
 │  ────────────────────────────────────────────────────  │
 │                                                        │

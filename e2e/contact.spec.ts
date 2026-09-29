@@ -1,5 +1,10 @@
-import { test, expect } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { test, expect } from "./fixtures";
+import {
+  expectAccessible,
+  expectHydrated,
+  expectNoEmDash,
+  expectNoHorizontalOverflow,
+} from "./checks";
 
 /**
  * The contact page — the site's only conversion event.
@@ -24,14 +29,15 @@ const form = (page: import("@playwright/test").Page) => page.locator("main");
 
 test("responds with one h1 and is indexable", async ({ page }) => {
   await expect(page.locator("h1")).toHaveCount(1);
-  await expect(page.getByRole("heading", { level: 1, name: "Contact" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Book a site visit" })).toBeVisible();
   // The placeholder's noindex must be gone, or the real page never ranks.
-  await expect(page.locator('head meta[name="robots"]')).toHaveCount(0);
+  const robots = await page.locator('head meta[name="robots"]').getAttribute("content");
+  expect(robots).toMatch(/^index, follow/);
+  expect(robots).not.toContain("noindex");
 });
 
 test("passes axe accessibility checks", async ({ page }) => {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
+  await expectAccessible(page);
 });
 
 test("no em dashes in the copy, including the collapsed FAQ answers", async ({ page }) => {
@@ -39,8 +45,7 @@ test("no em dashes in the copy, including the collapsed FAQ answers", async ({ p
   // not innerText: a closed <details> hides its answer from the rendered text,
   // so innerText alone would let an em dash through in exactly the copy most
   // likely to be pasted in from elsewhere.
-  const copy = await page.locator("main").textContent();
-  expect(copy).not.toContain("—");
+  await expectNoEmDash(page.locator("main"));
 });
 
 test("a valid submission confirms with the name and number given", async ({ page }) => {
@@ -64,6 +69,9 @@ test("a valid submission confirms with the name and number given", async ({ page
   // A local 05… number typed in comes back as the canonical +971… form. The
   // copy promises a call on this number, so it has to be the number we stored.
   await expect(status).toContainText("+971543755150");
+  // "Usually": the terms say no response time is guaranteed, so the
+  // confirmation must not promise one.
+  await expect(status).toContainText("We’ll usually call you on +971543755150 within the hour");
 
   // The form is replaced, not merely hidden.
   await expect(form(page).getByLabel("Name")).toHaveCount(0);
@@ -71,10 +79,18 @@ test("a valid submission confirms with the name and number given", async ({ page
 });
 
 test("an empty submission names both required fields and focuses the first", async ({ page }) => {
+  // Focus management is client behaviour: tap only once it is live. On CI's
+  // WebKit runner a tap before hydration went down the no-JS path instead.
+  await expectHydrated(page);
   await page.getByRole("button", { name: "Book a site visit" }).click();
 
-  await expect(page.getByText("Add your name so we know who we're calling.")).toBeVisible();
-  await expect(page.getByText("Add a phone number so we can call you back.")).toBeVisible();
+  // Each field's own message (the summary above repeats them as links).
+  await expect(page.locator("#name-error")).toHaveText(
+    "Add your name so we know who we're calling.",
+  );
+  await expect(page.locator("#phone-error")).toHaveText(
+    "Add a phone number so we can call you back.",
+  );
 
   // Focus must move to the first failing field, or a keyboard user is left at
   // the submit button with errors above them they were never told about.
@@ -90,7 +106,9 @@ test("a badly formatted number is rejected on format, not presence", async ({ pa
 
   await page.getByRole("button", { name: "Book a site visit" }).click();
 
-  await expect(page.getByText("Check the number. It should start with +971 or 05.")).toBeVisible();
+  await expect(page.locator("#phone-error")).toHaveText(
+    "Check the number. It should start with +971 or 05.",
+  );
   await expect(form(page).getByLabel("Phone")).toBeFocused();
 });
 
@@ -137,7 +155,13 @@ test("no FAQ structured data while the assessment fee is unconfirmed", async ({ 
   // has signed off. /faq withholds its schema for the same reason.
   //
   // When the fee is confirmed, this assertion inverts rather than gets deleted.
-  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
+  // The site and page schema are here (business, website, page); what must
+  // not be is a FAQPage, or any node carrying the fee.
+  const blocks = await page
+    .locator('script[type="application/ld+json"]')
+    .evaluateAll((els) => els.map((el) => el.textContent ?? ""));
+  expect(blocks.join("")).not.toContain('"FAQPage"');
+  expect(blocks.join("")).not.toMatch(/1,?500/);
 });
 
 test("the fee is stated once, and only where a reader can question it", async ({ page }) => {
@@ -167,11 +191,26 @@ test("the directions link opens safely off-site", async ({ page }) => {
   await expect(link).toHaveAttribute("target", "_blank");
 });
 
+// The email is the longest of the three and the one that broke: in a half-width
+// section it had 464px of row for 484px of text and wrapped mid-domain, so the
+// address read "contact@mapletech.a / e". Height against line-height rather than
+// a screenshot, because the failure is a second line and nothing else.
+test("every contact channel stays on one line", async ({ page }) => {
+  const values = page.locator("section[aria-labelledby='get-in-touch'] li a");
+  await expect(values).toHaveCount(3);
+
+  for (const value of await values.all()) {
+    const lines = await value.evaluate((el) => {
+      const style = getComputedStyle(el);
+      const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5;
+      return Math.round(el.getBoundingClientRect().height / lineHeight);
+    });
+    expect(lines, `${await value.textContent()} wrapped`).toBe(1);
+  }
+});
+
 test("the page does not overflow horizontally", async ({ page }) => {
-  const overflows = await page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth + 1,
-  );
-  expect(overflows).toBe(false);
+  await expectNoHorizontalOverflow(page);
 });
 
 test("the consent boxes start unticked and the required one gates submission", async ({ page }) => {
@@ -189,9 +228,9 @@ test("the consent boxes start unticked and the required one gates submission", a
   await form(page).getByLabel("Name").fill("Ravi");
   await form(page).getByLabel("Phone").fill("0543755150");
   await page.getByRole("button", { name: "Book a site visit" }).click();
-  await expect(
-    page.getByText("Please confirm you would like us to contact you about your enquiry."),
-  ).toBeVisible();
+  await expect(page.locator("#contactConsent-error")).toHaveText(
+    "Please confirm you would like us to contact you about your enquiry.",
+  );
 });
 
 test("the marketing box never gates submission", async ({ page }) => {
@@ -211,4 +250,29 @@ test("the marketing box never gates submission", async ({ page }) => {
 test("the required marker is visible text, not colour alone", async ({ page }) => {
   // A required marker a colourblind visitor cannot perceive is not a marker.
   await expect(form(page).getByText("(required)")).toBeVisible();
+});
+
+// Validation is server-only. The form once imported three plain constants
+// from the Zod schema module, which shipped and ran all of Zod in the
+// browser at load (src/lib/contact-fields.ts). Nothing the browser runs may
+// contain it; Zod's class names survive minification as strings.
+test.describe("the browser's share of the form", () => {
+  for (const path of ["/contact", "/"]) {
+    test(`${path} loads no Zod`, async ({ page }) => {
+      const scripts: string[] = [];
+      page.on("response", async (response) => {
+        if (response.request().resourceType() === "script") scripts.push(response.url());
+      });
+      await page.goto(path);
+      await page.waitForLoadState("networkidle");
+      expect(scripts.length).toBeGreaterThan(0);
+      for (const url of scripts) {
+        const body = await (await page.request.get(url)).text();
+        expect({ url, zod: /ZodObject|ZodError|ZodString/.test(body) }).toEqual({
+          url,
+          zod: false,
+        });
+      }
+    });
+  }
 });

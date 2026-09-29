@@ -1,0 +1,53 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  // No ground of its own: this sits on the page's light canvas like every other
+  // section. It painted a full-bleed brown-950 first, which put two dark blocks
+  // back to back under the Process rail and read as one long tunnel. The dark
+  // ground is the rail's alone.
+  //
+  // It does still set padding-inline, which is unusual here: a row of filled
+  // cards needs a gutter exactly where body stops supplying one. The reasoning
+  // is with the mixin.
+  .pricing {
+    @include card-gutter;
+    padding-block: clamp(#{$space-20}, 10vw, #{$space-32});
+  }
+
+  // --- Intro ------------------------------------------------------------------
+
+  .intro {
+    margin-inline: auto;
+    max-inline-size: 80ch;
+    margin-block-end: clamp(#{$space-12}, 8vw, #{$space-20});
+    text-align: center;
+  }
+
+  .heading {
+    font-size: var(--type-h2);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    max-inline-size: 62ch;
+    margin-inline: auto;
+    margin-block-start: $space-4;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-snug;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  // --- Comparison link --------------------------------------------------------
+
+  .compare {
+    display: flex;
+    justify-content: center;
+    margin-block-start: clamp(#{$space-10}, 5vw, #{$space-16});
+  }
+}

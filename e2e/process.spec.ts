@@ -1,5 +1,5 @@
-import { test, expect } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { test, expect } from "./fixtures";
+import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
 
 /**
  * The "Our Process" rail.
@@ -93,13 +93,11 @@ test("insets every page, and never lets the copy reach the screen edge", async (
 });
 
 test("passes axe accessibility checks", async ({ page }) => {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
+  await expectAccessible(page);
 });
 
 test("no em dashes in the copy", async ({ page }) => {
-  const copy = await rail(page).textContent();
-  expect(copy).not.toContain("—");
+  await expectNoEmDash(rail(page));
 });
 
 test("vertical scrolling drives the track sideways, and the page never scrolls sideways", async ({
@@ -124,10 +122,7 @@ test("vertical scrolling drives the track sideways, and the page never scrolls s
 
   // The whole point of the clipped viewport: the rail moves, the document does
   // not. A horizontal scrollbar here would mean the track escaped its box.
-  const overflows = await page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-  );
-  expect(overflows).toBe(false);
+  await expectNoHorizontalOverflow(page);
 });
 
 test("reaches the last page by the end of the pin window", async ({ page }) => {
@@ -138,12 +133,15 @@ test("reaches the last page by the end of the pin window", async ({ page }) => {
   await page.evaluate(({ top, height }) => window.scrollTo(0, top + height), box);
   await page.waitForTimeout(400);
 
-  // Six pages, so the track travels five of them: -83.33% of its own width.
-  // Asserted as a range rather than a string because the browser rounds.
-  const percent = await rail(page)
+  // Six pages, so the track travels five of them and a little more: the
+  // computed translate is a calc() of a percentage and the overrun, so the
+  // RENDERED offset is read rather than the string parsed.
+  const offset = await rail(page)
     .locator("ol")
-    .evaluate((el) => parseFloat(getComputedStyle(el).translate));
-  expect(percent).toBeLessThan(0);
+    .evaluate(
+      (el) => el.getBoundingClientRect().left - el.parentElement!.getBoundingClientRect().left,
+    );
+  expect(offset).toBeLessThan(0);
 });
 
 /**
@@ -157,33 +155,50 @@ test("reaches the last page by the end of the pin window", async ({ page }) => {
  */
 test.describe("the portal", () => {
   // Percentage of the pin window to scroll to, as a fraction of its travel.
+  //
+  // Converges rather than scrolling once. The target is measured from layout,
+  // and right after load the layout above the rail is still settling: on
+  // WebKit the first jump from the top landed 5 to 8px short of where the rail
+  // then sat (measured, 40 runs: y=1080 to 1083 against 1088.5), while every
+  // later jump landed exactly. At the start of the pin the section above
+  // still moves 1:1 with scroll, so that shortfall read as the "hold" moving
+  // and failed the test on iPhone about one run in fifteen. Re-measuring after
+  // each scroll removes the dependency on when the page happened to settle.
   const at = async (page: import("@playwright/test").Page, fraction: number) => {
-    const box = await rail(page).evaluate((el) => {
-      const rect = el.getBoundingClientRect();
-      return { top: rect.top + window.scrollY, height: rect.height };
-    });
-    await page.evaluate(
-      ({ top, height, fraction }) =>
-        window.scrollTo(0, top + (height - window.innerHeight) * fraction),
-      { ...box, fraction },
-    );
+    let miss = Infinity;
+    for (let attempt = 0; attempt < 5 && miss > 1; attempt += 1) {
+      miss = await rail(page).evaluate(
+        (el, f) =>
+          new Promise<number>((resolve) => {
+            const rect = el.getBoundingClientRect();
+            const target = rect.top + window.scrollY + (rect.height - window.innerHeight) * f;
+            window.scrollTo(0, target);
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => {
+                const now = el.getBoundingClientRect();
+                const settled = now.top + window.scrollY + (now.height - window.innerHeight) * f;
+                resolve(Math.abs(window.scrollY - settled));
+              }),
+            );
+          }),
+        fraction,
+      );
+    }
+    expect(miss, `could not land at ${fraction} of the pin window`).toBeLessThanOrEqual(1);
     await page.waitForTimeout(300);
   };
 
   const portal = (page: import("@playwright/test").Page) =>
     rail(page).locator("[class*='portal']").first();
 
-  // The BLOCK axis of the scale, which is the one the zoom animates at every
-  // width. `scale` computes to "x y", and below lg the x is pinned at 1 so the
-  // slab rises as a full-width band: parseFloat on the whole string reads the x
-  // and reported 1 throughout, which made the zoom look like it never ran.
+  // The RENDERED block-axis scale: painted height over layout height. Not the
+  // computed `scale`, because the zoom is now two scales composed — .grow's
+  // timed half around .portal's scroll-driven half — and neither alone is the
+  // size the reader sees. The block axis because below lg only it zooms.
   const scaleOf = (page: import("@playwright/test").Page) =>
-    portal(page).evaluate((el) => {
-      const parts = getComputedStyle(el).scale.split(/\s+/).map(parseFloat);
-      if (parts.length === 0 || Number.isNaN(parts[0])) return 1;
-      // One value means both axes share it; two means x then y.
-      return parts.length > 1 ? parts[1] : parts[0];
-    });
+    portal(page).evaluate(
+      (el) => el.getBoundingClientRect().height / (el as HTMLElement).offsetHeight,
+    );
 
   test("rises out of the bottom edge and grows upward to fill the stage", async ({ page }) => {
     await at(page, 0);
@@ -210,7 +225,7 @@ test.describe("the portal", () => {
     // By the end of the portal's slice it fills the stage, having grown upward
     // while its bottom stayed put.
     await at(page, 0.25);
-    expect(await scaleOf(page)).toBeGreaterThan(0.99);
+    await expect.poll(() => scaleOf(page)).toBeGreaterThan(0.99);
     const grown = await portal(page).evaluate((el) => el.getBoundingClientRect().top);
     expect(grown).toBeLessThan(small.top);
   });
@@ -286,15 +301,48 @@ test.describe("the portal", () => {
     expect(scale).toBeGreaterThan(0.1);
     expect(scale).toBeLessThan(1);
 
-    // parseFloat("0%") is 0, and so is parseFloat("none") via the || 0 below.
-    const during = await track.evaluate((el) => parseFloat(getComputedStyle(el).translate) || 0);
-    expect(during).toBe(0);
+    // The rendered offset of the track in its viewport, not the computed
+    // translate: that is a calc() of a percentage and the overrun.
+    const offsetOf = () =>
+      track.evaluate(
+        (el) => el.getBoundingClientRect().left - el.parentElement!.getBoundingClientRect().left,
+      );
+    expect(Math.abs(await offsetOf())).toBeLessThan(1);
 
     // Past the boundary the rail is moving and the portal is done.
     await at(page, 0.5);
-    expect(await scaleOf(page)).toBeGreaterThan(0.99);
-    const after = await track.evaluate((el) => parseFloat(getComputedStyle(el).translate) || 0);
-    expect(after).toBeLessThan(0);
+    await expect.poll(() => scaleOf(page)).toBeGreaterThan(0.99);
+    expect(await offsetOf()).toBeLessThan(0);
+  });
+
+  test("finishes growing on its own past the handoff, and shrinks back above it", async ({
+    page,
+  }) => {
+    // Scroll drives the zoom only to --process-portal-handoff (0.5). Just past
+    // the end of that scroll the reader has stopped, and the slab must still
+    // reach full size without another pixel of scrolling.
+    //
+    // Save-Data keeps the hero's three.js canvas off. ProcessHandoff's observer
+    // runs on rendering frames, and headless Chrome draws that canvas in
+    // software: under parallel workers a frame took seconds, so the observer
+    // fired after the poll gave up. Measured, not guessed. It is the hero's
+    // cost, not this section's, and a GPU renders it in a few milliseconds.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "connection", { value: { saveData: true } });
+    });
+    await page.goto("/");
+    const end = await portalEnd(page);
+
+    await at(page, end / 2);
+    expect(await scaleOf(page), "scroll alone stops short of full size").toBeLessThan(0.5);
+
+    await at(page, end * 1.05);
+    await expect.poll(() => scaleOf(page)).toBeGreaterThan(0.99);
+
+    // Back above the handoff it runs back down to scroll's share, smoothly
+    // rather than holding at full size.
+    await at(page, end * 0.9);
+    await expect.poll(() => scaleOf(page)).toBeLessThan(0.5);
   });
 
   test("leaves the hero's buttons clickable while the slab is still small", async ({ page }) => {
@@ -383,9 +431,12 @@ test.describe("the portal", () => {
     // Once it has grown it covers the screen, edge included. A 24px light
     // border down every side is what a clip at the wrong level looks like, and
     // that is exactly what this catches.
+    // Polled: the last half of the grow is a timed transition, not scroll.
     await at(page, 0.3);
     expect(await darkAt(middle.x, middle.y), "centre should be dark once grown").toBe(true);
-    expect(await darkAt(edge.x, edge.y), "viewport edge should be dark once grown").toBe(true);
+    await expect
+      .poll(() => darkAt(edge.x, edge.y), { message: "viewport edge should be dark once grown" })
+      .toBe(true);
   });
 
   test("the growing stage never makes the document scroll sideways", async ({ page }) => {
@@ -455,4 +506,26 @@ test.describe("reduced motion", () => {
     });
     expect(ratio).toBeGreaterThan(0.9);
   });
+});
+
+test("the rail's label tells a keyboard user what moves it, and that works", async ({ page }) => {
+  test.skip(
+    test.info().project.name !== "Desktop Chrome",
+    "the pinned rail, driven by page scroll",
+  );
+  const viewport = page.getByRole("group", { name: /Our process, six panels/ });
+  await expect(viewport).toHaveAttribute(
+    "aria-label",
+    "Our process, six panels. Scroll the page or use the up and down arrow keys to move through them.",
+  );
+  // Bring the pin window on screen, focus the rail, and press Down.
+  await rail(page).evaluate((el) => {
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, top + window.innerHeight);
+  });
+  await viewport.focus();
+  const track = rail(page).locator("ol");
+  const before = await track.evaluate((el) => getComputedStyle(el).translate);
+  for (let i = 0; i < 8; i += 1) await page.keyboard.press("ArrowDown");
+  await expect.poll(() => track.evaluate((el) => getComputedStyle(el).translate)).not.toBe(before);
 });

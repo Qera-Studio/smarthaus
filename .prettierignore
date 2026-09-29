@@ -1,3 +1,8 @@
 .next
 node_modules
 pnpm-lock.yaml
+coverage
+qera-system
+public/draco
+* [2-9].*
+.e2e-mail/

@@ -295,9 +295,8 @@
     border: 0;
     border-radius: 0;
     background-color: transparent;
-    cursor: pointer;
-    // No hover treatment: the cursor change is the affordance, and tinting the
-    // villa on hover would fight the render.
+    // No hover treatment: tinting the villa on hover would fight the render.
+    // The cursor stays the site's dot here as everywhere (globals.scss).
 
     @include focus-ring;
   }
@@ -356,7 +355,6 @@
     font-weight: $font-weight-medium;
     text-align: start;
     white-space: nowrap;
-    cursor: pointer;
 
     transition-property: background-color, color;
     transition-duration: var(--duration-fast);
@@ -390,7 +388,6 @@
     color: var(--color-text-primary);
     font-size: var(--font-size-sm);
     font-weight: $font-weight-medium;
-    cursor: pointer;
 
     transition-property: background-color, color;
     transition-duration: var(--duration-fast);
@@ -592,7 +589,9 @@
         animation-name: hero-leave;
         animation-timing-function: linear;
         animation-fill-mode: both;
-        animation-timeline: view();
+        // Inset zeroed: view()'s default inset is html's scroll-padding,
+        // which is there for focus, not for this range. See Process.module.scss.
+        animation-timeline: view(block 0px);
         animation-range: exit 0% exit 100%;
       }
     }

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Button } from "../Button";
 import { ParticleText } from "../ParticleText";
 import styles from "./ComingSoon.module.scss";
 
@@ -43,9 +43,10 @@ export function ComingSoon({ blurb }: ComingSoonProps) {
 
       <p className={styles.body}>{blurb}</p>
 
-      <Link href="/" className={styles.cta}>
-        Back to home
-      </Link>
+      {/* The wrapper owns the spacing, not the button: see Button.tsx. */}
+      <div className={styles.ctaRow}>
+        <Button href="/">Back to home</Button>
+      </div>
     </section>
   );
 }

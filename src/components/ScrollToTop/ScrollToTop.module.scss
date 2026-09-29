@@ -25,6 +25,8 @@
 
     display: flex;
     align-items: center;
+    // Fixed, so the footer can reserve exactly this much (see Footer.module.scss).
+    min-block-size: var(--scroll-top-block-size);
     padding-block: $space-3;
     padding-inline: $space-4;
 
@@ -35,7 +37,6 @@
     border-radius: 0;
     background-color: var(--color-bg-canvas);
     color: var(--color-text-primary);
-    cursor: pointer;
 
     // Hidden by default, faded and nudged down. `visibility` rather than
     // `display` so the transition has something to run on; the JS `inert`

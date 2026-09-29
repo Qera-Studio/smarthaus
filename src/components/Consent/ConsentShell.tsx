@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { CONSENT_COPY } from "../../content/consent";
 import {
   OPEN_PREFERENCES_EVENT,
@@ -112,13 +112,31 @@ export function ConsentShell({
   idPrefix,
   standalone = false,
 }: ConsentShellProps) {
-  // `null` means "not yet known". Distinct from a resolved state so the banner
-  // cannot flash before the cookie has been read.
-  const [state, setState] = useState<ConsentState | null>(null);
+  // Before the cookie is read, the banner renders as if it will ask, so it is
+  // in the server HTML and paints with the page rather than after hydration:
+  // on a phone's first visit it is the largest thing on screen, and waiting for
+  // hydration made it the LCP element at about 4s (2026-09-27). Whether it
+  // actually SHOWS before hydration is decided by the consent boot script and
+  // Consent.module.scss, so a visitor who has already chosen never sees it
+  // flash. The mount effect below then resolves the real state.
+  const [state, setState] = useState<ConsentState | null>(
+    standalone ? null : { ask: true, analytics: false },
+  );
   const [expanded, setExpanded] = useState(standalone);
   // What the Analytics switch currently says, which is not yet a decision —
   // `Save preferences` is what commits it.
   const [analyticsOn, setAnalyticsOn] = useState(false);
+  // Set once the visitor moves the switch, cleared when a choice is committed.
+  // Until then the stored record decides what the switch shows; after it, the
+  // visitor's unsaved choice does, so a re-read (on mount, or on tab focus)
+  // cannot quietly undo it. That was a real loss on /cookie-preferences: a
+  // toggle made before hydration was adopted, then overwritten by the mount
+  // read of a cookie that said off (e2e/consent.spec.ts, "before hydration").
+  const touched = useRef(false);
+  const chooseAnalytics = useCallback((on: boolean) => {
+    touched.current = true;
+    setAnalyticsOn(on);
+  }, []);
   const [saved, setSaved] = useState(false);
 
   // Ids, all namespaced by idPrefix so two instances cannot collide. Must stay
@@ -142,9 +160,13 @@ export function ConsentShell({
   // The card itself, measured so ScrollToTop can sit above it. See the
   // ResizeObserver effect below.
   const cardRef = useRef<HTMLElement>(null);
-  // False until the first stage change, so the focus effect below does not fire
-  // on mount. See the effect for why that distinction matters.
-  const stageSwitched = useRef(false);
+  // The stage the focus effect below last acted on, so it moves focus only
+  // when the stage actually changed. A one-shot "first run" flag did not
+  // survive React Strict Mode, which runs every effect twice on mount: the
+  // second run saw the flag already set and focused "Choose what to share"
+  // on page load. Comparing against the last stage is true however many
+  // times the effect runs.
+  const lastStage = useRef(expanded);
   const pathname = usePathname();
 
   // Resolve the stored choice after mount, and keep it resolved.
@@ -173,7 +195,10 @@ export function ConsentShell({
     const sync = (force = false) => {
       const next = readConsentState(readConsentCookie(document.cookie));
       setState(force ? { ...next, ask: true } : next);
-      setAnalyticsOn(next.analytics);
+      if (!touched.current) setAnalyticsOn(next.analytics);
+      // React owns the banner from here: the pre-hydration CSS gate stops
+      // applying. Also the e2e suite's hydration witness (e2e/checks.ts).
+      document.documentElement.setAttribute("data-consent-ready", "");
     };
 
     // NODE_ENV is inlined by the bundler, so in a production build this is
@@ -222,6 +247,7 @@ export function ConsentShell({
       });
       setState({ ask: false, analytics: allow });
       setAnalyticsOn(allow);
+      touched.current = false;
       setSaved(true);
       setExpanded(standalone);
     },
@@ -324,10 +350,8 @@ export function ConsentShell({
     // the banner's button here would steal focus from whatever the visitor was
     // doing when the banner appeared — a 3.2.5 change-on-request failure, and
     // far more disruptive than the problem being solved.
-    if (!stageSwitched.current) {
-      stageSwitched.current = true;
-      return;
-    }
+    if (lastStage.current === expanded) return;
+    lastStage.current = expanded;
     if (expanded) {
       panelRef.current?.focus();
       return;
@@ -344,7 +368,12 @@ export function ConsentShell({
   // no banner to dismiss on the preferences page. Also wired while the panel
   // is open with no `ask` outstanding — opened from the footer after a choice
   // — where the first branch below simply closes it.
-  useEffect(() => {
+  //
+  // A layout effect, so the listener is attached in the same commit that puts
+  // the banner on screen. As a passive effect it attached after paint, and on
+  // a slow device an Escape pressed the moment the banner appeared was lost:
+  // the banner was visible and not listening. CI's iPhone project hit it.
+  useLayoutEffect(() => {
     if (standalone || (state?.ask !== true && !expanded)) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -368,9 +397,9 @@ export function ConsentShell({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [standalone, state?.ask, expanded]);
 
-  // Nothing to show until the cookie has been read, and nothing to show once a
-  // choice is on file — unless the panel was opened from the footer, which is
-  // the way back in after a choice. The preferences page always renders.
+  // Nothing to show once a choice is on file, unless the panel was opened from
+  // the footer, which is the way back in after a choice. The preferences page
+  // always renders.
   if (!standalone && (state === null || (!state.ask && !expanded))) return null;
 
   // The banner does not appear on the preferences page.
@@ -536,7 +565,7 @@ export function ConsentShell({
                     labelId={ids.analyticsLabel}
                     describedBy={ids.analyticsBody}
                     checked={analyticsOn}
-                    onChange={setAnalyticsOn}
+                    onChange={chooseAnalytics}
                   />
                 }
               >

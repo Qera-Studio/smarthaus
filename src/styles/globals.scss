@@ -15,6 +15,29 @@
   html {
     background-color: var(--color-bg-canvas);
 
+    // Focus never lands under a fixed bar (WCAG 2.4.11 Focus Not Obscured,
+    // Accessibility System §5). When Tab or a fragment link scrolls something
+    // into view, the browser keeps it this far from each edge. Below lg the nav
+    // is a bar floating at the bottom, so the bottom is reserved; from lg up it
+    // is at the top. The consent banner publishes its height while it shows
+    // (--consent-block-size, ConsentShell) and is reserved on both.
+    //
+    // Trap: a view timeline's inset defaults to this padding. Every view()
+    // and view-timeline in the codebase states a zero inset for that reason;
+    // a new one must too, or its range shifts by the nav's height.
+    scroll-padding-block-start: $space-4;
+    scroll-padding-block-end: calc(
+      var(--nav-float-inset) + var(--nav-bar-block-size) + var(--consent-block-size, 0px) +
+        #{$space-4}
+    );
+
+    @include bp-lg {
+      scroll-padding-block-start: calc(
+        var(--nav-float-inset) + var(--nav-capsule-block-size) + #{$space-4}
+      );
+      scroll-padding-block-end: calc(var(--consent-block-size, 0px) + #{$space-4});
+    }
+
     // No rubber-band at the top or bottom of the page.
     //
     // Overscrolling past either end dragged the whole document and exposed
@@ -136,11 +159,20 @@
     outline-offset: 2px;
   }
 
-  // Links and buttons default to `pointer`, which would override the dot from
-  // html. Inherit instead so the cursor stays consistent everywhere.
+  // The dot is the cursor everywhere, controls included, on the client's
+  // call: no hand over links and buttons, no arrow or I-beam over form
+  // fields, and never hidden. Every control inherits it from html (or the
+  // light dot from a [data-ground="dark"] ancestor). No component stylesheet
+  // sets a cursor of its own; src/styles/__tests__/cursor.test.ts fails if
+  // one does, since a components-layer rule would beat this one.
   a,
   button,
-  [role="button"] {
+  [role="button"],
+  summary,
+  label,
+  select,
+  input,
+  textarea {
     cursor: inherit;
   }
 
@@ -154,6 +186,11 @@
   // The value is re-inlined rather than shared, because var() and SCSS
   // interpolation are both unresolved inside a data URI.
   [data-ground="dark"] {
+    // The focus ring on a dark ground. brown-600, the light-ground ring, is
+    // 3.0:1 on brown-950 and fails on brown-900 (2.85) and brown-800 (2.32);
+    // brown-300 is 6.5:1 or better on all three (WCAG 1.4.11, 2.4.7). Every
+    // focus-ring() that takes the default colour inherits this.
+    --color-border-focus: #{$brown-300};
     cursor:
       url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="8" fill="%23F8F5F0" fill-opacity="0.75"/></svg>')
         20 20,

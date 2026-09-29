@@ -1,5 +1,5 @@
-import { test, expect } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { test, expect } from "./fixtures";
+import { expectAccessible, expectHydrated, expectNoEmDash, withConsentDecided } from "./checks";
 
 /**
  * /faq — the smoke suite AGENTS.md requires of every real page, plus the two
@@ -19,8 +19,7 @@ test.describe("/faq", () => {
 
   test("passes axe accessibility checks", async ({ page }) => {
     await page.goto("/faq");
-    const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations).toEqual([]);
+    await expectAccessible(page);
   });
 
   test("answers are in the DOM while collapsed", async ({ page }) => {
@@ -41,6 +40,10 @@ test.describe("/faq", () => {
     page.locator("details").filter({ hasText: "Where do you work?" }).first();
 
   test("a question opens and closes on click", async ({ page }) => {
+    // Consent decided, as in pricing-page.spec: on CI's iPhone 17 the banner
+    // sat over this question and took the tap (2026-09-27, screenshot in the
+    // run). The banner has its own suite; this is about the disclosure.
+    await withConsentDecided(page);
     await page.goto("/faq");
     const question = disclosure(page);
     await expect(question).not.toHaveAttribute("open", /.*/);
@@ -68,6 +71,7 @@ test.describe("/faq", () => {
   test("each question is announced with its question as the name and its state", async ({
     page,
   }) => {
+    await withConsentDecided(page); // the banner can take the tap; see above
     await page.goto("/faq");
     const question = disclosure(page);
     const summary = question.locator("summary");
@@ -95,6 +99,10 @@ test.describe("/faq", () => {
     // reader had not scrolled. globals.scss now arms the smoothing only while a
     // :target is active.
     await page.goto("/solutions");
+    // This asserts a client-side route change, so tap only once the client
+    // router is live: on CI's WebKit runner a tap before hydration went
+    // nowhere and the test timed out waiting for /faq.
+    await expectHydrated(page);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.getByRole("link", { name: "FAQs" }).click();
     await page.waitForURL("**/faq");
@@ -166,8 +174,7 @@ test.describe("/faq", () => {
     // textContent, not innerText: a closed <details> hides its answer from the
     // rendered text, and on this page 42 of the 42 answers start closed — which
     // is exactly the copy an em dash would slip through in.
-    const copy = await page.locator("main").textContent();
-    expect(copy).not.toContain("—");
+    await expectNoEmDash(page.locator("main"));
   });
 
   test("is noindex and emits no schema while facts are unconfirmed", async ({ page }) => {
@@ -177,7 +184,13 @@ test.describe("/faq", () => {
     // Structured data on a noindex page is a contradictory signal, and these
     // answers still contain figures that must not be quoted back by an answer
     // engine. Invert both assertions in the change that clears the placeholders.
-    await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
+    // The site-wide business and website block is on every page; what must not
+    // be here is the FAQPage, or a page node for a page that refuses indexing.
+    const blocks = await page
+      .locator('script[type="application/ld+json"]')
+      .evaluateAll((els) => els.map((el) => el.textContent ?? ""));
+    expect(blocks.join("")).not.toContain('"FAQPage"');
+    expect(blocks.join("")).not.toContain('"WebPage"');
     await expect(page.locator("[data-placeholder]").first()).toBeAttached();
   });
 });

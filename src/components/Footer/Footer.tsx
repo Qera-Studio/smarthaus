@@ -57,14 +57,15 @@ export function Footer() {
             <p className={styles.newsletterSubtitle}>Subscribe to our newsletters</p>
 
             {/*
-              Disabled deliberately. There is no email backend yet — no Resend,
-              no Server Action, no mailbox wired up — and a field that accepts
-              an address and silently discards it is a dark pattern, and a
-              consent-record problem under UAE PDPL.
+              Disabled deliberately. Resend delivers enquiries, but there is no
+              newsletter list, no subscribe action and no unsubscribe route, and
+              a field that accepts an address and silently discards it is a dark
+              pattern, and a consent-record problem under UAE PDPL.
 
-              To go live: add the Server Action + Zod + honeypot + Resend stack
-              per AGENTS.md, drop the `disabled` attributes and this note, and
-              add the schema test.
+              To go live: add a subscribe Server Action + Zod + honeypot, a list
+              to hold the addresses, an unsubscribe route and a privacy-policy
+              row, drop the `disabled` attributes and this note, and add the
+              schema test.
             */}
             <div className={styles.field} data-disabled>
               {/* A real label, not just the placeholder: the placeholder sits
@@ -227,8 +228,10 @@ function LinkColumn({
         {title}
       </h2>
       <ul className={styles.linkList} aria-labelledby={id}>
+        {/* Keyed by label: the install links share one href until /solutions
+            has its sections (nav-links.ts). */}
         {links.map(({ href, label }) => (
-          <li key={href}>
+          <li key={label}>
             <Link className={styles.link} href={href}>
               <RollingText>{label}</RollingText>
             </Link>

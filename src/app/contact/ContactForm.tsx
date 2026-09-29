@@ -4,11 +4,12 @@ import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 
-import { HONEYPOT_FIELD, INTERESTS } from "../../lib/contact-schema";
+import { Button } from "../../components/Button";
+import { HONEYPOT_FIELD, INTERESTS, MAX_LENGTH } from "../../lib/contact-fields";
 import { CONSENT_FORM_COPY } from "../../content/consent";
 import { whatsappLink } from "../../lib/contact";
 import { submitEnquiry, submitShortEnquiry } from "./actions";
-import { INITIAL_STATE, type ContactState } from "./state";
+import { INITIAL_STATE, type ContactState, type FieldErrors } from "./state";
 import styles from "./page.module.scss";
 
 /**
@@ -23,7 +24,55 @@ import styles from "./page.module.scss";
 // Order matters: the first failing field in this list is the one focused. The
 // consent checkbox is last because it sits below the field grid, so sending a
 // visitor there only happens when nothing above it also failed.
-const FOCUS_ORDER = ["name", "email", "phone", "interest", "contactConsent"] as const;
+// Visual order, so the first field focused is the first one the eye meets.
+const FOCUS_ORDER = [
+  "name",
+  "email",
+  "phone",
+  "community",
+  "interest",
+  "message",
+  "contactConsent",
+] as const;
+
+/**
+ * Stated before the visitor types, not only in the error (WCAG 3.3.2, and
+ * Accessibility System §12: format requirements given upfront).
+ */
+const PHONE_HINT = "A UAE mobile number. Starting with 05 or +971 both work.";
+const MESSAGE_HINT = `Optional. Up to ${MAX_LENGTH.message.toLocaleString("en-US")} characters.`;
+
+/** A field's hint and error, in reading order, as one aria-describedby. */
+function describedBy(id: string, hasHint: boolean, error: string | undefined) {
+  return [hasHint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
+}
+
+/**
+ * Every problem at once, above the form, as the one announcement
+ * (Accessibility System §12: errors summarised, focus moved to the error
+ * context). Each item links to its field. Focus still moves to the first
+ * field, so the per-field messages are not alerts themselves: announcing each
+ * one as well would read the same errors twice. They are read with their
+ * field, through aria-describedby.
+ */
+function ErrorSummary({ errors }: { errors: FieldErrors }) {
+  const fields = FOCUS_ORDER.filter((field) => errors[field]);
+  if (fields.length === 0) return null;
+  return (
+    <div className={styles.formError} role="alert">
+      <p>{fields.length === 1 ? "Check this before sending:" : "Check these before sending:"}</p>
+      <ul className={styles.errorList}>
+        {fields.map((field) => (
+          <li key={field}>
+            <a className={styles.inlineLink} href={`#${field}`}>
+              {errors[field]}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 /**
  * `short` is the homepage form above the footer: name, email, phone, message.
@@ -38,7 +87,7 @@ const FOCUS_ORDER = ["name", "email", "phone", "interest", "contactConsent"] as 
  */
 export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }) {
   const short = variant === "short";
-  const [state, formAction] = useActionState(
+  const [state, formAction, isPending] = useActionState(
     short ? submitShortEnquiry : submitEnquiry,
     INITIAL_STATE,
   );
@@ -72,11 +121,25 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
   const values = state.status === "invalid" || state.status === "failed" ? state.values : {};
 
   return (
-    <form ref={formRef} action={formAction} className={styles.form} noValidate>
+    <form
+      ref={formRef}
+      action={formAction}
+      className={styles.form}
+      noValidate
+      // The submit button stays focusable while sending (see Submit), so it can
+      // be pressed again; this is what stops a second send.
+      onSubmit={(event) => {
+        if (isPending) event.preventDefault();
+      }}
+    >
+      {state.status === "invalid" && <ErrorSummary errors={state.fieldErrors} />}
+
       {/* Announces the send failure, which belongs to no single field. */}
       {state.status === "failed" && (
         <p className={styles.formError} role="alert">
-          That didn&rsquo;t send.{" "}
+          {state.reason === "rate-limited"
+            ? "Several enquiries have come from here in the last few minutes, so this one was not sent. Try again in a few minutes. "
+            : "That didn’t send. "}
           <a
             className={styles.inlineLink}
             href={whatsappLink("Hi, I tried the enquiry form on your site and it did not send.")}
@@ -96,11 +159,12 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             name="name"
             type="text"
             autoComplete="name"
+            maxLength={MAX_LENGTH.name}
             defaultValue={values.name}
             placeholder="enter full name"
             className={styles.input}
             aria-invalid={errors.name ? true : undefined}
-            aria-describedby={errors.name ? "name-error" : undefined}
+            aria-describedby={describedBy("name", false, errors.name)}
           />
         </Field>
 
@@ -110,15 +174,16 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             name="email"
             type="email"
             autoComplete="email"
+            maxLength={MAX_LENGTH.email}
             defaultValue={values.email}
             placeholder="enter email"
             className={styles.input}
             aria-invalid={errors.email ? true : undefined}
-            aria-describedby={errors.email ? "email-error" : undefined}
+            aria-describedby={describedBy("email", false, errors.email)}
           />
         </Field>
 
-        <Field id="phone" label="Phone" error={errors.phone}>
+        <Field id="phone" label="Phone" error={errors.phone} hint={PHONE_HINT}>
           {/* The prefix is adjacent text, not the input's value: someone typing
               a local 05… number would otherwise produce "+97105…". */}
           <span className={styles.prefix} aria-hidden="true">
@@ -130,24 +195,28 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             type="tel"
             inputMode="tel"
             autoComplete="tel"
+            maxLength={MAX_LENGTH.phone}
             defaultValue={values.phone}
             placeholder="enter phone number"
             className={styles.input}
             aria-invalid={errors.phone ? true : undefined}
-            aria-describedby={errors.phone ? "phone-error" : undefined}
+            aria-describedby={describedBy("phone", true, errors.phone)}
           />
         </Field>
 
         {!short && (
-          <Field id="community" label="Community">
+          <Field id="community" label="Community" error={errors.community}>
             <input
               id="community"
               name="community"
               type="text"
               autoComplete="address-level2"
+              maxLength={MAX_LENGTH.community}
               defaultValue={values.community}
               placeholder="eg. Dubai Hills"
               className={styles.input}
+              aria-invalid={errors.community ? true : undefined}
+              aria-describedby={describedBy("community", false, errors.community)}
             />
           </Field>
         )}
@@ -160,7 +229,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
               defaultValue={values.interest ?? INTERESTS[1]}
               className={styles.select}
               aria-invalid={errors.interest ? true : undefined}
-              aria-describedby={errors.interest ? "interest-error" : undefined}
+              aria-describedby={describedBy("interest", false, errors.interest)}
             >
               {INTERESTS.map((interest) => (
                 <option key={interest} value={interest}>
@@ -171,14 +240,17 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
           </Field>
         )}
 
-        <Field id="message" label="Message">
+        <Field id="message" label="Message" error={errors.message} hint={MESSAGE_HINT}>
           <input
             id="message"
             name="message"
             type="text"
+            maxLength={MAX_LENGTH.message}
             defaultValue={values.message}
             placeholder="enter message"
             className={styles.input}
+            aria-invalid={errors.message ? true : undefined}
+            aria-describedby={describedBy("message", true, errors.message)}
           />
         </Field>
       </div>
@@ -312,7 +384,7 @@ function Checkbox({
         </p>
       )}
       {error && (
-        <p id={errorId} className={styles.fieldError} role="alert">
+        <p id={errorId} className={styles.fieldError}>
           {error}
         </p>
       )}
@@ -324,9 +396,13 @@ function Checkbox({
 function Submit() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className={styles.submit} disabled={pending}>
-      {pending ? "Sending" : "Book a site visit"}
-    </button>
+    // The row owns the spacing and the left alignment; the button owns the
+    // band. See Button.tsx for why it carries no margin of its own.
+    <div className={styles.submitRow}>
+      <Button type="submit" loading={pending}>
+        {pending ? "Sending" : "Book a site visit"}
+      </Button>
+    </div>
   );
 }
 
@@ -334,11 +410,14 @@ function Field({
   id,
   label,
   error,
+  hint,
   children,
 }: {
   id: string;
   label: string;
   error?: string | undefined;
+  /** Format or limit, under the control and before any error (WCAG 3.3.2). */
+  hint?: string | undefined;
   children: React.ReactNode;
 }) {
   return (
@@ -351,8 +430,17 @@ function Field({
       <div className={styles.control} data-invalid={error ? "true" : undefined}>
         {children}
       </div>
+      {/* Under the control, not between label and control: a hint above
+          pushed one input of a pair lower than its neighbour (the home
+          enquiry's Phone beside Email). Still before the error in reading
+          order and in aria-describedby. */}
+      {hint && (
+        <p id={`${id}-hint`} className={styles.hint}>
+          {hint}
+        </p>
+      )}
       {error && (
-        <p id={`${id}-error`} className={styles.fieldError} role="alert">
+        <p id={`${id}-error`} className={styles.fieldError}>
           {error}
         </p>
       )}
@@ -364,7 +452,7 @@ function Confirmation({ state }: { state: Extract<ContactState, { status: "ok" }
   return (
     <div className={styles.confirmation} role="status">
       <p className={styles.confirmationLead}>
-        Thanks{state.name ? `, ${state.name}` : ""}. We&rsquo;ll call you
+        Thanks{state.name ? `, ${state.name}` : ""}. We&rsquo;ll usually call you
         {state.phone ? ` on ${state.phone}` : ""} within the hour during business hours.
       </p>
       <p className={styles.confirmationBody}>
@@ -372,14 +460,13 @@ function Confirmation({ state }: { state: Extract<ContactState, { status: "ok" }
         install.
       </p>
       <div className={styles.confirmationActions}>
-        <a
-          className={styles.submit}
+        <Button
           href={whatsappLink("Hi, I just booked a site visit through your website.")}
           target="_blank"
           rel="noopener noreferrer"
         >
           Message us on WhatsApp
-        </a>
+        </Button>
         <Link className={styles.secondaryCta} href="/solutions">
           See what we install
         </Link>

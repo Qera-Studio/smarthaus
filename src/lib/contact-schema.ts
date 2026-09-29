@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { HONEYPOT_FIELD, INTERESTS, MAX_LENGTH } from "./contact-fields";
+
+// Re-exported so the server side reads the whole contract from one place.
+// The browser imports ./contact-fields directly and never loads Zod.
+export { HONEYPOT_FIELD, INTERESTS, MAX_LENGTH };
 
 /**
  * The enquiry form's contract. The server is the only validator that matters —
@@ -7,15 +12,6 @@ import { z } from "zod";
  * Error strings live here rather than in the component so the message a field
  * shows and the message the server produced cannot drift apart.
  */
-
-/** Verbatim from the brief. The value IS the label — there is no code to map. */
-export const INTERESTS = [
-  "Smart home for my villa",
-  "Cameras and security",
-  "Both",
-  "I'm a designer or project manager",
-  "Something else",
-] as const;
 
 /**
  * A UAE number, written the way people actually write it: `+971 54 375 5150`,
@@ -46,12 +42,17 @@ const normalisePhone = (value: string) =>
  */
 const UAE_PHONE = /^\+9715\d{8}$/;
 
-const name = z.string().trim().min(1, { message: "Add your name so we know who we're calling." });
+const name = z
+  .string()
+  .trim()
+  .min(1, { message: "Add your name so we know who we're calling." })
+  .max(MAX_LENGTH.name, { message: `Keep the name to ${MAX_LENGTH.name} characters or fewer.` });
 
 const phone = z
   .string()
   .trim()
   .min(1, { message: "Add a phone number so we can call you back." })
+  .max(MAX_LENGTH.phone, { message: "Check the number. It should start with +971 or 05." })
   .transform(normalisePhone)
   .refine((value) => UAE_PHONE.test(value), {
     message: "Check the number. It should start with +971 or 05.",
@@ -74,9 +75,14 @@ const optionalText = z
   .optional();
 
 const optionalEmail = optionalText.refine(
-  (value) => value === undefined || z.email().safeParse(value).success,
+  (value) =>
+    value === undefined || (value.length <= MAX_LENGTH.email && z.email().safeParse(value).success),
   { message: "Check the email address." },
 );
+
+/** Optional free text with a ceiling. */
+const boundedText = (max: number, message: string) =>
+  optionalText.refine((value) => value === undefined || value.length <= max, { message });
 
 /**
  * An unticked checkbox posts nothing at all; a ticked one posts "on". So the
@@ -117,8 +123,14 @@ const baseSchema = z.object({
   name,
   phone,
   email: optionalEmail,
-  community: optionalText,
-  message: optionalText,
+  community: boundedText(
+    MAX_LENGTH.community,
+    `Keep the community to ${MAX_LENGTH.community} characters or fewer.`,
+  ),
+  message: boundedText(
+    MAX_LENGTH.message,
+    `Keep the message to ${MAX_LENGTH.message.toLocaleString("en-US")} characters or fewer. We can cover the rest on the call.`,
+  ),
   /**
    * Not from the brief's field list. `interest` is a closed set, so an
    * unrecognised value means the payload was not produced by our form.
@@ -161,9 +173,3 @@ export const shortContactSchema = baseSchema.omit({
 
 export type ContactInput = z.input<typeof contactSchema>;
 export type ContactData = z.infer<typeof contactSchema>;
-
-/**
- * The honeypot's field name. `company` rather than anything containing "honey"
- * or "hp" — a bot that reads field names should see a field it wants to fill.
- */
-export const HONEYPOT_FIELD = "company";

@@ -129,7 +129,7 @@
     // invalidate the whole declaration.
     border-block-end-style: solid;
     border-block-end-width: 1px;
-    border-block-end-color: var(--color-border);
+    border-block-end-color: var(--color-border-input);
 
     transition-property: border-block-end-color;
     transition-duration: var(--duration-fast);
@@ -219,7 +219,6 @@
     background-repeat: no-repeat;
     background-position: right center;
     background-size: 16px 16px;
-    cursor: pointer;
 
     // The open list. Chrome 135+ and Edge render it from CSS once the control
     // opts in via appearance: base-select; Safari and Firefox ignore the whole
@@ -296,6 +295,19 @@
     max-inline-size: 52ch;
   }
 
+  // A field's format or limit, under the control and before any error.
+  .hint {
+    margin-block-start: $space-1;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .errorList {
+    margin-block-start: $space-2;
+    padding-inline-start: $space-5;
+    list-style: disc;
+  }
+
   .inlineLink {
     color: inherit;
     text-decoration-line: underline;
@@ -303,38 +315,12 @@
     @include focus-ring;
   }
 
-  .submit {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  // The band is the Button component. This places it: left-aligned rather than
+  // stretched, which is what `align-self` bought when the button was itself a
+  // flex item of the form.
+  .submitRow {
     align-self: flex-start;
     margin-block-start: $space-8;
-    padding-block: $space-3;
-    padding-inline: $space-6;
-    border: 0;
-    border-radius: 0;
-    background-color: var(--color-bg-inverse-strong);
-    color: var(--color-text-inverse);
-    font-family: inherit;
-    font-size: var(--font-size-sm);
-    font-weight: $font-weight-semibold;
-    text-decoration: none;
-    cursor: pointer;
-
-    transition-property: background-color, opacity;
-    transition-duration: var(--duration-fast);
-    transition-timing-function: var(--ease-out);
-
-    &:hover {
-      background-color: var(--color-hover);
-    }
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-
-    @include focus-ring;
   }
 
   // --- Confirmation ---------------------------------------------------------
@@ -387,6 +373,19 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: $space-4;
     }
+
+    // The one section body that spans both of .section's columns rather than
+    // sitting in the right one. Three values across half the page is 464px of
+    // room at lg for 484px of text, so the email wrapped mid-domain
+    // ("contact@mapletech.a / e") through the whole 1024-1220 band. Widening
+    // the row is the only fix that holds: at half width no font size fits, and
+    // the 50/50 split is deliberate for every other section here.
+    //
+    // The title keeps its own column, so the section still reads as a pair —
+    // the channels simply start under it instead of beside it.
+    @include bp-lg {
+      grid-column: 1 / -1;
+    }
   }
 
   .channel {
@@ -399,8 +398,8 @@
   // Inverted against the other label/value pairs on this page, deliberately.
   // Here the value IS the content — a number someone is about to dial — and the
   // label only says which channel it is. So the label takes the quiet treatment
-  // and the value takes the weight. Both sizes step up 2px from the page's
-  // small-text default.
+  // and the value takes the weight. The label steps up 2px from the page's
+  // small-text default; the value sits one token above it.
   .channelLabel {
     font-size: calc(var(--font-size-sm) + 2px);
     font-weight: $font-weight-regular;
@@ -408,9 +407,9 @@
   }
 
   .channelValue {
-    // Interpolated so Sass emits the calc() verbatim. Written plainly it folds
-    // the expression and silently drops the + 2px, leaving 18px.
-    font-size: #{"calc(var(--font-size-md) + 2px)"};
+    // One token under md. At md the email and both numbers were still wider
+    // than their third of the row on some screens and wrapped to a second line.
+    font-size: var(--font-size-base);
     font-weight: $font-weight-semibold;
     color: var(--color-text-primary);
     overflow-wrap: anywhere;
@@ -548,7 +547,6 @@
     padding-block: $space-4;
     font-size: var(--type-body-lg);
     color: var(--color-text-primary);
-    cursor: pointer;
     list-style: none;
 
     // Safari still paints the disclosure triangle without this.
@@ -682,7 +680,6 @@
     border-color: var(--color-text-secondary);
     border-radius: 0;
     background-color: var(--color-bg-surface);
-    cursor: pointer;
 
     transition-property: background-color, border-color;
     transition-duration: var(--duration-fast);
@@ -706,7 +703,6 @@
     font-size: var(--font-size-sm);
     line-height: $line-height-relaxed;
     color: var(--color-text-primary);
-    cursor: pointer;
   }
 
   // Visible text, never colour alone.

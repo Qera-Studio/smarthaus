@@ -4,6 +4,15 @@ type RollingTextProps = {
   children: string;
   /** Seconds between each character starting its roll. */
   stagger?: number;
+  /**
+   * `letter` rolls each character in turn; `word` rolls the whole word as one
+   * piece, in three elements instead of one per character. The footer used
+   * `word` for a morning on 2026-09-28 to cut ~375 elements off the homepage;
+   * Shivanshu asked for the per-letter roll back the same day, so nothing
+   * uses `word` now and e2e/dom-budget.spec.ts carries the cost. The option
+   * stays for the day the budget matters more than the roll.
+   */
+  by?: "letter" | "word";
   className?: string;
 };
 
@@ -11,40 +20,49 @@ type RollingTextProps = {
  * Character-roll hover effect: each letter slides up and out while a copy
  * rolls in from below, staggered left to right.
  *
- * Server Component — no JavaScript ships. The animation is two stacked copies
- * of each character moved by CSS transforms, with the per-character delay set
- * by a custom property on each span.
+ * Server Component, no JavaScript. One span per character, and nothing else
+ * per character: the incoming copy is the character's own `text-shadow`,
+ * drawn one line below it, and the stagger comes from :nth-child rules in the
+ * stylesheet. It was four spans and an inline style per character, which in
+ * the nav and footer came to about 1,500 elements on every page, repeated in
+ * the page's embedded React data (measured 2026-09-28: the footer was 1,284 of
+ * the homepage's 1,870 elements). Every one was parsed, styled, laid out and
+ * hydrated on load, on a phone.
  *
- * The duplicate copy is aria-hidden and the whole effect is wrapped so screen
- * readers announce the word once, not letter by letter.
+ * The animated copy is aria-hidden and the real text sits beside it, so
+ * screen readers announce the word once, not letter by letter.
  */
-export function RollingText({ children, stagger = 0.02, className }: RollingTextProps) {
-  const chars = [...children];
-
+export function RollingText({
+  children,
+  stagger = 0.02,
+  by = "letter",
+  className,
+}: RollingTextProps) {
   return (
-    <span className={[styles.roll, className].filter(Boolean).join(" ")}>
+    <span
+      className={[styles.roll, className].filter(Boolean).join(" ")}
+      // One custom property per word, not one per character.
+      style={
+        stagger === 0.02 ? undefined : ({ "--roll-stagger": `${stagger}s` } as React.CSSProperties)
+      }
+    >
       {/* The accessible name. Splitting text into per-character spans makes
           some screen readers spell the word out, so the real text is here and
           the animated copy is hidden from the a11y tree. */}
       <span className={styles.label}>{children}</span>
 
       <span className={styles.animation} aria-hidden="true">
-        {chars.map((char, i) => (
-          <span
+        {by === "word" ? (
+          <span className={styles.char}>{children}</span>
+        ) : (
+          [...children].map((char, i) => (
             // Characters have no stable identity; index is the correct key.
-            key={i}
-            className={styles.char}
-          >
-            <span
-              className={styles.charColumn}
-              style={{ "--char-delay": `${i * stagger}s` } as React.CSSProperties}
-            >
+            <span key={i} className={styles.char}>
               {/* Non-breaking space keeps the cell width for real spaces. */}
-              <span className={styles.charIn}>{char === " " ? "\u00A0" : char}</span>
-              <span className={styles.charOut}>{char === " " ? "\u00A0" : char}</span>
+              {char === " " ? " " : char}
             </span>
-          </span>
-        ))}
+          ))
+        )}
       </span>
     </span>
   );

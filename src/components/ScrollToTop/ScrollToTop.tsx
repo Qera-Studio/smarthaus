@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import styles from "./ScrollToTop.module.scss";
+import { latestEntry } from "@/lib/observer";
 
 /**
  * A back-to-top button that appears once the page top has scrolled away.
@@ -24,8 +25,8 @@ export function ScrollToTop() {
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
-    const io = new IntersectionObserver(([entry]) => {
-      setVisible(!entry?.isIntersecting);
+    const io = new IntersectionObserver((entries) => {
+      setVisible(!latestEntry(entries)?.isIntersecting);
     });
     io.observe(el);
     return () => io.disconnect();
@@ -47,26 +48,43 @@ export function ScrollToTop() {
   //
   // Margins are negative insets from each viewport edge, measured off the
   // button's real box so the band tracks it across breakpoints rather than
-  // duplicating the CSS offsets here.
+  // duplicating the CSS offsets here. All four sides: with only top and
+  // bottom the band spanned the whole viewport width, so a dark block anywhere
+  // in the button's row counted as behind it. That went unseen while the
+  // consent banner mounted after this effect; once the banner was in the
+  // server HTML (2026-09-27) its card, beside the button rather than under
+  // it, turned the button dark over light prose.
   useEffect(() => {
     const button = buttonRef.current;
     const targets = document.querySelectorAll('[data-ground="dark"]');
     if (!button || targets.length === 0) return;
 
     let io: IntersectionObserver | undefined;
+    // Last known state of every dark section. Kept across rebuilds of the
+    // observer; a fresh one reports every target again on its first callback.
+    const over = new Map<Element, boolean>();
 
     const observe = () => {
       io?.disconnect();
       const box = button.getBoundingClientRect();
-      const top = Math.round(box.top);
-      const bottom = Math.round(window.innerHeight - box.bottom);
+      // Never below zero: an edge the box has crossed (hidden, it is nudged
+      // down past the bottom on a short viewport) gave "--8px", which the
+      // browser refuses, and the constructor threw on the whole page.
+      const inset = (distance: number) => Math.max(0, Math.round(distance));
+      const top = inset(box.top);
+      const bottom = inset(window.innerHeight - box.bottom);
+      const left = inset(box.left);
+      const right = inset(document.documentElement.clientWidth - box.right);
       io = new IntersectionObserver(
         (entries) => {
-          // Several dark sections could be observed, so this cannot read one
-          // entry — it asks whether ANY of them currently overlaps the band.
-          setOnDark(entries.some((entry) => entry.isIntersecting));
+          // Several dark sections are observed, and a callback carries entries
+          // only for the ones that CHANGED. Asking "does any entry intersect"
+          // forgot a section still under the button whenever a different one
+          // left the band. Record each target's state, then ask of all of them.
+          for (const entry of entries) over.set(entry.target, entry.isIntersecting);
+          setOnDark([...over.values()].some(Boolean));
         },
-        { rootMargin: `-${top}px 0px -${bottom}px 0px`, threshold: 0 },
+        { rootMargin: `-${top}px -${right}px -${bottom}px -${left}px`, threshold: 0 },
       );
       targets.forEach((target) => io?.observe(target));
     };

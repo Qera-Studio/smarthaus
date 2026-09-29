@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
+import { expectNoHorizontalOverflow, withConsentDecided } from "./checks";
 
 /**
  * The footer's two load-bearing behaviours, both of which are invisible to a
@@ -26,6 +27,12 @@ test.skip(
   ({ isMobile }) => Boolean(isMobile),
   "viewport-geometry assertions; runs on the desktop project only",
 );
+
+// The footer's own geometry, without the consent banner, whose height the
+// footer adds to its padding while the banner shows.
+test.beforeEach(async ({ page }) => {
+  await withConsentDecided(page);
+});
 
 /** Read the three children of the footer: top, spacer, bottom. */
 async function measure(page: import("@playwright/test").Page, width: number, height: number) {
@@ -71,10 +78,7 @@ test("the ground bleeds past the content cap without horizontal overflow", async
   await page.setViewportSize({ width: 1800, height: 900 });
   await page.goto("/");
 
-  const overflows = await page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth,
-  );
-  expect(overflows).toBe(false);
+  await expectNoHorizontalOverflow(page);
 
   // The footer box itself stops at the 1440px cap — that is expected. What
   // must be true is that its painted ground still reaches both edges.

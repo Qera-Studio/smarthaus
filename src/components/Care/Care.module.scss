@@ -4,8 +4,10 @@
 @layer components {
   // No padding-inline: body already carries the site-wide cap and gutter
   // (globals.scss), so a gutter here would be a second one on top of it.
+  // 96px above and below, fixed rather than fluid, on the client's call. The
+  // row inside carries no bottom padding of its own so this is the whole gap.
   .care {
-    padding-block: clamp(#{$space-20}, 10vw, #{$space-32}) 0;
+    padding-block: $space-24;
   }
 
   // --- Lead-in --------------------------------------------------------------
@@ -44,7 +46,9 @@
   .row {
     display: grid;
     gap: $space-10;
-    padding-block: $space-3 clamp(#{$space-16}, 10vw, #{$space-24});
+    // Top only: the gap between the rule and the content. The section's own
+    // padding is the gap below.
+    padding-block: $space-3 0;
     border-block-start-style: solid;
     border-block-start-width: 1px;
     border-block-start-color: var(--color-border);

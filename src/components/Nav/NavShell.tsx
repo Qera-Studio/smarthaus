@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import styles from "./Nav.module.scss";
+import { latestEntry } from "@/lib/observer";
+import { trackNavWidths } from "./measure";
 
 /**
  * How much of the viewport the footer must cover before the nav hides. The
@@ -48,6 +50,8 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
   // panel: the bar is part of the open nav, and a tap on the hamburger must
   // reach its own onClick rather than being closed out from under it.
   const headerRef = useRef<HTMLElement>(null);
+  const linksRef = useRef<HTMLElement>(null);
+  const ctaRef = useRef<HTMLSpanElement>(null);
 
   // Desktop capsule trigger. A sentinel plus IntersectionObserver rather than a
   // scroll listener, which AGENTS.md rules out — this fires twice per crossing
@@ -55,8 +59,8 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
-    const io = new IntersectionObserver(([entry]) => {
-      setStuck(!entry?.isIntersecting);
+    const io = new IntersectionObserver((entries) => {
+      setStuck(!latestEntry(entries)?.isIntersecting);
     });
     io.observe(el);
     return () => io.disconnect();
@@ -80,7 +84,8 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
     const el = document.querySelector("footer");
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => {
+      (entries) => {
+        const entry = latestEntry(entries);
         if (!entry) return;
         // Intersecting the shortened root means the footer's top has passed
         // the trigger line — i.e. it now covers at least FOOTER_HIDE_RATIO of
@@ -163,6 +168,9 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
     return () => document.removeEventListener("pointerdown", onPointerDown, { capture: true });
   }, [open]);
 
+  // The capsule's geometry uses the widths this platform renders: measure.ts.
+  useEffect(() => trackNavWidths(headerRef.current!, linksRef.current!, ctaRef.current!), []);
+
   return (
     <>
       {/* Marks the top of the page. Once it scrolls out, the nav is "stuck". */}
@@ -182,10 +190,20 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
         inert={atFooter || undefined}
       >
         {/*
-          The panel comes FIRST so that below lg — where <header> is a flex
-          column pinned to the bottom of the screen — it grows upward while the
-          bar stays welded to the bottom edge. This is source order doing the
-          work; an `order` property cannot, and previously did not.
+          Source order is focus order: brand, then the links, then the toggle
+          and the CTA, which is the order they read left to right on desktop.
+          The brand used to sit after the panel, so Tab ran through the centre
+          links, jumped back to the logo, then on to the CTA (WCAG 2.4.3,
+          e2e/keyboard.spec.ts). Neither band's layout depends on this order:
+          both place every piece by grid row and column (Nav.module.scss).
+        */}
+        <span className={styles.brandMark}>{brandMark}</span>
+        <span className={styles.brandFull}>{brandFull}</span>
+
+        {/*
+          Below lg the panel is placed in the row ABOVE the bar, and the box
+          is pinned by its bottom edge, so opening it grows the capsule upward
+          while the bar stays welded to the bottom.
 
           `inert` when closed, not just visually clipped: overflow alone would
           leave the links tabbable and in the accessibility tree, giving
@@ -194,7 +212,7 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
         */}
         <div id={panelId} className={styles.panel} inert={(!isDesktop && !open) || undefined}>
           <div className={styles.panelInner}>
-            <nav className={styles.panelLinks} aria-label="Primary">
+            <nav ref={linksRef} className={styles.panelLinks} aria-label="Primary">
               {links}
             </nav>
             <div className={styles.panelFooter}>{footer}</div>
@@ -202,9 +220,6 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
         </div>
 
         <div className={styles.bar}>
-          <span className={styles.brandMark}>{brandMark}</span>
-          <span className={styles.brandFull}>{brandFull}</span>
-
           <button
             ref={toggleRef}
             type="button"
@@ -222,7 +237,9 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
             </svg>
           </button>
 
-          <span className={styles.ctaSlot}>{cta}</span>
+          <span ref={ctaRef} className={styles.ctaSlot}>
+            {cta}
+          </span>
         </div>
       </header>
     </>

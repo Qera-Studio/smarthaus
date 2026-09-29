@@ -297,10 +297,12 @@ Our [Privacy Policy](/privacy) explains what personal information we collect, wh
 
 These terms are governed by the federal laws of the United Arab Emirates and the laws of the Emirate of Dubai.
 
-The courts of Dubai, United Arab Emirates have jurisdiction over any dispute arising out of or in connection with these terms or your use of this website.
+The courts of [PLACEHOLDER: forum — counsel to confirm] have jurisdiction over any dispute arising out of or in connection with these terms or your use of this website.
 
 <!-- COUNSEL REVIEW POINT — (counsel), Legal System §14 "Governing law & dispute
-     resolution". Drafted as the expected position for a Dubai mainland entity.
+     resolution". The expected position for a Dubai mainland entity is the
+     courts of Dubai; it is a placeholder (decided 2026-09-26, matching the
+     rendered page) until the entity's licensing confirms it.
      MUST be confirmed against the actual entity licensing — IF THE ENTITY IS
      DIFC OR ADGM, THE FORUM IS DIFFERENT (those zones have their own courts and
      their own law), and this clause would be wrong. This is the same open
@@ -333,7 +335,8 @@ IDENTITY (same set as the privacy policy — fill both together)
   [ ] Licensing authority and jurisdiction  ← ALSO SETTLES §14 FORUM
   [x] Trade licence number — 897839
   [x] SIRA licence number — SSP202210037219
-  [ ] Registered address
+  [x] Registered address — The Iridium, 2nd Floor, Office 225, Umm Suqeim St,
+      Al Barsha First, Dubai (confirmed 2026-09-26 against the trade licence)
   [ ] hello@ inbox
   [ ] Effective date — set on counsel sign-off, not on merge
 

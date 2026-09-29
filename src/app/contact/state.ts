@@ -9,7 +9,10 @@
  */
 
 export type FieldErrors = Partial<
-  Record<"name" | "phone" | "email" | "interest" | "contactConsent", string>
+  Record<
+    "name" | "phone" | "email" | "community" | "interest" | "message" | "contactConsent",
+    string
+  >
 >;
 
 /**
@@ -34,7 +37,12 @@ export type ContactState =
   /** `values` refills the form: an error must never cost the visitor their typing. */
   | { status: "invalid"; fieldErrors: FieldErrors; values: SubmittedValues }
   /** The send itself failed. Distinct from "invalid": nothing the user typed is wrong. */
-  | { status: "failed"; values: SubmittedValues };
+  | {
+      status: "failed";
+      values: SubmittedValues;
+      /** Set when the send was refused by the rate limit rather than failing. */
+      reason?: "rate-limited";
+    };
 
 export const INITIAL_STATE: ContactState = { status: "idle" };
 

@@ -20,15 +20,27 @@
     // The scrolled capsule's width from lg up. A max, not a fixed size: on a
     // 1024px window the content column is already narrower than this, and the
     // capsule should never grow past the gutters it sits inside.
-    // Half the link row plus one gap — the distance from the middle track's
-    // centre to an edge track's inner boundary. The 315px is the measured
-    // width of the four labels and their three gaps; there is no way to read
-    // it from CSS, so it is stated once here and everything else derives.
-    --nav-links-half: calc(315px / 2 + var(--nav-gap));
+    // The rendered widths of the link row (five labels, four gaps) and the
+    // CTA. NavShell measures both and writes them inline on this element
+    // (see measure.ts), because text width depends on the platform's font
+    // rendering: Linux Chrome draws the row about 10px wider than macOS. These
+    // fallbacks are the macOS measurements, used before hydration and
+    // without JS. The mark is an SVG, so its 23px is the same everywhere.
+    --nav-links-row: 196px;
+    --nav-cta-width: 129px;
+    // Half the link row plus one gap: the distance from the middle track's
+    // centre to an edge track's inner boundary.
+    --nav-links-half: calc(var(--nav-links-row) / 2 + var(--nav-gap));
+    // Half the difference between the two end pieces. See the grid note in
+    // the desktop band for why the link row sits this far off centre.
+    --nav-end-offset: calc((var(--nav-cta-width) - 23px) / 2);
     // The capsule hugs its content: mark, gap, links, gap, CTA, plus padding
     // and border. Derived rather than a round number, so it cannot drift out
     // of step with the tracks above.
-    --nav-stuck-size: calc(2 * (129px + var(--nav-gap) + var(--nav-padding-stuck) + 1px) + 315px);
+    --nav-stuck-size: calc(
+      2 * (var(--nav-cta-width) + var(--nav-gap) + var(--nav-padding-stuck) + 1px) +
+        var(--nav-links-row)
+    );
     // How far the bar's BOX sits below the viewport top, in both states: the
     // tall bar's reserved top margin and the capsule's sticky inset, so
     // sticking never moves the box. 16, not 24: it is the tall bar's 24px of
@@ -107,11 +119,13 @@
     // scale stops at 600ms and this surface sits just past it.
     --nav-collapse-duration: 650ms;
     // How long the collapse waits for the contents to fade out. The last item
-    // to leave starts at 4 * step-out and takes --nav-item-duration-out, so the
-    // fade-out window is (4 * step-out + duration-out); the panel starts moving
+    // to leave starts at 3 * step-out and takes --nav-item-duration-out, so the
+    // fade-out window is (3 * step-out + duration-out); the panel starts moving
     // at 90% of it — the same handover the opening uses in the other direction.
+    // The 3 is the link count; it and the two fallbacks in the stagger rules
+    // below move together with NAV_LINKS.
     --nav-collapse-hold: calc(
-      (4 * var(--nav-stagger-step-out) + var(--nav-item-duration-out)) * 0.9
+      (3 * var(--nav-stagger-step-out) + var(--nav-item-duration-out)) * 0.9
     );
     // How far each link travels as it fades in.
     --nav-link-rise: #{$space-3};
@@ -284,6 +298,10 @@
 
     // Hover feedback is the character roll (see RollingText), not a fade.
     @include focus-ring;
+
+    // The page being viewed carries aria-current="page" and nothing visual:
+    // the 1px rule under it was removed at Shivanshu's request (2026-09-28).
+    // CLAUDE.md's 2.4.8 row records the location cue as programmatic only.
   }
 
   .cta {
@@ -327,6 +345,18 @@
     color: var(--nav-ink);
 
     @include focus-ring;
+
+    // 32px drawn (a 24px icon and 4px of padding); 44px to a finger. The
+    // outset grows the tap area without changing how the bar looks.
+    @media (pointer: coarse) {
+      position: relative;
+
+      &::before {
+        content: "";
+        position: absolute;
+        inset: calc((32px - var(--size-touch-target)) / 2);
+      }
+    }
   }
 
   .burger {
@@ -462,13 +492,13 @@
       // frame; it was the mismatch, not the fr edges.)
       //
       // The consequence, and it is deliberate: with equal gaps the link row
-      // cannot also sit on the page's centre line. It settles 53px to the
+      // cannot also sit on the page's centre line. It settles 53px (on macOS) to the
       // start of it — half the difference between the two end pieces — and,
       // because that offset is the SAME constant at every width, it is already
       // there in the tall bar and never travels during the shrink.
       grid-template-columns:
-        calc(50% - var(--nav-links-half) - 53px) auto
-        calc(50% - var(--nav-links-half) + 53px);
+        calc(50% - var(--nav-links-half) - var(--nav-end-offset)) auto
+        calc(50% - var(--nav-links-half) + var(--nav-end-offset));
       align-items: center;
       // Each item is placed by its own justify-self below, in both states, so
       // nothing flips on stick. The old rule set justify-items only on
@@ -733,15 +763,27 @@
       // Keep paint and layout local — the panel animates margin and rows, and
       // nothing outside the nav should be asked to re-layout for it.
       contain: layout paint;
-      // A real flex column, so the panel and bar are flex ITEMS. Previously
-      // this was a block box and `.panel { order: -1 }` silently did nothing —
-      // order only applies to flex/grid children — which left the panel after
-      // the bar in flow, so opening the menu pushed the bar 249px up the
-      // screen. Source order now puts the panel first (see NavShell.tsx) and
-      // the bar last, and because the box is pinned by its BOTTOM edge, only
-      // its top edge travels. The bar does not move at all.
-      display: flex;
-      flex-direction: column;
+      // Two rows: the panel on top, the bar's three controls below it. The box
+      // is pinned by its BOTTOM edge, so opening the panel moves only its top
+      // edge and the bar does not move at all. Rows are placed explicitly
+      // because source order is focus order (brand, links, toggle, CTA; see
+      // NavShell.tsx), which is not top-to-bottom order here. The bar's own
+      // box dissolves below, as it does from lg up, so its controls are cells
+      // of this grid.
+      //
+      // Symmetric outer tracks, not `auto 1fr auto`. The mark (23px) and the
+      // toggle (40px) are different widths, so with auto tracks the centre
+      // column is not the bar's centre and the CTA sits ~8px off. Equal 1fr
+      // edges put the middle track dead centre whatever the two controls
+      // measure; `auto` on the middle lets the CTA keep its own width.
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      column-gap: var(--nav-gap);
+      // What the bar's own padding was: around the controls, so on every side
+      // but the top, which the controls' own margin gives (below).
+      padding-inline: var(--nav-padding);
+      padding-block-end: var(--nav-padding);
       // Square on mobile too, in both states: the collapsed bar and the
       // expanded menu panel share this box.
       border-radius: 0;
@@ -750,14 +792,24 @@
     }
 
     .bar {
-      // Brand and toggle and CTA; the wordmark is dropped for the mark.
-      // Symmetric outer tracks, not `auto 1fr auto`. The mark (23px) and the
-      // toggle (40px) are different widths, so with auto tracks the centre
-      // column is not the bar's centre and the CTA sits ~8px off. Equal 1fr
-      // edges put the middle track dead centre whatever the two controls
-      // measure; `auto` on the middle lets the CTA keep its own width.
-      grid-template-columns: 1fr auto 1fr;
-      padding: var(--nav-padding);
+      display: contents;
+    }
+
+    // Row 1, the full width. The negative margin undoes .nav's inline padding,
+    // which is there for the controls, so the open panel keeps the width it
+    // had when the padding lived on the bar.
+    .panel {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      margin-inline: calc(-1 * var(--nav-padding));
+    }
+
+    // Row 2: brand, CTA, toggle. The top margin is the bar's old top padding.
+    .brandMark,
+    .toggle,
+    .ctaSlot {
+      grid-row: 2;
+      margin-block-start: var(--nav-padding);
     }
 
     // Fixed at the bottom here, so it leaves downwards. The float inset is
@@ -774,28 +826,19 @@
     // Swap the two controls: the CTA takes the centre column, the hamburger
     // moves to the end. Explicit columns rather than reordering the DOM — the
     // toggle must stay before the CTA in source so Tab reaches the menu
-    // control before the call to action, and below lg the source order of
-    // .panel and .bar is already load-bearing for the layout.
-    //
-    // The ROW is pinned as well, and has to be: source order is toggle then
-    // CTA, so once the toggle claims column 3 the auto-placement cursor has
-    // passed column 2, and the CTA wraps to a second row instead of sitting
-    // beside it. Naming the row keeps all three on one line.
+    // control before the call to action. Rows are set above.
     .brandMark {
       grid-column: 1;
-      grid-row: 1;
     }
 
     .toggle {
       display: flex;
       grid-column: 3;
-      grid-row: 1;
       justify-self: end;
     }
 
     .ctaSlot {
       grid-column: 2;
-      grid-row: 1;
       justify-self: center;
     }
 
@@ -841,9 +884,9 @@
     // reverse stagger lives here and the forward one on [data-open] below.
     //
     // Closing runs bottom-up, the mirror of opening: the footer leaves first
-    // (--link-index falls back to 4, so 4 - 4 = 0), then About, Developers,
-    // Designers, Solutions. The panel itself then waits for this to be 90%
-    // done before collapsing — see the .panel rule below.
+    // (--link-index falls back to 3, so 3 - 3 = 0), then About, Pricing,
+    // Solutions. The panel itself then waits for this to
+    // be 90% done before collapsing — see the .panel rule below.
     .item,
     .panelFooter {
       opacity: 0;
@@ -851,7 +894,7 @@
       transition-property: opacity, transform;
       transition-duration: var(--nav-item-duration-out);
       transition-timing-function: var(--nav-expand-ease);
-      transition-delay: calc((4 - var(--link-index, 4)) * var(--nav-stagger-step-out));
+      transition-delay: calc((3 - var(--link-index, 3)) * var(--nav-stagger-step-out));
     }
 
     .nav[data-open] .item,
@@ -864,7 +907,7 @@
       transition-duration: var(--nav-item-duration);
       // Hold until the expansion is 90% done, then one step per link.
       transition-delay: calc(
-        var(--nav-expand-duration) * 0.9 + var(--link-index, 4) * var(--nav-stagger-step)
+        var(--nav-expand-duration) * 0.9 + var(--link-index, 3) * var(--nav-stagger-step)
       );
     }
   }
