@@ -27,7 +27,7 @@ test("shows one slide at a time and titles the section with an h2", async ({ pag
   await expect(s.getByRole("heading", { level: 2, name: "One stop, full house" })).toBeVisible();
   await expect(s.getByRole("tab")).toHaveCount(8);
   await expect(s.getByRole("tabpanel")).toHaveCount(1);
-  await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
 });
 
 test("a tab click switches the slide", async ({ page }) => {
@@ -39,14 +39,14 @@ test("a tab click switches the slide", async ({ page }) => {
 
 test("arrow keys, Home and End move the selection", async ({ page }) => {
   const s = section(page);
-  await s.getByRole("tab", { name: "Cameras" }).focus();
+  await s.getByRole("tab", { name: "Smart lock" }).focus();
   await page.keyboard.press("ArrowRight");
-  await expect(s.getByRole("tab", { name: "Smart lock" })).toBeFocused();
-  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
+  await expect(s.getByRole("tab", { name: "Wall controller" })).toBeFocused();
+  await expect(s.getByRole("tabpanel", { name: "Wall controller" })).toBeVisible();
   await page.keyboard.press("End");
-  await expect(s.getByRole("tabpanel", { name: "TV and audio" })).toBeVisible();
-  await page.keyboard.press("Home");
   await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
+  await page.keyboard.press("Home");
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
 });
 
 test("the pause button stops the timer, and a second click restarts it", async ({ page }) => {
@@ -55,18 +55,18 @@ test("the pause button stops the timer, and a second click restarts it", async (
   await pause.click();
   await expect(pause).toHaveAttribute("aria-pressed", "true");
   await page.waitForTimeout(6000);
-  await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
   // Focus is still on the button after the click. That must not hold it.
   await pause.click();
   await expect(pause).toHaveAttribute("aria-pressed", "false");
   await expect(pause.locator("svg").nth(0)).toBeVisible();
-  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible({ timeout: 8000 });
+  await expect(s.getByRole("tabpanel", { name: "Wall controller" })).toBeVisible({ timeout: 8000 });
 });
 
 test("the timer runs under a resting pointer and advances on its own", async ({ page }) => {
   const s = section(page);
   await s.getByRole("button", { name: "Pause automatic advance" }).hover();
-  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible({ timeout: 8000 });
+  await expect(s.getByRole("tabpanel", { name: "Wall controller" })).toBeVisible({ timeout: 8000 });
 });
 
 test("focus inside the bar pauses it and shows the play glyph", async ({ page }) => {
@@ -75,13 +75,13 @@ test("focus inside the bar pauses it and shows the play glyph", async ({ page })
   // Keyboard focus, so :focus-visible is set; locator.focus() alone is not
   // enough for Chromium to treat it as keyboard-originated.
   await page.keyboard.press("Tab");
-  await s.getByRole("tab", { name: "Cameras" }).focus();
+  await s.getByRole("tab", { name: "Smart lock" }).focus();
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowLeft");
   await expect(pause.locator("svg").nth(0)).toBeHidden();
   await expect(pause.locator("svg").nth(1)).toBeVisible();
   await page.waitForTimeout(6000);
-  await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
 });
 
 test("passes axe", async ({ page }) => {
@@ -126,13 +126,16 @@ test("the arrows step through the slides and wrap at both ends", async ({ page }
   const next = s.getByRole("button", { name: "Next component" });
   const prev = s.getByRole("button", { name: "Previous component" });
   await next.click();
-  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
-  await expect(s.getByRole("tab", { name: "Smart lock" })).toHaveAttribute("aria-selected", "true");
+  await expect(s.getByRole("tabpanel", { name: "Wall controller" })).toBeVisible();
+  await expect(s.getByRole("tab", { name: "Wall controller" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await prev.click();
   await prev.click();
-  await expect(s.getByRole("tabpanel", { name: "TV and audio" })).toBeVisible();
-  await next.click();
   await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
+  await next.click();
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
 });
 
 /**
@@ -212,12 +215,12 @@ test("a sideways swipe on a phone steps the carousel", async ({ page, isMobile }
     await stage.dispatchEvent("pointerup", { ...common, clientX: x + dx, clientY: y + 4 });
   };
   await swipe(-120);
-  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
+  await expect(s.getByRole("tabpanel", { name: "Wall controller" })).toBeVisible();
   await swipe(120);
-  await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
   // A short drag is a tap, not a swipe.
   await swipe(-12);
-  await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
 });
 
 test("the stage leaves vertical scrolling to the page", async ({ page }) => {
@@ -233,8 +236,8 @@ test("keeps the selected tab inside the strip's view on a phone", async ({ page,
   test.skip(!isMobile, "the strip only scrolls when the bar is narrower than the tabs");
   const s = section(page);
   await s.getByRole("button", { name: "Pause automatic advance" }).click();
-  await s.getByRole("tab", { name: "TV and audio" }).evaluate((el) => el.scrollIntoView());
-  await s.getByRole("tab", { name: "TV and audio" }).click();
+  await s.getByRole("tab", { name: "Cameras" }).evaluate((el) => el.scrollIntoView());
+  await s.getByRole("tab", { name: "Cameras" }).click();
   await section(page).scrollIntoViewIfNeeded();
   await s.getByRole("button", { name: "Next component" }).click();
   // Wrapped to the first tab: the strip must come back to show it.
@@ -256,7 +259,7 @@ test.describe("reduced motion", () => {
     const s = section(page);
     await expect(s.getByRole("button", { name: "Pause automatic advance" })).toHaveCount(0);
     await page.waitForTimeout(6000);
-    await expect(s.getByRole("tabpanel", { name: "Cameras" })).toBeVisible();
+    await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
     await s.getByRole("tab", { name: "Curtains" }).click();
     await expect(s.getByRole("tabpanel", { name: "Curtains" })).toBeVisible();
   });
@@ -264,7 +267,7 @@ test.describe("reduced motion", () => {
   test("the arrows still work, and the slides swap without travelling", async ({ page }) => {
     const s = section(page);
     await s.getByRole("button", { name: "Next component" }).click();
-    await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
+    await expect(s.getByRole("tabpanel", { name: "Wall controller" })).toBeVisible();
     await expect(s.locator('[data-state="leaving"]')).toHaveCount(0);
   });
 });

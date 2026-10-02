@@ -29,19 +29,6 @@ export type HardwareItem = {
 
 export const HARDWARE_ITEMS: readonly HardwareItem[] = [
   {
-    id: "cameras",
-    title: "Cameras",
-    description:
-      "The cameras watch the boundary, not just the doorway. They tell people and vehicles apart from moving branches and cats, so your phone only buzzes when it matters. When you are away, the same cameras are what let you check the house in three seconds instead of calling someone.",
-    icon: "cctv.svg",
-    image: {
-      src: "cctv.jpg",
-      width: 2560,
-      height: 1422,
-      alt: "A bullet camera mounted on a plain wall in low afternoon light",
-    },
-  },
-  {
     id: "smart-lock",
     title: "Smart lock",
     description:
@@ -130,6 +117,19 @@ export const HARDWARE_ITEMS: readonly HardwareItem[] = [
       width: 2496,
       height: 1400,
       alt: "A wall-mounted television in a dim living room",
+    },
+  },
+  {
+    id: "cameras",
+    title: "Cameras",
+    description:
+      "The cameras watch the boundary, not just the doorway. They tell people and vehicles apart from moving branches and cats, so your phone only buzzes when it matters. When you are away, the same cameras are what let you check the house in three seconds instead of calling someone.",
+    icon: "cctv.svg",
+    image: {
+      src: "cctv.jpg",
+      width: 2560,
+      height: 1422,
+      alt: "A bullet camera mounted on a plain wall in low afternoon light",
     },
   },
 ];
