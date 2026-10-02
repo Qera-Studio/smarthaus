@@ -32,6 +32,15 @@ describe("llms.txt", () => {
     }
   });
 
+  it("links to every indexable page, so a newly published one is not missed", () => {
+    // The other half of the rule above: when a page drops its noindex and
+    // joins the sitemap, it joins this file in the same change.
+    const linked = links.map((link) => new URL(link).pathname);
+    for (const path of Object.keys(LAST_MODIFIED)) {
+      expect(linked).toContain(path);
+    }
+  });
+
   it("links on the same origin as the sitemap and the structured data", () => {
     for (const link of links) expect(new URL(link).origin).toBe(SITE_URL);
   });
