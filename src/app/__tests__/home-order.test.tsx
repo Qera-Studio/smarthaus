@@ -4,7 +4,7 @@ import Home from "../page";
 
 /**
  * The homepage is an ordered list of sections, and the order is the argument:
- * who is behind the brand, what the house is made of, how it gets installed,
+ * what the house is made of, how it gets installed,
  * what it costs, what keeping it running costs, then the enquiry. Each
  * section has its own suite; this one only holds the sequence.
  *
@@ -39,29 +39,21 @@ const order = (container: HTMLElement) =>
 describe("Home page", () => {
   it("renders every section once, in the planned order", () => {
     const { container } = render(<Home />);
-    expect(order(container)).toEqual([
-      "hero",
-      "maple",
-      "hardware",
-      "process",
-      "pricing",
-      "care",
-      "enquiry",
-    ]);
+    expect(order(container)).toEqual(["hero", "hardware", "process", "pricing", "care", "enquiry"]);
   });
 
-  it("places the Maple banner directly after the hero", () => {
-    // The banner answers "who is behind this" before anything asks to be
-    // trusted. Anywhere later and the Hardware pitch arrives first.
+  it("leaves the Maple banner off the page", () => {
+    // Unmounted 2026-10-02 at Shivanshu's request. The component is kept in
+    // src/components/Maple so it can come back; this fails if it does by
+    // accident rather than by decision.
     const { container } = render(<Home />);
-    const sections = order(container);
-    expect(sections.indexOf("maple")).toBe(sections.indexOf("hero") + 1);
+    expect(order(container)).not.toContain("maple");
   });
 
-  it("places the Maple banner directly before the hardware carousel", () => {
+  it("puts the hardware carousel directly after the hero", () => {
     const { container } = render(<Home />);
     const sections = order(container);
-    expect(sections.indexOf("hardware")).toBe(sections.indexOf("maple") + 1);
+    expect(sections.indexOf("hardware")).toBe(sections.indexOf("hero") + 1);
   });
 
   it("keeps the enquiry last, directly above the footer", () => {
