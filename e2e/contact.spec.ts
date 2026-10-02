@@ -71,7 +71,9 @@ test("a valid submission confirms with the name and number given", async ({ page
   await expect(status).toContainText("+971543755150");
   // "Usually": the terms say no response time is guaranteed, so the
   // confirmation must not promise one.
-  await expect(status).toContainText("We’ll usually call you on +971543755150 within the hour");
+  await expect(status).toContainText(
+    "We’ll usually call you on +971543755150 during business hours.",
+  );
 
   // The form is replaced, not merely hidden.
   await expect(form(page).getByLabel("Name")).toHaveCount(0);

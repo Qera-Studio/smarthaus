@@ -453,7 +453,7 @@ function Confirmation({ state }: { state: Extract<ContactState, { status: "ok" }
     <div className={styles.confirmation} role="status">
       <p className={styles.confirmationLead}>
         Thanks{state.name ? `, ${state.name}` : ""}. We&rsquo;ll usually call you
-        {state.phone ? ` on ${state.phone}` : ""} within the hour during business hours.
+        {state.phone ? ` on ${state.phone}` : ""} during business hours.
       </p>
       <p className={styles.confirmationBody}>
         If you&rsquo;d rather not wait, message us directly. In the meantime, here is what we
