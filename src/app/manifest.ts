@@ -2,10 +2,12 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Smarthaus — Premium Smart Home Automation",
+    // The site's own title and description, so an installed app says what the
+    // search result does.
+    name: "Smarthaus | Home Automation and Security in Dubai",
     short_name: "Smarthaus",
     description:
-      "Smarthaus delivers premium smart home automation solutions in Dubai. Seamless control of lighting, climate, security, and entertainment.",
+      "Cameras, entry, audio and home automation for Dubai villas, installed, connected and looked after by one licensed team. Book a site visit.",
     start_url: "/",
     display: "standalone",
     // Matches --color-bg-canvas ($brown-100) so the splash screen does not
