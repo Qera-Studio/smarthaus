@@ -223,6 +223,20 @@ test("a sideways swipe on a phone steps the carousel", async ({ page, isMobile }
   await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
 });
 
+test("a sideways trackpad swipe steps the slide and keeps the page", async ({ page, isMobile }) => {
+  test.skip(isMobile, "a trackpad gesture is a desktop input");
+  const s = section(page);
+  await s.getByRole("button", { name: "Pause automatic advance" }).click();
+  const box = (await s.locator('[role="tabpanel"]').first().locator("..").boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const before = await page.evaluate(() => window.scrollY);
+  await page.mouse.wheel(120, 0);
+  await expect(s.getByRole("tabpanel", { name: "Wall controller" })).toBeVisible();
+  // Cancelled, so neither a navigation nor a page scroll came of it.
+  expect(new URL(page.url()).pathname).toBe("/");
+  expect(await page.evaluate(() => window.scrollY)).toBe(before);
+});
+
 test("the stage leaves vertical scrolling to the page", async ({ page }) => {
   const touchAction = await section(page)
     .locator('[role="tabpanel"]')

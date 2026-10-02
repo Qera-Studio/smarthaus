@@ -16,6 +16,20 @@ type Props = { items: readonly HardwareItem[] };
 export const SWIPE_MIN_PX = 40;
 
 /**
+ * Sideways wheel travel, summed over one gesture, that steps a slide. A
+ * trackpad swipe reports dozens of small deltas, so it is the running total
+ * that counts, not any single event.
+ */
+export const WHEEL_STEP_PX = 40;
+
+/**
+ * How long the wheel has to go quiet before a new gesture can step again. A
+ * trackpad keeps firing momentum events after the fingers lift; each one
+ * restarts this wait, so one swipe moves one slide however long it coasts.
+ */
+export const WHEEL_QUIET_MS = 200;
+
+/**
  * A vertical carousel: the icon bar is an ARIA tablist, the slides stack in
  * one grid cell, and a switch pushes one slide out while the next comes in:
  * next rises from below as the outgoing one leaves upward, previous is the
@@ -31,6 +45,13 @@ export const SWIPE_MIN_PX = 40;
  * events for touch and pen only (a mouse drag on the image would start the
  * browser's own image drag instead), and the stage's `touch-action: pan-y`
  * leaves vertical scrolling to the page.
+ *
+ * A trackpad's two-finger swipe arrives as wheel events instead, and left
+ * alone the browser reads a sideways one as back or forward and leaves the
+ * page. So the carousel takes sideways wheel gestures for itself: it cancels
+ * them and steps one slide per gesture. Vertical wheel is untouched, so the
+ * page still scrolls over it. iOS Safari's edge swipe is the browser's own
+ * and no page can cancel it.
  *
  * ## The timer is a CSS animation
  *
@@ -65,6 +86,8 @@ export function HardwareStage({ items }: Props) {
   const bar = useRef<HTMLDivElement>(null);
   const tabs = useRef<HTMLDivElement>(null);
   const swipe = useRef<{ id: number; x: number; y: number } | null>(null);
+  // The latest step, for the wheel listener below, which is attached once.
+  const stepRef = useRef<(delta: 1 | -1) => void>(() => {});
 
   // Keep the selected tab in view inside the strip, which scrolls sideways on
   // a phone once the arrows take their share of the bar. Only the strip's own
@@ -102,6 +125,40 @@ export function HardwareStage({ items }: Props) {
     };
   }, []);
 
+  // A native listener, not onWheel: React attaches wheel listeners as
+  // passive, and a passive listener cannot cancel the browser's navigation.
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    let travel = 0;
+    let spent = false;
+    let quiet: ReturnType<typeof setTimeout> | undefined;
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+      // The tab strip scrolls sideways when the bar is too narrow for it;
+      // there the gesture is the strip's to scroll.
+      const strip = tabs.current;
+      if (strip?.contains(event.target as Node) && strip.scrollWidth > strip.clientWidth) return;
+      event.preventDefault();
+      clearTimeout(quiet);
+      quiet = setTimeout(() => {
+        travel = 0;
+        spent = false;
+      }, WHEEL_QUIET_MS);
+      if (spent) return;
+      travel += event.deltaX;
+      if (Math.abs(travel) < WHEEL_STEP_PX) return;
+      spent = true;
+      // Fingers moving left scroll content right: positive deltaX is next.
+      stepRef.current(travel > 0 ? 1 : -1);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      clearTimeout(quiet);
+    };
+  }, []);
+
   const select = (index: number, dir?: "next" | "prev") => {
     const next = (index + items.length) % items.length;
     if (next === active) return;
@@ -113,6 +170,9 @@ export function HardwareStage({ items }: Props) {
   // One step either way, wrapping. The direction is explicit so the last
   // slide's "next" still rises from below as it wraps to the first.
   const step = (delta: 1 | -1) => select(active + delta, delta > 0 ? "next" : "prev");
+  useEffect(() => {
+    stepRef.current = step;
+  });
 
   const onPointerDown = (event: React.PointerEvent) => {
     if (event.pointerType === "mouse") return;
