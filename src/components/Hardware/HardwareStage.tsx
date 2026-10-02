@@ -30,6 +30,15 @@ export const WHEEL_STEP_PX = 40;
 export const WHEEL_QUIET_MS = 200;
 
 /**
+ * A new swipe can start before the last one's coast has gone quiet: a second
+ * flick lands mid-coast, macOS stops the momentum and the fresh deltas run on
+ * in the same stream, so the quiet wait alone swallowed every quick re-swipe.
+ * Momentum only ever decays, so once the deltas have fallen to half their
+ * peak, a climb of this much over their low is fresh fingers on the pad.
+ */
+export const WHEEL_RISE_PX = 8;
+
+/**
  * A vertical carousel: the icon bar is an ARIA tablist, the slides stack in
  * one grid cell, and a switch pushes one slide out while the next comes in:
  * next rises from below as the outgoing one leaves upward, previous is the
@@ -132,6 +141,9 @@ export function HardwareStage({ items }: Props) {
     if (!el) return;
     let travel = 0;
     let spent = false;
+    // Since the last step: the largest sideways delta, and the smallest after it.
+    let peak = 0;
+    let low = 0;
     let quiet: ReturnType<typeof setTimeout> | undefined;
     const onWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
@@ -145,10 +157,22 @@ export function HardwareStage({ items }: Props) {
         travel = 0;
         spent = false;
       }, WHEEL_QUIET_MS);
-      if (spent) return;
+      const size = Math.abs(event.deltaX);
+      if (spent) {
+        // Still speeding up after the step: the same swipe.
+        if (size > peak) {
+          peak = low = size;
+          return;
+        }
+        low = Math.min(low, size);
+        if (low > peak / 2 || size < low + WHEEL_RISE_PX) return;
+        spent = false;
+        travel = 0;
+      }
       travel += event.deltaX;
       if (Math.abs(travel) < WHEEL_STEP_PX) return;
       spent = true;
+      peak = low = size;
       // Fingers moving left scroll content right: positive deltaX is next.
       stepRef.current(travel > 0 ? 1 : -1);
     };

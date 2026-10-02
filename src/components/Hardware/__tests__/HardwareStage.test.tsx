@@ -1,7 +1,13 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import type { HardwareItem } from "../../../content/hardware";
-import { HardwareStage, SWIPE_MIN_PX, WHEEL_QUIET_MS, WHEEL_STEP_PX } from "../HardwareStage";
+import {
+  HardwareStage,
+  SWIPE_MIN_PX,
+  WHEEL_QUIET_MS,
+  WHEEL_RISE_PX,
+  WHEEL_STEP_PX,
+} from "../HardwareStage";
 
 /**
  * The hardware carousel's behaviour: which slide is shown, which way it
@@ -348,6 +354,60 @@ describe("HardwareStage", () => {
       });
       wheel(WHEEL_STEP_PX);
       expect(selected()).toBe(2);
+    });
+
+    // Shaped like a real trackpad stream: a swipe ramps up, the coast after it
+    // only decays, and no timer runs between them, because a quick second
+    // flick lands before the coast has gone quiet (reported 2026-10-02: every
+    // swipe after the first did nothing until the cursor was moved).
+    const SWIPE = [4, 12, 24, 36];
+    const COAST = [30, 22, 15, 9, 5, 3];
+    const play = (deltas: number[], sign = 1) => deltas.forEach((d) => wheel(sign * d));
+
+    it("steps again for a second swipe made during the first one's coast", () => {
+      render(<HardwareStage items={ITEMS} />);
+      play(SWIPE);
+      play(COAST);
+      expect(selected()).toBe(1);
+      play(SWIPE);
+      expect(selected()).toBe(2);
+    });
+
+    it("goes back for a swipe the other way made during the coast", () => {
+      render(<HardwareStage items={ITEMS} />);
+      play(SWIPE);
+      play(COAST);
+      play(SWIPE, -1);
+      expect(selected()).toBe(0);
+    });
+
+    it("keeps a swipe that is still speeding up after its step to one slide", () => {
+      render(<HardwareStage items={ITEMS} />);
+      play([...SWIPE, 48, 60, 72]);
+      play(COAST);
+      expect(selected()).toBe(1);
+    });
+
+    it("does not read a coast that has not yet halved as a new swipe", () => {
+      // A wobble near the peak is the same fingers, not fresh ones.
+      render(<HardwareStage items={ITEMS} />);
+      play(SWIPE);
+      play([30, 20, 20 + WHEEL_RISE_PX, 26, 18]);
+      expect(selected()).toBe(1);
+    });
+
+    it("needs a real climb over the coast's low, not jitter", () => {
+      render(<HardwareStage items={ITEMS} />);
+      play(SWIPE);
+      play([18, 10, 4, 4 + WHEEL_RISE_PX - 1, 4]);
+      expect(selected()).toBe(1);
+    });
+
+    it("cancels every event of the second swipe too", () => {
+      render(<HardwareStage items={ITEMS} />);
+      play(SWIPE);
+      play(COAST);
+      for (const d of SWIPE) expect(wheel(d).defaultPrevented).toBe(true);
     });
 
     it("leaves a vertical scroll to the page", () => {
