@@ -48,6 +48,22 @@ describe("footer socials", () => {
     expect(whatsapp.label).toBe("Smarthaus on WhatsApp");
   });
 
+  it("draws WhatsApp with its real glyph, not the placeholder bubble", () => {
+    // The Simple Icons mark is three subpaths: the handset, then the inner and
+    // outer edge of the bubble. The placeholder was two arcs and no handset.
+    const whatsapp = SOCIALS.find((social) => social.id === "whatsapp")!;
+    expect(whatsapp.path).toMatch(/^M17\.472 14\.382/);
+    expect(whatsapp.path.match(/[Mm]/g)).toHaveLength(3);
+  });
+
+  it("colours only a real glyph, never a placeholder", () => {
+    // A brand colour on a stand-in shape would pass it off as the real mark.
+    for (const social of pending) expect(social.color).toBeUndefined();
+    for (const social of SOCIALS.filter((s) => s.color)) {
+      expect(social.color).toMatch(/^#[0-9A-F]{6}$/);
+    }
+  });
+
   it("still has four placeholder profiles; this fails when the first real one lands", () => {
     // Replacing a placeholder is meant to fail here, so the change that brings
     // a real profile URL also updates this count and clears `pending`.

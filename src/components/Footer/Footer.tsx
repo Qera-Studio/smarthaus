@@ -109,7 +109,7 @@ export function Footer() {
             </ul>
 
             <ul className={styles.socials}>
-              {SOCIALS.map(({ id, label, href, path }) => (
+              {SOCIALS.map(({ id, label, href, path, color }) => (
                 <li key={id}>
                   <a
                     className={styles.chip}
@@ -124,7 +124,7 @@ export function Footer() {
                       aria-hidden="true"
                       focusable="false"
                     >
-                      <path d={path} />
+                      <path d={path} fill={color} />
                     </svg>
                   </a>
                 </li>
