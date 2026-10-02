@@ -5,7 +5,7 @@ import Home from "../page";
 /**
  * The homepage is an ordered list of sections, and the order is the argument:
  * what the house is made of, how it gets installed,
- * what it costs, what keeping it running costs, then the enquiry. Each
+ * what it costs, then the enquiry. Each
  * section has its own suite; this one only holds the sequence.
  *
  * Every section is stubbed to a marker. The real ones pull in three.js, scroll
@@ -39,7 +39,7 @@ const order = (container: HTMLElement) =>
 describe("Home page", () => {
   it("renders every section once, in the planned order", () => {
     const { container } = render(<Home />);
-    expect(order(container)).toEqual(["hero", "hardware", "process", "pricing", "care", "enquiry"]);
+    expect(order(container)).toEqual(["hero", "hardware", "process", "pricing", "enquiry"]);
   });
 
   it("leaves the Maple banner off the page", () => {
@@ -48,6 +48,13 @@ describe("Home page", () => {
     // accident rather than by decision.
     const { container } = render(<Home />);
     expect(order(container)).not.toContain("maple");
+  });
+
+  it("leaves the Care section off the page", () => {
+    // Hidden 2026-10-02 at Shivanshu's request, ahead of its removal. The
+    // component stays in src/components/Care, as Maple does.
+    const { container } = render(<Home />);
+    expect(order(container)).not.toContain("care");
   });
 
   it("puts the hardware carousel directly after the hero", () => {
