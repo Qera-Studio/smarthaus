@@ -12,6 +12,7 @@ import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
 import { Splash } from "../components/Loader/Splash";
 import { Consent } from "../components/Consent";
+import { Cursor } from "../components/Cursor";
 import { ScrollToTop } from "../components/ScrollToTop";
 import { JsonLd, siteGraph } from "../components/Schema";
 import { CONSENT_BOOT_SCRIPT } from "../lib/consent-boot";
@@ -145,6 +146,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           up, keyed off a height the banner publishes as --consent-block-size.
         */}
         <ScrollToTop />
+        {/* The inverting cursor. Renders nothing on touch or in forced colours,
+            where the native dot from globals.scss stays the cursor. */}
+        <Cursor />
         {/*
           Last in the body, after the footer.
 
