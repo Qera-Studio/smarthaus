@@ -45,14 +45,22 @@ test.describe("social links", () => {
 
   test("there are five, each with an accessible name and a hidden icon", async ({ page }) => {
     await expect(socials(page)).toHaveCount(5);
+    // WhatsApp is the official logo as an image with an empty alt; the rest
+    // are hidden paths. Either way the link's label is its name.
     for (const link of await socials(page).all()) {
-      await expect(link.locator("svg")).toHaveAttribute("aria-hidden", "true");
+      const img = link.locator("img");
+      if (await img.count()) await expect(img).toHaveAttribute("alt", "");
+      else await expect(link.locator("svg")).toHaveAttribute("aria-hidden", "true");
     }
   });
 
   test("WhatsApp is the real channel and says so plainly", async ({ page }) => {
     const whatsapp = footer(page).getByRole("link", { name: "Smarthaus on WhatsApp", exact: true });
     await expect(whatsapp).toHaveAttribute("href", /^https:\/\/wa\.me\/\d+$/);
+    // The full-colour logo actually loaded, not a broken image box.
+    await expect
+      .poll(() => whatsapp.locator("img").evaluate((img: HTMLImageElement) => img.naturalWidth))
+      .toBeGreaterThan(0);
   });
 
   for (const platform of ["Instagram", "Facebook", "X", "LinkedIn"]) {

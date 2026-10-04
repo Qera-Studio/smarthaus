@@ -51,20 +51,29 @@ describe("Footer", () => {
     ]);
   });
 
-  it("paints WhatsApp in its own green and leaves the rest in the chip's ink", () => {
-    // The real WhatsApp glyph is the brand mark, colour included (2026-10-02).
-    // The placeholders take currentColor until their real marks land.
-    const fill = (label: string) =>
-      screen.getByRole("link", { name: label }).querySelector("path")?.getAttribute("fill");
-    expect(fill("Smarthaus on WhatsApp")).toBe("#25D366");
+  it("draws WhatsApp as its full-colour logo and the rest in the chip's ink", () => {
+    // The official logo file (2026-10-03): its colours are the mark. The
+    // placeholders stay currentColor paths until their real marks land.
+    const icon = (label: string) =>
+      screen.getByRole("link", { name: label }).querySelector("img, svg")!;
+    expect(icon("Smarthaus on WhatsApp")).toHaveAttribute("src", "/whatsapp.svg");
     for (const social of SOCIALS.filter((s) => s.id !== "whatsapp")) {
-      expect(fill(social.label)).toBeNull();
+      expect(icon(social.label).tagName.toLowerCase()).toBe("svg");
+      expect(icon(social.label).querySelector("path")).toHaveAttribute("d", social.path);
     }
   });
 
   it("hides each social icon from assistive technology", () => {
+    // An empty alt for the logo file, aria-hidden for the paths: the link's
+    // own label names the platform either way.
     for (const social of SOCIALS) {
-      const svg = screen.getByRole("link", { name: social.label }).querySelector("svg");
+      const link = screen.getByRole("link", { name: social.label });
+      const img = link.querySelector("img");
+      if (img) {
+        expect(img).toHaveAttribute("alt", "");
+        continue;
+      }
+      const svg = link.querySelector("svg");
       expect(svg).toHaveAttribute("aria-hidden", "true");
       expect(svg).toHaveAttribute("focusable", "false");
     }

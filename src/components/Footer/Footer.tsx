@@ -109,7 +109,7 @@ export function Footer() {
             </ul>
 
             <ul className={styles.socials}>
-              {SOCIALS.map(({ id, label, href, path, color }) => (
+              {SOCIALS.map(({ id, label, href, path, src }) => (
                 <li key={id}>
                   <a
                     className={styles.chip}
@@ -118,14 +118,21 @@ export function Footer() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <svg
-                      className={styles.chipIcon}
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                      focusable="false"
-                    >
-                      <path d={path} fill={color} />
-                    </svg>
+                    {src ? (
+                      // A full-colour logo: drawn as it is, so a file, not a
+                      // currentColor path. next/image would only wrap an SVG.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className={styles.chipIcon} src={src} alt="" />
+                    ) : (
+                      <svg
+                        className={styles.chipIcon}
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path d={path} />
+                      </svg>
+                    )}
                   </a>
                 </li>
               ))}
