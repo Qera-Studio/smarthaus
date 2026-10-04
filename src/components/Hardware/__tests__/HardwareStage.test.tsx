@@ -145,7 +145,7 @@ describe("HardwareStage", () => {
   describe("the arrow buttons", () => {
     it("puts previous first in the bar and next last, around the tabs and pause", () => {
       render(<HardwareStage items={ITEMS} />);
-      const bar = screen.getByRole("tablist").parentElement!;
+      const bar = screen.getByRole("tablist").parentElement!.parentElement!;
       const buttons = Array.from(bar.children).filter((el) => el.tagName === "BUTTON");
       expect(buttons[0]).toHaveAccessibleName("Previous component");
       expect(buttons.at(-1)).toHaveAccessibleName("Next component");

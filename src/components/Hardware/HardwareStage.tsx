@@ -263,26 +263,39 @@ export function HardwareStage({ items }: Props) {
           </svg>
         </button>
 
-        <div ref={tabs} role="tablist" aria-label="Components" className={styles.tabs}>
-          {items.map((item, i) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              id={`hardware-tab-${item.id}`}
-              aria-controls={`hardware-panel-${item.id}`}
-              aria-selected={i === active}
-              aria-label={item.title}
-              tabIndex={i === active ? 0 : -1}
-              className={styles.tab}
-              onClick={() => select(i)}
-              onKeyDown={(event) => onKeyDown(event, i)}
-            >
-              {/* A 24px SVG: next/image would only wrap it in a loader it cannot use. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/hero/hardware/icons/${item.icon}`} alt="" width={24} height={24} />
-            </button>
-          ))}
+        {/* The tab pill: the strip, which scrolls on a phone, and the timer
+            line along its foot, which must not scroll with it. */}
+        <div className={styles.tabPill}>
+          <div ref={tabs} role="tablist" aria-label="Components" className={styles.tabs}>
+            {items.map((item, i) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                id={`hardware-tab-${item.id}`}
+                aria-controls={`hardware-panel-${item.id}`}
+                aria-selected={i === active}
+                aria-label={item.title}
+                tabIndex={i === active ? 0 : -1}
+                className={styles.tab}
+                onClick={() => select(i)}
+                onKeyDown={(event) => onKeyDown(event, i)}
+              >
+                {/* A 24px SVG: next/image would only wrap it in a loader it cannot use. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/hero/hardware/icons/${item.icon}`} alt="" width={24} height={24} />
+              </button>
+            ))}
+          </div>
+          {autoplay ? (
+            <span
+              key={active}
+              className={styles.progress}
+              data-running={running}
+              aria-hidden="true"
+              onAnimationEnd={() => select(active + 1, "next")}
+            />
+          ) : null}
         </div>
 
         {autoplay ? (
@@ -331,16 +344,6 @@ export function HardwareStage({ items }: Props) {
             <path d="M8.6 17.6 10 19l7-7-7-7-1.4 1.4 5.6 5.6z" />
           </svg>
         </button>
-
-        {autoplay ? (
-          <span
-            key={active}
-            className={styles.progress}
-            data-running={running}
-            aria-hidden="true"
-            onAnimationEnd={() => select(active + 1, "next")}
-          />
-        ) : null}
       </div>
 
       <div

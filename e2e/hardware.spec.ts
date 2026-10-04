@@ -90,51 +90,51 @@ test("passes axe", async ({ page }) => {
 
 // --- Arrows, swipe and the push -------------------------------------------
 
-test("the bar reads previous, divider, tabs, pause, divider, next", async ({ page }) => {
-  const s = section(page);
-  const order = await s.evaluate((el) => {
-    const bar = el.querySelector('[role="tablist"]')!.parentElement!;
-    return Array.from(bar.children)
-      .filter((c) => c.tagName === "BUTTON" || c.getAttribute("role") === "tablist")
-      .map((c) => {
-        const cs = getComputedStyle(c);
-        return {
-          name: c.getAttribute("aria-label") ?? c.getAttribute("role"),
-          start: cs.borderInlineStartStyle,
-          end: cs.borderInlineEndStyle,
-          left: c.getBoundingClientRect().left,
-        };
-      });
+/** The four groups in the bar, in DOM order: previous, the tab pill, pause, next. */
+function groups(page: import("@playwright/test").Page) {
+  return section(page).evaluate((el) => {
+    const bar = el.querySelector('[role="tablist"]')!.parentElement!.parentElement!;
+    return Array.from(bar.children).map((c) => {
+      const r = c.getBoundingClientRect();
+      const cs = getComputedStyle(c);
+      return {
+        name:
+          c.getAttribute("aria-label") ??
+          c.querySelector('[role="tablist"]')?.getAttribute("aria-label") ??
+          null,
+        left: r.left,
+        right: r.right,
+        ground: cs.backgroundColor,
+        barGround: getComputedStyle(bar).backgroundColor,
+      };
+    });
   });
+}
+
+test("the bar reads previous, tabs, pause, next, left to right", async ({ page }) => {
+  const order = await groups(page);
   expect(order.map((o) => o.name)).toEqual([
     "Previous component",
     "Components",
     "Pause automatic advance",
     "Next component",
   ]);
-  // Laid out in that order left to right, not only in source order.
   const lefts = order.map((o) => o.left);
   expect([...lefts].sort((a, b) => a - b)).toEqual(lefts);
-  // The dividers: after previous, before pause, before next.
-  expect(order[0]!.end).toBe("solid");
-  expect(order[2]!.start).toBe("solid");
-  expect(order[3]!.start).toBe("solid");
 });
 
-// Air between arrow, tabs, pause and arrow, so the controls do not read as
-// three more icons in the strip (2026-10-03).
-test("sets the arrows and the pause button apart from the tabs", async ({ page }) => {
-  const s = section(page);
-  const gaps = await s.evaluate((el) => {
-    const bar = el.querySelector('[role="tablist"]')!.parentElement!;
-    const boxes = Array.from(bar.children)
-      .filter((c) => c.tagName === "BUTTON" || c.getAttribute("role") === "tablist")
-      .map((c) => c.getBoundingClientRect());
-    return boxes.slice(1).map((b, i) => Math.round(b.left - boxes[i]!.right));
-  });
+// Four separate pills with clear canvas between them, so the controls do not
+// read as three more icons in the strip (2026-10-04: a gap inside one shared
+// glass bar read as no gap at all).
+test("floats each control group as its own pill, with canvas between", async ({ page }) => {
+  const order = await groups(page);
+  const gaps = order.slice(1).map((g, i) => Math.round(g.left - order[i]!.right));
   expect(gaps).toHaveLength(3);
   for (const gap of gaps) expect(gap).toBeGreaterThanOrEqual(8);
   expect(new Set(gaps).size).toBe(1);
+  // Each pill has a ground; the row behind them has none, so the gap is page.
+  for (const g of order) expect(g.ground).not.toBe("rgba(0, 0, 0, 0)");
+  expect(order[0]!.barGround).toBe("rgba(0, 0, 0, 0)");
 });
 
 test("the arrows step through the slides and wrap at both ends", async ({ page }) => {
