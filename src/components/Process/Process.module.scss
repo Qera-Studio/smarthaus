@@ -31,6 +31,9 @@ $stack-min-block: 32rem;
 
 @layer blocks {
   .process {
+    // 96px above and below, as every homepage section after the hero has.
+    padding-block: $space-24;
+
     // L2 ink ramp. Colour tokens rather than `opacity`, which would inherit to
     // every descendant. Same approach as the footer's --footer-ink-* set.
     --process-ink: #{$brown-100};
@@ -61,8 +64,6 @@ $stack-min-block: 32rem;
     background-color: var(--process-sheet);
     // The top edge is what shows as a sheet slides over the one below it.
     border-block-start: 1px solid $brown-800;
-    border-start-start-radius: $radius-xl;
-    border-start-end-radius: $radius-xl;
     // Cast upward, onto the sheet it is covering.
     box-shadow: 0 (-$space-4) $space-12 rgba($brown-950, 0.6);
 
