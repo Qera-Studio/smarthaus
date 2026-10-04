@@ -137,6 +137,28 @@ test("floats each control group as its own pill, with canvas between", async ({ 
   expect(order[0]!.barGround).toBe("rgba(0, 0, 0, 0)");
 });
 
+// Square pills for the three plain buttons (2026-10-04: the pause button was
+// as wide as a tab and read as one), and a ground that steps one shade along
+// the ramp on hover, now the only hover feedback with the drawn cursor gone.
+test("draws the arrows and pause as squares that darken on hover", async ({ page, isMobile }) => {
+  const s = section(page);
+  const controls = [
+    s.getByRole("button", { name: "Previous component" }),
+    s.getByRole("button", { name: "Pause automatic advance" }),
+    s.getByRole("button", { name: "Next component" }),
+  ];
+  for (const control of controls) {
+    const box = (await control.boundingBox())!;
+    expect(Math.round(box.width)).toBe(Math.round(box.height));
+  }
+  test.skip(isMobile, "hover is a mouse concern");
+  const ground = () => controls[1]!.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const resting = await ground();
+  await controls[1]!.hover();
+  await expect.poll(ground).not.toBe(resting);
+  await expect.poll(ground).toBe("rgba(196, 163, 125, 0.5)");
+});
+
 test("the arrows step through the slides and wrap at both ends", async ({ page }) => {
   const s = section(page);
   const next = s.getByRole("button", { name: "Next component" });

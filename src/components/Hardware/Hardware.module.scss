@@ -125,6 +125,7 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
     position: relative;
     @include glass(0);
     opacity: 1;
+    transition-property: background-color;
 
     svg {
       opacity: 0.45;
@@ -136,11 +137,31 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
     &[aria-pressed="true"] svg {
       opacity: 1;
     }
+
+    // The hover is the ground stepping one shade along the ramp, the same
+    // brown-300 tint the glass is made of at a heavier alpha. A colour
+    // change rather than a cursor change (2026-10-04, at Shivanshu's call).
+    &:hover {
+      background-color: rgb(var(--glass-tint) / 0.5);
+    }
+  }
+
+  // A tab sits inside the tab pill's glass, so its hover is the same tint
+  // laid over it rather than a pill of its own. Not on the selected tab,
+  // which is already at full strength.
+  .tab {
+    transition-property: opacity, background-color;
+
+    &:hover:not([aria-selected="true"]) {
+      background-color: rgb(var(--glass-tint) / 0.25);
+    }
   }
 
   // Square rather than the tabs' 64 by 48: on a phone the two arrows come out
   // of the tab strip's width, and the strip is the thing that scrolls.
-  .arrow {
+  // The pause button too: as its own pill it read as a stray wide tab.
+  .arrow,
+  .pause {
     inline-size: $space-12;
   }
 
