@@ -35,8 +35,12 @@
     // all of them.
     border: 0;
     border-radius: 0;
-    background-color: var(--color-bg-canvas);
-    color: var(--color-text-primary);
+    // brown-600 everywhere, rather than a colour that swaps with the ground
+    // behind it. Bone on it is 6:1 (text); against the light canvas it is
+    // 5.5:1 and against brown-950 3.0:1, so it holds WCAG 1.4.11's 3:1 as a
+    // control on both grounds the site has.
+    background-color: #{$brown-600};
+    color: #{$brown-50};
 
     // Hidden by default, faded and nudged down. `visibility` rather than
     // `display` so the transition has something to run on; the JS `inert`
@@ -44,9 +48,7 @@
     visibility: hidden;
     opacity: 0;
     translate: 0 $space-2;
-    // Colours transition too, so crossing into a dark section is a fade rather
-    // than a snap.
-    transition-property: opacity, translate, visibility, background-color, color;
+    transition-property: opacity, translate, visibility;
     transition-duration: var(--duration-normal);
     transition-timing-function: var(--ease-out);
 
@@ -54,14 +56,6 @@
       visibility: visible;
       opacity: 1;
       translate: 0 0;
-    }
-
-    // Over a dark band the light chip would vanish into it, so the two colours
-    // swap. Driven by JS, which reports whether a [data-ground="dark"] section
-    // is under the button — see ScrollToTop.tsx.
-    &[data-on-dark] {
-      background-color: var(--color-bg-inverse-strong);
-      color: var(--color-text-inverse);
     }
 
     @include bp-lg {

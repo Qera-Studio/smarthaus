@@ -18,9 +18,8 @@ export function Hardware() {
           One stop, full house
         </h2>
         <p className={styles.leadBody}>
-          Most villas in Dubai run on five apps, four installers and nobody to call when something
-          stops working. Smarthaus puts your cameras, doors, audio and home controls on one system,
-          built by one team and covered by one contract.
+          Cameras, locks, lighting, climate and sound on one system. The team that installs it is
+          the team you call when something needs attention.
         </p>
       </div>
 

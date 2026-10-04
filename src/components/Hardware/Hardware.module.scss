@@ -50,20 +50,41 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
     gap: clamp(#{$space-10}, 6vw, #{$space-20});
   }
 
-  // Glass needs a containing block for its grain; `relative` also positions
-  // the progress line along the bottom edge.
+  // The row of controls: no ground of its own. Each of the four groups,
+  // previous arrow, tabs, pause, next arrow, is its own glass pill with clear
+  // canvas between them (2026-10-04: a gap inside one bar read as no gap).
   .bar {
-    position: relative;
     display: flex;
     align-items: center;
     justify-self: center;
     max-inline-size: 100%;
+    // Lets the grid shrink the row below its content on a phone, so the tab
+    // pill gives up the width and its strip scrolls. The shared bar got this
+    // from its `overflow: hidden`, which the pills cannot have: it would clip
+    // their shadows.
+    min-inline-size: 0;
+    // Tighter on a phone, where every pixel of gap comes out of the tab strip.
+    gap: $space-2;
+
+    @include bp-md {
+      gap: $space-4;
+    }
+  }
+
+  // Shrinks on a phone so the strip inside it scrolls, and clips the strip.
+  // Glass needs a containing block for its grain; `relative` also positions
+  // the timer line along the pill's foot.
+  .tabPill {
+    position: relative;
+    flex-shrink: 1;
+    min-inline-size: 0;
     overflow: hidden;
     @include glass(0);
   }
 
   .tabs {
     display: flex;
+    min-inline-size: 0;
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -95,24 +116,52 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
     }
   }
 
-  // The dividers, all one rule: pause and the next arrow are set off from
-  // what comes before them, the previous arrow from what comes after it.
+  // The arrows and pause are pills of their own. Declared after the shared
+  // rule above, whose `background: none` and `border: 0` would otherwise
+  // strip the glass. They stay at full strength: the 0.45 fade is for an
+  // unselected tab, and on a pill it faded the glass with the glyph.
   .pause,
-  .arrow[data-edge="end"] {
-    border-inline-start-style: solid;
-    border-inline-start-width: 1px;
-    border-inline-start-color: var(--glass-border);
+  .arrow {
+    position: relative;
+    @include glass(0);
+    opacity: 1;
+    transition-property: background-color;
+
+    svg {
+      opacity: 0.45;
+      transition-property: opacity;
+      transition-duration: var(--duration-fast);
+    }
+
+    &:hover svg,
+    &[aria-pressed="true"] svg {
+      opacity: 1;
+    }
+
+    // The hover is the ground stepping one shade along the ramp, the same
+    // brown-300 tint the glass is made of at a heavier alpha. A colour
+    // change rather than a cursor change (2026-10-04, at Shivanshu's call).
+    &:hover {
+      background-color: rgb(var(--glass-tint) / 0.5);
+    }
   }
 
-  .arrow[data-edge="start"] {
-    border-inline-end-style: solid;
-    border-inline-end-width: 1px;
-    border-inline-end-color: var(--glass-border);
+  // A tab sits inside the tab pill's glass, so its hover is the same tint
+  // laid over it rather than a pill of its own. Not on the selected tab,
+  // which is already at full strength.
+  .tab {
+    transition-property: opacity, background-color;
+
+    &:hover:not([aria-selected="true"]) {
+      background-color: rgb(var(--glass-tint) / 0.25);
+    }
   }
 
   // Square rather than the tabs' 64 by 48: on a phone the two arrows come out
   // of the tab strip's width, and the strip is the thing that scrolls.
-  .arrow {
+  // The pause button too: as its own pill it read as a stray wide tab.
+  .arrow,
+  .pause {
     inline-size: $space-12;
   }
 

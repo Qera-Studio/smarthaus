@@ -41,7 +41,7 @@ test("the nav and hero CTAs show the dot, not a hand and not nothing", async ({ 
 });
 
 test("a Button link and everything inside it show the dot", async ({ page }) => {
-  const link = page.getByRole("link", { name: /Visit Maple Technologies/ });
+  const link = page.getByRole("link", { name: "View detailed pricing" });
   expect(await cursorOf(link)).toContain(DARK_DOT);
   const inner = await link.evaluate((el) =>
     Array.from(el.querySelectorAll("*")).map((c) => getComputedStyle(c).cursor),

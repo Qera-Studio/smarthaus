@@ -1,7 +1,13 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import type { HardwareItem } from "../../../content/hardware";
-import { HardwareStage, SWIPE_MIN_PX } from "../HardwareStage";
+import {
+  HardwareStage,
+  SWIPE_MIN_PX,
+  WHEEL_QUIET_MS,
+  WHEEL_RISE_PX,
+  WHEEL_STEP_PX,
+} from "../HardwareStage";
 
 /**
  * The hardware carousel's behaviour: which slide is shown, which way it
@@ -139,7 +145,7 @@ describe("HardwareStage", () => {
   describe("the arrow buttons", () => {
     it("puts previous first in the bar and next last, around the tabs and pause", () => {
       render(<HardwareStage items={ITEMS} />);
-      const bar = screen.getByRole("tablist").parentElement!;
+      const bar = screen.getByRole("tablist").parentElement!.parentElement!;
       const buttons = Array.from(bar.children).filter((el) => el.tagName === "BUTTON");
       expect(buttons[0]).toHaveAccessibleName("Previous component");
       expect(buttons.at(-1)).toHaveAccessibleName("Next component");
@@ -288,6 +294,153 @@ describe("HardwareStage", () => {
         clientY: 300,
       });
       expect(selected()).toBe(1);
+    });
+  });
+
+  describe("trackpad swipe", () => {
+    // A two-finger swipe arrives as wheel events. Left alone the browser reads
+    // a sideways one as back or forward and leaves the page.
+    function wheel(deltaX: number, deltaY = 0, target: Element = stage()) {
+      const event = new WheelEvent("wheel", { deltaX, deltaY, bubbles: true, cancelable: true });
+      act(() => {
+        target.dispatchEvent(event);
+      });
+      return event;
+    }
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it("a sideways gesture steps once and is kept from the browser", () => {
+      render(<HardwareStage items={ITEMS} />);
+      const event = wheel(WHEEL_STEP_PX);
+      expect(event.defaultPrevented).toBe(true);
+      expect(selected()).toBe(1);
+    });
+
+    it("a gesture the other way goes back, wrapping", () => {
+      render(<HardwareStage items={ITEMS} />);
+      wheel(-WHEEL_STEP_PX);
+      expect(selected()).toBe(ITEMS.length - 1);
+    });
+
+    it("sums small deltas, as a trackpad reports them", () => {
+      render(<HardwareStage items={ITEMS} />);
+      const quarter = WHEEL_STEP_PX / 4;
+      for (let i = 0; i < 3; i++) wheel(quarter);
+      expect(selected()).toBe(0);
+      wheel(quarter);
+      expect(selected()).toBe(1);
+    });
+
+    it("moves one slide per gesture, however long the momentum runs", () => {
+      render(<HardwareStage items={ITEMS} />);
+      for (let i = 0; i < 20; i++) {
+        const event = wheel(WHEEL_STEP_PX);
+        // Still cancelled after the step, or the coast would navigate away.
+        expect(event.defaultPrevented).toBe(true);
+        act(() => {
+          jest.advanceTimersByTime(WHEEL_QUIET_MS - 1);
+        });
+      }
+      expect(selected()).toBe(1);
+    });
+
+    it("steps again once the wheel has gone quiet", () => {
+      render(<HardwareStage items={ITEMS} />);
+      wheel(WHEEL_STEP_PX);
+      act(() => {
+        jest.advanceTimersByTime(WHEEL_QUIET_MS);
+      });
+      wheel(WHEEL_STEP_PX);
+      expect(selected()).toBe(2);
+    });
+
+    // Shaped like a real trackpad stream: a swipe ramps up, the coast after it
+    // only decays, and no timer runs between them, because a quick second
+    // flick lands before the coast has gone quiet (reported 2026-10-02: every
+    // swipe after the first did nothing until the cursor was moved).
+    const SWIPE = [4, 12, 24, 36];
+    const COAST = [30, 22, 15, 9, 5, 3];
+    const play = (deltas: number[], sign = 1) => deltas.forEach((d) => wheel(sign * d));
+
+    it("steps again for a second swipe made during the first one's coast", () => {
+      render(<HardwareStage items={ITEMS} />);
+      play(SWIPE);
+      play(COAST);
+      expect(selected()).toBe(1);
+      play(SWIPE);
+      expect(selected()).toBe(2);
+    });
+
+    it("goes back for a swipe the other way made during the coast", () => {
+      render(<HardwareStage items={ITEMS} />);
+      play(SWIPE);
+      play(COAST);
+      play(SWIPE, -1);
+      expect(selected()).toBe(0);
+    });
+
+    it("keeps a swipe that is still speeding up after its step to one slide", () => {
+      render(<HardwareStage items={ITEMS} />);
+      play([...SWIPE, 48, 60, 72]);
+      play(COAST);
+      expect(selected()).toBe(1);
+    });
+
+    it("does not read a coast that has not yet halved as a new swipe", () => {
+      // A wobble near the peak is the same fingers, not fresh ones.
+      render(<HardwareStage items={ITEMS} />);
+      play(SWIPE);
+      play([30, 20, 20 + WHEEL_RISE_PX, 26, 18]);
+      expect(selected()).toBe(1);
+    });
+
+    it("needs a real climb over the coast's low, not jitter", () => {
+      render(<HardwareStage items={ITEMS} />);
+      play(SWIPE);
+      play([18, 10, 4, 4 + WHEEL_RISE_PX - 1, 4]);
+      expect(selected()).toBe(1);
+    });
+
+    it("cancels every event of the second swipe too", () => {
+      render(<HardwareStage items={ITEMS} />);
+      play(SWIPE);
+      play(COAST);
+      for (const d of SWIPE) expect(wheel(d).defaultPrevented).toBe(true);
+    });
+
+    it("leaves a vertical scroll to the page", () => {
+      render(<HardwareStage items={ITEMS} />);
+      const event = wheel(10, WHEEL_STEP_PX * 2);
+      expect(event.defaultPrevented).toBe(false);
+      expect(selected()).toBe(0);
+    });
+
+    it("takes the gesture over the icon bar too", () => {
+      render(<HardwareStage items={ITEMS} />);
+      const event = wheel(WHEEL_STEP_PX, 0, screen.getByRole("tablist"));
+      expect(event.defaultPrevented).toBe(true);
+      expect(selected()).toBe(1);
+    });
+
+    it("lets the tab strip scroll itself when it overflows", () => {
+      render(<HardwareStage items={ITEMS} />);
+      const strip = screen.getByRole("tablist");
+      Object.defineProperty(strip, "scrollWidth", { configurable: true, value: 600 });
+      Object.defineProperty(strip, "clientWidth", { configurable: true, value: 300 });
+      const event = wheel(WHEEL_STEP_PX, 0, tab("Smart lock"));
+      expect(event.defaultPrevented).toBe(false);
+      expect(selected()).toBe(0);
+    });
+
+    it("stops listening when unmounted", () => {
+      const { unmount } = render(<HardwareStage items={ITEMS} />);
+      const el = root();
+      unmount();
+      const event = new WheelEvent("wheel", { deltaX: WHEEL_STEP_PX, cancelable: true });
+      el.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
     });
   });
 

@@ -97,6 +97,30 @@ test("lines the four buttons up on one row", async ({ page }) => {
 });
 
 /**
+ * The Connected card's CTA is the solid band, whose hover used to step from
+ * brown-950 to brown-800: too close to see (reported 2026-10-02). It now
+ * empties to its outline, so the hover is a change of shape, not of shade.
+ */
+test("empties the Connected card's CTA to an outline on hover", async ({ page, isMobile }) => {
+  test.skip(isMobile, "hover is a mouse concern");
+  const cta = pricing(page)
+    .locator('[data-tone="image"]')
+    .getByRole("link", { name: "Get started" });
+  await cta.scrollIntoViewIfNeeded();
+  const paint = () =>
+    cta.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { bg: s.backgroundColor, ink: s.color, edge: s.borderTopColor };
+    });
+  const BROWN_950 = "rgb(10, 8, 7)";
+  expect((await paint()).bg).toBe(BROWN_950);
+
+  await cta.hover();
+  await expect.poll(paint).toEqual({ bg: "rgba(0, 0, 0, 0)", ink: BROWN_950, edge: BROWN_950 });
+  await expectAccessible(page);
+});
+
+/**
  * No horizontal scrollbar. Four columns at a fixed minimum would be the usual
  * way to cause one, so this guards the `minmax(0, 1fr)` tracks: without the 0
  * a grid column refuses to shrink below its content and the row pushes the

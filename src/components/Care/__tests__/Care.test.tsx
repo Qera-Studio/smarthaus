@@ -10,6 +10,17 @@ import { Care } from "../Care";
  * nobody is assigned to clear.
  */
 describe("Care packages", () => {
+  it("opens on reassurance, not on a breakdown", () => {
+    // The heading was "Friday, 9:14pm. The gate won't open." until 2026-10-02.
+    // Shivanshu asked for something easing and direct: the section sells
+    // being looked after, and leading with a failure frightened the reader it
+    // was meant to settle.
+    render(<Care />);
+    const heading = screen.getByRole("heading", { level: 2 });
+    expect(heading).toHaveTextContent("Looked after, long after installation.");
+    expect(heading.textContent).not.toMatch(/won.t|broken|fail|\d+:\d+/i);
+  });
+
   it("gives each package its own description", () => {
     // The section shipped with both cards carrying identical text, which read
     // as a copy placeholder and gave a reader no reason to choose Premium.

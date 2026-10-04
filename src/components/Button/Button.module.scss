@@ -67,12 +67,18 @@
 
     // --- Variants -----------------------------------------------------------
 
+    // Hover empties the band to its outline, the mirror of `outline` filling.
+    // It stepped to brown-800 before, which is too close to brown-950 to see
+    // (reported on the Connected tier's CTA, 2026-10-02). Solid only ever sits
+    // on a light ground, where brown-950 text is the strongest pair there is.
     &[data-variant="solid"] {
       background-color: var(--color-bg-inverse-strong);
       color: var(--color-text-inverse);
 
       &:hover:not(:disabled) {
-        background-color: var(--color-hover);
+        background-color: transparent;
+        border-color: var(--color-bg-inverse-strong);
+        color: var(--color-bg-inverse-strong);
       }
     }
 
