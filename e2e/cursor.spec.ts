@@ -110,15 +110,15 @@ test.describe("the inverting cursor", () => {
     await link.scrollIntoViewIfNeeded();
     await link.hover();
     await expect(box(page)).toHaveAttribute("data-shape", "square");
-    // One size for both shapes (2026-10-03): only the corners change.
+    // One size for both shapes (20px, 2026-10-04): only the corners change.
     const size = async () => {
       const b = (await box(page).boundingBox())!;
       return [Math.round(b.width), Math.round(b.height)];
     };
-    await expect.poll(size).toEqual([24, 24]);
+    await expect.poll(size).toEqual([20, 20]);
     await page.getByRole("heading", { level: 2 }).first().hover();
     await expect(box(page)).toHaveAttribute("data-shape", "dot");
-    await expect.poll(size).toEqual([24, 24]);
+    await expect.poll(size).toEqual([20, 20]);
   });
 
   test("turns square over the carousel's tabs and arrows", async ({ page }) => {
@@ -132,15 +132,27 @@ test.describe("the inverting cursor", () => {
     }
   });
 
-  test("inverts what is behind it, keeping the hue warm", async ({ page }) => {
-    // A plain stretch of bone page: the left gutter of a text page.
+  // Pixels, not styles: the inversion is a compositor effect. A probe block on
+  // the bone page, so the ground under the cursor is known exactly: a button
+  // (the square) and a plain block (the dot), side by side.
+  test("the square inverts what is behind it, warm; the dot paints and does not", async ({
+    page,
+  }) => {
     await page.goto("/accessibility");
-    const at = { x: 6, y: 400 };
+    await page.evaluate(() => {
+      const make = (tag: string, left: number) => {
+        const el = document.createElement(tag);
+        el.style.cssText = `position:fixed;top:300px;left:${left}px;width:80px;height:80px;background:#f0e9dd;border:0;padding:0;z-index:1`;
+        document.body.append(el);
+      };
+      make("button", 100);
+      make("div", 300);
+    });
     // Decoded in a blank page: no PNG library in the repo, and the site's CSP
     // is not in the way there.
     const scratch = await page.context().newPage();
-    const pixel = async () => {
-      const png = await page.screenshot({ clip: { ...at, width: 1, height: 1 } });
+    const pixel = async (x: number, y: number) => {
+      const png = await page.screenshot({ clip: { x, y, width: 1, height: 1 } });
       return scratch.evaluate(async (b64) => {
         const img = new Image();
         img.src = `data:image/png;base64,${b64}`;
@@ -151,14 +163,27 @@ test.describe("the inverting cursor", () => {
         return { r: r!, g: g!, b: b! };
       }, png.toString("base64"));
     };
-    const before = await pixel();
-    expect(before.r).toBeGreaterThan(200);
 
-    await takeOver(page, at.x, at.y);
-    await expect.poll(async () => (await pixel()).r).toBeLessThan(60);
-    // Inverted bone, hue turned back: still red over blue, a brown not a navy.
-    const after = await pixel();
-    expect(after.r).toBeGreaterThan(after.b);
+    // Over the button: inverted bone, hue turned back. A straight invert of
+    // bone is rgb(15 22 34), a navy; turned back it is a near-black whose blue
+    // stays within a few points of its red.
+    await takeOver(page, 140, 340);
+    await expect(box(page)).toHaveAttribute("data-shape", "square");
+    await expect.poll(async () => (await pixel(140, 340)).r).toBeLessThan(60);
+    const square = await pixel(140, 340);
+    expect(square.b - square.r).toBeLessThan(10);
+
+    // Over plain content: brown-900 at 75% painted over bone. Its edge pixel
+    // shows the difference: a painted dot is solid to its rim, where an
+    // inverted one would be the inverse colour there too, so test the centre
+    // against the paint, rgb(20 17 14 / .75) over rgb(240 233 221) = 75, 71, 66.
+    await page.mouse.move(340, 340);
+    await expect(box(page)).toHaveAttribute("data-shape", "dot");
+    await expect(box(page)).toHaveCSS("backdrop-filter", "none");
+    await expect.poll(async () => (await pixel(340, 340)).r).toBeLessThan(90);
+    const dot = await pixel(340, 340);
+    expect(Math.abs(dot.r - 75)).toBeLessThan(8);
+    expect(Math.abs(dot.b - 66)).toBeLessThan(8);
     await scratch.close();
   });
 

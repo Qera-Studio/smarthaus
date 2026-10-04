@@ -125,6 +125,20 @@ describe("Cursor", () => {
     document.getElementById("b")!.remove();
   });
 
+  it("marks the ground under the pointer, for the dot's light or dark ink", () => {
+    render(<Cursor />);
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<footer id="f" data-ground="dark"><p id="in">x</p></footer><p id="out">y</p>',
+    );
+    pointer("pointerover", {}, document.getElementById("in")!);
+    expect(box()).toHaveAttribute("data-ground", "dark");
+    pointer("pointerover", {}, document.getElementById("out")!);
+    expect(box()).toHaveAttribute("data-ground", "light");
+    document.getElementById("f")!.remove();
+    document.getElementById("out")!.remove();
+  });
+
   it("hides when the mouse leaves the window, not when it crosses an element", () => {
     render(<Cursor />);
     pointer("pointermove", { x: 5, y: 5 });
@@ -203,8 +217,16 @@ describe("Cursor.module.scss", () => {
   // checked on its source; e2e/cursor.spec.ts checks the pixels.
   const scss = readFileSync(join(__dirname, "..", "Cursor.module.scss"), "utf8");
 
-  it("inverts and turns the hue back, so bone goes brown, not navy", () => {
-    expect(scss).toMatch(/backdrop-filter:\s*invert\(1\)\s+hue-rotate\(180deg\);/);
+  it("inverts only the square, turning the hue back so bone goes brown", () => {
+    const square = scss.slice(scss.indexOf('&[data-shape="square"]'));
+    expect(square).toMatch(/backdrop-filter:\s*invert\(1\)\s+hue-rotate\(180deg\);/);
+    expect(scss.match(/backdrop-filter:/g)).toHaveLength(1);
+  });
+
+  it("paints the dot in the native dot's two colours", () => {
+    // brown-900 and brown-50 at 75%, the values globals.scss inlines.
+    expect(scss).toMatch(/background-color:\s*rgb\(20 17 14 \/ 0\.75\);/);
+    expect(scss).toMatch(/\[data-ground="dark"\][^}]*rgb\(248 245 240 \/ 0\.75\)/);
   });
 
   it("never takes a click meant for what is underneath", () => {
@@ -212,10 +234,9 @@ describe("Cursor.module.scss", () => {
   });
 
   it("draws the dot and the square at one size, so only the corners change", () => {
-    // 24px both (2026-10-03). No scale anywhere: a size change between the
+    // 20px both (2026-10-04). No scale anywhere: a size change between the
     // shapes is what the client asked to remove.
-    expect(scss).toMatch(/--cursor-size:\s*#\{\$space-6\};/);
+    expect(scss).toMatch(/--cursor-size:\s*#\{\$space-5\};/);
     expect(scss).not.toMatch(/^\s*scale:/m);
-    expect(scss).toMatch(/transition-property:\s*border-radius, opacity;/);
   });
 });

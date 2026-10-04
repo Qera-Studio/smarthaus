@@ -22,10 +22,10 @@ export const FINE_POINTER = "(hover: hover) and (pointer: fine)";
 export const FORCED_COLORS = "(forced-colors: active)";
 
 /**
- * The site's cursor: a dot that turns into a square over anything clickable.
- * It is not painted, it is a window: the box inverts whatever sits behind it
- * (`backdrop-filter`), text, buttons, the fluid hero and all, so it reads on
- * every ground without a light and a dark version.
+ * The site's cursor: a painted dot that turns into a square over anything
+ * clickable. The square is not painted, it is a window: it inverts whatever
+ * sits behind it (`backdrop-filter`), text, buttons and all. The dot is the
+ * native dot's colours, dark or light by the ground under it.
  *
  * ## The native dot stays the fallback
  *
@@ -72,6 +72,9 @@ export function Cursor() {
     const onOver = (event: PointerEvent) => {
       const target = event.target as Element | null;
       el.dataset.shape = target?.closest?.(CLICKABLE) ? "square" : "dot";
+      // The painted dot needs the light ink on a dark section; the square
+      // inverts, so it does not care.
+      el.dataset.ground = target?.closest?.('[data-ground="dark"]') ? "dark" : "light";
     };
     // Off the window: relatedTarget is null when the pointer left the page.
     const onOut = (event: PointerEvent) => {
@@ -95,6 +98,7 @@ export function Cursor() {
       ref={box}
       className={styles.cursor}
       data-shape="dot"
+      data-ground="light"
       data-visible="false"
       aria-hidden="true"
     />
