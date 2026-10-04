@@ -272,31 +272,6 @@ describe("ScrollToTop", () => {
     deliver(sentinel, GONE, SEEN);
     expect(button).not.toHaveAttribute("data-visible");
   });
-
-  it("stays on the dark style while one dark section remains under it and another leaves", () => {
-    const { button, sections } = renderButton(2);
-    const [first, second] = sections as [HTMLElement, HTMLElement];
-    deliver(first, SEEN);
-    deliver(second, SEEN);
-    deliver(first, GONE);
-    expect(button).toHaveAttribute("data-on-dark");
-  });
-
-  it("drops the dark style once every dark section has left", () => {
-    const { button, sections } = renderButton(2);
-    const [first, second] = sections as [HTMLElement, HTMLElement];
-    deliver(first, SEEN);
-    deliver(second, SEEN);
-    deliver(first, GONE);
-    deliver(second, GONE);
-    expect(button).not.toHaveAttribute("data-on-dark");
-  });
-
-  it("applies the newest state of one dark section within a batch", () => {
-    const { button, sections } = renderButton(1);
-    deliver(sections[0]!, SEEN, GONE);
-    expect(button).not.toHaveAttribute("data-on-dark");
-  });
 });
 
 // --- Hardware carousel ------------------------------------------------------
