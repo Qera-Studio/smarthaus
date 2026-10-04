@@ -212,23 +212,46 @@ test("every contact channel stays on one line", async ({ page }) => {
 });
 
 // Every section on the page pairs a title on the left with its content on the
-// right; the channels spanned both columns until 2026-10-03.
-test("puts the contact channels in the right column, under each other", async ({ page }) => {
+// right. The channels sit there as three columns, label over value, with the
+// labels on one line and the values on another (2026-10-04).
+test("puts the contact channels in the right column, three across, label over value", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "the two-column page starts at lg");
   await page.setViewportSize({ width: 1440, height: 900 });
   const section = page.locator("section[aria-labelledby='get-in-touch']");
-  const left = async (selector: string) => (await page.locator(selector).first().boundingBox())!.x;
-  const channels = await section
-    .locator("li")
-    .evaluateAll((els) =>
-      els.map((el) => el.getBoundingClientRect()).map((r) => ({ x: r.x, y: r.y })),
-    );
+  const rows = await section.locator("li").evaluateAll((els) =>
+    els.map((li) => {
+      const at = (el: Element) => {
+        const r = el.getBoundingClientRect();
+        return { x: Math.round(r.x), y: Math.round(r.y), right: Math.round(r.right) };
+      };
+      return { label: at(li.querySelector("span")!), value: at(li.querySelector("a")!) };
+    }),
+  );
+  const column = await page
+    .locator("section[aria-labelledby='location'] > div")
+    .evaluate((el) => Math.round(el.getBoundingClientRect().x));
 
-  // Same left edge as the location panels, which sit in the right column.
-  const right = await left("section[aria-labelledby='location'] > div");
-  for (const { x } of channels) expect(Math.round(x)).toBe(Math.round(right));
-  // One per row.
-  expect(channels.map((c) => c.y)).toEqual([...channels.map((c) => c.y)].sort((a, b) => a - b));
-  expect(new Set(channels.map((c) => Math.round(c.y))).size).toBe(3);
+  expect(rows).toHaveLength(3);
+  // Starts at the right column's edge, and runs left to right.
+  expect(rows[0]!.label.x).toBe(column);
+  expect(rows[1]!.label.x).toBeGreaterThan(rows[0]!.label.right);
+  expect(rows[2]!.label.x).toBeGreaterThan(rows[1]!.value.right);
+  // One line of labels, one line of values below them.
+  expect(new Set(rows.map((r) => r.label.y)).size).toBe(1);
+  expect(new Set(rows.map((r) => r.value.y)).size).toBe(1);
+  expect(rows[0]!.value.y).toBeGreaterThan(rows[0]!.label.y);
+  // Air between a label and its value, not two lines set flush.
+  const gap = await section
+    .locator("li")
+    .first()
+    .evaluate((li) => {
+      const label = li.querySelector("span")!.getBoundingClientRect();
+      return Math.round(li.querySelector("a")!.getBoundingClientRect().top - label.bottom);
+    });
+  expect(gap).toBeGreaterThanOrEqual(8);
 });
 
 test("the page does not overflow horizontally", async ({ page }) => {

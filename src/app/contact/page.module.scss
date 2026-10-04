@@ -369,19 +369,22 @@
     gap: $space-6;
     list-style: none;
 
+    // Three columns, two rows: the labels on the first, the values on the
+    // second (2026-10-04, at Shivanshu's request), in the right column like
+    // every other section body. Each channel subgrids onto both rows so the
+    // labels and the values each share one line however long a value runs.
+    //
+    // `auto` tracks spread by space-between, not equal thirds: at lg the
+    // column is 464px, and a third of it is narrower than the email, which
+    // wrapped mid-domain ("contact@mapletech.a / e") the last time it was
+    // squeezed. Sized to content, the email takes what it needs.
     @include bp-md {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: $space-4;
-    }
-
-    // In the right column like every other section body (2026-10-03, at
-    // Shivanshu's request), so one per row there: three across half the page
-    // is 464px at lg for 484px of text, and the email wrapped mid-domain
-    // ("contact@mapletech.a / e"). Stacked, each value has the whole column.
-    // Below lg the section is one column and the three-across row has room.
-    @include bp-lg {
-      grid-template-columns: minmax(0, 1fr);
-      gap: $space-6;
+      grid-template-columns: repeat(3, auto);
+      grid-template-rows: auto auto;
+      justify-content: space-between;
+      column-gap: $space-6;
+      // The row gap is the gap between a label and its value.
+      row-gap: $space-3;
     }
   }
 
@@ -390,6 +393,14 @@
     flex-direction: column;
     gap: $space-2;
     min-inline-size: 0;
+
+    @include bp-md {
+      display: grid;
+      grid-row: span 2;
+      grid-template-rows: subgrid;
+      // Inherit the list's row gap; a gap of its own here would replace it.
+      row-gap: inherit;
+    }
   }
 
   // Inverted against the other label/value pairs on this page, deliberately.
