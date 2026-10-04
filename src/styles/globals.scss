@@ -197,14 +197,6 @@
       auto;
   }
 
-  // Once Cursor.tsx has taken over (a mouse, outside forced colours, after
-  // the first move) it draws the cursor, so the native dot steps aside. Only
-  // the two rules that declare a dot need overriding: every control inherits.
-  html[data-cursor="custom"],
-  html[data-cursor="custom"] [data-ground="dark"] {
-    cursor: none;
-  }
-
   a {
     @include focus-ring;
 

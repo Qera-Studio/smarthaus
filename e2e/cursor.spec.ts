@@ -2,14 +2,11 @@ import { test, expect, type Locator } from "./fixtures";
 import { withConsentDecided } from "./checks";
 
 /**
- * Two layers. The native cursor is the brown dot everywhere, controls
- * included, and it is what a visitor has until the mouse moves (and always
- * without JavaScript or in forced colours). Once it moves, Cursor.tsx draws
- * an inverting dot that turns square over anything clickable, and the native
- * one steps aside.
- *
- * The native checks read computed styles without moving the mouse, because a
- * move is what hands over.
+ * The cursor is the brown dot everywhere, controls included. It used to be
+ * hidden over buttons (`cursor: none`) and component stylesheets set the hand
+ * elsewhere; both are gone on the client's call. Asserted in a real browser
+ * with a fine pointer: the computed cursor over each kind of control is the
+ * same dot html carries, or the light dot on a dark ground.
  */
 
 test.skip(({ isMobile }) => isMobile, "the cursor is a mouse concern");
@@ -23,6 +20,8 @@ const DARK_DOT = "%2314110E";
 const LIGHT_DOT = "%23F8F5F0";
 
 async function cursorOf(control: Locator) {
+  await control.scrollIntoViewIfNeeded();
+  await control.hover();
   return control.evaluate((el) => getComputedStyle(el).cursor);
 }
 
@@ -77,130 +76,4 @@ test("no element on the homepage uses any cursor but a dot", async ({ page }) =>
       .filter(({ cursor }) => !cursor.includes("data:image/svg+xml")),
   );
   expect(others).toEqual([]);
-});
-
-const box = (page: import("@playwright/test").Page) =>
-  page.locator('[aria-hidden="true"][data-shape]');
-
-/** Moves until the cursor answers: a move before hydration has no listener. */
-async function takeOver(page: import("@playwright/test").Page, x = 200, y = 200) {
-  let nudge = 0;
-  await expect(async () => {
-    await page.mouse.move(x + (nudge++ % 2), y);
-    await expect(box(page)).toHaveAttribute("data-visible", "true", { timeout: 200 });
-  }).toPass();
-}
-
-test.describe("the inverting cursor", () => {
-  test("stays out of the way until the mouse moves", async ({ page }) => {
-    await expect(box(page)).toHaveAttribute("data-visible", "false");
-    expect(await page.evaluate(() => document.documentElement.dataset.cursor)).toBeUndefined();
-  });
-
-  test("takes over from the native dot everywhere once the mouse moves", async ({ page }) => {
-    await takeOver(page);
-    const cursors = await page.evaluate(() =>
-      Array.from(document.querySelectorAll("html, body *"), (el) => getComputedStyle(el).cursor),
-    );
-    expect(new Set(cursors)).toEqual(new Set(["none"]));
-  });
-
-  test("turns square over a link and back to a dot off it", async ({ page }) => {
-    const link = page.getByRole("link", { name: "View detailed pricing" });
-    await link.scrollIntoViewIfNeeded();
-    await link.hover();
-    await expect(box(page)).toHaveAttribute("data-shape", "square");
-    // One size for both shapes (20px, 2026-10-04): only the corners change.
-    const size = async () => {
-      const b = (await box(page).boundingBox())!;
-      return [Math.round(b.width), Math.round(b.height)];
-    };
-    await expect.poll(size).toEqual([20, 20]);
-    await page.getByRole("heading", { level: 2 }).first().hover();
-    await expect(box(page)).toHaveAttribute("data-shape", "dot");
-    await expect.poll(size).toEqual([20, 20]);
-  });
-
-  test("turns square over the carousel's tabs and arrows", async ({ page }) => {
-    for (const control of [
-      page.getByRole("tab").first(),
-      page.getByRole("button", { name: "Next component" }),
-    ]) {
-      await control.scrollIntoViewIfNeeded();
-      await control.hover();
-      await expect(box(page)).toHaveAttribute("data-shape", "square");
-    }
-  });
-
-  // Pixels, not styles: the inversion is a compositor effect. A probe block on
-  // the bone page, so the ground under the cursor is known exactly: a button
-  // (the square) and a plain block (the dot), side by side.
-  test("the square inverts what is behind it, warm; the dot paints and does not", async ({
-    page,
-  }) => {
-    await page.goto("/accessibility");
-    await page.evaluate(() => {
-      const make = (tag: string, left: number) => {
-        const el = document.createElement(tag);
-        el.style.cssText = `position:fixed;top:300px;left:${left}px;width:80px;height:80px;background:#f0e9dd;border:0;padding:0;z-index:1`;
-        document.body.append(el);
-      };
-      make("button", 100);
-      make("div", 300);
-    });
-    // Decoded in a blank page: no PNG library in the repo, and the site's CSP
-    // is not in the way there.
-    const scratch = await page.context().newPage();
-    const pixel = async (x: number, y: number) => {
-      const png = await page.screenshot({ clip: { x, y, width: 1, height: 1 } });
-      return scratch.evaluate(async (b64) => {
-        const img = new Image();
-        img.src = `data:image/png;base64,${b64}`;
-        await img.decode();
-        const ctx = new OffscreenCanvas(1, 1).getContext("2d")!;
-        ctx.drawImage(img, 0, 0);
-        const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-        return { r: r!, g: g!, b: b! };
-      }, png.toString("base64"));
-    };
-
-    // Over the button: inverted bone, hue turned back. A straight invert of
-    // bone is rgb(15 22 34), a navy; turned back it is a near-black whose blue
-    // stays within a few points of its red.
-    await takeOver(page, 140, 340);
-    await expect(box(page)).toHaveAttribute("data-shape", "square");
-    await expect.poll(async () => (await pixel(140, 340)).r).toBeLessThan(60);
-    const square = await pixel(140, 340);
-    expect(square.b - square.r).toBeLessThan(10);
-
-    // Over plain content: brown-900 at 75% painted over bone. Its edge pixel
-    // shows the difference: a painted dot is solid to its rim, where an
-    // inverted one would be the inverse colour there too, so test the centre
-    // against the paint, rgb(20 17 14 / .75) over rgb(240 233 221) = 75, 71, 66.
-    await page.mouse.move(340, 340);
-    await expect(box(page)).toHaveAttribute("data-shape", "dot");
-    await expect(box(page)).toHaveCSS("backdrop-filter", "none");
-    await expect.poll(async () => (await pixel(340, 340)).r).toBeLessThan(90);
-    const dot = await pixel(340, 340);
-    expect(Math.abs(dot.r - 75)).toBeLessThan(8);
-    expect(Math.abs(dot.b - 66)).toBeLessThan(8);
-    await scratch.close();
-  });
-
-  test("hides when the mouse leaves the window", async ({ page }) => {
-    await takeOver(page);
-    await page.dispatchEvent("body", "pointerout", { relatedTarget: null });
-    await expect(box(page)).toHaveAttribute("data-visible", "false");
-  });
-});
-
-test.describe("forced colours @forced-colors", () => {
-  test("keeps the system's own cursor and draws no box", async ({ page }) => {
-    // Hydrated first, or "no box" would pass before the component could run.
-    await page.waitForLoadState("networkidle");
-    await page.mouse.move(200, 200);
-    await page.mouse.move(210, 200);
-    await expect(box(page)).toHaveCount(0);
-    expect(await page.evaluate(() => document.documentElement.dataset.cursor)).toBeUndefined();
-  });
 });

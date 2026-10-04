@@ -257,8 +257,6 @@ $z-sticky: 200;
 $z-overlay: 300;
 $z-modal: 400;
 $z-toast: 500;
-// Above everything, toasts included: it is the pointer.
-$z-cursor: 600;
 
 :root {
   --z-base: #{$z-base};
@@ -267,7 +265,6 @@ $z-cursor: 600;
   --z-overlay: #{$z-overlay};
   --z-modal: #{$z-modal};
   --z-toast: #{$z-toast};
-  --z-cursor: #{$z-cursor};
 }
 
 // --- L0: Typography ---------------------------------------------------------
