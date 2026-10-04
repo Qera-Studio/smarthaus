@@ -211,6 +211,26 @@ test("every contact channel stays on one line", async ({ page }) => {
   }
 });
 
+// Every section on the page pairs a title on the left with its content on the
+// right; the channels spanned both columns until 2026-10-03.
+test("puts the contact channels in the right column, under each other", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const section = page.locator("section[aria-labelledby='get-in-touch']");
+  const left = async (selector: string) => (await page.locator(selector).first().boundingBox())!.x;
+  const channels = await section
+    .locator("li")
+    .evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect()).map((r) => ({ x: r.x, y: r.y })),
+    );
+
+  // Same left edge as the location panels, which sit in the right column.
+  const right = await left("section[aria-labelledby='location'] > div");
+  for (const { x } of channels) expect(Math.round(x)).toBe(Math.round(right));
+  // One per row.
+  expect(channels.map((c) => c.y)).toEqual([...channels.map((c) => c.y)].sort((a, b) => a - b));
+  expect(new Set(channels.map((c) => Math.round(c.y))).size).toBe(3);
+});
+
 test("the page does not overflow horizontally", async ({ page }) => {
   await expectNoHorizontalOverflow(page);
 });
