@@ -1,760 +1,116 @@
-@use "sass:math";
 @use "../../styles/variables" as *;
 @use "../../styles/mixins" as *;
 
-// The "Our Process" rail.
+// The "Our Process" stack.
 //
-// ## The mechanism, in one paragraph
+// Six full-screen sheets in one list. Each is `position: sticky` at the top
+// of the screen, so it holds still once it gets there while the next sheet,
+// later in the list and so painted above it, scrolls up from the bottom edge
+// and covers it. The list is the sticky containing block: when the last sheet
+// arrives, the whole stack leaves together and the page carries on.
 //
-// `.process` is a TALL SPACER carrying a `view-timeline`. `.pin` inside it is
-// `position: sticky`, so it holds still against the viewport while the spacer
-// scrolls past. `.track` consumes that timeline and translates sideways. The
-// page's own vertical scroll is therefore what moves the rail horizontally, and
-// none of it involves a scroll listener, a wheel handler or a library.
+// Replaced the horizontal rail and its portal zoom on 2026-10-04. The rail is
+// at the git tag `archive/process-rail`.
 //
-// The spacer's height is the travel scaled by the two pacing ratios:
-// --process-portal-ratio for the zoom and --process-rail-ratio for the rail.
-// The zoom is quick because it is a reveal; the rail is slower because each
-// page has to be readable as it passes.
+// ## Every sheet is exactly one screen
 //
-// ## The portal
+// A pinned sheet taller than the screen would have its foot covered by the
+// next one before anyone saw it, and CSS cannot pin a box by its bottom edge
+// without knowing its height. So the sheet is the screen's height and its
+// images take whatever the copy leaves (`min-block-size: 0` on the frames).
+// e2e/process.spec.ts asserts that every sheet's content fits on all three
+// devices.
 //
-// The section now opens with a ZOOM REVEAL before the rail moves at all. The
-// pinned stage starts as a small square sitting near the bottom of the viewport
-// and grows to fill it, rising as it grows. Only when it has filled the screen
-// does the track start sliding.
-//
-// ## Where the dark ground lives, and why it matters
-//
-// On `.portal`, NOT on `.process`. The brown-950 slab is the thing the reader
-// watches grow, so it has to be the element that scales. Painting it on the
-// spacer — which is what shipped first — leaves the dark field full-bleed and
-// stationary from the moment the section is reached, and the zoom then reads as
-// text scaling up on a background that was always there.
-//
-// The bleed past body's 1440px cap is on `.pin`, one level ABOVE the portal.
-// The pin has `overflow: hidden`, and a clip always beats a child's attempt to
-// escape it however that child is positioned: with the negative margins on the
-// portal instead, the grown slab carried a 24px light border down every edge.
-// Widening the clipper is the only fix that keeps the clip.
-//
-// `data-ground="dark"` sits on the portal for the same reason — it marks the
-// dark pixels, and those now move.
-//
-// Both run on ONE timeline, split into two slices. The pin window is one stage
-// longer than the rail needs, and that extra stage is the portal's. Everything
-// below is expressed against --process-portal-end, the boundary between them,
-// so the split is one number rather than a set of hand-matched percentages.
-//
-// A second view-timeline was the obvious alternative and is worse: the portal
-// and the rail would each need their own subject with its own range, the two
-// ranges would have to be kept in sync by hand, and the fallback would have to
-// compute two progress values instead of one.
+// Where it cannot fit, the stack is off: under reduced motion, and on a
+// screen shorter than $stack-min-block (a phone on its side, or the desktop
+// at 200% zoom), the sheets are plain sections one after another.
+
+// Below this viewport height the copy and a picture no longer share one
+// screen, so the sheets stop pinning.
+$stack-min-block: 32rem;
 
 @layer blocks {
-  // $process-page-count must match PROCESS_PAGES.length in src/content/process.ts.
-  // The stylesheet cannot read that array, and `animation-range` cannot take the
-  // --process-pages custom property in a percentage position, so this is the one
-  // place the count is duplicated. src/content/__tests__/process.test.ts pins the
-  // array at six, so a seventh page fails the unit suite before it reaches here.
-  //
-  // Declared at the top because --process-portal-end on <main> also needs it,
-  // and Sass resolves variables in source order.
-  $process-page-count: 6;
-
   .process {
-    // L2 component tokens. Every value this block departs from the system on is
-    // declared here so it is readable in one place.
-    //
-    // --process-pages is set inline by the component: the page count is the one
-    // number the stylesheet cannot know, and both the track width and the
-    // spacer height derive from it.
-    // The stage height comes from --process-hold-stage on <main>, which is
-    // where it has to live so the hero's hold animation can measure the zoom.
-    // Aliased rather than restated, so there is one definition.
-    --process-stage-block: var(--process-hold-stage);
-    // What the stage gives up at the bottom for the mobile nav bar. The pin
-    // adds it back so the dark ground reaches the screen edge; the content
-    // inside keeps the inset so it never sits under the bar. Zero at lg, where
-    // the nav is a top bar and the stage is already the full viewport.
-    --process-stage-inset: var(--nav-bar-block-size);
-    // How far the track slides, as a fraction of ITS OWN width. The track is
-    // `pages` stages wide, and the distance to cover is all but the last one, so
-    // `(pages - 1) / pages`. Expressed this way rather than in viewport units
-    // because the track sits inside body's 1440px cap: 100vw pages would
-    // overflow their slot on a wide screen and every page after the first would
-    // land short of where it should.
-    --process-travel: calc(100% * (var(--process-pages) - 1) / var(--process-pages));
-    // A little past the last page. At exactly (pages - 1) / pages the rail
-    // stopped with the last page's image a hair short of its slot and the pin
-    // let go the same instant, which read as the rail quitting early. The
-    // overrun keeps it moving past full for this much; the ground shows on
-    // the right for that last stretch, on the client's call.
-    --process-overrun: 8vw;
-    // --process-portal-ratio, --process-rail-ratio, --process-portal-stages and
-    // --process-portal-end are declared on <main>, not here: the hero is a
-    // SIBLING of this section and needs them too. See that rule for why.
-    // The rail's own scroll: `ratio` stages for every page of travel.
-    --process-rail-block: calc(
-      var(--process-stage-block) * (var(--process-pages) - 1) * var(--process-rail-ratio)
-    );
-    // The portal's scroll, at its own ratio.
-    --process-portal-block: calc(
-      var(--process-stage-block) * var(--process-portal-stages) * var(--process-portal-ratio)
-    );
-    // The spacer's height: one stage to pin against, plus the portal, plus the
-    // rail.
-    --process-scroll-block: calc(var(--process-portal-block) + var(--process-rail-block));
-    // How much further the reader scrolls past the previous section's last
-    // screen before the slab starts rising. See the overlay margin below.
-    // A share of the stage rather than a fixed length, so it scales with the
-    // screen. 96px was tried and the slab still arrived under the carousel's
-    // image; three tenths of a screen is the client's call.
-    --process-portal-delay: calc(var(--process-stage-block) * 0.3);
-    // The square's size at the very start of the portal, as a fraction of the
-    // full stage. 0.1 is what the client asked for and is small enough to read
-    // as an object rather than as a shrunken page.
-    --process-portal-scale: 0.1;
-    // The inline axis of that scale. 1 below lg, so the slab is full-width from
-    // the start and rises as a band; the zoom is then purely vertical, which is
-    // the only axis a phone has room for. Set to the same value as the block
-    // axis at lg, where there is width to spare and the square reads as an
-    // object. See .portal for what scaling both axes did on a phone.
-    --process-portal-scale-x: 1;
-    // Where the square sits when it is smallest, as the scale's origin.
-    //
-    // 100% is the stage's bottom edge, so the slab grows UPWARD out of it. The
-    // anchor has now been all three: 90%, then 10%, now dead bottom, and the
-    // reason it kept moving is that the anchor was never the actual problem.
-    //
-    // While the slab is at a tenth of the stage, the other nine tenths of that
-    // stage are empty page. Anchored low that emptiness sat above the square;
-    // anchored high it sat below it. Moving the origin only moved the gap.
-    // What removes it is the OVERLAY below: the section is pulled up over the
-    // one before it, so the space the slab has not yet covered is the previous
-    // section rather than nothing at all. With that in place, dead bottom is
-    // the right origin, because the slab then rises off the bottom edge of the
-    // screen and climbs over what is already there.
-    --process-portal-anchor: 100%;
-    // WHERE SCROLL LETS GO OF THE ZOOM. Scroll grows the slab from
-    // --process-portal-scale up to this, and a timed transition on .grow takes
-    // it the rest of the way, so the reader does not have to scroll the whole
-    // second half by hand. Scrolling back above the point runs it back down.
-    //
-    // It works by composition, not by handing one property between two
-    // drivers: .grow holds this scale and .portal inside it animates to 1, so
-    // the rendered size is the product. The scroll animation and the
-    // transition never write the same property, which is what an animation
-    // would otherwise win outright.
-    --process-portal-handoff: 0.5;
-    // Its inline axis, which follows the same rule as --process-portal-scale-x:
-    // 1 below lg where only the block axis zooms.
-    --process-portal-handoff-x: 1;
-    // What .portal starts at so the PRODUCT starts at --process-portal-scale.
-    --process-portal-from: calc(var(--process-portal-scale) / var(--process-portal-handoff));
-    --process-portal-from-x: calc(var(--process-portal-scale-x) / var(--process-portal-handoff-x));
-    // The image is 124% of its frame and sits at -12%, so it has 12% of the
-    // FRAME of slack at each edge — just under 10% as a fraction of the image's
-    // own height. 4.5% therefore sits at roughly half the available travel and
-    // cannot expose an edge.
-    //
-    // Halved from 9% at the client's call: over one page's range that was
-    // moving an image 150px or so, which read as too much. The oversize is left
-    // at 124% rather than tightened to match, so the shift can be turned back up
-    // without also re-deriving the frame geometry.
-    --process-parallax-shift: 4.5%;
     // L2 ink ramp. Colour tokens rather than `opacity`, which would inherit to
     // every descendant. Same approach as the footer's --footer-ink-* set.
     --process-ink: #{$brown-100};
-    // brown-100 at 70%, not brown-300. brown-300 is a warm mid-tone that reads
-    // gold against this ground rather than as quiet body text, which is not the
-    // palette's intent. A colour token rather than an `opacity`, which would
-    // inherit to every descendant. Same approach as the footer's ink ramp.
+    // brown-100 at 70%, not brown-300, which reads gold on this ground.
     --process-ink-dim: #{rgba($brown-100, 0.7)};
-    --process-rule: #{$brown-800};
-
-    // svh, never vh or dvh. 100vh on iOS Safari is the LARGE viewport, and
-    // 100dvh changes as the URL bar collapses, which would reflow the spacer
-    // mid-scroll: visible jank, and CLS against a budget of < 0.05. svh is the
-    // small viewport and is stable. Footer.module.scss:118 has the long version.
-    block-size: calc(var(--process-stage-block) + var(--process-scroll-block));
-
-    // THE OVERLAY. The section is pulled up over the one before it by exactly
-    // the scroll the portal costs, so the zoom is paid for out of the previous
-    // section's height instead of adding to the page.
-    //
-    // This is the fix for a gap that moved twice without going away. The
-    // section reserves a full stage, and while the slab is at a tenth of it the
-    // other nine tenths are empty page: anchored low that emptiness sat above
-    // the square, anchored high it sat below. It was never a padding bug and no
-    // choice of origin removes it, because the space is reserved whether or not
-    // anything is drawn in it.
-    //
-    // Pulled up, that space is no longer reserved at all. The slab opens over
-    // the previous section, which stays put and visible until it is covered,
-    // and the page below starts immediately after the rail. The reader never
-    // sees an empty stage because there is never an empty stage.
-    //
-    // BY A WHOLE STAGE, not by the portal's scroll. The overlap was the
-    // portal's 270px first, which happened to work while the hero was the
-    // previous section: the hero is one screen tall, so its last 270px was
-    // also its last screen. With the hardware carousel in front, 1256px tall,
-    // the same overlap left only the carousel's foot on screen when the pin
-    // engaged and the slab grew over blank canvas below it. Measured: the
-    // previous section's bottom sat at y270 for the whole zoom. What the
-    // pin needs under it is the previous section's LAST SCREEN, and that is a
-    // stage of overlap whatever the section before this one is.
-    //
-    // The section's own pin engages at its top, which is now one stage higher
-    // than it was. Holding the section BEFORE it still is a separate job, and
-    // the :has() rule below does it: this margin alone would let it scroll
-    // out from under the growing slab. Measured on the hero: it moved from
-    // y-293 to y-844 over the zoom.
-    //
-    // Less --process-portal-delay: the pin engaged the instant the previous
-    // section's last screen filled the viewport, which put the rising slab
-    // over the carousel's controls before the reader had finished with them.
-    // The delay is that much more scroll before the slab starts, on the
-    // client's call; the previous section's bottom then sits that far above
-    // the viewport's during the zoom, and the slab covers the strip as it
-    // grows.
-    margin-block-start: calc(-1 * (var(--process-stage-block) - var(--process-portal-delay)));
-
-    // The timeline lives on the spacer and is consumed by its descendants.
-    view-timeline-name: --process-scroll;
-    view-timeline-axis: block;
-
-    // Zero, stated. The initial value is `auto`, which means "the scroller's
-    // scroll-padding", and html carries scroll-padding to keep focus clear of
-    // the fixed nav (globals.scss, WCAG 2.4.11). Left at auto, that padding
-    // shifted the whole pin window by the nav's height: measured 2026-09-27,
-    // the section above moved 4.9px during the zoom on Galaxy S24.
-    view-timeline-inset: 0px;
-
-    // Above the section it overlaps, so the growing slab paints over the hero
-    // rather than under it.
-    z-index: 1;
-
-    // TRANSPARENT TO THE POINTER, so the hero underneath stays usable.
-    //
-    // The overlay pulls this section up over the hero by a whole portal's
-    // scroll, so its box covers the hero's two CTAs from the moment the page
-    // loads — while the slab inside it is still a tenth of a stage and nothing
-    // is painted over them at all. Measured at scroll 0: "Book a site visit"
-    // and "Explore Villa" both reported this section as the hit target, and
-    // neither button worked.
-    //
-    // It has to be on the SECTION, not on .pin inside it. The pin's box is the
-    // stage, but the section's is the whole tall spacer, and that is the one
-    // hanging over the hero. Putting it on the pin left the section still
-    // intercepting: the blocker simply changed from a DIV to a SECTION.
-    //
-    // `none` here with `auto` back on .portal means only the PAINTED slab takes
-    // input. The slab's box is exactly its ground, so what is clickable is
-    // exactly what is visible.
-    pointer-events: none;
-
-    // NO background of its own, deliberately.
-    //
-    // The dark ground belongs to .portal, not to this spacer, and that is the
-    // whole point of the zoom: the brown-950 slab is the THING that grows. If
-    // the spacer painted it, the dark field would already be full-bleed and
-    // stationary before the portal started, and the reader would see text
-    // scaling up on a background that was always there rather than a dark
-    // panel opening out of the page. That is exactly what shipped first and
-    // what this fixes.
-    //
-    // Leaving it transparent lets the page canvas (brown-100) show through for
-    // as long as the slab has not covered it.
-    position: relative;
-    isolation: isolate;
-
-    @include bp-lg {
-      // --process-stage-block follows --process-hold-stage on <main>, which has
-      // its own lg value, so only the inset changes here.
-      //
-      // The nav is a top bar here, so the stage is already the whole viewport
-      // and there is nothing for the pin to add back.
-      --process-stage-inset: 0px;
-      // Enough width for the square to read as an object, so both axes scale.
-      --process-portal-scale-x: var(--process-portal-scale);
-      --process-portal-handoff-x: var(--process-portal-handoff);
-    }
+    // brown-950 with the sheet edge one step up the ramp, so a sheet over a
+    // sheet reads as two pieces of paper rather than one dark field.
+    --process-sheet: var(--color-bg-inverse-strong);
+    --process-edge: #{$brown-800};
   }
 
-  // Hold the section BEFORE this one still while the slab climbs over it, and
-  // then LET IT GO.
-  //
-  // Without the hold the overlay reads wrong: the slab rises correctly, but the
-  // hero slides up behind it at the same time, so two things move at once and
-  // the slab looks like it is merely scrolling into view rather than covering
-  // something. Measured over the zoom, the hero ran from y-293 to y-844.
-  //
-  // NO `position: sticky` here, and that is the second attempt at this.
-  //
-  // Sticky was the obvious tool and it does not work. It pins for the whole of
-  // its containing block, which is <main>, so the hero never released: measured
-  // at scroll 4700, well past the rail, it still reported y0..833 and one of
-  // its buttons was the hit target at the centre of the viewport, over the
-  // section the reader was actually looking at. Adding `inset-block-end` does
-  // not bound it either — when both insets are set on a sticky element the
-  // start wins and the end is ignored, which is why the computed value came
-  // back `auto`.
-  //
-  // It is also unnecessary. The overlay already holds the hero still WITHOUT
-  // pinning it, because the hero's last viewport of scroll is the same scroll
-  // the portal consumes: the section's negative margin means the page does not
-  // advance past the hero while the slab grows. What the hero needs is not to
-  // be held, but to stay UNDER the slab and out of its way.
-  //
-  // `:has(+ ...)` rather than a class on the hero, or a rule inside
-  // Hero.module.scss. The rule only exists because THIS section overlaps it, so
-  // it belongs to the thing that created the need: a page without Process takes
-  // this away with it, and the hero keeps knowing nothing about what follows.
-  // Hoist the section's timeline so the HERO can read it too.
-  //
-  // A view-timeline is visible only to the declaring element's descendants, and
-  // the hero is a SIBLING of the section, so the hold animation below simply did
-  // not run: the computed `translate` stayed 0px at every scroll position.
-  // `timeline-scope` on their common ancestor lifts the name to where both can
-  // see it. The timeline is still declared on .process; this only widens who may
-  // consume it.
-  // The pacing tokens live HERE, on the ancestor the section and the hero
-  // share, and .process inherits them rather than declaring its own.
-  //
-  // The hero is a SIBLING of .process, so nothing scoped to .process reaches
-  // it. The hold's animation-range read --process-portal-end as an empty var(),
-  // which invalidates the whole declaration: the computed value came back
-  // `normal`, the animation ran over the whole section rather than the zoom,
-  // and the hero never moved. Declaring them once up here is what puts them in
-  // scope for both, and it keeps a single definition rather than two copies
-  // free to drift.
-  //
-  // --process-pages cannot join them: the component sets it inline on the
-  // section, which is why the block sizes derived from it stay down there.
-  :global(main):has(.process) {
-    timeline-scope: --process-scroll;
-
-    // How much vertical scroll buys one stage of motion. 1 is 1:1, above 1 is
-    // slower, below 1 faster. THE TWO PHASES HAVE THEIR OWN.
-    //
-    // They shared one ratio at first, and that was wrong in both directions at
-    // once. The zoom wants to be quick: it is a reveal, and 0.6 makes the slab
-    // arrive rather than creep. The rail wants the opposite, because each page
-    // carries a heading, a paragraph and photographs that have to be readable
-    // as they pass, and at 0.6 they flicked by.
-    //
-    // The portal's is 0.3, half its original 0.6, because scroll now drives
-    // only the first half of the zoom (see --process-portal-handoff). The
-    // rate per pixel is unchanged; keeping 0.6 would have left the reader
-    // scrolling through a stretch where nothing moved.
-    --process-portal-ratio: 0.3;
-    --process-rail-ratio: 2;
-    // How many stages of scroll the portal gets before the rail starts.
-    --process-portal-stages: 1;
-    // The stage height, in scope up here so the hold's keyframe can measure the
-    // zoom's scroll distance. .process has its own --process-stage-block for
-    // the same value; this is the copy the HERO can see, and the two are kept
-    // in step by the bp-lg block below mirroring the section's.
-    --process-hold-stage: calc(100svh - var(--nav-bar-block-size));
-
-    @include bp-lg {
-      --process-hold-stage: 100svh;
-    }
-
-    // WHERE THE PORTAL ENDS, as a fraction of the pin window. Every
-    // animation-range is written against this, so the split is one number.
-    //
-    // Derived from the RATIOS rather than the block sizes, which is what lets
-    // it live here: the stage height cancels out of the fraction, so this needs
-    // no page count and no viewport unit. It is the portal's share of the total
-    // scroll, where the rail's share is (pages - 1) stages at the rail ratio.
-    //
-    // It has to be stated this way now the phases have different ratios. While
-    // they shared one it reduced to a ratio of stage counts, because the ratio
-    // appeared in both terms and cancelled. With the portal at 0.6 and the rail
-    // at 2, a count-based split would put the boundary at 17% when the portal
-    // actually ends at 6%, and the rail would spend its first tenth sliding
-    // under a slab that had not finished growing.
-    // The page count is the SCSS constant, not --process-pages: that one is set
-    // inline on the section and so is out of scope up here, for the same reason
-    // everything else had to move. The constant is already in this file for the
-    // per-page parallax ranges and is pinned by the unit suite, so this adds no
-    // new place for the number to drift.
-    --process-portal-end: calc(
-      100% * (var(--process-portal-stages) * var(--process-portal-ratio)) /
-        (
-          var(--process-portal-stages) * var(--process-portal-ratio) + #{$process-page-count - 1} *
-            var(--process-rail-ratio)
-        )
-    );
-  }
-
-  :global(main) > :has(+ .process) {
-    // No padding reserved for the overlap. It was 270px of empty canvas at
-    // this section's foot, added so the tenth-size square would not paint
-    // over the carousel's copy; with the overlap now a whole stage, that
-    // padding was exactly the blank band the slab grew over.
-
-    // A stacking position BELOW the process section, which states z-index: 1.
-    // `relative` is what makes z-index apply at all; without it the hero would
-    // paint by document order and sit on top of the very slab meant to cover
-    // it.
-    position: relative;
-    z-index: 0;
-
-    // Held still for the length of the zoom, then released.
-    //
-    // `position: sticky` is what this needs and it cannot be used: its
-    // containing block is <main>, so it pins until the END of the page. That
-    // was a real bug — the hero stayed frozen at y0..833 behind every later
-    // section and its buttons kept taking clicks. `inset-block-end` does not
-    // bound it either; with both insets set the start wins and the end computes
-    // to `auto`.
-    //
-    // A scroll-driven animation does the job that sticky cannot, on the section's
-    // own timeline, so the hold starts and ends at exactly the points the zoom
-    // does. It translates the hero down at the same rate the page scrolls up,
-    // which cancels its motion; outside that range it is simply not running and
-    // the hero travels normally.
-    animation-name: process-hold;
-    animation-timeline: --process-scroll;
-    animation-range: contain 0% contain var(--process-portal-end);
-    animation-fill-mode: both;
-    animation-timing-function: linear;
-  }
-
-  // Cancels the hero's scroll for the length of the zoom. The distance is the
-  // portal's own scroll, which is exactly how far the page advances while the
-  // slab is growing.
-  //
-  // Written out from the ratio rather than reusing --process-portal-block: that
-  // one is scoped to .process and computes to EMPTY on the hero, which is its
-  // sibling. The translate then resolved to nothing and the hero did not move
-  // at all, while every other part of the wiring looked correct — the animation
-  // was on the right timeline and reported `running`.
-  @keyframes process-hold {
-    to {
-      translate: 0
-        calc(var(--process-hold-stage) * var(--process-portal-stages) * var(--process-portal-ratio));
-    }
-  }
-
-  .pin {
-    position: sticky;
-    inset-block-start: 0;
-
-    // The stage, plus whatever the stage deliberately gives up at the bottom.
-    //
-    // Below lg --process-stage-block is `100svh - nav`, because the nav is a
-    // bottom bar there and rail CONTENT must not sit under it. The dark GROUND
-    // has no such problem, and stopping it short left the slab rising off a
-    // line 60px above the screen with a light strip beneath it: measured on an
-    // iPhone 14, the slab bottomed out at y604 in a 664px viewport.
-    //
-    // So the pin runs the full viewport and the title bar and rail keep their
-    // own inset. --process-stage-inset is that difference, zero at lg where
-    // the nav is a top bar and the stage is already the whole screen.
-    block-size: calc(var(--process-stage-block) + var(--process-stage-inset));
-
-    // THE PIN is what bleeds past body's gutter, not the portal inside it.
-    //
-    // This was the bug behind a 24px light border down every edge of the
-    // grown slab. The portal had negative insets of its own and its box did
-    // measure 0..1440, but `overflow: hidden` here clipped it back to the
-    // pin's own 24..1416: a clip always wins over a child's escape, however
-    // the child is positioned. Widening the clipper is the only fix that does
-    // not mean giving up the clip.
-    //
-    // Negative margins rather than the footer's `calc(50% - 50vw)`: that
-    // resolves 50% against a containing block which is itself inside body's
-    // padding, so it lands one gutter short on each side. The gutter is a
-    // token, so cancelling it by name is both exact and self-explaining.
-    margin-inline: calc(-1 * var(--page-gutter));
-
-    // Clips the portal to the stage on all four sides, so the slab never
-    // paints over the page above or below while it is smaller than the stage.
-    // The inline overhang cannot become a scrollbar: html carries
-    // `overflow-x: clip` (globals.scss:50).
-    overflow: hidden;
-  }
-
-  // --- The portal -----------------------------------------------------------
-
-  // The timed half of the zoom. Holds the slab at --process-portal-handoff
-  // until ProcessHandoff reports the scroll has passed that point, then
-  // transitions to full size; and back again when it is scrolled above it.
-  // Same origin as .portal, so the two scales compose about one point.
-  //
-  // The duration is set by ProcessHandoff from the speed the reader was
-  // scrolling, so the transition opens at the rate scroll had been growing
-  // the slab and eases out from there. --duration-slow is the fallback before
-  // it has measured anything. The easing is not the --ease-out token: that
-  // curve starts at four and a half times its average rate, which is the
-  // lurch this replaces. This one starts at twice, and ProcessHandoff's
-  // EASE_START is that number; change them together.
-  .grow {
-    block-size: 100%;
-    transform-origin: 50% var(--process-portal-anchor);
-    scale: var(--process-portal-handoff-x) var(--process-portal-handoff);
-    transition-property: scale;
-    transition-duration: var(--process-grow-duration, var(--duration-slow));
-    transition-timing-function: cubic-bezier(0.5, 1, 0.89, 1);
-  }
-
-  .process[data-portal-open] .grow {
-    scale: 1 1;
-  }
-
-  // ProcessHandoff's marker. Its BOTTOM edge is the handoff: one portal's
-  // scroll below the section's top, where the scroll-driven half ends. It is a
-  // viewport tall so "scrolled past" is simply "entirely above the viewport",
-  // and so a jump from anywhere past it back to the top of the page lands the
-  // marker on screen and fires the observer rather than skipping over it.
-  .handoff {
-    position: absolute;
-    inset-block-start: calc(var(--process-portal-block) - 100svh);
-    inset-inline-start: 0;
-    inline-size: 1px;
-    block-size: 100svh;
-    pointer-events: none;
-  }
-  //
-  // Everything the pin holds lives inside this box, and this box is what
-  // scales. The title bar and the rail therefore grow together as one unit,
-  // which is the point: the reader sees a small SLAB of the section rise and
-  // open out, not a picture that a header is later bolted onto.
-  //
-  // ## Why scaling about the bottom edge is the whole effect
-  //
-  // `transform-origin` at 50% 100% pins the stage's bottom edge and scales
-  // everything about it. At 0.1 the box is a tenth of the stage sitting on that
-  // edge, and as the scale runs to 1 its top climbs to the top of the stage
-  // while its bottom never moves: the RISE is a consequence of the origin, not
-  // a separate translate animated alongside it.
-  //
-  // That matters beyond tidiness. One animated property means the portal cannot
-  // drift out of sync with itself, and `scale` alone stays on the compositor.
-  // An accompanying `translate` would be a second property to keep in phase for
-  // no visual gain.
-  .portal {
-    display: flex;
-    flex-direction: column;
-    transform-origin: 50% var(--process-portal-anchor);
-
-    // The content keeps the inset the pin gave back. The pin now runs the full
-    // viewport so the dark ground reaches the screen edge, but below lg the
-    // nav is a bottom bar and the rail would otherwise slide underneath it.
-    // Padding rather than a shorter box, so the ground still fills the pin.
-    padding-block-end: var(--process-stage-inset);
-
-    // Input comes back on, having been turned off for the whole pin above. The
-    // slab is what the reader can see, so the slab is what they can click; the
-    // empty stage around it stays transparent and the hero underneath keeps
-    // working until this actually covers it.
-    pointer-events: auto;
-
-    // THE DARK GROUND LIVES HERE, not on the spacer. This element is the slab
-    // the reader watches grow, so it is what has to be brown-950; the page
-    // behind stays on its own canvas until this covers it.
-    background-color: var(--color-bg-inverse-strong);
-
-    // Simply fills the pin, which has already been widened past body's gutter.
-    // Nothing clever here on purpose: the bleed is solved one level up, so
-    // this element only has to be the full size of its parent and carry the
-    // colour.
-    //
-    // The ground is on the ELEMENT rather than a ::before, and that part does
-    // matter: a pseudo-element would be a child of the thing being scaled and
-    // would scale with it, so there would be nothing to widen.
-    block-size: 100%;
-    // The starting state, so the square is correct on first paint and before
-    // any timeline attaches. `animation-fill-mode: both` holds the same value,
-    // but only once the animation exists; this covers the frame before that and
-    // the no-animation paths at the end of the file.
-    //
-    // TWO values, x then y. Below lg the x stays 1 and only the block axis
-    // scales, so the slab rises as a FULL-WIDTH band rather than a narrow
-    // column. Scaling both axes on a phone left the hero's CTAs and the
-    // back-to-top button showing down either side of the slab and overlapping
-    // its copy: legible in a 1440 screenshot, unreadable on an iPhone.
-    // The FROM values, not the scale tokens: .grow multiplies them back down.
-    scale: var(--process-portal-from-x) var(--process-portal-from);
-    // NO border-radius, and that is a decision rather than an omission.
-    //
-    // `scale` multiplies the rendered corner along with everything else, so a
-    // fixed radius is the wrong size at both ends: 16px here draws as 1.6px
-    // while the box is small (invisible, the thing it was for) and as a full
-    // 16px once it fills the viewport, where a rounded edge against the
-    // full-bleed ground reads as a mistake. Cancelling that needs a radius that
-    // counter-scales, which means interpolating a registered @property, which
-    // is a lot of machinery for a corner nobody asked for.
-    //
-    // The small state reads as an object on its own: it is a bright slab on a
-    // brown-950 ground with hard edges. ponytail: add the @property only if the
-    // square actually looks wrong in review.
-    overflow: hidden;
-  }
-
-  // --- Title bar ------------------------------------------------------------
-
-  // Title on its own line, the progress bar as the full-width rule BENEATH it.
-  //
-  // Not side by side: the floating nav capsule is centred over the top of the
-  // page, so a bar running beside the title passes straight under it and the
-  // reader loses the middle third of the only progress indicator there is.
-  // Below the title it clears the capsule entirely.
-  .titleBar {
-    display: flex;
-    flex-direction: column;
-    gap: $space-4;
-    flex: 0 0 auto;
-    // Clears the floating nav capsule, which is fixed over the top of the page
-    // and centred. Measured: the capsule runs to y67 at lg, so a title bar
-    // starting at $space-5 put the progress rule at y57, straight underneath
-    // it, and the reader lost the middle third of the only progress indicator
-    // on the page. The nav publishes its own height, so this tracks it rather
-    // than hard-coding the measurement.
-    //
-    // HALF the nav height, not all of it. The capsule is centred and floats,
-    // so it only covers the middle of this row; reserving its full height
-    // again below it left a band of dead space above the title with nothing in
-    // it. Half clears the rule while pulling the whole header up.
-    //
-    // 24px below the rule before the rail begins, so the bar reads as the
-    // section's own header rather than as the top edge of the first image.
-    padding-block: calc(var(--nav-bar-block-size) / 2 + #{$space-5}) $space-6;
-
-    // The gutter back. .pin now bleeds past body's padding so the dark ground
-    // can reach the viewport edge, and the title and its progress rule were
-    // carried out with it: the heading sat flush against the screen edge and
-    // the rule ran off both sides. The ground still bleeds; only the contents
-    // are inset again.
-    padding-inline: var(--page-gutter);
-
-    @include bp-max($bp-lg) {
-      // Below lg the nav is a bottom bar, so there is nothing to clear here.
-      padding-block-start: $space-5;
-    }
-  }
-
-  .sectionTitle {
-    font-size: var(--font-size-sm);
-    font-weight: $font-weight-medium;
-    color: var(--process-ink);
-  }
-
-  // The bar IS the rule under the title. One element doing both jobs, rather
-  // than a border plus a bar sitting on top of it.
-  .progress {
-    block-size: 1px;
-    inline-size: 100%;
-    background-color: var(--process-rule);
-  }
-
-  .progressFill {
-    display: block;
-    block-size: 100%;
-    background-color: var(--process-ink);
-    // No logical equivalent of transform-origin exists yet. Flagged as the RTL
-    // follow-up for V2, when `dir` can be rtl and this becomes `right center`.
-    transform-origin: left center;
-    scale: 0 1;
-  }
-
-  // --- The rail -------------------------------------------------------------
-
-  .viewport {
-    flex: 1 1 auto;
-    min-block-size: 0;
-    // Clipped, not scrollable: above lg the timeline moves the track, and a
-    // real scroll container here would fight it. The reduced-motion and
-    // no-timeline paths below turn this back into `auto`, which is what makes
-    // the rail usable when nothing is driving it.
-    overflow: hidden;
-
-    @include focus-ring;
-  }
-
-  // A grid of `pages` equal columns, each one stage wide.
-  //
-  // The track's own width has to be stated: with `grid-auto-flow: column` and
-  // no width it stays at its container's size, the columns overflow invisibly,
-  // and the translate percentage below is then computed against one stage
-  // instead of six. Measured: trackW came back 1392 rather than 8352, so the
-  // rail moved a sixth of the distance it should have.
-  //
-  // `calc(100% * pages)` resolves against the viewport box, which is the stage,
-  // so the track is exactly `pages` stages wide at every breakpoint and needs no
-  // viewport units of its own.
-  .track {
-    display: grid;
-    // 1fr each, of a track that is `pages` stages wide, so every column is
-    // exactly one stage. Not `100%`, which inside the widened track would
-    // resolve against the track itself and make each page six stages wide.
-    grid-template-columns: repeat(var(--process-pages), minmax(0, 1fr));
-    inline-size: calc(100% * var(--process-pages));
-    block-size: 100%;
+  .sheets {
     margin: 0;
     padding: 0;
     list-style: none;
+    // Past body's gutter so the ground reaches the screen edge; each sheet
+    // gives the gutter back as padding. A token cancelled by name, as the
+    // footer does.
+    margin-inline: calc(-1 * var(--page-gutter));
   }
 
-  // Below lg every page is the same shape: content, then its images stacked
-  // under it. The multi-column layouts are desktop-only and are applied inside
-  // the bp-lg block at the end of this file.
-  //
-  // A four-column grid at phone width gives the text column about 80px, which
-  // sets the copy one word per line. That is what this default prevents.
-  .page {
-    min-inline-size: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto;
-    align-content: center;
+  .sheet {
+    display: flex;
+    flex-direction: column;
     gap: $space-4;
-    padding-block: $space-6;
-    // 64px down BOTH sides of every page.
-    //
-    // Padding rather than a gap on the track: the track is a grid whose columns
-    // are exactly one stage each, and a column-gap there would push every page
-    // past its stage and break the 1:1 relationship the translate depends on.
-    // Padding keeps each page one stage wide and takes the inset out of its own
-    // width.
-    //
-    // The two outer edges are the exception, below: the first page has no
-    // leading inset and the last no trailing one, so the rail starts and ends
-    // flush with the section rather than a gutter short of it.
-    // 64px is a DESKTOP inset. Below lg it is the page gutter instead: two 64px
-    // insets on a 390px screen leave 262px of stage, and after the layout's own
-    // columns the body text measured 47px wide, which is a word or two per
-    // line. Same failure the multi-column layouts hit at phone width, and the
-    // same fix.
+    padding-block: $space-8;
     padding-inline: var(--page-gutter);
+    background-color: var(--process-sheet);
+    // The top edge is what shows as a sheet slides over the one below it.
+    border-block-start: 1px solid $brown-800;
+    border-start-start-radius: $radius-xl;
+    border-start-end-radius: $radius-xl;
+    // Cast upward, onto the sheet it is covering.
+    box-shadow: 0 (-$space-4) $space-12 rgba($brown-950, 0.6);
+
+    // Nothing dark under the first one: the shadow would smudge the light
+    // section above.
+    &:first-child {
+      box-shadow: none;
+    }
 
     @include bp-lg {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
       padding-inline: $space-16;
-
-      // The outer two edges are flush with the section, so the rail starts and
-      // ends at the stage edge rather than a gutter short of it. Only at lg:
-      // below it the pin is full-bleed, so "flush with the section" is the
-      // screen edge and the first page's copy ran straight into it.
-      &:first-child {
-        padding-inline-start: 0;
-      }
-
-      &:last-child {
-        padding-inline-end: 0;
-      }
+      // Clear of the floating nav capsule at the top.
+      padding-block-start: calc(
+        var(--nav-float-inset) + var(--nav-capsule-block-size) + #{$space-6}
+      );
     }
-    // Each page clips its own contents. Layouts below use negative margins to
-    // bleed an image to the edge of the stage, and without this those images
-    // paint straight over the NEXT page: step 2's image covered step 3's copy,
-    // which read as text clipped at the left edge even on an exact boundary.
-    overflow: hidden;
   }
 
-  // --- Page content ---------------------------------------------------------
+  // The stack. Only where it can work; see the head of this file.
+  @media (prefers-reduced-motion: no-preference) and (min-height: $stack-min-block) {
+    .sheet {
+      position: sticky;
+      inset-block-start: 0;
+      // svh, never vh or dvh: 100vh on iOS is the large viewport and would
+      // hide each sheet's foot under the URL bar, and dvh reflows as that bar
+      // collapses.
+      block-size: 100svh;
+      overflow: hidden;
+
+      .frame {
+        flex: 1 1 0;
+        aspect-ratio: auto;
+      }
+
+      // Below lg the nav floats over the bottom of the screen, so the copy
+      // and images stop above it. The ground still runs to the edge.
+      @include bp-max($bp-lg) {
+        padding-block-end: calc(
+          var(--nav-bar-block-size) + var(--nav-float-inset) + env(safe-area-inset-bottom) +
+            #{$space-6}
+        );
+      }
+    }
+  }
+
+  // --- Sheet content ----------------------------------------------------------
 
   .content {
     display: flex;
@@ -763,10 +119,13 @@
     justify-content: center;
     gap: $space-3;
     min-inline-size: 0;
+    flex-shrink: 0;
   }
 
+  // "Step 01", and the section's h2 on the intro, in the same style.
   .step {
     font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
     color: var(--process-ink-dim);
   }
 
@@ -793,85 +152,50 @@
     color: var(--process-ink-dim);
   }
 
-  // --- Image frames ---------------------------------------------------------
+  // --- Image frames -----------------------------------------------------------
 
-  // The frame fills whatever grid area the layout gives it. It deliberately
-  // does NOT take an aspect-ratio from the image: the grid rows are already a
-  // definite size (the stage is a fixed height), so a ratio here would fight
-  // them and overflow. There is no CLS cost either, because the box is sized by
-  // the grid before the image loads rather than by the image itself.
+  // Outside the stack the frame takes the picture's usual 4:3. In the stack
+  // the sheet is one screen tall, and the frames share what the copy leaves
+  // of it instead (the rule in the stack block above). Either way the box is
+  // sized before the image loads, so nothing shifts.
   .frame {
     position: relative;
     overflow: hidden;
     min-inline-size: 0;
     min-block-size: 0;
-    // Below lg the page rows are `auto`, so the frame has no height of its own
-    // to fill and would collapse to nothing (the image inside is absolute). A
-    // ratio gives it one. From lg the rows are definite and this is dropped, so
-    // the frame fills its grid area instead.
     aspect-ratio: 4 / 3;
-
-    @include bp-lg {
-      aspect-ratio: auto;
-    }
   }
 
-  // Absolute so the intrinsic width/height next/image writes as attributes
-  // cannot stretch the frame. The oversize is the parallax travel budget: same
-  // shape as the hero's mouse parallax in AGENTS.md, an oversized image in a
-  // clipped box with a subtle shift.
-  //
-  // Oversized on the BLOCK axis, and the drift is vertical.
-  //
-  // It was horizontal first, and that was the bug: the track is already sliding
-  // the whole page sideways by a full viewport, so a 4% shift in the same axis
-  // is swamped by it and reads as nothing at all. Against a horizontal track,
-  // vertical is the axis where relative motion is actually visible.
+  // Absolute so the intrinsic width and height next/image writes cannot
+  // stretch the frame.
   .image {
     position: absolute;
-    inset-inline: 0;
-    inset-block-start: -12%;
+    inset: 0;
     inline-size: 100%;
-    block-size: 124%;
+    block-size: 100%;
     object-fit: cover;
   }
 
-  // --- The six layouts ------------------------------------------------------
+  // --- The six layouts --------------------------------------------------------
   //
   // Grid only, and desktop only. Which slot an image lands in is the layout's
   // business, and the component just names them .slot1 and .slot2 in source
-  // order. Below lg every page keeps the single-column default above: these
-  // arrangements assume a landscape stage, and a four-column grid at phone
-  // width sets the copy one word per line.
+  // order. Below lg every sheet is the single column above.
 
   @include bp-lg {
-    // The intro carries no image, so its content is the whole page and sits in
-    // the middle of the stage rather than hard against the leading edge, where
-    // it read as a column that had lost its picture.
-    // The intro carries no image, so its content is the whole page: centred in
-    // the stage, and the text centred within itself.
-    //
-    // `justify-items` alone was not enough. It centres the BOX, but the copy
-    // inside stayed ragged-left against a left edge, which still read as
-    // off-centre.
-    //
-    // It is also the first page, so its padding is 0 leading and 64px trailing.
-    // Centring inside an asymmetric box lands the content 32px left of the
-    // stage's true centre, which is the whole complaint. The trailing inset is
-    // given back as a margin so the CONTENT BOX is symmetric again, while the
-    // page keeps its 64px of separation from step 1.
+    // No image: the copy is the whole sheet, centred.
     .intro {
       justify-items: center;
+      align-content: center;
 
       .content {
         max-inline-size: 80ch;
         align-items: center;
         text-align: center;
-        margin-inline-end: calc(-1 * #{$space-16});
       }
     }
 
-    // p2: column 1 is the portrait across both rows, column 2 is text over image.
+    // Step 1: the portrait across both rows, text over an image beside it.
     .portraitLead {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       grid-template-rows: repeat(2, minmax(0, 1fr));
@@ -890,29 +214,20 @@
       }
     }
 
-    // Step 2 (Proposal): text in a narrow leading column, the image taking
-    // everything else.
-    //
-    // The image is the point of this page, so it runs the FULL height of the
-    // stage. `4fr` against the text's `1fr` is a wider split than the 4-column
-    // grid gave it. It does NOT bleed past the page's trailing padding: every
-    // page carries 64px down both sides, and an image that cancelled it here
-    // would be the one page breaking the rule.
+    // Step 2: text in a narrow leading column, the image taking the rest.
     .wideRight {
       grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
       grid-template-rows: minmax(0, 1fr);
-      padding-block: 0;
 
       .content {
         grid-column: 1;
-        padding-block: $space-8;
       }
       .slot1 {
         grid-column: 2;
       }
     }
 
-    // Step 3 (Installation): a full-width banner, then text beside a wide image.
+    // Step 3: a full-width banner, then text beside a wide image.
     .bannerSplit {
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-rows: repeat(2, minmax(0, 1fr));
@@ -924,9 +239,6 @@
       .content {
         grid-column: 1;
         grid-row: 2;
-        // 24px of air between the copy and the image beside it. The grid's own
-        // column gap closes the distance between TRACKS, and the text is
-        // shorter than its track, so without this the two read as touching.
         padding-inline-end: $space-6;
       }
       .slot2 {
@@ -935,18 +247,12 @@
       }
     }
 
-    // p5: text over a full-width image.
+    // Step 4: text over a full-width image.
     .stacked {
       grid-template-rows: auto minmax(0, 1fr);
-      align-content: stretch;
     }
 
-    // Step 5 (Care): a wide image with text beside it, then an offset wide
-    // image that runs out to the trailing edge.
-    //
-    // No padding override here. This is the LAST page, so the base rule already
-    // drops its trailing inset and both images finish exactly where the rail
-    // does rather than a gutter short of it.
+    // Step 5: a wide image with text beside it, then an offset wide image.
     .offsetPair {
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-rows: repeat(2, minmax(0, 1fr));
@@ -958,300 +264,12 @@
       .content {
         grid-column: 4;
         grid-row: 1;
-        // Air between the copy and the image to its left.
         padding-inline-start: $space-6;
       }
       .slot2 {
         grid-column: 2 / span 3;
         grid-row: 2;
       }
-    }
-  }
-
-  // --- Motion ---------------------------------------------------------------
-  //
-  // `contain 0% contain 100%` is exactly the pin window. For a subject taller
-  // than the viewport, the `contain` range runs from "the subject's top aligns
-  // with the scrollport's top" to "its bottom aligns with the bottom", which is
-  // precisely the span over which the sticky child is stationary. No offsets,
-  // no calc, and it stays correct if the page count changes.
-  //
-  // `translate` rather than `transform: translateX()`: it composites the same
-  // and leaves `transform` free for the images, so the track and the parallax
-  // never contend for one property.
-
-  // The portal. SCALE ONLY: the rise comes from transform-origin, so there is
-  // exactly one animated property and it stays on the compositor.
-  //
-  // The corner radius deliberately does NOT animate here. An unregistered
-  // custom property is not interpolable — it would flip at the midpoint rather
-  // than ease — and registering one with @property to smooth a cosmetic detail
-  // buys a rounding artefact at full scale for no real gain. The radius is a
-  // static value on .portal instead, divided by the scale so it reads as a
-  // constant on-screen corner rather than growing with the box.
-  @keyframes process-portal {
-    from {
-      // Both axes, matching the base rule. Below lg the x is 1 throughout, so
-      // only the block axis animates and the slab rises as a full-width band.
-      scale: var(--process-portal-from-x) var(--process-portal-from);
-    }
-    to {
-      scale: 1 1;
-    }
-  }
-
-  @keyframes process-slide {
-    to {
-      translate: calc(-1 * var(--process-travel) - var(--process-overrun)) 0;
-    }
-  }
-
-  @keyframes process-progress {
-    to {
-      scale: 1 1;
-    }
-  }
-
-  // Vertical, against the horizontal track. See the .image note above.
-  @keyframes process-parallax {
-    from {
-      translate: 0 calc(-1 * var(--process-parallax-shift));
-    }
-    to {
-      translate: 0 var(--process-parallax-shift);
-    }
-  }
-
-  .portal,
-  .track,
-  .progressFill,
-  .image {
-    animation-timeline: --process-scroll;
-    animation-fill-mode: both;
-    animation-timing-function: linear;
-  }
-
-  // The portal owns the FIRST slice of the pin window; the rail owns the rest.
-  // Both boundaries are --process-portal-end, so the handover is exact: the
-  // track is still at 0% at the instant the portal reaches full size, and it
-  // starts moving on the next pixel of scroll.
-  .portal {
-    animation-name: process-portal;
-    animation-range: contain 0% contain var(--process-portal-end);
-  }
-
-  .track,
-  .progressFill {
-    animation-range: contain var(--process-portal-end) contain 100%;
-  }
-
-  .track {
-    animation-name: process-slide;
-  }
-
-  // The progress bar measures the RAIL, not the portal: it shares the track's
-  // range, so it sits at empty throughout the zoom and starts filling only when
-  // the pages actually begin to move. A bar that filled during the portal would
-  // be reporting progress through six steps while still showing the first.
-  .progressFill {
-    animation-name: process-progress;
-  }
-
-  // Parallax runs over ONE PAGE's slice of the section, not the whole thing.
-  //
-  // It shared the track's full-section range at first, and that is why the
-  // effect was invisible: the drift was spread across all 11 viewports of
-  // scrolling, so an image moved 99px in total — about 9px per viewport.
-  // Measured, not guessed. The computed `translate` was animating correctly the
-  // whole time, which is what made it look like the CSS was working.
-  //
-  // Each page occupies 1/pages of the pin window, so page N's slice runs from
-  // (N-1)/pages to N/pages. The drift now happens while that page is actually
-  // the one on screen, which is roughly six times faster and visible.
-  //
-  // The per-page ranges are written out rather than generated: `animation-range`
-  // takes no custom property in a percentage position, so a loop would need one
-  // literal per page anyway. Six pages, six lines, and the unit suite asserts
-  // the page count so a seventh cannot land unnoticed.
-  .image {
-    animation-name: process-parallax;
-  }
-
-  // Each page's slice is now a fraction of the RAIL's portion of the window,
-  // offset past the portal — not a fraction of the whole thing. Sharing the old
-  // full-window sixths would have started page 1's drift during the zoom and
-  // left every page's parallax running a sixth of a portal early.
-  //
-  // calc() rather than Sass arithmetic, because --process-portal-end is a
-  // custom property the compiler cannot fold. The shape is:
-  //   start = portalEnd + (100% - portalEnd) * (i - 1) / pages
-  @for $i from 1 through $process-page-count {
-    .page:nth-child(#{$i}) .image {
-      $from: math.div($i - 1, $process-page-count);
-      $to: math.div($i, $process-page-count);
-      animation-range: contain
-        calc(var(--process-portal-end) + (100% - var(--process-portal-end)) * #{$from})
-        contain
-        calc(var(--process-portal-end) + (100% - var(--process-portal-end)) * #{$to});
-    }
-  }
-
-  // Alternate the drift so adjacent images move against each other. That
-  // counter-motion, not the shift itself, is what reads as depth.
-  .page:nth-child(even) .image {
-    animation-direction: reverse;
-  }
-
-  // --- No scroll-driven animations ------------------------------------------
-  //
-  // ProcessFallback writes --process-progress in a rAF loop. It starts only
-  // when this @supports block is the live one, so the two drivers can never
-  // both run. See that file and the CLAUDE.md exception it is conditional on.
-
-  @supports not (animation-timeline: view()) {
-    // --process-progress runs 0..1 across the WHOLE pin window, portal
-    // included, because the fallback measures the section and knows nothing
-    // about the split. These two re-map it onto the two phases, so the
-    // no-timeline path lands on the same boundary as the CSS path rather than
-    // running the rail through the zoom.
-    //
-    // Both are clamped: without the clamp the portal would keep scaling past 1
-    // for the rest of the section, and the rail would run backwards during it.
-    //
-    // --process-portal-end is a percentage, so it is divided by 100% to get the
-    // unitless fraction these need.
-    .portal {
-      --process-portal-progress: clamp(
-        0,
-        var(--process-progress, 0) / (var(--process-portal-end) / 100%),
-        1
-      );
-      // Both axes, matching the animated path. Below lg the x term starts at 1
-      // and stays there, so this reduces to a vertical-only grow.
-      scale: calc(
-          var(--process-portal-from-x) + (1 - var(--process-portal-from-x)) *
-            var(--process-portal-progress)
-        )
-        calc(
-          var(--process-portal-from) + (1 - var(--process-portal-from)) *
-            var(--process-portal-progress)
-        );
-    }
-
-    .track,
-    .progressFill,
-    .image {
-      --process-rail-progress: clamp(
-        0,
-        (var(--process-progress, 0) - var(--process-portal-end) / 100%) /
-          (1 - var(--process-portal-end) / 100%),
-        1
-      );
-    }
-
-    .track {
-      // calc() cannot multiply a percentage by a unitless var here, so the
-      // progress scales the page count instead and the percentage stays whole.
-      translate: calc(
-          -100% * var(--process-rail-progress) * (var(--process-pages) - 1) /
-            var(--process-pages) - var(--process-overrun) * var(--process-rail-progress)
-        )
-        0;
-    }
-
-    .progressFill {
-      scale: var(--process-rail-progress) 1;
-    }
-
-    .image {
-      translate: 0 calc((var(--process-rail-progress) * 2 - 1) * var(--process-parallax-shift));
-    }
-  }
-
-  // --- Reduced motion -------------------------------------------------------
-  //
-  // The global reset in _reset.scss sets `animation-duration: 0.01ms`, which
-  // does NOTHING to a scroll-driven animation: duration is ignored when
-  // animation-timeline is a progress timeline. The timeline has to be dropped
-  // explicitly, which is what this block does.
-  //
-  // With nothing driving the track, the section stops being a spacer and the
-  // rail becomes a plain horizontal scroller the reader moves themselves.
-
-  @media (prefers-reduced-motion: reduce) {
-    .process {
-      block-size: auto;
-      // No overlay. There is no zoom to pay for, and the section is a static
-      // full-size slab here: pulled up a stage it simply covered the previous
-      // section's last screen, tabs included. Measured: the carousel's tabs
-      // reported this section as the hit target.
-      margin-block-start: 0;
-    }
-
-    // Nor a hold on the previous section, for the same reason.
-    :global(main) > :has(+ .process) {
-      animation-name: none;
-    }
-
-    .pin {
-      position: static;
-      block-size: auto;
-    }
-
-    .viewport {
-      overflow-x: auto;
-      // The inline axis is left free on <html> precisely so a rail can contain
-      // its own overscroll. globals.scss:26 names the legal ToC as the
-      // precedent.
-      overscroll-behavior-x: contain;
-    }
-
-    // The stage no longer has a definite height, so pages need one of their own
-    // or the grid rows collapse to their content.
-    .page {
-      min-block-size: 70svh;
-    }
-
-    // `animation-name: none`, not `animation-timeline: none`. Dropping only the
-    // timeline turns the animation back into a TIME-based one, which with
-    // `animation-fill-mode: both` then holds its first keyframe and keeps
-    // overriding the `translate` below. Measured: the track reported "0%" from
-    // the keyframe rather than "none" from this rule, on all three device
-    // profiles. Removing the animation is what actually stops it.
-    .track,
-    .image,
-    .progressFill,
-    .portal {
-      animation-name: none;
-      translate: none;
-    }
-
-    // The portal has to be reset to full size EXPLICITLY. `.portal` carries
-    // `scale: 0.1` as a static declaration so the square is right before the
-    // animation attaches, and killing the animation does not undo it: without
-    // this the whole section renders as an unreadable tenth-size square in the
-    // corner, and every other assertion in the e2e suite still passes.
-    //
-    // Its height goes back to `auto` because the pin is static here and has no
-    // definite height of its own to fill.
-    //
-    // The bleed is NOT undone. It lives on .pin, which keeps its negative
-    // margins in this mode, so the dark band still runs edge to edge while the
-    // rail is a plain horizontal scroller.
-    .portal {
-      scale: none;
-      block-size: auto;
-    }
-
-    // Same trap one level up: .grow's handoff scale is static too.
-    .grow {
-      scale: none;
-      block-size: auto;
-    }
-
-    // A progress indicator for an animation that is not running is noise.
-    .progress {
-      display: none;
     }
   }
 }

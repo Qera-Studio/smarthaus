@@ -154,10 +154,10 @@ Mobile gets its own portrait compositions, never a CSS crop of desktop. Phases 2
 </details>
 
 <details>
-<summary><b>The Process rail</b></summary>
+<summary><b>The Process stack</b></summary>
 <br>
 
-A brown-950 stage grows out of the page, pins, then scrolls sideways, all from vertical scroll and all in CSS: a tall spacer with a `view-timeline`, a sticky pin, a track driven by `animation-timeline`. Browsers without scroll timelines get a 40-line rAF fallback that writes exactly one custom property and deletes itself the day Firefox ships the feature. Reduced motion collapses it to a plain `overflow-x` list. Details in [`AGENTS.md`](AGENTS.md#the-process-rail--horizontal-scroll).
+Six full-screen sheets, each `position: sticky` at the top of the screen, so the next rises from the bottom and covers the last as you scroll. No timeline and no script. Every sheet is one screen tall, and the stack turns into plain sections under reduced motion or on a short screen. Details in [`AGENTS.md`](AGENTS.md#the-process-stack--sheets-on-scroll).
 
 </details>
 
