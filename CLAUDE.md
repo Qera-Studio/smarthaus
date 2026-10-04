@@ -248,8 +248,6 @@ Server Components first. `'use client'` limited to:
 - Mobile navigation (toggle state), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
-- Process portal handoff (`Process/ProcessHandoff.tsx` — one IntersectionObserver that sets `data-portal-open` and the transition's duration from the measured scroll speed; a CSS transition finishes the zoom's second half)
-- Process rail fallback (requestAnimationFrame — see the second motion-stack exception below). Renders nothing, and never starts in a browser that supports scroll-driven animations
 
 Everything else is a Server Component. If you're reaching for `'use client'`, a Server Component with a small client island probably works instead.
 
@@ -279,25 +277,9 @@ No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget c
 
 **This does not license a second one.** Any further canvas or rAF work needs the same justification made explicitly, or it belongs in the documented stack.
 
-### The second exception: the Process rail fallback
+### The second exception: retired
 
-`src/components/Process/ProcessFallback.tsx` runs a `requestAnimationFrame` loop that writes one custom property, `--process-progress`, on the Process section. It is the second place in the codebase animating outside the stack above.
-
-**Why it was allowed:**
-
-- **The documented stack cannot express this.** IntersectionObserver reports crossings, not position within a range. A section whose horizontal offset is a continuous function of scroll position needs a continuous signal, and there is no way to get one from IO or the Web Animations API in a browser without scroll timelines. This is not a case where a CSS transition would have done.
-- **It is the fallback, not the mechanism.** The primary path is `animation-timeline` on a `view-timeline`, which is pure CSS and runs off the main thread. The loop is gated behind `CSS.supports("animation-timeline: view()")` and never starts where that works — today it ships for Firefox stable and old Safari and nothing else, and it deletes itself the day Firefox unflags scroll-driven animations.
-- **Zero dependencies, and far cheaper than the alternative.** The alternative is Lenis or GSAP ScrollTrigger, both banned outright by AGENTS.md, both 20–60KB against a budget the framework already eats 575KB of. This is roughly 40 lines.
-- **Bounded work per frame.** One `getBoundingClientRect`, one early return when the value has not changed, one `setProperty`. No layout thrash, no DOM construction, no canvas.
-
-**What it must always do** (and what to check if it is ever touched):
-
-- **Gate `prefers-reduced-motion` in JS.** The `_reset.scss` reduced-motion block zeroes CSS durations and has **no effect on a rAF loop**. Same trap as ParticleText.
-- **Gate on `CSS.supports`.** Two drivers writing one property is a bug, not redundancy.
-- **Start and stop from an IntersectionObserver.** It must not run while the section is off screen.
-- **Write exactly one property.** A second one means the loop has grown into a layout engine and should be reviewed as one.
-
-`src/components/Process/__tests__/ProcessFallback.test.tsx` asserts the first three.
+The Process rail's requestAnimationFrame fallback (`ProcessFallback.tsx`) was the second exception until 2026-10-04, when the rail was replaced by sticky sheets that need no script. The rail and its fallback are at the git tag `archive/process-rail`. The number is not reused.
 
 **This still does not license a fourth.** The third is below, and it is the last.
 

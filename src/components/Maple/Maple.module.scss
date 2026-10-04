@@ -14,7 +14,7 @@ $card-max: 1200px;
   // the client's call, and only once the columns sit side by side: on a phone
   // the card needs every pixel of width it can get.
   .maple {
-    padding-block: clamp(#{$space-16}, 8vw, #{$space-24});
+    padding-block: $space-24;
 
     @include bp-lg {
       padding-inline: $space-12;

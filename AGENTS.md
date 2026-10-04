@@ -187,65 +187,25 @@ All clips: `muted playsinline preload="none"` with a poster. Clips load on deman
 
 ---
 
-## The Process rail — horizontal scroll
+## The Process stack — sheets on scroll
 
-`src/components/Process/` is a full-viewport brown-950 stage on the homepage that **grows out of the page** and then scrolls **sideways**, both driven by the page's own vertical scroll. Content lives in `src/content/process.ts`.
+`src/components/Process/` is six full-screen brown-950 sheets on the homepage, one per page of `src/content/process.ts`. Each pins at the top of the screen when it gets there, and the next rises from the bottom edge and covers it, like a sheet of paper pushed up over the last. It replaced the horizontal rail and its portal zoom on 2026-10-04, at Shivanshu's call; the rail is kept at the git tag `archive/process-rail`.
 
 ### The mechanism
 
-Pure CSS. No scroll listener, no wheel interception, no library.
+`position: sticky; inset-block-start: 0` on each `<li>`, inside one `<ol>`. Later sheets paint above earlier ones by source order, so no z-index. The list is the sticky containing block, so when the last sheet arrives the whole stack leaves together. No timeline, no listener, no client code: the section is a Server Component.
 
-- The `<section>` is a **tall spacer** carrying `view-timeline-name: --process-scroll`.
-- Inside it, `.pin` is `position: sticky` and holds still while the spacer scrolls past.
-- `.track` consumes that timeline and translates horizontally. `contain 0% contain 100%` is exactly the pin window: for a subject taller than the viewport, `contain` runs from "top aligns" to "bottom aligns", which is precisely the span over which the sticky child is stationary.
-- The pin window is **split into two phases** at `--process-portal-end`: the portal owns the first slice and the rail the rest. See "The portal" below.
-- The spacer's height is the travel scaled by `--process-scroll-ratio`. That ratio is the single pacing knob — 1 is 1:1 (a pixel of scroll is a pixel sideways), above 1 is slower, below 1 faster. It currently ships at **0.6**, which puts the whole section at roughly 4.6 viewports.
+Three things that are load-bearing:
 
-Four things that are load-bearing and easy to break:
+- **Every sheet is exactly one screen (`100svh`).** CSS cannot pin a box by its bottom edge without knowing its height, so a pinned sheet taller than the screen has its foot covered before anyone reads it. The images give way instead (`min-block-size: 0` on the frames), and `e2e/process.spec.ts` asserts every sheet's content fits on all three devices. New copy that does not fit fails that test; shorten it or drop a picture rather than letting the sheet grow.
+- **The stack is gated: `prefers-reduced-motion: no-preference` and `min-height: 32rem`.** Below that height (a phone on its side, or the desktop at 200% zoom) the copy and a picture cannot share one screen, so the sheets become plain sections and the frames take a 4:3 box of their own. Reduced motion gets the same plain layout.
+- **Below lg the sheet pads its foot by the floating nav bar**, so copy and pictures stop above it while the ground still runs to the screen edge. From lg it pads its head by the nav capsule.
 
-- **The track needs an explicit `inline-size`.** With `grid-auto-flow: column` and no width it stays at its container's size, the columns overflow invisibly, and the translate percentage is then computed against one stage instead of six. Measured: the rail moved a sixth of the distance it should have.
-- **`translate`, not `transform: translateX()`.** Composites the same and leaves `transform` free for the images, so the track and the parallax never contend for one property.
-- **`--process-pages` is set inline by the component.** The page count is the one number the stylesheet cannot know, and both the track width and the spacer height derive from it.
-- **The dark ground is on `.portal`, and the full-bleed escape is on `.pin`.** Neither is on the `<section>`, which paints nothing. Moving either one breaks the effect in a way every existing test still passes — see below.
+The section no longer overlaps or holds the section before it.
 
-### The portal
+### Accessibility
 
-The section opens with a zoom reveal before the rail moves: the stage starts at a tenth of its size near the **top** of the viewport and grows downward to fill it. Both phases run on **one timeline**, split at `--process-portal-end`, which is a ratio of stage counts and therefore survives any change to the scroll ratio or the breakpoint.
-
-- **The direction is not animated.** `transform-origin` sits at `--process-portal-anchor` (100%), so scaling about it makes the slab rise off the bottom edge of the screen. One property, which cannot drift out of phase with itself and stays on the compositor. The anchor was 90%, then 10% opening downward, and both left an empty stage on one side of the square; the overlay below is what removed that, and with it dead bottom is the reviewed direction. Do not move it back to the top: that has been rejected in review.
-- **The overlay is a whole stage.** `.process` pulls itself up over the previous section by `--process-stage-block`, so when the pin engages that section's last screen is under the slab and there is never blank canvas below it. It was the portal's own scroll (270px) at first, which worked only while the one-screen hero was the previous section; a taller section in front left only its foot on screen. The previous section is held still for the zoom by the `process-hold` animation on `main > :has(+ .process)`. Reduced motion drops both.
-- **The header keeps the page gutter.** `.pin` bleeds past body's padding so the ground can reach the viewport edge, which carries the title and its progress rule out with it unless `.titleBar` puts them back with `padding-inline`. It reserves half the nav height above itself, not all of it: the capsule floats and is centred, so it only covers the middle of that row.
-- **The ground belongs to the slab.** `background-color` is on `.portal` because the brown-950 panel is the thing that grows. On the spacer — which is what shipped first — the dark field is already full-bleed and stationary, and the zoom reads as text scaling up on a background that never moved. `data-ground="dark"` is on the portal for the same reason: it marks the dark pixels, and those now move.
-- **The bleed is one level above the ground.** `.pin` carries the negative margins that escape body's 1440px cap, not `.portal`. The pin has `overflow: hidden`, and a clip beats a child's escape however that child is positioned: with the margins on the portal, the grown slab carried a 24px light border down every edge. Widening the clipper is the only fix that keeps the clip.
-- **Scroll drives only the first half of the zoom.** It grows the slab to `--process-portal-handoff` (0.5); past that point `ProcessHandoff.tsx` sets `data-portal-open` and a transition on `.grow` finishes it, and runs it back down when scrolled above. The two scales compose (`.grow` wraps `.portal`), so the scroll animation and the transition never write the same property. The portal's scroll ratio was halved to 0.3 in the same change, or the second half would have been dead scroll. The transition's duration is not fixed: the observer measures the scroll speed as its marker leaves and sets `--process-grow-duration` so the timed half opens at the rate scroll had been growing the slab. A fixed 400ms ease-out started about three times faster than a wheel scroll and read as a lurch at the join.
-- **Per-page parallax ranges are offset past the portal.** They divide the rail's share of the window, not the whole thing, or every page's drift runs a portal early.
-- **Reduced motion must reset the scale explicitly.** `.portal` carries `scale: 0.1` statically so the square is right before the animation attaches; removing the animation does not undo it, and the section then renders as an unreadable tenth-size square.
-
-### Parallax
-
-Images are 124% of their clipped frame and drift ±4.5% **vertically**, alternating direction per page. The counter-motion against the track is what reads as depth. Same shape as the hero's mouse parallax above: an oversized image, a clipped box, a subtle shift.
-
-The axis is the part worth knowing. It was horizontal first, and that was invisible: the track is already sliding the whole page sideways by a full stage, so a few percent in the same axis is swamped by it. Against a horizontal track, vertical is the only axis where relative motion reads.
-
-Each image's range covers **one page's slice of the rail**, not the whole section. Sharing the full range spread the drift across every viewport of scrolling and moved an image about 9px per viewport — the computed `translate` animated correctly the whole time, which is what made it look like the CSS was working.
-
-### prefers-reduced-motion
-
-The section drops the spacer and the pin, the rail becomes a real `overflow-x: auto` scroll container, the progress bar is hidden, and every animation is removed with **`animation-name: none`** — not `animation-timeline: none`, which only converts the animation back to a time-based one that then holds its first keyframe and keeps overriding the `translate`. That was a real failure on all three device profiles; the comment in the stylesheet records it.
-
-The portal needs a second, separate reset: **`scale: none`**. Removing an animation does not undo a static declaration, and `.portal` carries `scale: 0.1` in the base rule so the square is correct before the timeline attaches. Without the reset the whole section renders as an unreadable tenth-size square in the corner — and it is the one failure here that every pre-existing assertion still passes, which is why `e2e/process.spec.ts` asserts it directly.
-
-### Accessibility — 1.4.10 is knowingly not met
-
-A pinned horizontal rail is two-dimensional scrolling for reading content, which the Accessibility System marks `[Floor]` at 320px / 400% zoom. This is a **signed-off design decision, not an oversight.**
-
-Mitigations, all of which must survive any change to this section:
-
-- The scroll container is focusable with `role="group"` and an `aria-label` — axe's `scrollable-region-focusable`, the same treatment `LegalTable.tsx` documents.
-- Six `<h3>` headings inside a real `<ol>`, all in the accessibility tree at all times, so the content reads linearly without sideways scrolling at all.
-- `prefers-reduced-motion` removes the pin entirely.
-
-What it does not give is a single-axis reading path for a sighted user at 400% zoom. Record that when the accessibility log is compiled.
+Single-axis now: nothing scrolls sideways, so the 1.4.10 Reflow exception the rail carried is gone, and with it the focusable `role="group"` scroller. Six `<h3>` in a real `<ol>`, with the section's `<h2>` on the first sheet in the slot the steps use for "Step 01".
 
 ### Photography
 

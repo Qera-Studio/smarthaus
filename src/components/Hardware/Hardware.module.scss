@@ -12,7 +12,7 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
 @layer components {
   .hardware {
     --hardware-interval: 5s;
-    padding-block: clamp(#{$space-20}, 10vw, #{$space-32}) 0;
+    padding-block: $space-24;
   }
 
   // --- Lead-in (Care's, same values) -----------------------------------------

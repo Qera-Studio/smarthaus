@@ -152,7 +152,7 @@ export function VillaCanvas({
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
     // Gated in JS as well as CSS: the _reset.scss reduced-motion block zeroes
     // CSS durations and has no effect on a rAF loop. Same trap as
-    // ParticleText and ProcessFallback.
+    // ParticleText and the fluid hero.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const connection = (navigator as Navigator & { connection?: Connection }).connection;
     if (connection?.saveData || /(^|[^4-9])[23]g$/.test(connection?.effectiveType ?? "")) return;

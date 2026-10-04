@@ -1,67 +1,91 @@
 import { render, screen, within } from "@testing-library/react";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { PROCESS_PAGES } from "../../../content/process";
 import { Process } from "../Process";
 
-// Both observers have their own tests and need IntersectionObserver; this file
-// is about the section's structure and what it tells assistive technology.
-jest.mock("../ProcessHandoff", () => ({ ProcessHandoff: () => null }));
-jest.mock("../ProcessFallback", () => ({ ProcessFallback: () => null }));
+const dir = join(__dirname, "..");
 
-function viewport() {
-  return screen.getByRole("group");
+function sheets() {
+  return within(screen.getByRole("list")).getAllByRole("listitem");
 }
 
 describe("Process", () => {
   it("is a region named by its own heading", () => {
     render(<Process />);
-    const heading = screen.getByRole("heading", { level: 2 });
+    const heading = screen.getByRole("heading", { level: 2, name: "Our Process" });
     expect(heading).toHaveAttribute("id", "our-process");
     expect(heading.closest("section")).toHaveAttribute("aria-labelledby", "our-process");
+    expect(heading.closest("section")).toHaveAttribute("data-process", "");
   });
 
-  it("tells the stylesheet how many pages there are", () => {
+  it("renders one sheet per page, in order", () => {
     render(<Process />);
-    const section = screen.getByRole("heading", { level: 2 }).closest("section")!;
-    expect(section.style.getPropertyValue("--process-pages")).toBe(String(PROCESS_PAGES.length));
-  });
-
-  it("makes the scroller focusable, as axe's scrollable-region-focusable asks", () => {
-    render(<Process />);
-    expect(viewport()).toHaveAttribute("tabindex", "0");
-  });
-
-  it("names the panels and only the keys that move them", () => {
-    render(<Process />);
-    expect(viewport()).toHaveAccessibleName(
-      "Our process, six panels. Scroll the page or use the up and down arrow keys to move through them.",
-    );
-  });
-
-  it("does not promise left and right, which do nothing in the pinned rail", () => {
-    render(<Process />);
-    const label = viewport().getAttribute("aria-label")!;
-    expect(label).not.toMatch(/left|right/i);
-    expect(label).not.toMatch(/use the arrow keys/i);
-  });
-
-  it("says six panels because there are six", () => {
-    render(<Process />);
-    expect(PROCESS_PAGES).toHaveLength(6);
-    expect(within(viewport()).getAllByRole("listitem")).toHaveLength(6);
-  });
-
-  it("keeps every step heading in the accessibility tree, in order", () => {
-    render(<Process />);
-    const titles = within(viewport())
-      .getAllByRole("heading", { level: 3 })
-      .map((h) => h.textContent);
+    expect(sheets()).toHaveLength(PROCESS_PAGES.length);
+    const titles = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(titles).toEqual(PROCESS_PAGES.map((page) => page.title));
   });
 
-  it("hides the progress rule, which cannot report a live value", () => {
+  it("puts the section's title on the first sheet, in the slot the steps use", () => {
+    render(<Process />);
+    const [intro, ...steps] = sheets();
+    expect(within(intro!).getByRole("heading", { level: 2 })).toHaveTextContent("Our Process");
+    expect(within(intro!).queryByText(/^Step /)).toBeNull();
+    steps.forEach((sheet, index) => {
+      expect(within(sheet).queryByRole("heading", { level: 2 })).toBeNull();
+      expect(within(sheet).getByText(`Step ${PROCESS_PAGES[index + 1]!.step}`)).toBeInTheDocument();
+    });
+  });
+
+  it("marks every sheet as a dark ground, for the light cursor dot", () => {
+    render(<Process />);
+    sheets().forEach((sheet) => expect(sheet).toHaveAttribute("data-ground", "dark"));
+  });
+
+  it("renders every paragraph, duration and image of every page", () => {
+    render(<Process />);
+    const items = sheets();
+    PROCESS_PAGES.forEach((page, index) => {
+      const sheet = within(items[index]!);
+      page.body.forEach((paragraph) => expect(sheet.getByText(paragraph)).toBeInTheDocument());
+      expect(sheet.getByText(page.duration)).toBeInTheDocument();
+      expect(sheet.queryAllByRole("img").map((img) => img.getAttribute("alt"))).toEqual(
+        page.images.map((image) => image.alt),
+      );
+    });
+  });
+
+  it("no longer offers a scroll region: nothing scrolls sideways", () => {
     const { container } = render(<Process />);
-    expect(container.querySelector('[role="progressbar"]')).toBeNull();
-    const hidden = container.querySelectorAll('header [aria-hidden="true"]');
-    expect(hidden.length).toBeGreaterThan(0);
+    expect(screen.queryByRole("group")).toBeNull();
+    expect(container.querySelector("[tabindex]")).toBeNull();
+  });
+});
+
+describe("the stack's mechanism", () => {
+  // jsdom applies no CSS; e2e/process.spec.ts measures the stack in a browser.
+  const scss = readFileSync(join(dir, "Process.module.scss"), "utf8");
+
+  it("is a sticky sheet per page, with no scroll timeline or animation", () => {
+    expect(scss).toMatch(/position:\s*sticky/);
+    expect(scss).not.toMatch(/animation|view-timeline|timeline-scope|@keyframes/);
+  });
+
+  it("pins only with motion allowed and a screen tall enough to hold a sheet", () => {
+    expect(scss).toMatch(
+      /@media \(prefers-reduced-motion: no-preference\) and \(min-height: \$stack-min-block\)/,
+    );
+  });
+
+  it("no longer reaches into the section before it", () => {
+    expect(scss).not.toMatch(/:has\(\+/);
+    expect(scss).not.toMatch(/margin-block-start:\s*calc\(-1/);
+  });
+
+  it("ships no client code", () => {
+    for (const file of readdirSync(dir).filter((name) => /\.tsx?$/.test(name))) {
+      expect(readFileSync(join(dir, file), "utf8")).not.toMatch(/["']use client["']/);
+    }
   });
 });
