@@ -121,6 +121,22 @@ test("the bar reads previous, divider, tabs, pause, divider, next", async ({ pag
   expect(order[3]!.start).toBe("solid");
 });
 
+// Air between arrow, tabs, pause and arrow, so the controls do not read as
+// three more icons in the strip (2026-10-03).
+test("sets the arrows and the pause button apart from the tabs", async ({ page }) => {
+  const s = section(page);
+  const gaps = await s.evaluate((el) => {
+    const bar = el.querySelector('[role="tablist"]')!.parentElement!;
+    const boxes = Array.from(bar.children)
+      .filter((c) => c.tagName === "BUTTON" || c.getAttribute("role") === "tablist")
+      .map((c) => c.getBoundingClientRect());
+    return boxes.slice(1).map((b, i) => Math.round(b.left - boxes[i]!.right));
+  });
+  expect(gaps).toHaveLength(3);
+  for (const gap of gaps) expect(gap).toBeGreaterThanOrEqual(8);
+  expect(new Set(gaps).size).toBe(1);
+});
+
 test("the arrows step through the slides and wrap at both ends", async ({ page }) => {
   const s = section(page);
   const next = s.getByRole("button", { name: "Next component" });

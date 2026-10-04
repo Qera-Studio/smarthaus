@@ -59,7 +59,15 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
     justify-self: center;
     max-inline-size: 100%;
     overflow: hidden;
+    // Air between the four groups: arrow, tabs, pause, arrow (2026-10-03, at
+    // Shivanshu's request). Tighter on a phone, where every pixel of gap comes
+    // out of the tab strip.
+    gap: $space-2;
     @include glass(0);
+
+    @include bp-md {
+      gap: $space-4;
+    }
   }
 
   .tabs {
