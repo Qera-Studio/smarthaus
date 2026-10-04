@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 
 import type { FaqEntry } from "../../../content/faq";
+import { FAQ_CATEGORIES } from "../../../content/faq";
 import { FaqAccordion, plainAnswer } from "../FaqAccordion";
 
 /**
@@ -81,5 +82,30 @@ describe("plainAnswer", () => {
 
   it("returns a single paragraph unchanged", () => {
     expect(plainAnswer(entry({ answer: ["Yes, every system."] }))).toBe("Yes, every system.");
+  });
+});
+
+describe("plainAnswer, against the edges and the real content", () => {
+  it("never carries the reviewer's note into the schema text", () => {
+    const text = plainAnswer(entry({ pending: "Fee to be confirmed with Sunil." }));
+    expect(text).not.toContain("Sunil");
+  });
+
+  it("leaves no brace in any real entry's schema text", () => {
+    for (const real of FAQ_CATEGORIES.flatMap((category) => category.entries)) {
+      expect(plainAnswer(real)).not.toMatch(/[{}]/);
+    }
+  });
+});
+
+describe("FaqAccordion, against a stray brace", () => {
+  it("leaves an unmatched brace as text rather than marking the rest of the answer", () => {
+    const { container } = render(
+      <FaqAccordion entry={entry({ answer: ["An open { with no close."] })} />,
+    );
+    expect(marks(container)).toEqual([]);
+    expect(container.querySelector("details > div > p")).toHaveTextContent(
+      "An open { with no close.",
+    );
   });
 });
