@@ -38,8 +38,8 @@ export const FORCED_COLORS = "(forced-colors: active)";
  * ## Motion
  *
  * Following the pointer is not an animation: each pointermove writes one
- * `translate`, no rAF loop. The morph is a CSS transition on `scale` and
- * `border-radius`, which the reduced-motion reset zeroes.
+ * `translate`, no rAF loop. Dot and square are one size; the morph is a CSS
+ * transition on `border-radius`, which the reduced-motion reset zeroes.
  */
 export function Cursor() {
   const [enabled, setEnabled] = useState(false);

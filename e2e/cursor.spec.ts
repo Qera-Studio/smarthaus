@@ -110,8 +110,15 @@ test.describe("the inverting cursor", () => {
     await link.scrollIntoViewIfNeeded();
     await link.hover();
     await expect(box(page)).toHaveAttribute("data-shape", "square");
+    // One size for both shapes (2026-10-03): only the corners change.
+    const size = async () => {
+      const b = (await box(page).boundingBox())!;
+      return [Math.round(b.width), Math.round(b.height)];
+    };
+    await expect.poll(size).toEqual([24, 24]);
     await page.getByRole("heading", { level: 2 }).first().hover();
     await expect(box(page)).toHaveAttribute("data-shape", "dot");
+    await expect.poll(size).toEqual([24, 24]);
   });
 
   test("turns square over the carousel's tabs and arrows", async ({ page }) => {

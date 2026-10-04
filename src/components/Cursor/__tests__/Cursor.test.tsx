@@ -211,7 +211,11 @@ describe("Cursor.module.scss", () => {
     expect(scss).toMatch(/pointer-events:\s*none;/);
   });
 
-  it("morphs with scale and radius only, which stay off layout", () => {
-    expect(scss).toMatch(/transition-property:\s*scale, border-radius, opacity;/);
+  it("draws the dot and the square at one size, so only the corners change", () => {
+    // 24px both (2026-10-03). No scale anywhere: a size change between the
+    // shapes is what the client asked to remove.
+    expect(scss).toMatch(/--cursor-size:\s*#\{\$space-6\};/);
+    expect(scss).not.toMatch(/^\s*scale:/m);
+    expect(scss).toMatch(/transition-property:\s*border-radius, opacity;/);
   });
 });

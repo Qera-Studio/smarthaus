@@ -1,8 +1,9 @@
 @use "../../styles/variables" as *;
 
 @layer components {
-  // One box, drawn at the square's size and scaled down to the dot, so the
-  // morph is `scale` and `border-radius` only and stays on the compositor.
+  // One box, the same size as a dot and as a square (24px, 2026-10-03: the
+  // dot grew 1.5x from the native 16px, the square halved from 40px), so the
+  // morph is the corners alone.
   //
   // The box paints nothing. It inverts what is behind it, and the hue-rotate
   // turns the inverted colours back toward their own hue: a straight invert
@@ -10,7 +11,7 @@
   // out. Inverted this way bone reads as a deep brown and brown-950 as bone,
   // so the one box is the dark dot and the light dot at once.
   .cursor {
-    --cursor-size: #{$space-10};
+    --cursor-size: #{$space-6};
 
     position: fixed;
     inset-block-start: calc(var(--cursor-size) / -2);
@@ -20,15 +21,12 @@
     block-size: var(--cursor-size);
     pointer-events: none;
     backdrop-filter: invert(1) hue-rotate(180deg);
-    // A dot of 16px, the native dot's size.
-    scale: 0.4;
     border-radius: 50%;
-    transition-property: scale, border-radius, opacity;
+    transition-property: border-radius, opacity;
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out);
 
     &[data-shape="square"] {
-      scale: 1;
       border-radius: 0;
     }
 
