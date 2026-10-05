@@ -11,6 +11,7 @@ import "../styles/globals.scss";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
 import { Splash } from "../components/Loader/Splash";
+import { SPLASH_BOOT_SCRIPT } from "../lib/splash-boot";
 import { Consent } from "../components/Consent";
 import { ScrollToTop } from "../components/ScrollToTop";
 import { JsonLd, siteGraph } from "../components/Schema";
@@ -105,20 +106,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {process.env.NODE_ENV !== "development" && (
           <script dangerouslySetInnerHTML={{ __html: CONSENT_BOOT_SCRIPT }} />
         )}
+        {/*
+          Decides before first paint whether this load gets the splash: the
+          first full load in a tab does, nothing after it
+          (src/lib/splash-boot.ts). Development too, so dev shows what
+          production does; open a new tab to see it again.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: SPLASH_BOOT_SCRIPT }} />
       </head>
       <body>
         {/*
           FIRST child of <body>, deliberately: it is in the server HTML, so it
-          covers the viewport from the very first paint rather than appearing
-          after hydration over content the user can already see.
-
-          Development only for this trial. A fixed 2s splash in production
-          withholds content for two seconds on every navigation and sits on top
-          of the homepage's LCP element, which would fail the project's own LCP
-          and Lighthouse gates. Wiring it to real progress, and deciding whether
-          it runs on first load only, is the next decision — see Splash.tsx.
+          can cover the viewport from the very first paint. Hidden unless the
+          boot script above has shown it; see Splash.tsx.
         */}
-        {process.env.NODE_ENV === "development" ? <Splash /> : null}
+        <Splash />
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>

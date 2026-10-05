@@ -41,10 +41,11 @@ for (const route of ROUTES) {
       const strict = (await request.get(route)).headers()["content-security-policy-report-only"];
       expect(strict, "report-only policy present").toBeTruthy();
       const policy = directives(strict!);
-      // 'self', the consent boot script by its hash, and the Draco decoder's
-      // wasm. No 'unsafe-inline': that is what makes this policy strict.
+      // 'self', the consent and splash boot scripts by their hashes, and the
+      // Draco decoder's wasm. No 'unsafe-inline': that is what makes this
+      // policy strict.
       expect(policy["script-src"]).toMatch(
-        /^'self' 'sha256-[A-Za-z0-9+/]{43}=' 'wasm-unsafe-eval'$/,
+        /^'self' 'sha256-[A-Za-z0-9+/]{43}=' 'sha256-[A-Za-z0-9+/]{43}=' 'wasm-unsafe-eval'$/,
       );
       expect(policy["style-src"]).toBe("'self'");
       expect(policy["report-uri"]).toBe("/api/csp-report");
@@ -53,20 +54,20 @@ for (const route of ROUTES) {
   });
 }
 
-test("the report-only policy differs from the enforced one only by 'unsafe-inline' and the boot hash", async ({
+test("the report-only policy differs from the enforced one only by 'unsafe-inline' and the boot hashes", async ({
   request,
 }) => {
   const headers = (await request.get("/")).headers();
   const enforced = directives(headers["content-security-policy"]!);
   const strict = directives(headers["content-security-policy-report-only"]!);
   const without = (value: string) => value.replace(" 'unsafe-inline'", "");
-  // The consent boot script's hash stands in for 'unsafe-inline' in the
-  // strict script-src only; see next.config.ts.
+  // The two boot scripts' hashes (consent, splash) stand in for
+  // 'unsafe-inline' in the strict script-src only; see next.config.ts.
   const hash = /^'sha256-[A-Za-z0-9+/]{43}='$/;
   const strictScript = strict["script-src"]!.split(" ");
-  const bootHash = strictScript.find((source) => hash.test(source));
-  expect(bootHash, "the strict policy allows the boot script by hash").toBeDefined();
-  strict["script-src"] = strictScript.filter((source) => source !== bootHash).join(" ");
+  const bootHashes = strictScript.filter((source) => hash.test(source));
+  expect(bootHashes, "the strict policy allows both boot scripts by hash").toHaveLength(2);
+  strict["script-src"] = strictScript.filter((source) => !hash.test(source)).join(" ");
   expect(enforced["script-src"]).not.toMatch(/'sha256-/);
   // upgrade-insecure-requests is absent from both under Playwright.
   expect(Object.keys(strict).sort()).toEqual(Object.keys(enforced).sort());

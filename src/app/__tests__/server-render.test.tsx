@@ -69,9 +69,12 @@ describe("the root layout", () => {
     jest.resetModules();
   });
 
-  async function renderLayout(nodeEnv: "development" | "production") {
+  async function renderLayout(
+    nodeEnv: "development" | "production",
+    extra: { VERCEL?: string } = {},
+  ) {
     jest.resetModules();
-    process.env = { ...env, NODE_ENV: nodeEnv };
+    process.env = { ...env, ...extra, NODE_ENV: nodeEnv };
     // The renderer from the same fresh registry as the layout, or the two hold
     // different copies of React and every hook sees no dispatcher.
     const { renderToStaticMarkup: render } = await import("react-dom/server");
@@ -96,6 +99,37 @@ describe("the root layout", () => {
     const html = await renderLayout("development");
     expect(html).not.toContain(CONSENT_BOOT_SCRIPT);
     expect(html).toContain('aria-label="Cookie preferences"');
+  });
+
+  it.each(["production", "development"] as const)(
+    "runs the splash boot script in <head> in %s, before the body paints",
+    async (nodeEnv) => {
+      const { SPLASH_BOOT_SCRIPT } = await import("../../lib/splash-boot");
+      const html = await renderLayout(nodeEnv);
+      const head = html.slice(html.indexOf("<head>"), html.indexOf("</head>"));
+      expect(head).toContain(SPLASH_BOOT_SCRIPT);
+    },
+  );
+
+  it("renders the splash as the first thing in <body>, hidden until the boot script shows it", async () => {
+    const html = await renderLayout("production");
+    const body = html.slice(html.indexOf("<body"));
+    expect(body).toMatch(/^<body[^>]*><div id="splash"[^>]*aria-hidden="true"/);
+    // The script string lives in <head> only; the splash renders none of its own.
+    expect(body.slice(0, body.indexOf("Skip to main content"))).not.toContain("<script");
+  });
+
+  it("mounts Vercel's analytics only on a Vercel build", async () => {
+    // Both render nothing on the server, so each is stood in for by a marker.
+    // A mock factory outlives the module reset inside renderLayout.
+    const stub = (name: string) => () => ({ [name]: () => <i data-vercel={name} /> });
+    jest.doMock("@vercel/analytics/next", stub("Analytics"));
+    jest.doMock("@vercel/speed-insights/next", stub("SpeedInsights"));
+    const on = await renderLayout("production", { VERCEL: "1" });
+    expect(on).toContain('data-vercel="Analytics"');
+    expect(on).toContain('data-vercel="SpeedInsights"');
+    const off = await renderLayout("production");
+    expect(off).not.toContain("data-vercel");
   });
 
   it("puts the cookie banner in the server HTML, where the boot script can gate it", async () => {
