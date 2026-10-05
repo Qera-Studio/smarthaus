@@ -213,6 +213,15 @@ Every image in `public/hero/process/` is **placeholder stock** and every row in 
 
 ---
 
+## The loading splash
+
+`src/components/Loader/Splash.tsx` covers the page on a visitor's **first full load in a tab**, and never again in that tab: not on a reload, and not on a soft navigation, which never re-renders the root layout.
+
+- **Decided before first paint.** `src/lib/splash-boot.ts` runs in `<head>` and sets `data-splash` on `<html>`: `show` on a first load (and records it in `sessionStorage`), `skip` after that. The splash is server-rendered but **hidden by default**, so a repeat visit never flashes it, and with JavaScript off or storage blocked it never shows, since nothing could take it down.
+- **Real progress, not a timer.** The bar and percentage follow the page: ready is fonts ready plus the `load` event. It leaves once ready and at least `SPLASH_MIN_MS` (600ms) in, or at `SPLASH_MAX_MS` (2.5s) regardless; before ready the bar eases toward 90% and holds. It then fades (`leaving`) and hides (`done`), by CSS state rather than DOM removal, because the element is React's.
+- **Above everything** on `--z-modal`, the consent banner included; the banner is painted underneath from the first frame.
+- **e2e marks it seen** for every spec through the product's own `sessionStorage` key (`e2e/fixtures.ts`); `e2e/splash.spec.ts` opts back in with `test.use({ splash: true })`.
+
 ## Nav behaviour
 
 | State                           | Desktop                                                 | Mobile                                       |
@@ -309,7 +318,7 @@ One more `../` per directory level below these. Every file named here exists; `s
 
 The CSP in `next.config.ts` is `default-src 'self'` plus the few widenings recorded below, each with its reason (the Draco decoder's `'wasm-unsafe-eval'` and `blob:` worker, and `'unsafe-inline'` for scripts and styles, which is an accepted risk in `docs/launch-gate/accepted-risks.md`). No third-party origin is allowed. As third parties are added, update the CSP **in the same PR that adds the dependency**. Never leave a CSP update for later — it will break in production.
 
-The policy is built once, by `csp(strict)` in `next.config.ts`, and sent twice: enforced, and as a `Content-Security-Policy-Report-Only` twin that drops `'unsafe-inline'` from `script-src` and `style-src`, and allows the one inline script of our own, the consent boot script (`src/lib/consent-boot.ts`), by its SHA-256 hash. The hash is in the strict policy only: a policy that lists a hash makes browsers ignore its `'unsafe-inline'`, which in the enforced policy would block every inline script Next emits. Both report to `/api/csp-report` (`report-uri` for Firefox and Safari, `report-to csp-endpoint` via `Reporting-Endpoints` for Chromium). The endpoint is rate-limited, capped at 16KB, schema-checked, strips query strings, and logs each distinct violation once an hour as one `csp-violation` JSON line. `e2e/headers.spec.ts` asserts the two policies differ only by `'unsafe-inline'` and that hash, and `e2e/consent-boot.spec.ts` that the hash matches the script the page serves.
+The policy is built once, by `csp(strict)` in `next.config.ts`, and sent twice: enforced, and as a `Content-Security-Policy-Report-Only` twin that drops `'unsafe-inline'` from `script-src` and `style-src`, and allows our two inline scripts, the consent boot script (`src/lib/consent-boot.ts`) and the splash boot script (`src/lib/splash-boot.ts`), by their SHA-256 hashes. The hashes are in the strict policy only: a policy that lists a hash makes browsers ignore its `'unsafe-inline'`, which in the enforced policy would block every inline script Next emits. Both report to `/api/csp-report` (`report-uri` for Firefox and Safari, `report-to csp-endpoint` via `Reporting-Endpoints` for Chromium). The endpoint is rate-limited, capped at 16KB, schema-checked, strips query strings, and logs each distinct violation once an hour as one `csp-violation` JSON line. `e2e/headers.spec.ts` asserts the two policies differ only by `'unsafe-inline'` and those hashes, and `e2e/consent-boot.spec.ts` and `e2e/splash.spec.ts` that each hash matches the script the page serves.
 
 ### Planned CSP changes (update when implementing)
 

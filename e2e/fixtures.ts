@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { test as base } from "@playwright/test";
 
+import { SPLASH_SEEN_KEY } from "../src/lib/splash-boot";
+
 export { expect, devices, type Locator, type Page } from "@playwright/test";
 
 /**
@@ -34,7 +36,19 @@ export { expect, devices, type Locator, type Page } from "@playwright/test";
  * same way and `villa: true` opts back in to whichever hero canvas is mounted.
  * The option keeps its name: renaming it touches every spec for no behaviour.
  */
-type Options = { villa: boolean; clientAddress: string | undefined };
+type Options = { villa: boolean; splash: boolean; clientAddress: string | undefined };
+
+/*
+ * ## The splash is seen unless a spec asks for it
+ *
+ * The first full load in a tab shows the loading splash over the page for up
+ * to 2.5s (src/lib/splash-boot.ts). Every test is a first load, so every test
+ * would wait behind it, and any test that reads what is on screen by point or
+ * by pixel would read the splash. Each page therefore starts with the splash
+ * marked as seen in sessionStorage, through the same key the product reads.
+ * e2e/splash.spec.ts opts back in with
+ *   test.use({ splash: true });
+ */
 
 /**
  * ## Every test is its own visitor
@@ -57,7 +71,23 @@ export function addressFor(seed: string): string {
   return `10.${a}.${b}.${(c! % 254) + 1}`;
 }
 
-export const test = base.extend<Options & { villaGate: void; clientGate: void }>({
+export const test = base.extend<Options & { villaGate: void; clientGate: void; splashGate: void }>({
+  splash: [false, { option: true }],
+  splashGate: [
+    async ({ page, splash }, use) => {
+      if (!splash) {
+        await page.addInitScript((key) => {
+          try {
+            window.sessionStorage.setItem(key, "1");
+          } catch {
+            // Storage blocked: the product shows no splash either.
+          }
+        }, SPLASH_SEEN_KEY);
+      }
+      await use();
+    },
+    { auto: true },
+  ],
   clientAddress: [undefined, { option: true }],
   clientGate: [
     async ({ context, clientAddress }, use, testInfo) => {

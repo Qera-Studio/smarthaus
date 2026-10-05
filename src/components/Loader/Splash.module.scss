@@ -2,11 +2,9 @@
 
 @layer components {
   .splash {
-    // Must match DURATION_MS in Splash.tsx and --loader-cycle in
-    // Loader.module.scss. The bar reaching 100% and the mark finishing its one
-    // cycle are the same moment, which is the whole point of the timing.
-    --splash-duration: 2s;
-    // How long the overlay takes to fade once the time is out.
+    // How long the overlay takes to fade once the page is ready. In step with
+    // SPLASH_EXIT_MS in src/lib/splash-boot.ts, which waits this long before
+    // hiding it.
     --splash-exit: 320ms;
     // Thin, per the brief. A hairline that holds its weight on a 3x phone
     // screen rather than disappearing.
@@ -25,15 +23,19 @@
     // or the line cuts across the bottom of the strands.
     --splash-bar-inset: calc(50svh + var(--splash-mark-block) / 2 + var(--splash-gap));
 
+    // Hidden unless the boot script has shown it. See the rule below.
+    display: none;
     position: fixed;
     // `inset: 0` rather than logical longhands: this is a viewport-filling
     // overlay with no writing-mode-dependent edges, so there is nothing for
     // logical properties to express here.
     inset: 0;
-    // Above everything, including the nav (--z-sticky, 200).
-    z-index: var(--z-overlay);
+    // Above everything: the nav (--z-sticky) and the consent banner
+    // (--z-overlay), which shared this layer once and, later in the page, won
+    // it. The banner is still painted underneath from the first frame, and is
+    // there when the splash lifts.
+    z-index: var(--z-modal);
 
-    display: grid;
     // The mark sits in the middle of the viewport; the bar and readout are
     // pinned near the bottom by their own rules below.
     place-items: center;
@@ -53,27 +55,20 @@
     transition-timing-function: var(--ease-out);
   }
 
-  // Set by the script when the time is out: the fade.
-  .splash[data-leaving] {
-    opacity: 0;
-    // Stop it swallowing a click during the fade — 320ms is long enough for a
-    // visitor to reach for something underneath.
-    pointer-events: none;
+  // Shown only while src/lib/splash-boot.ts says so on <html>: `show` on the
+  // first full load in a tab, then `leaving` for the fade. `skip`, `done` and
+  // no attribute at all (JavaScript off, or storage blocked) all leave it
+  // hidden, which is the default above. Hidden by CSS state rather than
+  // removed, because the element belongs to React's tree; see Splash.tsx.
+  :global(html[data-splash="show"]) .splash,
+  :global(html[data-splash="leaving"]) .splash {
+    display: grid;
   }
 
-  // Set once the fade has finished. This is where the splash actually goes
-  // away, and it is a CSS state rather than a DOM removal on purpose: the
-  // element belongs to React's tree, and detaching it from a script made
-  // React's reconciler throw NotFoundError on the next render. See the note in
-  // Splash.tsx.
-  //
-  // `display: none` rather than visibility or a transform, because it has to
-  // leave the flow, hit testing AND the accessibility tree — a full-viewport
-  // overlay that is merely transparent still covers the page. The [hidden]-like
-  // behaviour is what makes this equivalent to removing it, without touching
-  // the DOM React owns.
-  .splash[data-done] {
-    display: none;
+  // The fade. No clicks are swallowed during it.
+  :global(html[data-splash="leaving"]) .splash {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .centre {
@@ -98,30 +93,16 @@
     background-color: var(--color-border);
   }
 
+  // The boot script writes the page's real progress to --splash-progress on
+  // <html>, 0 to 1, every frame. A scale rather than a width, so it stays on
+  // the compositor.
   .fill {
     block-size: 100%;
-    // Animated rather than transitioned, because there is no state change to
-    // transition FROM — the bar starts filling the moment it paints, with no
-    // JavaScript involved. That is what lets the bar work even if the inline
-    // script never runs.
-    inline-size: 0;
+    inline-size: 100%;
     background-color: var(--color-text-primary);
-    animation-name: fill;
-    animation-duration: var(--splash-duration);
-    // Linear, deliberately. An eased progress bar implies the work is speeding
-    // up or slowing down, and a fake bar should not tell that story.
-    animation-timing-function: linear;
-    animation-iteration-count: 1;
-    animation-fill-mode: both;
-  }
-
-  @keyframes fill {
-    from {
-      inline-size: 0;
-    }
-    to {
-      inline-size: 100%;
-    }
+    // No logical equivalent of transform-origin yet; the RTL follow-up for V2.
+    transform-origin: left center;
+    scale: var(--splash-progress, 0) 1;
   }
 
   // --- The percentage readout ----------------------------------------------
@@ -174,19 +155,5 @@
     min-inline-size: 3.25ch;
     font-variant-numeric: tabular-nums;
     text-align: end;
-  }
-
-  // --- Reduced motion -------------------------------------------------------
-  //
-  // The splash still appears and still dismisses — it is load feedback, not
-  // decoration, so suppressing it entirely would leave a blank ground. What
-  // stops is the movement: the bar shows complete rather than sweeping. The
-  // readout needs nothing here since it no longer moves; the script mirrors
-  // this by putting the counter straight to 100.
-  @media (prefers-reduced-motion: reduce) {
-    .fill {
-      animation: none;
-      inline-size: 100%;
-    }
   }
 }
