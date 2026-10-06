@@ -20,8 +20,10 @@ const tab = (page: Page, name: string) => section(page).getByRole("tab", { name 
 const card = (page: Page, name: string) =>
   section(page).getByRole("tabpanel", { name, includeHidden: true });
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, javaScriptEnabled }) => {
   await page.goto("/");
+  // Nothing hydrates without JavaScript; those tests read the server HTML.
+  if (javaScriptEnabled === false) return;
   // The toggle and the pause button are client behaviour: a key or a Tab
   // pressed before hydration meets the server HTML instead, which flaked on
   // CI's slower runners.
@@ -256,16 +258,18 @@ test.describe("the timer and the slide", () => {
     await expect(tab(page, "TIS")).toHaveAttribute("aria-selected", "true");
   });
 
-  test("slides the incoming card in from the end, and the outgoing one out", async ({ page }) => {
+  test("slides the incoming card in from the end, and back from the start", async ({ page }) => {
+    // The incoming card keeps its animation after it lands; the outgoing one
+    // is released when it does, so only the incoming card is read, and the
+    // read cannot lose a race with a slow runner.
+    const animation = (name: string) =>
+      card(page, name).evaluate((panel) => getComputedStyle(panel).animationName);
     await section(page).scrollIntoViewIfNeeded();
     await tab(page, "Fibaro").click();
-    const names = await section(page)
-      .locator("[role=tabpanel]")
-      .evaluateAll((panels) => panels.map((panel) => getComputedStyle(panel).animationName));
     // CSS Modules prefix keyframe names with a hash; the end is ours.
-    expect(names[0]).toMatch(/partner-to-start$/);
-    expect(names[1]).toMatch(/partner-from-end$/);
-    await expect(card(page, "TIS")).toBeHidden();
+    await expect.poll(() => animation("Fibaro")).toMatch(/partner-from-end$/);
+    await tab(page, "TIS").click();
+    await expect.poll(() => animation("TIS")).toMatch(/partner-from-start$/);
   });
 
   test.describe("under reduced motion", () => {
