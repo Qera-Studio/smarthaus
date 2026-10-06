@@ -295,13 +295,6 @@
     max-inline-size: 52ch;
   }
 
-  // A field's format or limit, under the control and before any error.
-  .hint {
-    margin-block-start: $space-1;
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-  }
-
   .errorList {
     margin-block-start: $space-2;
     padding-inline-start: $space-5;
@@ -340,12 +333,13 @@
   .confirmationBody {
     margin-block-start: $space-3;
     font-size: var(--font-size-sm);
-    line-height: $line-height-relaxed;
+    line-height: $line-height-normal;
     color: var(--color-text-secondary);
     text-wrap: pretty;
   }
 
   .confirmationActions {
+    margin-block-start: $space-8;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -353,7 +347,7 @@
   }
 
   .secondaryCta {
-    margin-block-start: $space-8;
+    margin-block-start: $space-6;
     font-size: var(--font-size-sm);
     font-weight: $font-weight-semibold;
     color: var(--color-text-primary);

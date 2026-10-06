@@ -78,6 +78,26 @@ test("a valid submission confirms with the name and number given", async ({ page
   // The form is replaced, not merely hidden.
   await expect(form(page).getByLabel("Name")).toHaveCount(0);
   await expect(status.getByRole("link", { name: /WhatsApp/i })).toBeVisible();
+
+  // Spacing, at the client's call (2026-10-06): the body at the normal line
+  // height, 32px above the WhatsApp button, and 24px above the solutions link.
+  const body = status.getByText("If you’d rather not wait");
+  const lineHeight = await body.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return parseFloat(style.lineHeight) / parseFloat(style.fontSize);
+  });
+  expect(lineHeight).toBeCloseTo(1.5, 2);
+  const [bodyBottom, buttonTop] = await Promise.all([
+    body.evaluate((el) => el.getBoundingClientRect().bottom),
+    status
+      .getByRole("link", { name: /WhatsApp/i })
+      .evaluate((el) => el.getBoundingClientRect().top),
+  ]);
+  expect(Math.round(buttonTop - bodyBottom)).toBe(32);
+  await expect(status.getByRole("link", { name: "See what we install" })).toHaveCSS(
+    "margin-top",
+    "24px",
+  );
 });
 
 test("an empty submission names both required fields and focuses the first", async ({ page }) => {

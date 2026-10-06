@@ -109,6 +109,6 @@ describe("a refused or failed send", () => {
     await submit();
     await screen.findByRole("alert");
     expect(screen.getByLabelText("Name")).toHaveValue("Nadia");
-    expect(screen.getByLabelText("Phone")).toHaveValue("0501234567");
+    expect(screen.getByLabelText("Phone (UAE mobile)")).toHaveValue("0501234567");
   });
 });

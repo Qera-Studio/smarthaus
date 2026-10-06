@@ -3,7 +3,7 @@ import { expectAccessible, expectHydrated } from "./checks";
 import { mailFor, uniqueName } from "./mail";
 
 /**
- * The contact form's accessibility, in a real browser: hints before errors,
+ * The contact form's accessibility, in a real browser: the phone format in its label,
  * one summary of every problem, and a submit button that stays focusable while
  * it sends without ever sending twice.
  */
@@ -15,13 +15,14 @@ test.beforeEach(async ({ page }) => {
   await expectHydrated(page);
 });
 
-test("states the phone format and the message limit before anything is typed", async ({ page }) => {
-  await expect(form(page).getByLabel("Phone")).toHaveAccessibleDescription(
-    "A UAE mobile number. Starting with 05 or +971 both work.",
-  );
-  await expect(form(page).getByLabel("Message")).toHaveAccessibleDescription(
-    "Optional. Up to 2,000 characters.",
-  );
+test("states the phone format in its label, and no hint line until a value is wrong", async ({
+  page,
+}) => {
+  await expect(form(page).getByRole("textbox", { name: "Phone (UAE mobile)" })).toBeVisible();
+  await expect(form(page).getByLabel("Phone")).not.toHaveAttribute("aria-describedby");
+  await expect(form(page).getByLabel("Message")).not.toHaveAttribute("aria-describedby");
+  await expect(form(page).getByText("A UAE mobile number", { exact: false })).toHaveCount(0);
+  await expect(form(page).getByText("Up to 2,000 characters")).toHaveCount(0);
 });
 
 test("an empty submission summarises every problem once, as the only alert", async ({ page }) => {

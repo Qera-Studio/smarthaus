@@ -22,7 +22,7 @@ describe("field caps", () => {
   it.each([
     ["Name", MAX_LENGTH.name],
     ["Email", MAX_LENGTH.email],
-    ["Phone", MAX_LENGTH.phone],
+    ["Phone (UAE mobile)", MAX_LENGTH.phone],
     ["Community", MAX_LENGTH.community],
     ["Message", MAX_LENGTH.message],
   ])("caps %s at %i characters in the browser", (label, max) => {
@@ -46,10 +46,8 @@ describe("errors on the optional fields", () => {
     });
     const field = screen.getByLabelText("Message");
     expect(field).toHaveAttribute("aria-invalid", "true");
-    // The limit hint first, then the error: both read with the field.
-    expect(field).toHaveAccessibleDescription(
-      "Optional. Up to 2,000 characters. Keep the message to 2,000 characters or fewer.",
-    );
+    // The error alone: there is no standing limit hint to read before it.
+    expect(field).toHaveAccessibleDescription("Keep the message to 2,000 characters or fewer.");
   });
 
   it("shows a community error beside the community field, tied to it", async () => {
@@ -83,7 +81,7 @@ describe("errors on the optional fields", () => {
       fieldErrors: { community: "Too long.", phone: "Check the number." },
       values: {},
     });
-    expect(screen.getByLabelText("Phone")).toHaveFocus();
+    expect(screen.getByLabelText("Phone (UAE mobile)")).toHaveFocus();
   });
 
   it("marks neither optional field invalid when they have no error", async () => {
@@ -93,65 +91,45 @@ describe("errors on the optional fields", () => {
   });
 });
 
-describe("hints stated before any error (WCAG 3.3.2)", () => {
-  it("tells the visitor the phone format before they type", () => {
+describe("instructions without standing hint lines (WCAG 3.3.2)", () => {
+  // 2026-10-06, at Shivanshu's call: no hint line sits under a field until
+  // its value is wrong. The phone format moved into the label, where 3.3.2
+  // still has it before anything is typed.
+  it("states the phone format in the label, before anything is typed", () => {
     render(<ContactForm />);
-    expect(screen.getByLabelText("Phone")).toHaveAccessibleDescription(
-      "A UAE mobile number. Starting with 05 or +971 both work.",
-    );
+    expect(screen.getByRole("textbox", { name: "Phone (UAE mobile)" })).toBeInTheDocument();
   });
 
-  it("states the message's limit and that it is optional", () => {
-    render(<ContactForm />);
-    expect(screen.getByLabelText("Message")).toHaveAccessibleDescription(
-      "Optional. Up to 2,000 characters.",
-    );
-  });
-
-  it("gives the short form the same hints", () => {
+  it("does the same on the short form", () => {
     render(<ContactForm variant="short" />);
-    expect(screen.getByLabelText("Phone")).toHaveAccessibleDescription(/UAE mobile number/);
+    expect(screen.getByRole("textbox", { name: "Phone (UAE mobile)" })).toBeInTheDocument();
   });
 
-  it("reads the phone hint and then its error, in that order", async () => {
-    await submitWith({
-      status: "invalid",
-      fieldErrors: { phone: "Check the number. It should start with +971 or 05." },
-      values: {},
-    });
-    expect(screen.getByLabelText("Phone")).toHaveAccessibleDescription(
-      "A UAE mobile number. Starting with 05 or +971 both work. Check the number. It should start with +971 or 05.",
-    );
-  });
-
-  it("puts each hint under its control, so paired inputs line up", () => {
-    // A hint between label and control pushed Phone and Message below Name
-    // and Email in the two-column home enquiry (2026-09-28).
+  it("describes no field before the visitor has submitted anything", () => {
     render(<ContactForm />);
-    for (const [label, hint] of [
-      ["Phone", "phone-hint"],
-      ["Message", "message-hint"],
-    ] as const) {
-      const control = screen.getByLabelText(label);
-      const note = document.getElementById(hint)!;
-      expect(control.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The consent tick keeps its helper: that is what the data is used for,
+    // not a format hint.
+    for (const field of document.querySelectorAll("input:not([type=checkbox]), select")) {
+      expect(field).not.toHaveAttribute("aria-describedby");
     }
+    expect(document.getElementById("phone-hint")).toBeNull();
+    expect(document.getElementById("message-hint")).toBeNull();
   });
 
-  it("keeps the hint above the error in the page, as in the description", async () => {
+  it("shows the phone format only as the error a wrong number earns", async () => {
     await submitWith({
       status: "invalid",
       fieldErrors: { phone: "Check the number. It should start with +971 or 05." },
       values: {},
     });
-    const hint = document.getElementById("phone-hint")!;
-    const error = document.getElementById("phone-error")!;
-    expect(hint.compareDocumentPosition(error) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const phone = screen.getByLabelText("Phone (UAE mobile)");
+    expect(phone).toHaveAttribute("aria-invalid", "true");
+    expect(phone).toHaveAccessibleDescription("Check the number. It should start with +971 or 05.");
   });
 
-  it("gives fields without a hint no empty description", () => {
+  it("still stops the message at its limit in the browser, so the limit needs no notice", () => {
     render(<ContactForm />);
-    expect(screen.getByLabelText("Name")).not.toHaveAttribute("aria-describedby");
+    expect(screen.getByLabelText("Message")).toHaveAttribute("maxLength", "2000");
   });
 });
 
