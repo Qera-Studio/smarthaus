@@ -1,6 +1,9 @@
-@use "sass:color";
 @use "../../styles/variables" as *;
 @use "../../styles/mixins" as *;
+
+// The consent tick box's size. The helper under its label indents by it, so
+// the two are one number.
+$checkbox-size: 18px;
 
 // The contact page.
 //
@@ -165,12 +168,12 @@
     color: var(--color-text-primary);
 
     &::placeholder {
-      // Halfway from brown-600 to brown-500: 4.60:1 on canvas, the lightest
-      // that still clears AA's 4.5:1 (2026-10-06, the client asked for
-      // lighter; brown-500 itself is 3.94:1 and fails). The placeholder is
-      // never the accessible name here, but it is still text a sighted user
-      // reads, so 1.4.3 applies to it.
-      color: color.mix($brown-500, $brown-600, 50%);
+      // brown-800 at 70%, on the client's call (2026-10-06): 5.21:1 on
+      // canvas, the lightest of the options tried that clears AA's 4.5:1
+      // (brown-800 at 50% was 2.94:1). The placeholder is never the
+      // accessible name here, but it is still text a sighted user reads, so
+      // 1.4.3 applies to it.
+      color: rgba($brown-800, 0.7);
     }
 
     // Autofill.
@@ -674,14 +677,14 @@
   // CSS with no aria bookkeeping. Same reasoning as the <select> above.
   .checkbox {
     appearance: none;
-    // 22px visual box, on the client's call (2026-10-06). Under 2.5.8's 24px
+    // 18px visual box, on the client's call (2026-10-06). Under 2.5.8's 24px
     // on its own, and still passing: the label is tied to the box, so the
     // whole label line is the target, as e2e/form-a11y.spec.ts checks.
-    inline-size: 22px;
-    block-size: 22px;
+    inline-size: $checkbox-size;
+    block-size: $checkbox-size;
     flex: 0 0 auto;
     // Optically align with the first line of the label rather than its box.
-    margin-block-start: 3px;
+    margin-block-start: 5px;
     border-style: solid;
     border-width: 1px;
     border-color: var(--color-text-secondary);
@@ -700,7 +703,7 @@
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f0e9dd' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: center;
-      background-size: 16px 16px;
+      background-size: 13px 13px;
     }
 
     @include focus-ring;
@@ -720,7 +723,7 @@
   .consentHelper {
     // Indented to the label's start edge, so it reads as belonging to it rather
     // than to the form.
-    padding-inline-start: calc(24px + #{$space-3});
+    padding-inline-start: calc(#{$checkbox-size} + #{$space-3});
     font-size: var(--font-size-sm);
     line-height: $line-height-relaxed;
     color: var(--color-text-secondary);

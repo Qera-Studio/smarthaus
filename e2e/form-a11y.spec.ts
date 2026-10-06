@@ -101,15 +101,13 @@ test("while sending, the button stays focusable and busy, and a second press sen
 });
 
 test.describe("the form's look, at the client's call (2026-10-06)", () => {
-  test("keeps the lighter placeholder above AA contrast on the canvas", async ({ page }) => {
-    const ratio = await form(page)
+  test("draws the placeholder as brown-800 at 70%, above AA contrast on the canvas", async ({
+    page,
+  }) => {
+    const { ratio, alpha } = await form(page)
       .getByLabel("Name")
       .evaluate((input) => {
-        const rgb = (value: string) =>
-          value
-            .match(/\d+(\.\d+)?/g)!
-            .slice(0, 3)
-            .map(Number);
+        const channels = (value: string) => value.match(/\d+(\.\d+)?/g)!.map(Number);
         const lum = ([r, g, b]: number[]) => {
           const [R, G, B] = [r!, g!, b!].map((v) => {
             const c = v / 255;
@@ -117,13 +115,16 @@ test.describe("the form's look, at the client's call (2026-10-06)", () => {
           });
           return 0.2126 * R! + 0.7152 * G! + 0.0722 * B!;
         };
-        const text = lum(rgb(getComputedStyle(input, "::placeholder").color));
+        const [r, g, b, a = 1] = channels(getComputedStyle(input, "::placeholder").color);
         // The canvas is painted on <html>; body and the form are transparent.
-        const ground = lum(rgb(getComputedStyle(document.documentElement).backgroundColor));
-        return (Math.max(text, ground) + 0.05) / (Math.min(text, ground) + 0.05);
+        const ground = channels(getComputedStyle(document.documentElement).backgroundColor);
+        // What the eye sees: the placeholder blended over the canvas.
+        const seen = [r!, g!, b!].map((c, i) => c * a + ground[i]! * (1 - a));
+        const [x, y] = [lum(seen), lum(ground)].sort((p, q) => q - p);
+        return { ratio: (x! + 0.05) / (y! + 0.05), alpha: a };
       });
+    expect(alpha).toBeCloseTo(0.7, 2);
     expect(ratio).toBeGreaterThanOrEqual(4.5);
-    expect(ratio).toBeLessThan(5);
   });
 
   test("sets the two field columns 64px apart", async ({ page }) => {
@@ -138,11 +139,27 @@ test.describe("the form's look, at the client's call (2026-10-06)", () => {
     expect(Math.round(email!.left - name!.right)).toBe(64);
   });
 
-  test("draws the tick boxes at 22px, and the whole label still ticks them", async ({ page }) => {
+  test("draws the tick boxes at 18px, and the whole label still ticks them", async ({ page }) => {
     const box = form(page).getByRole("checkbox", { name: /I would like Smarthaus/ });
     const size = await box.evaluate((el) => el.getBoundingClientRect());
-    expect([size.width, size.height]).toEqual([22, 22]);
+    expect([size.width, size.height]).toEqual([18, 18]);
     await form(page).getByText("I would like Smarthaus to contact me").click();
     await expect(box).toBeChecked();
+  });
+
+  test("lines the consent helper up with its label, not with the box", async ({ page }) => {
+    const [label, helper] = await Promise.all(
+      [
+        form(page).getByText("I would like Smarthaus to contact me"),
+        form(page).getByText("We use your details to answer your enquiry"),
+      ].map((locator) =>
+        locator.evaluate((el) => {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          return range.getClientRects()[0]!.left;
+        }),
+      ),
+    );
+    expect(Math.round(helper! - label!)).toBe(0);
   });
 });
