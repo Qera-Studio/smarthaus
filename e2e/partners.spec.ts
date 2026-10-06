@@ -234,8 +234,10 @@ test.describe("the timer and the slide", () => {
   });
 
   test("stays put once paused", async ({ page }) => {
-    await shorten(page);
+    // Paused before the interval is shortened: on a phone the cards are on
+    // screen at load, so a 400ms timer could run out before the click lands.
     await section(page).getByRole("button", { name: "Pause the partner cards" }).click();
+    await shorten(page);
     await section(page).scrollIntoViewIfNeeded();
     await page.waitForTimeout(1500);
     await expect(tab(page, "TIS")).toHaveAttribute("aria-selected", "true");
