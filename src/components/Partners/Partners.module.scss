@@ -1,0 +1,312 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+// The card's width cap, carried over from the Maple banner (Maple.module.scss
+// has why it is not a token).
+$card-max: 1200px;
+
+// The slide, the hardware carousel's: twice $duration-slow on a quart
+// ease-in-out, so it gathers speed, travels and settles.
+$slide-duration: $duration-slow * 2;
+$slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
+// How far past the card the stage clips, so the glass card's shadow is not
+// cut flat at its sides. Under the page gutter, so it never widens the page.
+$stage-bleed: $space-4;
+
+@layer components {
+  // 96px above and below, as every homepage section after the hero has. The
+  // 48px sides sit inside body's own gutter once the columns are side by side.
+  .partners {
+    padding-block: $space-24;
+
+    @include bp-lg {
+      padding-inline: $space-12;
+    }
+  }
+
+  .carousel {
+    --partners-interval: 6s;
+    display: grid;
+    gap: $space-4;
+    max-inline-size: $card-max;
+    margin-inline: auto;
+  }
+
+  // --- The toggle -----------------------------------------------------------
+
+  // The tabs at the start, the pause button at the end.
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tabs {
+    display: flex;
+    gap: $space-6;
+  }
+
+  // Text tabs: the selected one at full ink with a rule under it, the other
+  // dimmed. Colour tokens rather than opacity, and the dimmed state stays
+  // above 4.5:1 on canvas.
+  .tab {
+    // 48px tall, the hardware tabs' height: over the project's 44px
+    // touch-target floor on a phone (e2e/touch-targets.spec.ts).
+    min-block-size: $space-12;
+    // And as wide: "TIS" alone is about 22px. Text stays at the start, so the
+    // first tab's label is flush with the card's edge below it.
+    min-inline-size: $space-12;
+    text-align: start;
+    padding-block: $space-2;
+    background: none;
+    border: 0;
+    border-block-end: 2px solid transparent;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    color: var(--color-text-muted);
+    transition-property: color, border-color;
+    transition-duration: var(--duration-fast);
+    @include focus-ring;
+
+    &:hover,
+    &[aria-selected="true"] {
+      color: var(--color-text-primary);
+    }
+
+    &[aria-selected="true"] {
+      border-block-end-color: currentColor;
+    }
+  }
+
+  // 48px square, the tabs' size, so it is a full touch target.
+  .pause {
+    display: grid;
+    place-items: center;
+    inline-size: $space-12;
+    block-size: $space-12;
+    background: none;
+    border: 0;
+    color: var(--color-text-muted);
+    transition-property: color;
+    transition-duration: var(--duration-fast);
+    @include focus-ring;
+
+    &:hover,
+    &[aria-pressed="true"] {
+      color: var(--color-text-primary);
+    }
+  }
+
+  // The glyph names the state the timer is actually in: the play glyph while
+  // paused by the button or by keyboard focus in the carousel.
+  .glyphPlay,
+  .carousel:has(:focus-visible) .glyphPause,
+  .pause[aria-pressed="true"] .glyphPause {
+    display: none;
+  }
+
+  .carousel:has(:focus-visible) .glyphPlay,
+  .pause[aria-pressed="true"] .glyphPlay {
+    display: block;
+  }
+
+  // The timer: a hairline across the carousel that fills over the interval.
+  // Bronze is decorative here; the selected tab and the pause button carry
+  // the state.
+  .progress {
+    display: block;
+    block-size: 2px;
+    background-color: var(--color-accent);
+    transform-origin: left center;
+    animation-name: partners-progress;
+    animation-duration: var(--partners-interval);
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+    animation-play-state: paused;
+
+    &[data-running="true"] {
+      animation-play-state: running;
+    }
+  }
+
+  // Keyboard focus anywhere in the carousel holds the timer, so a reader
+  // tabbing to a card's button is never raced by it. :focus-visible, so a
+  // mouse click does not hold it.
+  .carousel:has(:focus-visible) .progress {
+    animation-play-state: paused;
+  }
+
+  @keyframes partners-progress {
+    from {
+      scale: 0 1;
+    }
+    to {
+      scale: 1 1;
+    }
+  }
+
+  // --- The cards ------------------------------------------------------------
+
+  // Every card in one cell: the stage is as tall as the tallest card, so the
+  // toggle never moves the page below it.
+  // Clipped sideways only, so the cards slide in and out of view while their
+  // shadow still shows above and below. The bleed gives the sides room too.
+  .stage {
+    display: grid;
+    overflow-x: clip;
+    padding-inline: $stage-bleed;
+    margin-inline: calc(-1 * #{$stage-bleed});
+    padding-block: $stage-bleed;
+    margin-block: calc(-1 * #{$stage-bleed});
+  }
+
+  // The Maple banner's card: the same glass as the nav capsule and the
+  // hardware bar. Positioned because the mixin's grain layer sizes against it.
+  .card {
+    grid-area: 1 / 1;
+    position: relative;
+    display: grid;
+    gap: $space-4;
+    padding: $space-4;
+    @include glass(0);
+    // Hidden, not display:none: the copy stays in the HTML for crawlers, and
+    // visibility drops it from the tab order and the accessibility tree.
+    visibility: hidden;
+
+    // Both cards travel, on one duration and one curve, as a single strip.
+    // `both` holds the outgoing card off stage until the carousel releases it.
+    &[data-state="active"],
+    &[data-state="leaving"] {
+      visibility: visible;
+      animation-duration: $slide-duration;
+      animation-timing-function: $slide-ease;
+      animation-fill-mode: both;
+    }
+
+    &[data-state="leaving"] {
+      z-index: 1;
+    }
+
+    &[data-state="active"] {
+      z-index: 2;
+    }
+
+    // The copy takes the spare width, the logo panel only what it needs.
+    @include bp-lg {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: stretch;
+    }
+  }
+
+  // The direction picks the keyframes, and changing the name is what restarts
+  // the animation when a card becomes active again. Next: the incoming card
+  // comes in from the end while the outgoing one leaves by the start.
+  .carousel[data-direction="next"] {
+    .card[data-state="active"] {
+      animation-name: partner-from-end;
+    }
+
+    .card[data-state="leaving"] {
+      animation-name: partner-to-start;
+    }
+  }
+
+  .carousel[data-direction="prev"] {
+    .card[data-state="active"] {
+      animation-name: partner-from-start;
+    }
+
+    .card[data-state="leaving"] {
+      animation-name: partner-to-end;
+    }
+  }
+
+  // A card's width plus the bleed, so it starts and ends wholly out of view.
+  @keyframes partner-from-end {
+    from {
+      translate: calc(100% + #{$stage-bleed}) 0;
+    }
+  }
+
+  @keyframes partner-from-start {
+    from {
+      translate: calc(-100% - #{$stage-bleed}) 0;
+    }
+  }
+
+  @keyframes partner-to-start {
+    to {
+      translate: calc(-100% - #{$stage-bleed}) 0;
+    }
+  }
+
+  @keyframes partner-to-end {
+    to {
+      translate: calc(100% + #{$stage-bleed}) 0;
+    }
+  }
+
+  // No reduced-motion block, as in Hardware.module.scss: _reset.scss collapses
+  // the slide to 0.01ms, a swap that still fires animationend, which is what
+  // releases the outgoing card. The timer is withheld in the component.
+
+  .copy {
+    display: flex;
+    flex-direction: column;
+    padding: $space-4;
+
+    @include bp-lg {
+      padding: $space-2;
+    }
+  }
+
+  .title {
+    font-size: var(--font-size-lg);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    color: $brown-800;
+    text-wrap: balance;
+  }
+
+  // brown-800 at 70%, as on the Maple card: about 5:1 on the glass.
+  .description {
+    max-inline-size: 48ch;
+    margin-block-start: $space-2;
+    font-size: var(--font-size-sm);
+    line-height: $line-height-normal;
+    color: color-mix(in srgb, #{$brown-800} 70%, transparent);
+    text-wrap: pretty;
+  }
+
+  // The CTA pinned to the card's foot, at the inline start.
+  .action {
+    margin-block-start: auto;
+    padding-block-start: $space-6;
+  }
+
+  // The faint lift of the page's ground over the glass that marks the logo's
+  // area, as on the Maple card.
+  .logoPanel {
+    display: grid;
+    place-items: center;
+    padding-block: $space-12;
+    padding-inline: $space-16;
+    background-color: color-mix(in srgb, var(--color-bg-canvas) 30%, transparent);
+
+    @include bp-lg {
+      // A fixed width, so both cards' copy columns are the same width and the
+      // text does not reflow as the toggle switches.
+      inline-size: calc(#{$space-32} * 3 + 2 * #{$space-24});
+      padding-inline: $space-24;
+    }
+  }
+
+  // 384px wide, the Maple logo's size. Height follows from each file's own
+  // width and height attributes.
+  .logo {
+    inline-size: $space-32 * 3;
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+}

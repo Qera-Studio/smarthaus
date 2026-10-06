@@ -27,6 +27,9 @@ const config: Config = {
     // Fixtures that deliberately fail; scripts/__tests__/console-guard.test.ts
     // runs them one at a time in a child process.
     "/guard-fixtures/",
+    // Shared setup a suite imports, not a suite itself. Still under
+    // __tests__, so the ratio counts it as test code.
+    "/__tests__/helpers/",
     " 2\\.",
   ],
   // Keep in step with isCoverable() in scripts/coverage-gate.mjs; the gate

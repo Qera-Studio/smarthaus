@@ -31,9 +31,24 @@ async function naturalTops(page: Page) {
     });
 }
 
+/**
+ * Scrolls, then waits until the page is actually there and has painted.
+ * One frame was enough locally; under CI load WebKit had not settled the
+ * scroll by then, and the sheets read 17px short of where they would be.
+ */
 async function scrollTo(page: Page, y: number) {
   await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), y);
-  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await expect
+    .poll(() =>
+      page.evaluate((top) => {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        return Math.abs(window.scrollY - Math.min(top, max));
+      }, y),
+    )
+    .toBeLessThan(1);
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
 }
 
 /**

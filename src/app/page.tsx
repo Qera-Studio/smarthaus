@@ -1,4 +1,5 @@
 import { Hardware } from "../components/Hardware";
+import { Partners } from "../components/Partners";
 import { FluidHero } from "../components/FluidHero";
 import { HomeEnquiry } from "../components/HomeEnquiry";
 import { Pricing } from "../components/Pricing";
@@ -27,6 +28,9 @@ export default function Home() {
     <>
       <JsonLd data={pageGraph(PAGE)} />
       <FluidHero />
+      {/* Who stands behind the systems, before anything asks to be trusted.
+          Took the Maple banner's place; src/components/Maple stays unmounted. */}
+      <Partners />
       {/* What the house is made of, then how it gets installed. */}
       <Hardware />
       <Process />
