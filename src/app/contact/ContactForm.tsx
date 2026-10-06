@@ -36,15 +36,15 @@ const FOCUS_ORDER = [
 ] as const;
 
 /**
- * Stated before the visitor types, not only in the error (WCAG 3.3.2, and
- * Accessibility System §12: format requirements given upfront).
+ * A field's error, when it has one, as its aria-describedby.
+ *
+ * No standing hint lines under the fields (2026-10-06, at Shivanshu's call).
+ * The phone format WCAG 3.3.2 asks for upfront is in the field's label
+ * instead; the message limit needs no notice, since maxLength stops the field
+ * at it, and the server's error covers anything that gets past.
  */
-const PHONE_HINT = "A UAE mobile number. Starting with 05 or +971 both work.";
-const MESSAGE_HINT = `Optional. Up to ${MAX_LENGTH.message.toLocaleString("en-US")} characters.`;
-
-/** A field's hint and error, in reading order, as one aria-describedby. */
-function describedBy(id: string, hasHint: boolean, error: string | undefined) {
-  return [hasHint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
+function describedBy(id: string, error: string | undefined) {
+  return error ? `${id}-error` : undefined;
 }
 
 /**
@@ -164,7 +164,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             placeholder="enter full name"
             className={styles.input}
             aria-invalid={errors.name ? true : undefined}
-            aria-describedby={describedBy("name", false, errors.name)}
+            aria-describedby={describedBy("name", errors.name)}
           />
         </Field>
 
@@ -179,11 +179,11 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             placeholder="enter email"
             className={styles.input}
             aria-invalid={errors.email ? true : undefined}
-            aria-describedby={describedBy("email", false, errors.email)}
+            aria-describedby={describedBy("email", errors.email)}
           />
         </Field>
 
-        <Field id="phone" label="Phone" error={errors.phone} hint={PHONE_HINT}>
+        <Field id="phone" label="Phone (UAE mobile)" error={errors.phone}>
           {/* The prefix is adjacent text, not the input's value: someone typing
               a local 05… number would otherwise produce "+97105…". */}
           <span className={styles.prefix} aria-hidden="true">
@@ -200,7 +200,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             placeholder="enter phone number"
             className={styles.input}
             aria-invalid={errors.phone ? true : undefined}
-            aria-describedby={describedBy("phone", true, errors.phone)}
+            aria-describedby={describedBy("phone", errors.phone)}
           />
         </Field>
 
@@ -216,7 +216,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
               placeholder="eg. Dubai Hills"
               className={styles.input}
               aria-invalid={errors.community ? true : undefined}
-              aria-describedby={describedBy("community", false, errors.community)}
+              aria-describedby={describedBy("community", errors.community)}
             />
           </Field>
         )}
@@ -229,7 +229,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
               defaultValue={values.interest ?? INTERESTS[1]}
               className={styles.select}
               aria-invalid={errors.interest ? true : undefined}
-              aria-describedby={describedBy("interest", false, errors.interest)}
+              aria-describedby={describedBy("interest", errors.interest)}
             >
               {INTERESTS.map((interest) => (
                 <option key={interest} value={interest}>
@@ -240,7 +240,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
           </Field>
         )}
 
-        <Field id="message" label="Message" error={errors.message} hint={MESSAGE_HINT}>
+        <Field id="message" label="Message" error={errors.message}>
           <input
             id="message"
             name="message"
@@ -250,7 +250,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             placeholder="enter message"
             className={styles.input}
             aria-invalid={errors.message ? true : undefined}
-            aria-describedby={describedBy("message", true, errors.message)}
+            aria-describedby={describedBy("message", errors.message)}
           />
         </Field>
       </div>
@@ -410,14 +410,11 @@ function Field({
   id,
   label,
   error,
-  hint,
   children,
 }: {
   id: string;
   label: string;
   error?: string | undefined;
-  /** Format or limit, under the control and before any error (WCAG 3.3.2). */
-  hint?: string | undefined;
   children: React.ReactNode;
 }) {
   return (
@@ -430,15 +427,6 @@ function Field({
       <div className={styles.control} data-invalid={error ? "true" : undefined}>
         {children}
       </div>
-      {/* Under the control, not between label and control: a hint above
-          pushed one input of a pair lower than its neighbour (the home
-          enquiry's Phone beside Email). Still before the error in reading
-          order and in aria-describedby. */}
-      {hint && (
-        <p id={`${id}-hint`} className={styles.hint}>
-          {hint}
-        </p>
-      )}
       {error && (
         <p id={`${id}-error`} className={styles.fieldError}>
           {error}
