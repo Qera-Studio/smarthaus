@@ -1,7 +1,12 @@
 import type { Page } from "@playwright/test";
 
 import { test, expect } from "./fixtures";
-import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
+import {
+  expectAccessible,
+  expectHydrated,
+  expectNoEmDash,
+  expectNoHorizontalOverflow,
+} from "./checks";
 
 /**
  * The partner cards on the homepage: TIS and Fibaro, with a toggle between
@@ -17,6 +22,10 @@ const card = (page: Page, name: string) =>
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
+  // The toggle and the pause button are client behaviour: a key or a Tab
+  // pressed before hydration meets the server HTML instead, which flaked on
+  // CI's slower runners.
+  await expectHydrated(page);
 });
 
 test("sits directly after the hero", async ({ page }) => {
@@ -93,6 +102,10 @@ test.describe("keyboard", () => {
       "WebKit's Tab skips links by default, as in e2e/focus-visible.spec.ts",
     );
     const pause = section(page).getByRole("button", { name: "Pause the partner cards" });
+    // The pause button arrives with hydration, once the carousel knows it may
+    // autoplay; Tab pressed before then skips straight to the card.
+    await expect(pause).toBeVisible();
+    await expect(tab(page, "TIS")).toHaveAttribute("aria-selected", "true");
     await tab(page, "TIS").focus();
     // Tab, then the pause button beside the tabs, then the showing card.
     await page.keyboard.press("Tab");
