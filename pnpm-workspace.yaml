@@ -11,3 +11,12 @@ allowBuilds:
 # within hours, so waiting turns "we were patient" into "we were unaffected".
 # In minutes. Dependabot waits the same three days (.github/dependabot.yml).
 minimumReleaseAge: 4320
+
+# Security System §12, patched transitive dependencies. Next pins both below
+# the fixed release, so they are lifted here until it moves past them; drop
+# each entry once `pnpm why` shows Next resolving the patched version itself.
+# source-map-js: GHSA-68fv-2mgg-jv7q (event-loop DoS), fixed in 1.2.2.
+# sharp: GHSA-wq5f-xc86-pv6w (librsvg, CVE-2026-96889), fixed in 0.35.5.
+overrides:
+  source-map-js: '^1.2.2'
+  sharp: '^0.35.5'
