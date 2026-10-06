@@ -85,20 +85,26 @@ test("passes axe, never scrolls sideways, and has no em dash", async ({ page }) 
 });
 
 test.describe("keyboard", () => {
-  test("is one tab stop, then the visible card's button, never the hidden one's", async ({
+  test("is one tab stop, then pause, then the visible card's button, never the hidden one's", async ({
     page,
   }) => {
     test.skip(
       test.info().project.name === "iPhone 17",
       "WebKit's Tab skips links by default, as in e2e/focus-visible.spec.ts",
     );
+    const pause = section(page).getByRole("button", { name: "Pause the partner cards" });
     await tab(page, "TIS").focus();
+    // Tab, then the pause button beside the tabs, then the showing card.
+    await page.keyboard.press("Tab");
+    await expect(pause).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(section(page).getByRole("link", { name: /Visit TIS/ })).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
     await page.keyboard.press("Shift+Tab");
     await expect(tab(page, "TIS")).toBeFocused();
 
     await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
     await expect(section(page).getByRole("link", { name: /Visit Fibaro/ })).toBeFocused();
   });
@@ -148,7 +154,7 @@ test.describe("layout", () => {
   test("draws each logo at 384px wide in its own proportions", async ({ page }) => {
     test.skip(page.viewportSize()!.width < 768, "the logo panel narrows on a phone");
     for (const [name, ratio] of [
-      ["TIS", 545 / 1152],
+      ["TIS", 451 / 1152],
       ["Fibaro", 364 / 1152],
     ] as const) {
       await tab(page, name).click();
@@ -208,5 +214,52 @@ test.describe("without JavaScript", () => {
     const html = await section(page).innerHTML();
     expect(html).toContain("A Fibaro partner");
     expect(html).toContain("https://www.fibaro.com/en/");
+  });
+});
+
+test.describe("the timer and the slide", () => {
+  // The interval is 6s; a test shortens it rather than waiting. The variable
+  // lives on the carousel root, the section's only element child.
+  // Through the element's own style: an injected stylesheet is refused by
+  // the strict report-only CSP on WebKit.
+  const shorten = (page: Page) =>
+    page
+      .locator("[data-partners] > div")
+      .evaluate((root: HTMLElement) => root.style.setProperty("--partners-interval", "400ms"));
+
+  test("advances to the next card on its own while on screen", async ({ page }) => {
+    await shorten(page);
+    await section(page).scrollIntoViewIfNeeded();
+    await expect(tab(page, "Fibaro")).toHaveAttribute("aria-selected", "true", { timeout: 5000 });
+  });
+
+  test("stays put once paused", async ({ page }) => {
+    await shorten(page);
+    await section(page).getByRole("button", { name: "Pause the partner cards" }).click();
+    await section(page).scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1500);
+    await expect(tab(page, "TIS")).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("slides the incoming card in from the end, and the outgoing one out", async ({ page }) => {
+    await section(page).scrollIntoViewIfNeeded();
+    await tab(page, "Fibaro").click();
+    const names = await section(page)
+      .locator("[role=tabpanel]")
+      .evaluateAll((panels) => panels.map((panel) => getComputedStyle(panel).animationName));
+    // CSS Modules prefix keyframe names with a hash; the end is ours.
+    expect(names[0]).toMatch(/partner-to-start$/);
+    expect(names[1]).toMatch(/partner-from-end$/);
+    await expect(card(page, "TIS")).toBeHidden();
+  });
+
+  test.describe("under reduced motion", () => {
+    test.use({ reducedMotion: "reduce" });
+
+    test("has no timer and no pause button", async ({ page }) => {
+      await page.goto("/");
+      await expect(section(page).getByRole("button", { name: /Pause/ })).toHaveCount(0);
+      await expect(section(page).locator("span[data-running]")).toHaveCount(0);
+    });
   });
 });

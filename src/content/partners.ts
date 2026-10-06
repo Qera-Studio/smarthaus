@@ -18,6 +18,11 @@ export type Partner = {
   body: string;
   /** The maker's own site, as given by Shivanshu. */
   href: string;
+  /**
+   * Replacing a logo means a new filename, never a new file under the old
+   * one: /hero is cached for a day by browsers and by Next's image
+   * optimiser, so a file swapped in place keeps showing the old artwork.
+   */
   logo: { src: string; width: number; height: number };
 };
 
@@ -28,7 +33,7 @@ export const PARTNERS: readonly Partner[] = [
     title: "A TIS partner",
     body: "TIS makes wired home control: the wall panels, keypads and modules that run a villa's lighting, climate and scenes from one system. As a TIS partner, Smarthaus installs and sets up TIS systems.",
     href: "https://www.tiscontrol.com/",
-    logo: { src: "/hero/TIS_Logo.png", width: 1152, height: 545 },
+    logo: { src: "/hero/partners/tis.png", width: 1152, height: 451 },
   },
   {
     id: "fibaro",
@@ -36,6 +41,6 @@ export const PARTNERS: readonly Partner[] = [
     title: "A Fibaro partner",
     body: "Fibaro, a Nice brand, makes wireless smart home devices: sensors, switches and a central controller that add automation without rewiring. As a Fibaro partner, Smarthaus installs and sets up Fibaro systems where the walls are already finished.",
     href: "https://www.fibaro.com/en/",
-    logo: { src: "/hero/FIBARO_Logo.png", width: 1152, height: 364 },
+    logo: { src: "/hero/partners/fibaro.png", width: 1152, height: 364 },
   },
 ];

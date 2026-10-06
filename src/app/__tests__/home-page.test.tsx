@@ -120,7 +120,7 @@ describe("the partner cards, as the server sends them", () => {
 
   test("mark exactly one card active on first paint", () => {
     expect(section().match(/role="tabpanel"/g)).toHaveLength(2);
-    expect(section().match(/data-active="true"/g)).toHaveLength(1);
+    expect(section().match(/data-state="active"/g)).toHaveLength(1);
   });
 
   test("reserve each logo's box with its width and height, so nothing shifts", () => {

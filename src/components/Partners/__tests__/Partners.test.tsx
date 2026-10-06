@@ -1,9 +1,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { installEnv } from "./helpers/env";
 
 import { PARTNERS } from "../../../content/partners";
 import { Partners } from "../Partners";
+
+beforeEach(installEnv);
 
 /**
  * The partner cards make a claim about who Smarthaus works with, which puts
@@ -61,16 +64,16 @@ describe("Partners", () => {
       render(<Partners />);
       expect(tabs().map((tab) => tab.getAttribute("aria-selected"))).toEqual(["true", "false"]);
       expect(tabs().map((tab) => tab.tabIndex)).toEqual([0, -1]);
-      expect(panelFor("TIS")).toHaveAttribute("data-active", "true");
-      expect(panelFor("Fibaro")).not.toHaveAttribute("data-active");
+      expect(panelFor("TIS")).toHaveAttribute("data-state", "active");
+      expect(panelFor("Fibaro")).not.toHaveAttribute("data-state", "active");
     });
 
     it("switches the card on a click", () => {
       render(<Partners />);
       fireEvent.click(tabs()[1]!);
       expect(tabs()[1]).toHaveAttribute("aria-selected", "true");
-      expect(panelFor("Fibaro")).toHaveAttribute("data-active", "true");
-      expect(panelFor("TIS")).not.toHaveAttribute("data-active");
+      expect(panelFor("Fibaro")).toHaveAttribute("data-state", "active");
+      expect(panelFor("TIS")).not.toHaveAttribute("data-state", "active");
     });
 
     it.each([

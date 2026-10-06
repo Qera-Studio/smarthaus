@@ -1,7 +1,10 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { installEnv } from "./helpers/env";
 
 import type { Partner } from "../../../content/partners";
 import { PartnerCarousel } from "../PartnerCarousel";
+
+beforeEach(installEnv);
 
 /**
  * The toggle itself, against a list longer than today's two, so the wrapping
@@ -24,7 +27,9 @@ const THREE = [partner("one", "One"), partner("two", "Two"), partner("three", "T
 const tabs = () => screen.getAllByRole("tab");
 const selected = () => tabs().findIndex((tab) => tab.getAttribute("aria-selected") === "true");
 const activePanels = () =>
-  screen.getAllByRole("tabpanel", { hidden: true }).filter((panel) => panel.dataset["active"]);
+  screen
+    .getAllByRole("tabpanel", { hidden: true })
+    .filter((panel) => panel.dataset["state"] === "active");
 
 function press(key: string) {
   const focused = document.activeElement as HTMLElement;
@@ -87,7 +92,11 @@ describe("PartnerCarousel with three partners", () => {
     press("End");
     const panels = screen.getAllByRole("tabpanel", { hidden: true });
     expect(panels).toHaveLength(3);
-    expect(panels.map((panel) => panel.hasAttribute("data-active"))).toEqual([false, false, true]);
+    expect(panels.map((panel) => panel.dataset["state"] === "active")).toEqual([
+      false,
+      false,
+      true,
+    ]);
     expect(panels[0]).toHaveTextContent("As a One partner");
   });
 
