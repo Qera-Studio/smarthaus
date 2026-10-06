@@ -1,0 +1,165 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+// The card's width cap, carried over from the Maple banner (Maple.module.scss
+// has why it is not a token).
+$card-max: 1200px;
+
+@layer components {
+  // 96px above and below, as every homepage section after the hero has. The
+  // 48px sides sit inside body's own gutter once the columns are side by side.
+  .partners {
+    padding-block: $space-24;
+
+    @include bp-lg {
+      padding-inline: $space-12;
+    }
+  }
+
+  .carousel {
+    display: grid;
+    gap: $space-4;
+    max-inline-size: $card-max;
+    margin-inline: auto;
+  }
+
+  // --- The toggle -----------------------------------------------------------
+
+  .tabs {
+    display: flex;
+    gap: $space-6;
+  }
+
+  // Text tabs: the selected one at full ink with a rule under it, the other
+  // dimmed. Colour tokens rather than opacity, and the dimmed state stays
+  // above 4.5:1 on canvas.
+  .tab {
+    // 48px tall, the hardware tabs' height: over the project's 44px
+    // touch-target floor on a phone (e2e/touch-targets.spec.ts).
+    min-block-size: $space-12;
+    // And as wide: "TIS" alone is about 22px. Text stays at the start, so the
+    // first tab's label is flush with the card's edge below it.
+    min-inline-size: $space-12;
+    text-align: start;
+    padding-block: $space-2;
+    background: none;
+    border: 0;
+    border-block-end: 2px solid transparent;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    color: var(--color-text-muted);
+    transition-property: color, border-color;
+    transition-duration: var(--duration-fast);
+    @include focus-ring;
+
+    &:hover,
+    &[aria-selected="true"] {
+      color: var(--color-text-primary);
+    }
+
+    &[aria-selected="true"] {
+      border-block-end-color: currentColor;
+    }
+  }
+
+  // --- The cards ------------------------------------------------------------
+
+  // Every card in one cell: the stage is as tall as the tallest card, so the
+  // toggle never moves the page below it.
+  .stage {
+    display: grid;
+  }
+
+  // The Maple banner's card: the same glass as the nav capsule and the
+  // hardware bar. Positioned because the mixin's grain layer sizes against it.
+  .card {
+    grid-area: 1 / 1;
+    position: relative;
+    display: grid;
+    gap: $space-4;
+    padding: $space-4;
+    @include glass(0);
+    // Hidden, not display:none: the copy stays in the HTML for crawlers, and
+    // visibility drops it from the tab order and the accessibility tree.
+    visibility: hidden;
+
+    &[data-active] {
+      visibility: visible;
+      animation-name: partner-in;
+      animation-duration: var(--duration-normal);
+      animation-timing-function: var(--ease-out);
+    }
+
+    // The copy takes the spare width, the logo panel only what it needs.
+    @include bp-lg {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: stretch;
+    }
+  }
+
+  @keyframes partner-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .copy {
+    display: flex;
+    flex-direction: column;
+    padding: $space-4;
+
+    @include bp-lg {
+      padding: $space-2;
+    }
+  }
+
+  .title {
+    font-size: var(--font-size-lg);
+    font-weight: $font-weight-bold;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    color: $brown-800;
+    text-wrap: balance;
+  }
+
+  // brown-800 at 70%, as on the Maple card: about 5:1 on the glass.
+  .description {
+    max-inline-size: 48ch;
+    margin-block-start: $space-2;
+    font-size: var(--font-size-sm);
+    line-height: $line-height-normal;
+    color: color-mix(in srgb, #{$brown-800} 70%, transparent);
+    text-wrap: pretty;
+  }
+
+  // The CTA pinned to the card's foot, at the inline start.
+  .action {
+    margin-block-start: auto;
+    padding-block-start: $space-6;
+  }
+
+  // The faint lift of the page's ground over the glass that marks the logo's
+  // area, as on the Maple card.
+  .logoPanel {
+    display: grid;
+    place-items: center;
+    padding-block: $space-12;
+    padding-inline: $space-16;
+    background-color: color-mix(in srgb, var(--color-bg-canvas) 30%, transparent);
+
+    @include bp-lg {
+      // A fixed width, so both cards' copy columns are the same width and the
+      // text does not reflow as the toggle switches.
+      inline-size: calc(#{$space-32} * 3 + 2 * #{$space-24});
+      padding-inline: $space-24;
+    }
+  }
+
+  // 384px wide, the Maple logo's size. Height follows from each file's own
+  // width and height attributes.
+  .logo {
+    inline-size: $space-32 * 3;
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+}

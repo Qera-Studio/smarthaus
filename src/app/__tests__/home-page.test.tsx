@@ -83,3 +83,52 @@ describe("the homepage", () => {
     expect(html()).not.toContain("—");
   });
 });
+
+describe("the partner cards, as the server sends them", () => {
+  const section = () => {
+    const markup = html();
+    const start = markup.indexOf("<section", markup.indexOf('aria-labelledby="partners"') - 200);
+    return markup.slice(start, markup.indexOf("</section>", start));
+  };
+
+  test("come straight after the hero, before the hardware carousel", () => {
+    const markup = html();
+    const order = [
+      'aria-labelledby="hero-title"',
+      "data-partners",
+      'aria-labelledby="hardware',
+    ].map((hook) => markup.indexOf(hook));
+    expect(order.every((at) => at > -1)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
+  test("leave the Maple banner off the page", () => {
+    expect(html()).not.toContain("A brand by Maple Technologies");
+  });
+
+  test("serve both cards' copy and links in the HTML, before any script runs", () => {
+    const markup = section();
+    for (const text of [
+      "A TIS partner",
+      "A Fibaro partner",
+      "https://www.tiscontrol.com/",
+      "https://www.fibaro.com/en/",
+    ]) {
+      expect(markup).toContain(text);
+    }
+  });
+
+  test("mark exactly one card active on first paint", () => {
+    expect(section().match(/role="tabpanel"/g)).toHaveLength(2);
+    expect(section().match(/data-active="true"/g)).toHaveLength(1);
+  });
+
+  test("reserve each logo's box with its width and height, so nothing shifts", () => {
+    const logos = [...section().matchAll(/<img[^>]*alt="(TIS|Fibaro)"[^>]*>/g)].map((m) => m[0]);
+    expect(logos).toHaveLength(2);
+    for (const img of logos) {
+      expect(img).toMatch(/width="1152"/);
+      expect(img).toMatch(/height="\d+"/);
+    }
+  });
+});

@@ -439,7 +439,7 @@ Consent is owned by **Legal System §6** (Consent, Cookies & Tracking). Earlier 
   - Both numbers are published in the Privacy Policy and Terms identity tables
   - **The licence evidences security work — it is not a warranty of anything else.** Do not stretch it into a general quality or safety claim, and do not imply SIRA endorses Smarthaus
   - **Regulated sector consequence:** a SIRA licence puts Smarthaus in a regulated sector, which Legal System §0 makes a `(counsel)` item — sector rules stack on top of privacy law. Open items are tracked in the privacy policy's placeholder register
-- **TIS and Fibaro partnerships are UNCONFIRMED.** No copy, badge, or logo may reference them until formalised. Ask before writing any partner/brand reference
+- **TIS and Fibaro partnerships are confirmed** (formalised, confirmed by Shivanshu on 2026-10-06). The homepage's partner cards (`src/components/Partners/`, copy in `src/content/partners.ts`) say Smarthaus is a partner and installs each maker's systems, and nothing more: no tier ("certified", "authorised"), no figure and no superlative until one is confirmed with a source. `src/components/Partners/__tests__/Partners.test.tsx` fails if one slips in. Any other partner or brand reference still needs asking first
 - The company founding year is a placeholder. Never invent one
 - "Sustainable Tomorrows" and similar unevidenced claims must not appear
 - **If you find yourself writing a claim with no source, stop and ask.** Do not guess, do not interpolate from the brand name

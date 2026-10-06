@@ -25,6 +25,7 @@ function mockSection(name: string) {
 
 jest.mock("../../components/FluidHero", () => ({ FluidHero: mockSection("hero") }));
 jest.mock("../../components/Maple", () => ({ Maple: mockSection("maple") }));
+jest.mock("../../components/Partners", () => ({ Partners: mockSection("partners") }));
 jest.mock("../../components/Hardware", () => ({ Hardware: mockSection("hardware") }));
 jest.mock("../../components/Process", () => ({ Process: mockSection("process") }));
 jest.mock("../../components/Pricing", () => ({ Pricing: mockSection("pricing") }));
@@ -39,7 +40,14 @@ const order = (container: HTMLElement) =>
 describe("Home page", () => {
   it("renders every section once, in the planned order", () => {
     const { container } = render(<Home />);
-    expect(order(container)).toEqual(["hero", "hardware", "process", "pricing", "enquiry"]);
+    expect(order(container)).toEqual([
+      "hero",
+      "partners",
+      "hardware",
+      "process",
+      "pricing",
+      "enquiry",
+    ]);
   });
 
   it("leaves the Maple banner off the page", () => {
@@ -57,10 +65,18 @@ describe("Home page", () => {
     expect(order(container)).not.toContain("care");
   });
 
-  it("puts the hardware carousel directly after the hero", () => {
+  it("puts the partner cards directly after the hero, where Maple was", () => {
+    // 2026-10-06, at Shivanshu's call: the TIS and Fibaro partnerships are the
+    // stronger trust signal, and take the Maple banner's place.
     const { container } = render(<Home />);
     const sections = order(container);
-    expect(sections.indexOf("hardware")).toBe(sections.indexOf("hero") + 1);
+    expect(sections.indexOf("partners")).toBe(sections.indexOf("hero") + 1);
+  });
+
+  it("puts the hardware carousel directly after the partner cards", () => {
+    const { container } = render(<Home />);
+    const sections = order(container);
+    expect(sections.indexOf("hardware")).toBe(sections.indexOf("partners") + 1);
   });
 
   it("keeps the enquiry last, directly above the footer", () => {

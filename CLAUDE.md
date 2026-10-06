@@ -243,6 +243,7 @@ Server Components first. `'use client'` limited to:
 - Hero villa canvas (`Hero/VillaCanvas.tsx` — three.js, dynamically imported; falls back to the server-rendered poster and loads no three.js on touch, reduced motion, Save-Data, slow connections or any WebGL failure). **Unmounted, not deleted:** the homepage renders `FluidHero` in its place while the hero's content is written. `src/components/Hero/` stays intact so the villa can come back
 - Hero service tabs (`Hero/ServiceTabs.tsx` — ARIA tablist, selection state). Unmounted with the villa
 - Hardware carousel (`Hardware/HardwareStage.tsx` — ARIA tablist, active slide, one IntersectionObserver; the timer is a CSS animation whose `animationend` advances the slide, and it never starts under reduced motion)
+- Partner cards (`Partners/PartnerCarousel.tsx` — ARIA tablist toggling the TIS and Fibaro cards; no autoplay, so no pause control is needed)
 - Wireframe/scene reveal (Web Animations API)
 - Contact form (form state, Turnstile widget)
 - Mobile navigation (toggle state), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
