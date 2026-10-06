@@ -80,6 +80,9 @@ test("a form refused by the send limit", async ({ page }) => {
 test("an FAQ answer, open", async ({ page }) => {
   await withConsentDecided(page);
   await page.goto("/faq");
+  // A tap that lands mid-hydration can have its open state reset, which
+  // flaked once on CI's iPhone runner. Same wait as the form tests above.
+  await expectHydrated(page);
   const first = page.locator("main details").first();
   await first.locator("summary").click();
   await expect(first).toHaveAttribute("open", "");
@@ -89,6 +92,7 @@ test("an FAQ answer, open", async ({ page }) => {
 test("a pricing comparison row, open", async ({ page }) => {
   await withConsentDecided(page);
   await page.goto("/pricing");
+  await expectHydrated(page);
   const row = page.locator("[data-pricing-comparison] details details").first();
   await row.locator("summary").click();
   await expect(row).toHaveAttribute("open", "");
