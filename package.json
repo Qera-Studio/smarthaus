@@ -65,7 +65,7 @@
     "prettier": "^3.9.6",
     "sass": "^1.104.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^6"
   },
   "packageManager": "pnpm@12.4.1"
 }
