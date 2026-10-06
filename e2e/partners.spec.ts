@@ -258,10 +258,34 @@ test.describe("the timer and the slide", () => {
   test.describe("under reduced motion", () => {
     test.use({ reducedMotion: "reduce" });
 
-    test("has no timer and no pause button", async ({ page }) => {
+    test("never runs the timer, and offers no pause button", async ({ page }) => {
       await page.goto("/");
       await expect(section(page).getByRole("button", { name: /Pause/ })).toHaveCount(0);
-      await expect(section(page).locator("span[data-running]")).toHaveCount(0);
+      await expect(section(page).locator("span[data-running]")).toHaveAttribute(
+        "data-running",
+        "false",
+      );
     });
   });
+});
+
+test("is as tall before hydration as after, so it never pushes the page down", async ({
+  page,
+  browser,
+}) => {
+  // Without JavaScript the section is exactly what the server sent. The timer
+  // line once arrived only at hydration and moved everything below by 18px,
+  // which is how the process stack's own test found it.
+  const viewport = page.viewportSize()!;
+  const bare = await browser.newContext({ javaScriptEnabled: false, viewport });
+  const server = await bare.newPage();
+  await server.goto(page.url());
+  const before = (await section(server).boundingBox())!.height;
+  await bare.close();
+
+  await section(page).scrollIntoViewIfNeeded();
+  await expect(
+    section(page).getByRole("button", { name: "Pause the partner cards" }),
+  ).toBeVisible();
+  expect((await section(page).boundingBox())!.height).toBe(before);
 });

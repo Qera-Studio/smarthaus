@@ -139,18 +139,22 @@ export function PartnerCarousel({ partners }: { partners: readonly Partner[] }) 
         ) : null}
       </div>
 
-      {/* The timer: a rule under the controls. Keyed on the card, so each
+      {/* The timer: a rule under the controls, keyed on the card so each
           card's run starts from empty. Decorative: the pause button and the
-          selected tab carry the state. */}
-      {autoplay ? (
-        <span
-          key={active}
-          className={styles.progress}
-          data-running={running}
-          aria-hidden="true"
-          onAnimationEnd={() => select(active + 1, "next")}
-        />
-      ) : null}
+          selected tab carry the state.
+
+          Always rendered, never added at hydration. It sits in the grid, and
+          appearing after first paint pushed everything below it down 18px: a
+          layout shift for the visitor, and the CI failure that found it. At
+          rest it is a zero-width line, so under reduced motion it holds its
+          space and shows nothing. */}
+      <span
+        key={active}
+        className={styles.progress}
+        data-running={running}
+        aria-hidden="true"
+        onAnimationEnd={() => select(active + 1, "next")}
+      />
 
       <div className={styles.stage}>
         {partners.map((partner, index) => (

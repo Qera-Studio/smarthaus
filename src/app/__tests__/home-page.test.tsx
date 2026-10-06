@@ -123,6 +123,10 @@ describe("the partner cards, as the server sends them", () => {
     expect(section().match(/data-state="active"/g)).toHaveLength(1);
   });
 
+  test("send the timer line in the HTML, so hydration adds nothing above the fold", () => {
+    expect(section()).toMatch(/<span[^>]*data-running="false"[^>]*aria-hidden="true"/);
+  });
+
   test("reserve each logo's box with its width and height, so nothing shifts", () => {
     const logos = [...section().matchAll(/<img[^>]*alt="(TIS|Fibaro)"[^>]*>/g)].map((m) => m[0]);
     expect(logos).toHaveLength(2);

@@ -58,18 +58,27 @@ describe("the timer", () => {
     expect(timer()).not.toBe(first);
   });
 
-  it("does not exist under reduced motion, and neither does its pause button", () => {
+  it("never runs under reduced motion, and offers no pause button", () => {
     env.reduced = true;
     mount();
-    expect(timer()).toBeNull();
+    expect(timer()).toHaveAttribute("data-running", "false");
     expect(pause()).toBeNull();
   });
 
   it("follows the preference if it changes while the page is open", () => {
     mount();
     env.setReduced(true);
-    expect(timer()).toBeNull();
+    expect(timer()).toHaveAttribute("data-running", "false");
     env.setReduced(false);
+    expect(timer()).toHaveAttribute("data-running", "true");
+  });
+
+  it("is in the first render, so its space is held before hydration", () => {
+    // Rendered only once autoplay was known, it pushed the page down 18px
+    // after first paint. Reduced motion never sets autoplay, so this is the
+    // render the server sends.
+    env.reduced = true;
+    render(<PartnerCarousel partners={PARTNERS} />);
     expect(timer()).not.toBeNull();
   });
 
