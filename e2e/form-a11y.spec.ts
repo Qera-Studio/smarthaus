@@ -99,3 +99,50 @@ test("while sending, the button stays focusable and busy, and a second press sen
   await page.waitForTimeout(1_000);
   expect(await mailFor(name)).toHaveLength(1);
 });
+
+test.describe("the form's look, at the client's call (2026-10-06)", () => {
+  test("keeps the lighter placeholder above AA contrast on the canvas", async ({ page }) => {
+    const ratio = await form(page)
+      .getByLabel("Name")
+      .evaluate((input) => {
+        const rgb = (value: string) =>
+          value
+            .match(/\d+(\.\d+)?/g)!
+            .slice(0, 3)
+            .map(Number);
+        const lum = ([r, g, b]: number[]) => {
+          const [R, G, B] = [r!, g!, b!].map((v) => {
+            const c = v / 255;
+            return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * R! + 0.7152 * G! + 0.0722 * B!;
+        };
+        const text = lum(rgb(getComputedStyle(input, "::placeholder").color));
+        // The canvas is painted on <html>; body and the form are transparent.
+        const ground = lum(rgb(getComputedStyle(document.documentElement).backgroundColor));
+        return (Math.max(text, ground) + 0.05) / (Math.min(text, ground) + 0.05);
+      });
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+    expect(ratio).toBeLessThan(5);
+  });
+
+  test("sets the two field columns 64px apart", async ({ page }) => {
+    test.skip(page.viewportSize()!.width < 768, "one column below md");
+    const [name, email] = await Promise.all(
+      ["Name", "Email"].map((label) =>
+        form(page)
+          .getByLabel(label)
+          .evaluate((el) => el.closest("[class*='field']")!.getBoundingClientRect()),
+      ),
+    );
+    expect(Math.round(email!.left - name!.right)).toBe(64);
+  });
+
+  test("draws the tick boxes at 22px, and the whole label still ticks them", async ({ page }) => {
+    const box = form(page).getByRole("checkbox", { name: /I would like Smarthaus/ });
+    const size = await box.evaluate((el) => el.getBoundingClientRect());
+    expect([size.width, size.height]).toEqual([22, 22]);
+    await form(page).getByText("I would like Smarthaus to contact me").click();
+    await expect(box).toBeChecked();
+  });
+});
