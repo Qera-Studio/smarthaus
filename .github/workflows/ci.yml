@@ -27,9 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The ratchet and the touched-file rule compare against the base, so
           # the base commit has to be in the clone.
@@ -64,8 +64,8 @@ jobs:
           # else reads it, and the build skips it.
           submodules: true
           ssh-key: ${{ secrets.QERA_SYSTEM_DEPLOY_KEY }}
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -105,7 +105,7 @@ jobs:
             node scripts/test-ratio.mjs ${{ steps.base.outputs.ref && format('--base {0}', steps.base.outputs.ref) || '' }} || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage
@@ -127,9 +127,9 @@ jobs:
       # exhausted the account's monthly quota on 2026-09-26. The delivery job
       # below is the one place a real email is sent.
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -138,7 +138,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium webkit
       - name: Playwright
         run: pnpm exec playwright test --project "${{ matrix.project }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-${{ strategy.job-index }}
@@ -161,9 +161,9 @@ jobs:
       LEAD_EMAIL: ${{ secrets.LEAD_EMAIL }}
       LEAD_FROM_EMAIL: ${{ secrets.LEAD_FROM_EMAIL }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -172,7 +172,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: One real email through Resend
         run: pnpm exec playwright test --project delivery
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-delivery
@@ -188,9 +188,9 @@ jobs:
     env:
       CI: "true"
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -199,7 +199,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Forced colours and 200% zoom
         run: pnpm exec playwright test --project forced-colors --project zoom-200
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-extra
@@ -213,9 +213,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -224,7 +224,7 @@ jobs:
         run: pnpm build
       - name: Lighthouse CI
         run: pnpm test:lhci
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: lighthouse

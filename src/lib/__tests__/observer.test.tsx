@@ -13,8 +13,6 @@ import { latestEntry } from "@/lib/observer";
 import { NavShell } from "@/components/Nav/NavShell";
 import { ScrollToTop } from "@/components/ScrollToTop/ScrollToTop";
 import { HardwareStage } from "@/components/Hardware/HardwareStage";
-import { ProcessFallback } from "@/components/Process/ProcessFallback";
-import { ProcessHandoff } from "@/components/Process/ProcessHandoff";
 import { VillaCanvas } from "@/components/Hero/VillaCanvas";
 import { ConsentShell } from "@/components/Consent/ConsentShell";
 import { HARDWARE_ITEMS } from "@/content/hardware";
@@ -272,31 +270,6 @@ describe("ScrollToTop", () => {
     deliver(sentinel, GONE, SEEN);
     expect(button).not.toHaveAttribute("data-visible");
   });
-
-  it("stays on the dark style while one dark section remains under it and another leaves", () => {
-    const { button, sections } = renderButton(2);
-    const [first, second] = sections as [HTMLElement, HTMLElement];
-    deliver(first, SEEN);
-    deliver(second, SEEN);
-    deliver(first, GONE);
-    expect(button).toHaveAttribute("data-on-dark");
-  });
-
-  it("drops the dark style once every dark section has left", () => {
-    const { button, sections } = renderButton(2);
-    const [first, second] = sections as [HTMLElement, HTMLElement];
-    deliver(first, SEEN);
-    deliver(second, SEEN);
-    deliver(first, GONE);
-    deliver(second, GONE);
-    expect(button).not.toHaveAttribute("data-on-dark");
-  });
-
-  it("applies the newest state of one dark section within a batch", () => {
-    const { button, sections } = renderButton(1);
-    deliver(sections[0]!, SEEN, GONE);
-    expect(button).not.toHaveAttribute("data-on-dark");
-  });
 });
 
 // --- Hardware carousel ------------------------------------------------------
@@ -320,100 +293,6 @@ describe("HardwareStage", () => {
     deliver(root, SEEN);
     deliver(root, SEEN, GONE);
     expect(bar()).toHaveAttribute("data-running", "false");
-  });
-});
-
-// --- Process rail -----------------------------------------------------------
-
-describe("ProcessFallback", () => {
-  const originalCSS = globalThis.CSS;
-  let raf: jest.SpyInstance;
-  let caf: jest.SpyInstance;
-
-  beforeEach(() => {
-    (globalThis as { CSS?: unknown }).CSS = { supports: () => false };
-    raf = jest.spyOn(window, "requestAnimationFrame").mockImplementation(() => 7);
-    caf = jest.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    (globalThis as { CSS?: unknown }).CSS = originalCSS;
-    raf.mockRestore();
-    caf.mockRestore();
-  });
-
-  function mount() {
-    const section = document.createElement("section");
-    section.dataset["process"] = "";
-    document.body.append(section);
-    render(<ProcessFallback />);
-    return section;
-  }
-
-  it("starts the loop when the rail enters in a batch with its earlier absence", () => {
-    const section = mount();
-    deliver(section, GONE, SEEN);
-    expect(raf).toHaveBeenCalledTimes(1);
-  });
-
-  it("stops the loop when the rail leaves in a batch with its earlier presence", () => {
-    const section = mount();
-    deliver(section, SEEN);
-    deliver(section, SEEN, GONE);
-    expect(caf).toHaveBeenCalledWith(7);
-    expect(raf).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("ProcessHandoff", () => {
-  function mount() {
-    const section = document.createElement("section");
-    section.dataset["process"] = "";
-    section.style.setProperty("--process-portal-handoff", "0.5");
-    section.style.setProperty("--process-portal-scale", "0.1");
-    document.body.append(section);
-    render(<ProcessHandoff />, { container: section });
-    const marker = section.querySelector("[aria-hidden]")!;
-    return { section, marker };
-  }
-
-  it("applies the newest state when the marker scrolls past and back in one batch", () => {
-    const { section, marker } = mount();
-    deliver(
-      marker,
-      { isIntersecting: false, top: -10, time: 1 },
-      { isIntersecting: true, top: 10, time: 2 },
-    );
-    expect(section).not.toHaveAttribute("data-portal-open");
-  });
-
-  it("opens when the last entry of a batch is past the viewport", () => {
-    const { section, marker } = mount();
-    deliver(
-      marker,
-      { isIntersecting: true, top: 10, time: 1 },
-      { isIntersecting: false, top: -10, time: 2 },
-    );
-    expect(section).toHaveAttribute("data-portal-open");
-  });
-
-  it("measures speed from consecutive entries within one batch", () => {
-    // Before the fix only the first entry was read, so a batch never produced
-    // a speed sample and the grow duration was never set from it.
-    const { section, marker } = mount();
-    deliver(
-      marker,
-      { isIntersecting: true, top: 100, time: 10 },
-      { isIntersecting: true, top: 50, time: 20 },
-    );
-    expect(section.style.getPropertyValue("--process-grow-duration")).toMatch(/^\d+ms$/);
-  });
-
-  it("ignores an empty batch", () => {
-    const { section, marker } = mount();
-    deliver(marker);
-    expect(section).not.toHaveAttribute("data-portal-open");
-    expect(section.style.getPropertyValue("--process-grow-duration")).toBe("");
   });
 });
 

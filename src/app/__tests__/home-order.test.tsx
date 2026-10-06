@@ -4,8 +4,8 @@ import Home from "../page";
 
 /**
  * The homepage is an ordered list of sections, and the order is the argument:
- * who is behind the brand, what the house is made of, how it gets installed,
- * what it costs, what keeping it running costs, then the enquiry. Each
+ * what the house is made of, how it gets installed,
+ * what it costs, then the enquiry. Each
  * section has its own suite; this one only holds the sequence.
  *
  * Every section is stubbed to a marker. The real ones pull in three.js, scroll
@@ -25,6 +25,7 @@ function mockSection(name: string) {
 
 jest.mock("../../components/FluidHero", () => ({ FluidHero: mockSection("hero") }));
 jest.mock("../../components/Maple", () => ({ Maple: mockSection("maple") }));
+jest.mock("../../components/Partners", () => ({ Partners: mockSection("partners") }));
 jest.mock("../../components/Hardware", () => ({ Hardware: mockSection("hardware") }));
 jest.mock("../../components/Process", () => ({ Process: mockSection("process") }));
 jest.mock("../../components/Pricing", () => ({ Pricing: mockSection("pricing") }));
@@ -41,27 +42,41 @@ describe("Home page", () => {
     const { container } = render(<Home />);
     expect(order(container)).toEqual([
       "hero",
-      "maple",
+      "partners",
       "hardware",
       "process",
       "pricing",
-      "care",
       "enquiry",
     ]);
   });
 
-  it("places the Maple banner directly after the hero", () => {
-    // The banner answers "who is behind this" before anything asks to be
-    // trusted. Anywhere later and the Hardware pitch arrives first.
+  it("leaves the Maple banner off the page", () => {
+    // Unmounted 2026-10-02 at Shivanshu's request. The component is kept in
+    // src/components/Maple so it can come back; this fails if it does by
+    // accident rather than by decision.
     const { container } = render(<Home />);
-    const sections = order(container);
-    expect(sections.indexOf("maple")).toBe(sections.indexOf("hero") + 1);
+    expect(order(container)).not.toContain("maple");
   });
 
-  it("places the Maple banner directly before the hardware carousel", () => {
+  it("leaves the Care section off the page", () => {
+    // Hidden 2026-10-02 at Shivanshu's request, ahead of its removal. The
+    // component stays in src/components/Care, as Maple does.
+    const { container } = render(<Home />);
+    expect(order(container)).not.toContain("care");
+  });
+
+  it("puts the partner cards directly after the hero, where Maple was", () => {
+    // 2026-10-06, at Shivanshu's call: the TIS and Fibaro partnerships are the
+    // stronger trust signal, and take the Maple banner's place.
     const { container } = render(<Home />);
     const sections = order(container);
-    expect(sections.indexOf("hardware")).toBe(sections.indexOf("maple") + 1);
+    expect(sections.indexOf("partners")).toBe(sections.indexOf("hero") + 1);
+  });
+
+  it("puts the hardware carousel directly after the partner cards", () => {
+    const { container } = render(<Home />);
+    const sections = order(container);
+    expect(sections.indexOf("hardware")).toBe(sections.indexOf("partners") + 1);
   });
 
   it("keeps the enquiry last, directly above the footer", () => {

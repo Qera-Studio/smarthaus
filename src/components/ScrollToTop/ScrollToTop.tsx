@@ -14,13 +14,14 @@ import { latestEntry } from "@/lib/observer";
  * The scroll itself is `scrollTo`, not a rAF loop: the browser already honours
  * prefers-reduced-motion for `behavior: "smooth"` and falls back to an instant
  * jump, so there is nothing to gate in JS.
+ *
+ * One colour on every ground: brown-600 holds 3:1 against both the light
+ * canvas and the dark footer, so the observer that swapped its colours over
+ * dark sections is gone (2026-10-04, at Shivanshu's request).
  */
 export function ScrollToTop() {
   const [visible, setVisible] = useState(false);
-  // True while a dark section sits behind the button, which flips its colours.
-  const [onDark, setOnDark] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -32,89 +33,15 @@ export function ScrollToTop() {
     return () => io.disconnect();
   }, []);
 
-  // Invert over dark bands.
-  //
-  // [data-ground="dark"] is the codebase's existing marker for "this block
-  // paints a dark ground" — globals.scss already inverts the custom cursor on
-  // it, for the same reason this inverts. Reusing it means the footer, the
-  // contact page's location card and the consent panel are all covered
-  // already, and any future dark section is covered the moment it opts in.
-  //
-  // The test is "does a dark section overlap the button's own strip of the
-  // viewport", which is a plain intersection once the observer's root is shrunk
-  // to that strip. Same rootMargin technique NavShell uses, and for the same
-  // reason: intersectionRatio is a fraction of the TARGET, and a full-height
-  // footer's ratio never approaches anything useful.
-  //
-  // Margins are negative insets from each viewport edge, measured off the
-  // button's real box so the band tracks it across breakpoints rather than
-  // duplicating the CSS offsets here. All four sides: with only top and
-  // bottom the band spanned the whole viewport width, so a dark block anywhere
-  // in the button's row counted as behind it. That went unseen while the
-  // consent banner mounted after this effect; once the banner was in the
-  // server HTML (2026-09-27) its card, beside the button rather than under
-  // it, turned the button dark over light prose.
-  useEffect(() => {
-    const button = buttonRef.current;
-    const targets = document.querySelectorAll('[data-ground="dark"]');
-    if (!button || targets.length === 0) return;
-
-    let io: IntersectionObserver | undefined;
-    // Last known state of every dark section. Kept across rebuilds of the
-    // observer; a fresh one reports every target again on its first callback.
-    const over = new Map<Element, boolean>();
-
-    const observe = () => {
-      io?.disconnect();
-      const box = button.getBoundingClientRect();
-      // Never below zero: an edge the box has crossed (hidden, it is nudged
-      // down past the bottom on a short viewport) gave "--8px", which the
-      // browser refuses, and the constructor threw on the whole page.
-      const inset = (distance: number) => Math.max(0, Math.round(distance));
-      const top = inset(box.top);
-      const bottom = inset(window.innerHeight - box.bottom);
-      const left = inset(box.left);
-      const right = inset(document.documentElement.clientWidth - box.right);
-      io = new IntersectionObserver(
-        (entries) => {
-          // Several dark sections are observed, and a callback carries entries
-          // only for the ones that CHANGED. Asking "does any entry intersect"
-          // forgot a section still under the button whenever a different one
-          // left the band. Record each target's state, then ask of all of them.
-          for (const entry of entries) over.set(entry.target, entry.isIntersecting);
-          setOnDark([...over.values()].some(Boolean));
-        },
-        { rootMargin: `-${top}px -${right}px -${bottom}px -${left}px`, threshold: 0 },
-      );
-      targets.forEach((target) => io?.observe(target));
-    };
-
-    observe();
-
-    // The band is measured in pixels, so it goes stale when the viewport
-    // changes size — a rotate, or the breakpoint that moves the button up off
-    // the mobile nav. ResizeObserver on <body> rather than a resize listener,
-    // which AGENTS.md rules out alongside scroll listeners.
-    const ro = new ResizeObserver(observe);
-    ro.observe(document.body);
-
-    return () => {
-      io?.disconnect();
-      ro.disconnect();
-    };
-  }, []);
-
   return (
     <>
       {/* Marks the top of the page. Once it scrolls out, the button shows. */}
       <div ref={sentinelRef} className={styles.sentinel} aria-hidden="true" />
 
       <button
-        ref={buttonRef}
         type="button"
         className={styles.button}
         data-visible={visible || undefined}
-        data-on-dark={onDark || undefined}
         // Hidden means hidden: a faded-out button is still focusable and still
         // in the accessibility tree, so Tab would stop on a control nobody can
         // see. This flips with the state, so it also covers the reduced-motion

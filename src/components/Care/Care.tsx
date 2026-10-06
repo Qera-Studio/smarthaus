@@ -46,10 +46,10 @@ export function Care() {
   return (
     <section className={styles.care} aria-labelledby="care">
       <div className={styles.lead}>
-        <h2 className={styles.leadHeading}>Friday, 9:14pm. The gate won&rsquo;t open.</h2>
+        <h2 className={styles.leadHeading}>Looked after, long after installation.</h2>
         <p className={styles.leadBody}>
-          This is the moment that decides whether a smart home was worth it. With Smarthaus Premium
-          Care you call one number, day or night, and someone who knows your installation picks up.
+          With Smarthaus Premium Care you call one number, day or night, and someone who knows your
+          installation picks up.
         </p>
       </div>
 

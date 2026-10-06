@@ -1,8 +1,7 @@
-import { Care } from "../components/Care";
 import { Hardware } from "../components/Hardware";
+import { Partners } from "../components/Partners";
 import { FluidHero } from "../components/FluidHero";
 import { HomeEnquiry } from "../components/HomeEnquiry";
-import { Maple } from "../components/Maple";
 import { Pricing } from "../components/Pricing";
 import { Process } from "../components/Process";
 import { JsonLd, pageGraph } from "../components/Schema";
@@ -29,15 +28,15 @@ export default function Home() {
     <>
       <JsonLd data={pageGraph(PAGE)} />
       <FluidHero />
-      {/* Who is behind the brand, before anything asks to be trusted. */}
-      <Maple />
+      {/* Who stands behind the systems, before anything asks to be trusted.
+          Took the Maple banner's place; src/components/Maple stays unmounted. */}
+      <Partners />
       {/* What the house is made of, then how it gets installed. */}
       <Hardware />
       <Process />
-      {/* Price before maintenance: what a system costs, then what keeping it
-          running costs, then the enquiry. */}
+      {/* Care (the maintenance plan) is unmounted, not deleted, until the
+          section is rewritten; src/components/Care stays intact. */}
       <Pricing />
-      <Care />
       {/* Last thing on the page, directly above the footer. */}
       <HomeEnquiry />
     </>

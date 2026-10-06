@@ -24,13 +24,13 @@ describe("the confirmation", () => {
     submitShortEnquiry.mockReset();
   });
 
-  it("says we will usually call, on the number given, within the hour", async () => {
+  it("says we will usually call, on the number given, during business hours", async () => {
     submitEnquiry.mockResolvedValue({ status: "ok", name: "Nadia", phone: "+971501234567" });
     render(<ContactForm />);
     await submit();
     const status = await screen.findByRole("status");
     expect(status).toHaveTextContent(
-      "Thanks, Nadia. We’ll usually call you on +971501234567 within the hour during business hours.",
+      "Thanks, Nadia. We’ll usually call you on +971501234567 during business hours.",
     );
   });
 
@@ -42,15 +42,23 @@ describe("the confirmation", () => {
     expect(status.textContent).not.toMatch(/We’ll call you/);
   });
 
+  it("promises no response time", async () => {
+    // "Within the hour" was withdrawn on 2026-10-02: the terms guarantee no
+    // response time, and the confirmation is where a visitor holds us to one.
+    submitEnquiry.mockResolvedValue({ status: "ok", name: "Nadia", phone: "+971501234567" });
+    render(<ContactForm />);
+    await submit();
+    const status = await screen.findByRole("status");
+    expect(status.textContent).not.toMatch(/within|minutes|\bhour\b/i);
+  });
+
   it("reads naturally without a name or number, as after a caught bot", async () => {
     // The honeypot answers with an empty name and phone.
     submitEnquiry.mockResolvedValue({ status: "ok", name: "", phone: "" });
     render(<ContactForm />);
     await submit();
     const status = await screen.findByRole("status");
-    expect(status).toHaveTextContent(
-      "Thanks. We’ll usually call you within the hour during business hours.",
-    );
+    expect(status).toHaveTextContent("Thanks. We’ll usually call you during business hours.");
   });
 
   it("confirms the short homepage form the same way", async () => {
@@ -101,6 +109,6 @@ describe("a refused or failed send", () => {
     await submit();
     await screen.findByRole("alert");
     expect(screen.getByLabelText("Name")).toHaveValue("Nadia");
-    expect(screen.getByLabelText("Phone")).toHaveValue("0501234567");
+    expect(screen.getByLabelText("Phone (UAE mobile)")).toHaveValue("0501234567");
   });
 });

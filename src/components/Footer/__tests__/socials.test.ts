@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 // The footer's social links. Four of five point at a platform's home page
 // until the real profiles exist. These keep the label honest about that, and
 // make going live a deliberate change rather than a silent one.
@@ -37,8 +40,11 @@ describe("footer socials", () => {
     for (const social of SOCIALS) expect(new URL(social.href).protocol).toBe("https:");
   });
 
-  it("gives every icon a non-empty path", () => {
-    for (const social of SOCIALS) expect(social.path.trim()).toMatch(/^M/);
+  it("gives every icon a non-empty path or a logo file", () => {
+    for (const social of SOCIALS) {
+      if (social.src) expect(social.src).toMatch(/^\/[\w-]+\.svg$/);
+      else expect(social.path?.trim()).toMatch(/^M/);
+    }
   });
 
   it("keeps WhatsApp live: it is the one real channel", () => {
@@ -46,6 +52,21 @@ describe("footer socials", () => {
     expect(whatsapp.pending).toBeUndefined();
     expect(whatsapp.href).toMatch(/^https:\/\/wa\.me\/\d+$/);
     expect(whatsapp.label).toBe("Smarthaus on WhatsApp");
+  });
+
+  it("draws WhatsApp with the official logo file, which exists", () => {
+    const whatsapp = SOCIALS.find((social) => social.id === "whatsapp")!;
+    expect(whatsapp.src).toBe("/whatsapp.svg");
+    const svg = readFileSync(join(process.cwd(), "public", "whatsapp.svg"), "utf8");
+    // The green bubble, not a stand-in shape.
+    expect(svg).toMatch(/<svg[\s>]/);
+    expect(svg).toContain("#1FAF38");
+  });
+
+  it("gives a logo file only to a real profile, never a placeholder", () => {
+    // A real brand mark on a link to a platform's home page would pass it off
+    // as the Smarthaus profile.
+    for (const social of pending) expect(social.src).toBeUndefined();
   });
 
   it("still has four placeholder profiles; this fails when the first real one lands", () => {

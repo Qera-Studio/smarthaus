@@ -15,6 +15,14 @@ describe("hardware content", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it("opens on the house and ends on the cameras", () => {
+    // Cameras moved to the end on 2026-10-02 at Shivanshu's request: the
+    // carousel leads with living in the house, not watching it. The first
+    // slide is also what a visitor sees before touching anything.
+    expect(HARDWARE_ITEMS[0]!.id).toBe("smart-lock");
+    expect(HARDWARE_ITEMS.at(-1)!.id).toBe("cameras");
+  });
+
   it("gives every item a title, description and alt", () => {
     for (const item of HARDWARE_ITEMS) {
       expect(item.title.trim()).not.toBe("");

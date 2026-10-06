@@ -6,7 +6,9 @@
  * precedent set by Nav's inline hamburger. All paths are authored on a 24x24
  * viewBox.
  *
- * PLACEHOLDER GEOMETRY. The `path` values below are stand-ins so the layout,
+ * PLACEHOLDER GEOMETRY, except WhatsApp, which is the official full-colour
+ * logo as a file (`src`): its green bubble and white handset are the mark, so
+ * it is not recoloured to the chip's ink. The `path` values are stand-ins so the layout,
  * chip sizing and hover states can be built and reviewed. Replace each with
  * the real brand glyph before this ships — the shape of this array is what
  * matters, swapping the `d` strings needs no other change.
@@ -29,11 +31,20 @@ export type Social = {
    *  ambiguous when a screen reader reads a list of links out of context. */
   readonly label: string;
   readonly href: string;
-  /** Single path on a 24x24 viewBox. */
-  readonly path: string;
   /** Set while `href` is a placeholder. See the note at the top of the file. */
   readonly pending?: true;
-};
+} & (
+  | {
+      /** Single path on a 24x24 viewBox, in the chip's ink. */
+      readonly path: string;
+      readonly src?: never;
+    }
+  | {
+      /** A full-colour logo file in public/, drawn as it is. */
+      readonly src: string;
+      readonly path?: never;
+    }
+);
 
 export const SOCIALS: readonly Social[] = [
   {
@@ -42,8 +53,10 @@ export const SOCIALS: readonly Social[] = [
     // No pre-filled message: this is the footer's generic profile link, with no
     // page context to draw one from. The contact page passes its own.
     href: whatsappLink(),
-    // ponytail: placeholder glyph — swap for the real WhatsApp mark.
-    path: "M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 20Z",
+    // Shivanshu's file, 2026-10-03. The green is under 3:1 on the bone chip,
+    // 1.4.11's floor, which its exception for logos allows: a brand mark
+    // recoloured to pass is no longer the brand mark. The chip clears 3:1.
+    src: "/whatsapp.svg",
   },
   {
     id: "instagram",

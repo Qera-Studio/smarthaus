@@ -12,7 +12,7 @@
   // is with the mixin.
   .pricing {
     @include card-gutter;
-    padding-block: clamp(#{$space-20}, 10vw, #{$space-32});
+    padding-block: $space-24;
   }
 
   // --- Intro ------------------------------------------------------------------

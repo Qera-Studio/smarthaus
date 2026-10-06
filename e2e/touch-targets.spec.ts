@@ -67,9 +67,24 @@ test("each footer social chip is a 44px target that does not overlap its neighbo
   }
 });
 
+test("each partner tab is a 44px target", async ({ page }) => {
+  await page.goto("/");
+  const tabs = page.getByRole("tablist", { name: "Partners" }).getByRole("tab");
+  await expect(tabs).toHaveCount(2);
+  for (const tab of await tabs.all()) {
+    expect(await tapArea(tab), (await tab.textContent()) ?? "tab").toEqual([
+      true,
+      true,
+      true,
+      true,
+    ]);
+  }
+});
+
 test("each hardware tab is a 44px target", async ({ page }) => {
   await page.goto("/");
-  const tabs = page.getByRole("tab");
+  // Scoped to the carousel: the partner cards above it have a tablist too.
+  const tabs = page.getByRole("tablist", { name: "Components" }).getByRole("tab");
   expect(await tabs.count()).toBeGreaterThan(3);
   for (const tab of (await tabs.all()).slice(0, 4)) {
     expect(await tapArea(tab), (await tab.getAttribute("aria-label")) ?? "tab").toEqual([

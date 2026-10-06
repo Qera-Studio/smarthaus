@@ -1,6 +1,10 @@
 @use "../../styles/variables" as *;
 @use "../../styles/mixins" as *;
 
+// The consent tick box's size. The helper under its label indents by it, so
+// the two are one number.
+$checkbox-size: 18px;
+
 // The contact page.
 //
 // Every block is the same shape: a title on the left, content on the right,
@@ -100,7 +104,8 @@
 
     @include bp-md {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      column-gap: $space-8;
+      // 64px, on the client's call: at 32px the two columns read as one.
+      column-gap: $space-16;
     }
   }
 
@@ -163,10 +168,12 @@
     color: var(--color-text-primary);
 
     &::placeholder {
-      // brown-600 is the documented floor for readable text on canvas. The
-      // placeholder is never the accessible name here, but it still has to be
-      // legible to the sighted user relying on it.
-      color: var(--color-text-muted);
+      // brown-800 at 70%, on the client's call (2026-10-06): 5.21:1 on
+      // canvas, the lightest of the options tried that clears AA's 4.5:1
+      // (brown-800 at 50% was 2.94:1). The placeholder is never the
+      // accessible name here, but it is still text a sighted user reads, so
+      // 1.4.3 applies to it.
+      color: rgba($brown-800, 0.7);
     }
 
     // Autofill.
@@ -295,13 +302,6 @@
     max-inline-size: 52ch;
   }
 
-  // A field's format or limit, under the control and before any error.
-  .hint {
-    margin-block-start: $space-1;
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-  }
-
   .errorList {
     margin-block-start: $space-2;
     padding-inline-start: $space-5;
@@ -340,12 +340,13 @@
   .confirmationBody {
     margin-block-start: $space-3;
     font-size: var(--font-size-sm);
-    line-height: $line-height-relaxed;
+    line-height: $line-height-normal;
     color: var(--color-text-secondary);
     text-wrap: pretty;
   }
 
   .confirmationActions {
+    margin-block-start: $space-8;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -353,7 +354,7 @@
   }
 
   .secondaryCta {
-    margin-block-start: $space-8;
+    margin-block-start: $space-6;
     font-size: var(--font-size-sm);
     font-weight: $font-weight-semibold;
     color: var(--color-text-primary);
@@ -369,22 +370,22 @@
     gap: $space-6;
     list-style: none;
 
-    @include bp-md {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: $space-4;
-    }
-
-    // The one section body that spans both of .section's columns rather than
-    // sitting in the right one. Three values across half the page is 464px of
-    // room at lg for 484px of text, so the email wrapped mid-domain
-    // ("contact@mapletech.a / e") through the whole 1024-1220 band. Widening
-    // the row is the only fix that holds: at half width no font size fits, and
-    // the 50/50 split is deliberate for every other section here.
+    // Three columns, two rows: the labels on the first, the values on the
+    // second (2026-10-04, at Shivanshu's request), in the right column like
+    // every other section body. Each channel subgrids onto both rows so the
+    // labels and the values each share one line however long a value runs.
     //
-    // The title keeps its own column, so the section still reads as a pair —
-    // the channels simply start under it instead of beside it.
-    @include bp-lg {
-      grid-column: 1 / -1;
+    // `auto` tracks spread by space-between, not equal thirds: at lg the
+    // column is 464px, and a third of it is narrower than the email, which
+    // wrapped mid-domain ("contact@mapletech.a / e") the last time it was
+    // squeezed. Sized to content, the email takes what it needs.
+    @include bp-md {
+      grid-template-columns: repeat(3, auto);
+      grid-template-rows: auto auto;
+      justify-content: space-between;
+      column-gap: $space-6;
+      // The row gap is the gap between a label and its value.
+      row-gap: $space-3;
     }
   }
 
@@ -393,6 +394,14 @@
     flex-direction: column;
     gap: $space-2;
     min-inline-size: 0;
+
+    @include bp-md {
+      display: grid;
+      grid-row: span 2;
+      grid-template-rows: subgrid;
+      // Inherit the list's row gap; a gap of its own here would replace it.
+      row-gap: inherit;
+    }
   }
 
   // Inverted against the other label/value pairs on this page, deliberately.
@@ -668,13 +677,14 @@
   // CSS with no aria bookkeeping. Same reasoning as the <select> above.
   .checkbox {
     appearance: none;
-    // 24px visual box, 44px hit area via the padding below (WCAG 2.2 · 2.5.8
-    // asks 24 minimum; 44 is the floor on coarse pointers).
-    inline-size: 24px;
-    block-size: 24px;
+    // 18px visual box, on the client's call (2026-10-06). Under 2.5.8's 24px
+    // on its own, and still passing: the label is tied to the box, so the
+    // whole label line is the target, as e2e/form-a11y.spec.ts checks.
+    inline-size: $checkbox-size;
+    block-size: $checkbox-size;
     flex: 0 0 auto;
     // Optically align with the first line of the label rather than its box.
-    margin-block-start: 2px;
+    margin-block-start: 5px;
     border-style: solid;
     border-width: 1px;
     border-color: var(--color-text-secondary);
@@ -693,7 +703,7 @@
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f0e9dd' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: center;
-      background-size: 18px 18px;
+      background-size: 13px 13px;
     }
 
     @include focus-ring;
@@ -713,7 +723,7 @@
   .consentHelper {
     // Indented to the label's start edge, so it reads as belonging to it rather
     // than to the form.
-    padding-inline-start: calc(24px + #{$space-3});
+    padding-inline-start: calc(#{$checkbox-size} + #{$space-3});
     font-size: var(--font-size-sm);
     line-height: $line-height-relaxed;
     color: var(--color-text-secondary);

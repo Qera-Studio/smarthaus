@@ -30,8 +30,7 @@ export function HomeEnquiry() {
           Book a site visit
         </h2>
         <p className={styles.standfirst}>
-          Tell us a little about your home and we&rsquo;ll call you back. During business hours,
-          that&rsquo;s usually within the hour.
+          Tell us a little about your home and we&rsquo;ll call you back during business hours.
         </p>
       </div>
 

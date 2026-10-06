@@ -33,24 +33,25 @@ test("appears after scrolling and returns to the top", async ({ page }) => {
 });
 
 /**
- * /privacy rather than the homepage, deliberately. The homepage is shorter
- * than two viewports and its footer is min-block-size 100svh, so the footer
- * covers the button's strip at EVERY scroll position — there is no light
- * region to test the other half of the behaviour against. A long prose page
- * has one.
+ * One colour on every ground (2026-10-04): brown-600 holds 3:1 against the
+ * light canvas and the dark footer alike, so nothing swaps. /privacy because
+ * it is long enough to have both behind the button.
  */
-test("inverts its colours over the dark footer", async ({ page }) => {
+test("keeps brown-600 over light prose and over the dark footer", async ({ page }) => {
   await page.goto("/privacy");
 
   const backToTop = page.locator(button);
-  const ink = () => backToTop.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const paint = () =>
+    backToTop.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return [s.backgroundColor, s.color];
+    });
+  const BROWN_600_ON_BONE = ["rgb(122, 85, 55)", "rgb(248, 245, 240)"];
 
-  // Mid-page, over light prose: brown-100 ground, brown-900 ink.
   await page.evaluate(() => window.scrollTo(0, 600));
   await expect(backToTop).toBeVisible();
-  await expect.poll(ink).toBe("rgb(240, 233, 221)");
+  await expect.poll(paint).toEqual(BROWN_600_ON_BONE);
 
-  // Over the footer, which carries data-ground="dark": brown-950.
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await expect.poll(ink).toBe("rgb(10, 8, 7)");
+  await expect.poll(paint).toEqual(BROWN_600_ON_BONE);
 });

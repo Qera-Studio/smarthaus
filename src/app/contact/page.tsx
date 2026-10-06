@@ -21,7 +21,7 @@ const PAGE = {
   title: "Book a site visit in Dubai | Smarthaus",
   absolute: true,
   description:
-    "Book a site visit with Smarthaus. Tell us about your home and we will call you back, usually within the hour during business hours. Dubai, U.A.E.",
+    "Book a site visit with Smarthaus. Tell us about your home and we will call you back during business hours. Dubai, U.A.E.",
   path: "/contact",
   index: true,
 } as const;
@@ -93,8 +93,7 @@ export default function ContactPage() {
         <header className={styles.header}>
           <h1 className={styles.title}>Book a site visit</h1>
           <p className={styles.standfirst}>
-            Tell us a little about your home and we&rsquo;ll call you back. During business hours,
-            that&rsquo;s usually within the hour.
+            Tell us a little about your home and we&rsquo;ll call you back during business hours.
           </p>
         </header>
 

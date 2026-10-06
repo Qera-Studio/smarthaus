@@ -11,6 +11,11 @@ import { join, relative } from "node:path";
  * the only place a cursor is declared: html carries the dot, dark grounds
  * carry the light dot, and every control inherits.
  *
+ * A drawn cursor replaced this for two days (2026-10-03 to 10-04): a dot
+ * that turned into a square inverting what was behind it over controls. It
+ * was removed at the client's call; the controls' own hover colours, one step
+ * along the ramp, are the feedback instead. The 16px dot is the cursor.
+ *
  * A component stylesheet setting its own cursor would silently win over that,
  * because components sit in a later cascade layer than the base rule. So the
  * check is on source: any cursor declaration outside globals.scss fails.
