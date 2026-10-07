@@ -8,7 +8,7 @@ import { test, expect } from "./fixtures";
  * Desktop Chrome only: the head is the same markup on every device.
  */
 const SITE = "https://smarthaus.ae";
-const INDEXABLE = ["/", "/contact", "/accessibility"];
+const INDEXABLE = ["/", "/contact", "/about", "/accessibility"];
 const NOINDEX = [
   "/pricing",
   "/faq",
@@ -16,7 +16,6 @@ const NOINDEX = [
   "/terms",
   "/cookie-preferences",
   "/solutions",
-  "/about",
   "/designers",
   "/developers",
 ];
