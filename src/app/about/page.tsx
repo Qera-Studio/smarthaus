@@ -5,7 +5,7 @@ import { ValuesHover } from "../../components/About/ValuesHover";
 import styles from "../../components/About/About.module.scss";
 import faq from "../../components/Faq/Faq.module.scss";
 import { JsonLd, pageGraph } from "../../components/Schema";
-import { MISSION, VALUES, VISION, type Statement } from "../../content/about";
+import { APPROACH, MISSION, VALUES, VISION, type Statement } from "../../content/about";
 import { pageMetadata } from "../../lib/metadata";
 
 const PAGE = {
@@ -19,8 +19,8 @@ const PAGE = {
 export const metadata = pageMetadata(PAGE);
 
 /**
- * The About page: a hero, then mission, vision and values, from Shivanshu's
- * mockup of 2026-10-07. A Server Component; the only client code is the
+ * The About page: a hero, the approach, then mission, vision and values,
+ * from Shivanshu's mockups of 2026-10-07. A Server Component; the only client code is the
  * values' hover (ValuesHover), and the hero's parallax is CSS.
  *
  * Both photographs are decorative (empty alt): the words carry the meaning,
@@ -48,6 +48,31 @@ export default function AboutPage() {
         <h1 className={styles.heroTitle} id="about-title">
           About Us
         </h1>
+      </section>
+
+      <section className={styles.approach} aria-labelledby="approach" data-about-approach="">
+        <h2 className={styles.approachTitle} id="approach">
+          Our Approach
+        </h2>
+        <ul className={styles.approachGrid}>
+          {APPROACH.map((step) => (
+            <li key={step.title} className={styles.approachCard}>
+              {/* Decorative: the title beside it says what the step is. */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- a 32px SVG, as the hardware icons are */}
+              <img
+                className={styles.approachIcon}
+                src={`/about/icons/${step.icon}`}
+                alt=""
+                width={32}
+                height={32}
+              />
+              <div>
+                <h3 className={styles.approachStep}>{step.title}</h3>
+                <p className={styles.approachBody}>{step.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section

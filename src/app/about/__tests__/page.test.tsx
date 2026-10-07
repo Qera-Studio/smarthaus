@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 
 import AboutPage, { metadata } from "../page";
-import { MISSION, VALUES, VISION } from "../../../content/about";
+import { APPROACH, MISSION, VALUES, VISION } from "../../../content/about";
 import { DESCRIPTION_RANGE } from "../../../lib/metadata";
 
 /**
@@ -22,23 +22,23 @@ describe("About page", () => {
       expect(h1s[0]).toHaveTextContent("About Us");
     });
 
-    it("has the three sections as h2, in order", () => {
+    it("has the four sections as h2, in order", () => {
       render(<AboutPage />);
       const h2s = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-      expect(h2s).toEqual(["Mission", "Vision", "Values"]);
+      expect(h2s).toEqual(["Our Approach", "Mission", "Vision", "Values"]);
     });
 
     it("names each section by its heading", () => {
       render(<AboutPage />);
-      for (const name of ["About Us", "Mission", "Vision", "Values"]) {
+      for (const name of ["About Us", "Our Approach", "Mission", "Vision", "Values"]) {
         expect(screen.getByRole("region", { name })).toBeInTheDocument();
       }
     });
 
-    it("keeps both photographs decorative, so the words carry the meaning", () => {
+    it("keeps both photographs and every icon decorative, so the words carry the meaning", () => {
       const { container } = render(<AboutPage />);
       const images = container.querySelectorAll("img");
-      expect(images).toHaveLength(2);
+      expect(images).toHaveLength(2 + APPROACH.length);
       images.forEach((img) => expect(img).toHaveAttribute("alt", ""));
     });
 
@@ -48,6 +48,37 @@ describe("About page", () => {
         "data-ground",
         "dark",
       );
+    });
+  });
+
+  describe("approach", () => {
+    const cards = () =>
+      within(screen.getByRole("region", { name: "Our Approach" })).getAllByRole("listitem");
+
+    it("lists the six steps in order, each an h3 over its paragraph", () => {
+      render(<AboutPage />);
+      expect(cards()).toHaveLength(APPROACH.length);
+      cards().forEach((card, index) => {
+        const step = APPROACH[index]!;
+        expect(within(card).getByRole("heading", { level: 3 })).toHaveTextContent(step.title);
+        expect(within(card).getByText(step.body).tagName).toBe("P");
+      });
+    });
+
+    it("draws each step's own icon from public/about/icons", () => {
+      const { container } = render(<AboutPage />);
+      const icons = Array.from(container.querySelectorAll('[aria-labelledby="approach"] img')).map(
+        (img) => img.getAttribute("src"),
+      );
+      expect(icons).toEqual(APPROACH.map((step) => `/about/icons/${step.icon}`));
+    });
+
+    it("sits between the hero and the mission", () => {
+      const { container } = render(<AboutPage />);
+      const order = Array.from(container.querySelectorAll("section")).map((el) =>
+        el.getAttribute("aria-labelledby"),
+      );
+      expect(order).toEqual(["about-title", "approach", "mission", "vision", "values"]);
     });
   });
 

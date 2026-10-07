@@ -1,4 +1,7 @@
-import { MISSION, VALUES, VISION } from "../about";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+import { APPROACH, MISSION, VALUES, VISION } from "../about";
 
 /**
  * The About copy makes promises a buyer will hold the company to, confirmed
@@ -9,6 +12,7 @@ import { MISSION, VALUES, VISION } from "../about";
 
 const all = [MISSION.lead, MISSION.body, VISION.lead, VISION.body].concat(
   VALUES.flatMap((value) => [value.title, value.body]),
+  APPROACH.flatMap((step) => [step.title, step.body]),
 );
 
 describe("About content", () => {
@@ -41,6 +45,41 @@ describe("About content", () => {
     expect(body("We'd rather visit than guess.")).toBe(
       "No quote leaves without someone standing in the house first.",
     );
+  });
+
+  it("has the six approach steps, in the mockup's order", () => {
+    expect(APPROACH.map((step) => step.title)).toEqual([
+      "We start at the boundary.",
+      "We visit before we quote.",
+      "We work with what's there.",
+      "We design for the people, not specs.",
+      "We document everything.",
+      "We stay afterwards.",
+    ]);
+  });
+
+  it("keeps the visit's confirmed facts word for word", () => {
+    // Confirmed by Shivanshu, 2026-10-07: who visits, for how long, and what
+    // kind of price follows.
+    const visit = APPROACH.find((step) => step.title === "We visit before we quote.")!.body;
+    expect(visit).toContain("A technician and a technical lead spend about 90 minutes");
+    expect(visit).toContain("fixed and itemised, not an estimate");
+  });
+
+  it("gives card 4 its own text, not card 1's again", () => {
+    // The mockup repeated card 1's body under card 4; Shivanshu sent the real
+    // one the same day.
+    const bodies = APPROACH.map((step) => step.body);
+    expect(new Set(bodies).size).toBe(bodies.length);
+    expect(APPROACH[3]!.body).toMatch(/^A system that needs an expert to operate has failed\./);
+  });
+
+  it("gives every step an icon that exists, used once", () => {
+    const icons = APPROACH.map((step) => step.icon);
+    expect(new Set(icons).size).toBe(icons.length);
+    for (const icon of icons) {
+      expect(existsSync(join(process.cwd(), "public", "about", "icons", icon))).toBe(true);
+    }
   });
 
   it("gives every value a title and a body", () => {

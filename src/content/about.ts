@@ -5,7 +5,10 @@
  * Every promise here was confirmed by Shivanshu that day as true of every job
  * today (AGENTS.md, claims audit): one team designs, installs and maintains;
  * no finished home is photographed, no address published, no plan shared;
- * footage stays on equipment in the house; no quote without a visit. A line
+ * footage stays on equipment in the house; no quote without a visit. The
+ * approach cards' facts were confirmed the same day: a technician and a
+ * technical lead spend about 90 minutes at the visit; the price that follows
+ * is fixed and itemised; most jobs are in homes already lived in. A line
  * that stops being true comes out of this file before it comes out of the
  * business.
  */
@@ -20,6 +23,47 @@ export type Value = {
   title: string;
   body: string;
 };
+
+export type ApproachStep = {
+  title: string;
+  body: string;
+  /** Filename in public/about/icons/. Decorative: the title says it all. */
+  icon: string;
+};
+
+export const APPROACH: readonly ApproachStep[] = [
+  {
+    title: "We start at the boundary.",
+    body: "Cameras, gate and entry come first, then the rooms inside. It's the order a house actually needs, and it's where our experience is deepest.",
+    icon: "boundary.svg",
+  },
+  {
+    title: "We visit before we quote.",
+    body: "A technician and a technical lead spend about 90 minutes in the home, looking at cabling, network and whatever is already installed. The price that follows is fixed and itemised, not an estimate.",
+    icon: "visit.svg",
+  },
+  {
+    title: "We work with what's there.",
+    body: "Most of our jobs are in homes people are already living in. Anything sound stays, anything that needs replacing gets explained before it's touched.",
+    icon: "existing.svg",
+  },
+  {
+    title: "We design for the people, not specs.",
+    // Shivanshu's text of 2026-10-07, its em dashes made commas.
+    body: "A system that needs an expert to operate has failed. Everyone in the house, including staff and guests, should be able to use it without being taught twice.",
+    icon: "people.svg",
+  },
+  {
+    title: "We document everything.",
+    body: "What was installed, where it sits, how it's configured. You own that record, which means you're never locked to us.",
+    icon: "document.svg",
+  },
+  {
+    title: "We stay afterwards.",
+    body: "Maintenance, updates and one number to call. The install is the beginning of the relationship, not the end of it.",
+    icon: "aftercare.svg",
+  },
+];
 
 export const MISSION: Statement = {
   lead: "To make one company responsible for everything that runs your home.",

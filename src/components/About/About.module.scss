@@ -89,16 +89,88 @@ $parallax-travel: 8%;
     object-fit: cover;
   }
 
+  // --- Approach ---------------------------------------------------------------
+
+  // Six cards, three across from lg, two from md, one on a phone: the copy
+  // is a paragraph per card and two columns of it at 360px is a column of
+  // three words a line.
+  .approach {
+    margin-block-start: $space-24;
+  }
+
+  .approachTitle {
+    margin-block-end: $space-6;
+    font-size: var(--type-h2);
+    font-weight: $font-weight-regular;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+  }
+
+  // 1fr rows: the tallest card in a row sets the height of the row.
+  .approachGrid {
+    display: grid;
+    grid-auto-rows: 1fr;
+    gap: $space-3;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    @include bp-md {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @include bp-lg {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  // The homepage figures' ground (Stats.module.scss), with the mockup's thin
+  // border. Icon at the head, words at the foot. Text is brown-900 on this,
+  // 13.4:1.
+  .approachCard {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: $space-8;
+    min-block-size: clamp(#{$space-32 * 1.5}, 18vw, #{$space-32 * 2});
+    padding: $space-5;
+    background-color: rgba($brown-200, 0.5);
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--color-border);
+  }
+
+  .approachIcon {
+    display: block;
+    inline-size: $space-8;
+    block-size: $space-8;
+    object-fit: contain;
+  }
+
+  .approachStep {
+    font-size: var(--type-h4);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .approachBody {
+    margin-block-start: $space-2;
+    font-size: var(--type-body);
+    line-height: $line-height-normal;
+    text-wrap: pretty;
+  }
+
   // --- Mission ----------------------------------------------------------------
 
-  // A full screen from edge to edge: the photograph under a brown-900 veil on
-  // the top 60%, the copy on brown-900 below. The copy's band is a minimum,
-  // never a fixed height (WCAG 1.4.12), so a phone grows it rather than
-  // clipping the text.
+  // Edge to edge: the photograph under a brown-900 veil, 60% of a screen
+  // tall, then the copy on brown-900 at its own height. The band used to be
+  // held at 40% of a screen, which left a dark gap under the copy on a large
+  // screen (Shivanshu, 2026-10-07); now its padding is the only space.
   .mission {
     display: grid;
     grid-template-rows: 60svh auto;
-    min-block-size: 100svh;
     margin-block-start: $space-24;
     // Past body's gutter, as the Process sheets do; the copy gives it back.
     margin-inline: calc(-1 * var(--page-gutter));
@@ -118,7 +190,6 @@ $parallax-travel: 8%;
   }
 
   .missionBody {
-    min-block-size: 40svh;
     padding-block: $space-12;
     padding-inline: var(--page-gutter);
   }

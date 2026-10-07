@@ -21,11 +21,11 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/about");
 });
 
-test("sets out the hero, mission, vision and values, in that order", async ({ page }) => {
+test("sets out the hero, approach, mission, vision and values, in that order", async ({ page }) => {
   const order = await page
     .locator("main section")
     .evaluateAll((all) => all.map((el) => el.getAttribute("aria-labelledby")));
-  expect(order).toEqual(["about-title", "mission", "vision", "values"]);
+  expect(order).toEqual(["about-title", "approach", "mission", "vision", "values"]);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("About Us");
 });
 
@@ -97,15 +97,24 @@ test("keeps the title at 3:1 or better over the brightest sky behind it", async 
 });
 
 test.describe("mission", () => {
-  test("fills at least one screen, from edge to edge", async ({ page }) => {
-    const { box, vw, vh } = await region(page, "Mission").evaluate((el) => ({
+  test("runs from edge to edge", async ({ page }) => {
+    const { box, vw } = await region(page, "Mission").evaluate((el) => ({
       box: el.getBoundingClientRect().toJSON() as DOMRect,
       vw: document.documentElement.clientWidth,
-      vh: window.innerHeight,
     }));
-    expect(box.height).toBeGreaterThanOrEqual(vh - 1);
     expect(box.left).toBeLessThanOrEqual(0.5);
     expect(box.right).toBeGreaterThanOrEqual(vw - 0.5);
+  });
+
+  test("ends the dark band 48px under the copy, with no gap beyond it", async ({ page }) => {
+    // 2026-10-07: the band was held at 40% of a screen and left a dark gap
+    // under the copy on a large screen. Its padding is now the only space.
+    const { gap } = await region(page, "Mission").evaluate((el) => {
+      const paragraphs = el.querySelectorAll("p");
+      const last = paragraphs[paragraphs.length - 1]!.getBoundingClientRect();
+      return { gap: el.getBoundingClientRect().bottom - last.bottom };
+    });
+    expect(gap).toBeCloseTo(48, 0);
   });
 
   test("gives the photograph the top 60% of the screen, under a brown-900 veil", async ({
@@ -128,6 +137,75 @@ test.describe("mission", () => {
       .locator("p")
       .evaluateAll((all) => all.map((el) => getComputedStyle(el).color));
     expect(colours).toEqual(["rgb(240, 233, 221)", "rgba(240, 233, 221, 0.7)"]);
+  });
+});
+
+test.describe("approach", () => {
+  const cards = (page: Page) => region(page, "Our Approach").getByRole("listitem");
+  const boxes = (page: Page) =>
+    cards(page).evaluateAll((all) =>
+      all.map((el) => el.getBoundingClientRect().toJSON() as DOMRect),
+    );
+
+  test("sets six cards three across from lg, every one the same size", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "One column on a phone; its own test below.");
+    const all = await boxes(page);
+    expect(all).toHaveLength(6);
+    const tops = [...new Set(all.map((box) => Math.round(box.top)))];
+    expect(tops).toHaveLength(2);
+    for (const box of all) {
+      expect(box.width).toBeCloseTo(all[0]!.width, 0);
+      expect(box.height).toBeCloseTo(all[0]!.height, 0);
+    }
+  });
+
+  test("stacks the cards in one column on a phone", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "Phones only.");
+    const all = await boxes(page);
+    for (const box of all) expect(box.left).toBeCloseTo(all[0]!.left, 0);
+  });
+
+  test("keeps every card's words inside it", async ({ page }) => {
+    const overflowing = await cards(page).evaluateAll((all) =>
+      all.filter((el) => el.scrollHeight > el.clientHeight + 1).map((el) => el.textContent),
+    );
+    expect(overflowing).toEqual([]);
+  });
+
+  test("draws each card on the tint with a thin border, square", async ({ page }) => {
+    const styles = await cards(page).evaluateAll((all) =>
+      all.map((el) => {
+        const style = getComputedStyle(el);
+        return [style.backgroundColor, style.borderTopWidth, style.borderTopLeftRadius];
+      }),
+    );
+    for (const style of styles) expect(style).toEqual(["rgba(216, 199, 172, 0.5)", "1px", "0px"]);
+  });
+
+  test("loads every icon", async ({ page }) => {
+    const icons = region(page, "Our Approach").locator("img");
+    await expect(icons).toHaveCount(6);
+    for (const icon of await icons.all()) {
+      await icon.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() => icon.evaluate((el) => (el as HTMLImageElement).naturalWidth))
+        .toBeGreaterThan(0);
+    }
+  });
+
+  test("puts the icon at the head of the card and the words at its foot", async ({ page }) => {
+    const gaps = await cards(page).evaluateAll((all) =>
+      all.map((el) => {
+        const card = el.getBoundingClientRect();
+        const icon = el.querySelector("img")!.getBoundingClientRect();
+        const words = el.querySelector("p")!.getBoundingClientRect();
+        return { head: icon.top - card.top, foot: card.bottom - words.bottom };
+      }),
+    );
+    for (const { head, foot } of gaps) expect(Math.abs(head - foot)).toBeLessThan(2);
   });
 });
 
@@ -174,7 +252,7 @@ test.describe("values", () => {
     await expect(rows(page).nth(2)).not.toHaveAttribute("open");
   });
 
-  test("opens under a resting mouse, one at a time, and stays open when it leaves", async ({
+  test("opens under a resting mouse, one at a time, and closes when it leaves", async ({
     page,
     isMobile,
   }) => {
@@ -184,9 +262,20 @@ test.describe("values", () => {
     await rows(page).nth(3).locator("summary").hover();
     await expect(rows(page).nth(3)).toHaveAttribute("open", "");
     await expect(rows(page).nth(1)).not.toHaveAttribute("open");
-    await page.mouse.move(0, 0);
-    await expect(rows(page).nth(3)).toHaveAttribute("open", "");
     expect(await openCount(page)).toBe(1);
+    await page.mouse.move(0, 0);
+    await expect(rows(page).nth(3)).not.toHaveAttribute("open");
+    expect(await openCount(page)).toBe(0);
+  });
+
+  test("keeps a row the visitor clicked open after the mouse leaves", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "Hover is for a mouse.");
+    await rows(page).nth(2).locator("summary").click();
+    await page.mouse.move(0, 0);
+    await expect(rows(page).nth(2)).toHaveAttribute("open", "");
   });
 
   test("numbers the rows 01 to 05", async ({ page }) => {
@@ -278,4 +367,75 @@ test("leaves the title over the photograph centred", async ({ page }) => {
   const titleMiddle = title.left + title.width / 2;
   expect(Math.abs(heroMiddle - titleMiddle)).toBeLessThan(2);
   expect(title.top).toBeGreaterThanOrEqual(hero.top);
+});
+
+test.describe("approach on a tablet", () => {
+  test.use({ viewport: { width: 900, height: 1100 } });
+
+  test("sets the cards two across, three rows deep", async ({ page, isMobile }) => {
+    test.skip(isMobile, "A viewport override on a phone project is not a tablet.");
+    const lefts = await region(page, "Our Approach")
+      .getByRole("listitem")
+      .evaluateAll((all) => all.map((el) => Math.round(el.getBoundingClientRect().left)));
+    expect(new Set(lefts).size).toBe(2);
+    expect(lefts.filter((left) => left === lefts[0])).toHaveLength(3);
+  });
+});
+
+test("never has two values open as a mouse sweeps down the list", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Hover is for a mouse.");
+  for (let index = 0; index < 5; index += 1) {
+    await rows(page).nth(index).locator("summary").hover();
+    await expect(rows(page).nth(index)).toHaveAttribute("open", "");
+    expect(await openCount(page), `after row ${index + 1}`).toBe(1);
+  }
+});
+
+test("leaves a value opened from the keyboard open when a mouse crosses it", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "Hover is for a mouse.");
+  const summary = rows(page).nth(1).locator("summary");
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(rows(page).nth(1)).toHaveAttribute("open", "");
+  await summary.hover();
+  await page.mouse.move(0, 0);
+  await expect(rows(page).nth(1)).toHaveAttribute("open", "");
+});
+
+test("keeps the approach icons out of the accessibility tree", async ({ page }) => {
+  // Each icon repeats its card's title in a picture; announcing it adds noise.
+  await expect(region(page, "Our Approach").getByRole("img")).toHaveCount(0);
+  await expect(region(page, "Our Approach").getByRole("heading", { level: 3 })).toHaveCount(6);
+});
+
+test("lines the approach title up with the section titles below it", async ({ page }) => {
+  const lefts = await page
+    .locator("main h2")
+    .evaluateAll((all) => all.map((el) => Math.round(el.getBoundingClientRect().left)));
+  expect(new Set(lefts).size, lefts.join(", ")).toBe(1);
+});
+
+test.describe("200% zoom @zoom", () => {
+  test("keeps every approach card's words inside it, and the page within the screen", async ({
+    page,
+  }) => {
+    await page.goto("/about");
+    const overflowing = await region(page, "Our Approach")
+      .getByRole("listitem")
+      .evaluateAll((all) =>
+        all.filter((el) => el.scrollHeight > el.clientHeight + 1).map((el) => el.textContent),
+      );
+    expect(overflowing).toEqual([]);
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("keeps the values usable", async ({ page }) => {
+    await page.goto("/about");
+    await rows(page).nth(0).locator("summary").click();
+    await expect(rows(page).nth(0)).toHaveAttribute("open", "");
+    await expectNoHorizontalOverflow(page);
+  });
 });
