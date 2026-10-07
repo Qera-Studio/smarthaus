@@ -1,0 +1,83 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  // The enquiry's section pattern (HomeEnquiry.module.scss has the reasoning
+  // for each value): a rule across the top with 96px above it, title on the
+  // left half, content on the right half from lg, stacked below it.
+  .stats {
+    display: grid;
+    gap: $space-10;
+    margin-block-start: $space-24;
+    padding-block: $space-3 $space-24;
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-block-start-color: var(--color-border);
+
+    @include bp-lg {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: $space-12;
+      padding-block-start: $space-4;
+    }
+  }
+
+  .heading {
+    font-size: var(--type-h3);
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+
+    @include bp-lg {
+      font-weight: $font-weight-regular;
+    }
+  }
+
+  // Two equal columns at every width, and equal rows: 1fr rows make the
+  // tallest card set the height of all four.
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    gap: $space-4;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    @include bp-lg {
+      gap: $space-8;
+    }
+  }
+
+  // One shade darker than the canvas (brown-100), at half strength. Text
+  // stays brown-900 on this, 13.4:1.
+  //
+  // A minimum height, not an aspect ratio: aspect-ratio sizes each card from
+  // its own width and content, which overrode the equal rows on a phone (one
+  // card 20px taller) and clipped a long label. The rows alone set height.
+  .card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: $space-6;
+    min-block-size: clamp(#{$space-32}, 18vw, #{$space-32 * 2});
+    padding: clamp(#{$space-4}, 2vw, #{$space-6});
+    background-color: rgba($brown-200, 0.5);
+  }
+
+  .value {
+    font-size: var(--type-h3);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-tight;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-primary);
+  }
+
+  .label {
+    font-size: var(--type-body-lg);
+    line-height: $line-height-snug;
+    color: var(--color-text-primary);
+    text-wrap: pretty;
+  }
+}

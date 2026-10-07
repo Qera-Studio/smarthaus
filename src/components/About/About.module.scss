@@ -1,0 +1,353 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+// How far each photograph travels, as a share of its own layer.
+//
+// The hero's layer is 125% of its frame, its 25% spare all above, since it
+// only ever moves down. It sinks a quarter of the frame (20% of 125%) over
+// the first 60% of a screen of scrolling (30% on a phone, whose hero is
+// half the height), so it starts with the first pixel
+// and is plain to see, and its top meets the frame's top as it stops.
+//
+// The mission photograph's layer is 130%, 15% spare each way, and drifts 10%
+// of that (13% of the frame) each way across its whole pass.
+//
+// The first version moved the hero 8% across its whole pass while it was
+// already on screen at load: about 35px over a screen of scrolling, which
+// read as no effect at all (Shivanshu, 2026-10-07). The second timed it on
+// the layer's own exit, and the layer, nearly a screen tall on a desktop,
+// only began to exit 400px down.
+$hero-spare: 25%;
+$hero-travel: 20%;
+$mission-spare: 15%;
+$mission-travel: 10%;
+
+@layer components {
+  .page {
+    padding-block: $space-6 0;
+
+    @include bp-lg {
+      padding-block-start: $space-12;
+    }
+  }
+
+  // --- Hero -------------------------------------------------------------------
+
+  // Inside the page gutter, as drawn: the mockup's proportion from lg, taller
+  // on a phone so the towers are not a sliver.
+  .hero {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    aspect-ratio: 3 / 2;
+    overflow: clip;
+
+    @include bp-lg {
+      aspect-ratio: 1376 / 510;
+    }
+  }
+
+  .heroLayer {
+    position: absolute;
+    inset-block: (-$hero-spare) 0;
+    inset-inline: 0;
+  }
+
+  // Scroll-driven, so no script: each picture moves more slowly than the
+  // page. The hero is always at the top of the page, so it runs on the page's
+  // own scroll from the first pixel; the mission photograph across its own
+  // pass through the screen. Where the timeline is not supported (Firefox, Safari before 26), or
+  // motion is reduced, both simply sit still.
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .heroLayer,
+      .mediaLayer {
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+      }
+
+      .heroLayer {
+        animation-name: about-hero-parallax;
+        animation-timeline: scroll(root);
+        animation-range: 0 60svh;
+
+        // A phone's hero is half a desktop's height, so the same quarter of
+        // it is half the distance: it travels over half the scroll to move
+        // at the same rate.
+        @include bp-max($bp-lg) {
+          animation-range: 0 30svh;
+        }
+      }
+
+      .mediaLayer {
+        animation-name: about-mission-parallax;
+        animation-timeline: view();
+        animation-range: cover;
+      }
+    }
+  }
+
+  @keyframes about-hero-parallax {
+    from {
+      translate: 0 0;
+    }
+
+    to {
+      translate: 0 $hero-travel;
+    }
+  }
+
+  @keyframes about-mission-parallax {
+    from {
+      translate: 0 (-$mission-travel);
+    }
+
+    to {
+      translate: 0 $mission-travel;
+    }
+  }
+
+  // brown-50 straight on the photograph, untreated, at Shivanshu's call
+  // (2026-10-07): 2.68:1 on a desktop, about 1.6:1 on a phone, under the 3:1
+  // floor. An accepted risk, docs/launch-gate/accepted-risks.md, to resolve
+  // before launch.
+  .heroTitle {
+    position: relative;
+    align-self: start;
+    padding-block-start: clamp(#{$space-6}, 4vw, #{$space-12});
+    font-size: var(--type-h1);
+    font-weight: $font-weight-regular;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: $brown-50;
+  }
+
+  .cover {
+    object-fit: cover;
+  }
+
+  // --- Approach ---------------------------------------------------------------
+
+  // Six cards, three across from lg, two from md, one on a phone: the copy
+  // is a paragraph per card and two columns of it at 360px is a column of
+  // three words a line.
+  .approach {
+    margin-block-start: $space-24;
+  }
+
+  .approachTitle {
+    margin-block-end: $space-6;
+    font-size: var(--type-h2);
+    font-weight: $font-weight-regular;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+  }
+
+  // 1fr rows: the tallest card in a row sets the height of the row.
+  .approachGrid {
+    display: grid;
+    grid-auto-rows: 1fr;
+    gap: $space-3;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    @include bp-md {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @include bp-lg {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  // The homepage figures' ground (Stats.module.scss), with the mockup's thin
+  // border. Icon at the head, words at the foot. Text is brown-900 on this,
+  // 13.4:1.
+  .approachCard {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: $space-8;
+    min-block-size: clamp(#{$space-32 * 1.5}, 18vw, #{$space-32 * 2});
+    padding: $space-5;
+    background-color: rgba($brown-200, 0.5);
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--color-border);
+  }
+
+  .approachIcon {
+    display: block;
+    inline-size: $space-8;
+    block-size: $space-8;
+    object-fit: contain;
+  }
+
+  .approachStep {
+    font-size: var(--type-h4);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  // 4px under body size and at 70% (Shivanshu, 2026-10-07), so the titles
+  // lead. No token sits at 12px; written against the base size so it still
+  // scales with the visitor's own setting. brown-900 at 70% on the card's
+  // tint is 5.97:1, over AA for text this size.
+  .approachBody {
+    margin-block-start: $space-2;
+    font-size: calc(#{$font-size-base} - 4px);
+    line-height: $line-height-normal;
+    color: rgba($brown-900, 0.7);
+    text-wrap: pretty;
+  }
+
+  // --- Mission ----------------------------------------------------------------
+
+  // Edge to edge: the photograph under a brown-900 veil, 60% of a screen
+  // tall, then Mission and Vision on brown-900 at their own height. The band
+  // used to be held at 40% of a screen, which left a dark gap under the copy
+  // on a large screen (Shivanshu, 2026-10-07); now its padding is the only
+  // space.
+  .dark {
+    display: grid;
+    grid-template-rows: 60svh auto auto;
+    margin-block-start: $space-24;
+    // Past body's gutter, as the Process sheets do; the copy gives it back.
+    margin-inline: calc(-1 * var(--page-gutter));
+    background-color: $brown-900;
+    color: $brown-100;
+  }
+
+  .missionMedia {
+    position: relative;
+    overflow: clip;
+
+    // Above the moving layer by source order, so the veil never travels.
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-color: rgba($brown-900, 0.7);
+    }
+  }
+
+  .mediaLayer {
+    position: absolute;
+    inset-block: (-$mission-spare);
+    inset-inline: 0;
+  }
+
+  .darkSection {
+    padding-block: $space-12;
+    padding-inline: var(--page-gutter);
+  }
+
+  // Vision, under Mission: a rule between them inside the gutters, as the
+  // light sections are ruled, one step up the ramp so it reads on brown-900.
+  .darkRuled {
+    padding-block-start: 0;
+
+    > * {
+      padding-block-start: $space-12;
+      border-block-start: 1px solid $brown-800;
+    }
+  }
+
+  // --- The section pattern ----------------------------------------------------
+
+  // Values and the FAQ: a rule across the top with 96px above it, as the
+  // homepage's figures and enquiry have. Two in a row share one gap.
+  .ruled {
+    margin-block-start: $space-24;
+    padding-block: $space-3 $space-24;
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-block-start-color: var(--color-border);
+
+    @include bp-lg {
+      padding-block-start: $space-4;
+    }
+
+    & + & {
+      margin-block-start: 0;
+    }
+  }
+
+  // The title on the left half, the content on the right, from lg; stacked
+  // below it.
+  .pattern {
+    display: grid;
+    gap: $space-6;
+
+    @include bp-lg {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: $space-12;
+    }
+  }
+
+  .title {
+    font-size: var(--type-h2);
+    font-weight: $font-weight-regular;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    color: inherit;
+  }
+
+  // The FAQ's title, at the size the enquiry above it and the contact page's
+  // sections use: a long title at h2 size dwarfed the form beside it.
+  .titleSmall {
+    font-size: var(--type-h3);
+    font-weight: $font-weight-regular;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+  }
+
+  .content {
+    min-inline-size: 0;
+  }
+
+  .lead {
+    font-size: var(--type-h4);
+    line-height: $line-height-snug;
+    text-wrap: pretty;
+  }
+
+  .body {
+    max-inline-size: 62ch;
+    margin-block-start: $space-4;
+    font-size: var(--type-body);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  // On the dark ground: brown-100 at 70%, 8.0:1 on brown-900.
+  .dark .body {
+    color: rgba($brown-100, 0.7);
+  }
+
+  // --- Values -----------------------------------------------------------------
+
+  // The FAQ's rows (Faq.module.scss), for the values and the page's own
+  // FAQ, with each answer at body size rather than the legal pages' small
+  // print.
+  .rows {
+    --legal-body-size: var(--type-body);
+
+    // The section's rule already sits just above the first row, so that
+    // row's own top rule read as a double line (Shivanshu, 2026-10-07).
+    > :first-child {
+      border-block-start-width: 0;
+    }
+  }
+
+  .number {
+    flex: none;
+    font-size: var(--type-body-lg);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-primary);
+  }
+}
