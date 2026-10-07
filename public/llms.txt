@@ -10,5 +10,6 @@
 ## Pages
 
 - [Home](https://smarthaus.ae): what Smarthaus installs and how an installation runs, from site visit to handover.
+- [About](https://smarthaus.ae/about): who Smarthaus is, its mission and vision, and the five values behind every job.
 - [Book a site visit](https://smarthaus.ae/contact): the enquiry form, phone, WhatsApp and office location.
 - [Accessibility statement](https://smarthaus.ae/accessibility): how accessible the website is today and how to report a problem.

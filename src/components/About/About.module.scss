@@ -1,0 +1,204 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+// How far the hero image travels, each way, as a share of its own layer. The
+// layer is 120% of the frame (10% spare above and below), and 8% of 120% is
+// 9.6%, so the edge never comes into view.
+$parallax-travel: 8%;
+
+@layer components {
+  .page {
+    padding-block: $space-6 0;
+
+    @include bp-lg {
+      padding-block-start: $space-12;
+    }
+  }
+
+  // --- Hero -------------------------------------------------------------------
+
+  // Inside the page gutter, as drawn: the mockup's proportion from lg, taller
+  // on a phone so the towers are not a sliver.
+  .hero {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    aspect-ratio: 3 / 2;
+    overflow: clip;
+
+    @include bp-lg {
+      aspect-ratio: 1376 / 510;
+    }
+  }
+
+  .heroLayer {
+    position: absolute;
+    inset-block: -10%;
+    inset-inline: 0;
+
+    // brown-900 at 20% over the whole photograph. The title is brown-50 on
+    // the sky, and the lightest sky behind it measured 2.68:1 bare, under the
+    // 3:1 floor for large text; under this veil it is 3.86:1. On the layer,
+    // not the frame, so it travels with the picture and the title stays above
+    // it by source order.
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-color: rgba($brown-900, 0.2);
+    }
+  }
+
+  // Scroll-driven, so no script: the picture drifts down more slowly than the
+  // page as the hero passes through the screen. Where the timeline is not
+  // supported (Firefox today), or motion is reduced, it simply sits still.
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .heroLayer {
+        animation-name: about-parallax;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: view();
+        animation-range: cover;
+      }
+    }
+  }
+
+  @keyframes about-parallax {
+    from {
+      translate: 0 (-$parallax-travel);
+    }
+
+    to {
+      translate: 0 $parallax-travel;
+    }
+  }
+
+  .heroTitle {
+    position: relative;
+    align-self: start;
+    padding-block-start: clamp(#{$space-6}, 4vw, #{$space-12});
+    font-size: var(--type-h1);
+    font-weight: $font-weight-regular;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: $brown-50;
+  }
+
+  .cover {
+    object-fit: cover;
+  }
+
+  // --- Mission ----------------------------------------------------------------
+
+  // A full screen from edge to edge: the photograph under a brown-900 veil on
+  // the top 60%, the copy on brown-900 below. The copy's band is a minimum,
+  // never a fixed height (WCAG 1.4.12), so a phone grows it rather than
+  // clipping the text.
+  .mission {
+    display: grid;
+    grid-template-rows: 60svh auto;
+    min-block-size: 100svh;
+    margin-block-start: $space-24;
+    // Past body's gutter, as the Process sheets do; the copy gives it back.
+    margin-inline: calc(-1 * var(--page-gutter));
+    background-color: $brown-900;
+    color: $brown-100;
+  }
+
+  .missionMedia {
+    position: relative;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-color: rgba($brown-900, 0.7);
+    }
+  }
+
+  .missionBody {
+    min-block-size: 40svh;
+    padding-block: $space-12;
+    padding-inline: var(--page-gutter);
+  }
+
+  // --- The section pattern ----------------------------------------------------
+
+  // Vision and Values: a rule across the top with 96px above it, as the
+  // homepage's figures and enquiry have. Two in a row share one gap.
+  .ruled {
+    margin-block-start: $space-24;
+    padding-block: $space-3 $space-24;
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-block-start-color: var(--color-border);
+
+    @include bp-lg {
+      padding-block-start: $space-4;
+    }
+
+    & + & {
+      margin-block-start: 0;
+    }
+  }
+
+  // The title on the left half, the content on the right, from lg; stacked
+  // below it.
+  .pattern {
+    display: grid;
+    gap: $space-6;
+
+    @include bp-lg {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: $space-12;
+    }
+  }
+
+  .title {
+    font-size: var(--type-h2);
+    font-weight: $font-weight-regular;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+    color: inherit;
+  }
+
+  .content {
+    min-inline-size: 0;
+  }
+
+  .lead {
+    font-size: var(--type-h4);
+    line-height: $line-height-snug;
+    text-wrap: pretty;
+  }
+
+  .body {
+    max-inline-size: 62ch;
+    margin-block-start: $space-4;
+    font-size: var(--type-body);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  // On the dark ground: brown-100 at 70%, 8.0:1 on brown-900.
+  .mission .body {
+    color: rgba($brown-100, 0.7);
+  }
+
+  // --- Values -----------------------------------------------------------------
+
+  // The FAQ's rows (Faq.module.scss), with each answer at body size rather
+  // than the legal pages' small print.
+  .values {
+    --legal-body-size: var(--type-body);
+  }
+
+  .number {
+    flex: none;
+    font-size: var(--type-body-lg);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-primary);
+  }
+}
