@@ -38,12 +38,18 @@ test("sets out every section in order, ending on the FAQ", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("About Us");
 });
 
-// The layer's vertical offset inside its frame, in px.
-const shift = (page: Page, which: "hero" | "mission") =>
-  page.locator(`[data-parallax="${which}"]`).evaluate((el) => {
+// The layer's vertical offset inside its frame, in px, read two frames after
+// any scroll so the scroll-driven style has caught up: read straight after a
+// jump it was sometimes the old position (iPhone 17 on CI, 2026-10-07).
+const shift = async (page: Page, which: "hero" | "mission") => {
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  return page.locator(`[data-parallax="${which}"]`).evaluate((el) => {
     const frame = el.parentElement!.getBoundingClientRect();
     return el.getBoundingClientRect().top - frame.top;
   });
+};
 
 test("sinks the hero image visibly as it scrolls away", async ({ page }) => {
   // At least a fifth of the distance scrolled: the first version moved about
