@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 
 import AboutPage, { metadata } from "../page";
-import { APPROACH, MISSION, VALUES, VISION } from "../../../content/about";
+import { ABOUT_FAQS, APPROACH, MISSION, VALUES, VISION } from "../../../content/about";
 import { DESCRIPTION_RANGE } from "../../../lib/metadata";
 
 /**
@@ -11,7 +11,14 @@ import { DESCRIPTION_RANGE } from "../../../lib/metadata";
  * one-at-a-time group, or the page sliding back to noindex.
  */
 
-const values = () => document.querySelectorAll<HTMLDetailsElement>("details");
+// The enquiry is the homepage's own section, with its own suites; here it is
+// a marker, because its form imports the server action and jsdom cannot load
+// the mail client behind it.
+jest.mock("../../../components/HomeEnquiry", () => ({
+  HomeEnquiry: () => <section data-testid="home-enquiry" aria-labelledby="home-enquiry" />,
+}));
+
+const values = () => document.querySelectorAll<HTMLDetailsElement>("[data-about-values] details");
 
 describe("About page", () => {
   describe("structure", () => {
@@ -22,10 +29,16 @@ describe("About page", () => {
       expect(h1s[0]).toHaveTextContent("About Us");
     });
 
-    it("has the four sections as h2, in order", () => {
+    it("has the five sections as h2, in order", () => {
       render(<AboutPage />);
       const h2s = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-      expect(h2s).toEqual(["Our Approach", "Mission", "Vision", "Values"]);
+      expect(h2s).toEqual([
+        "Our Approach",
+        "Mission",
+        "Vision",
+        "Values",
+        "Frequently Asked Questions",
+      ]);
     });
 
     it("names each section by its heading", () => {
@@ -78,7 +91,15 @@ describe("About page", () => {
       const order = Array.from(container.querySelectorAll("section")).map((el) =>
         el.getAttribute("aria-labelledby"),
       );
-      expect(order).toEqual(["about-title", "approach", "mission", "vision", "values"]);
+      expect(order).toEqual([
+        "about-title",
+        "approach",
+        "mission",
+        "vision",
+        "values",
+        "home-enquiry",
+        "about-faqs",
+      ]);
     });
   });
 
@@ -134,6 +155,60 @@ describe("About page", () => {
         .getAllByText((_, el) => el?.tagName === "SPAN" && !el.hasAttribute("aria-hidden"))
         .map((el) => el.textContent);
       expect(titles).toEqual(VALUES.map((value) => value.title));
+    });
+  });
+
+  describe("faq and enquiry", () => {
+    const faqRows = () =>
+      document.querySelectorAll<HTMLDetailsElement>("[data-about-faqs] details");
+
+    it("asks each question once, in order, with its answer in the HTML", () => {
+      const { container } = render(<AboutPage />);
+      expect(faqRows()).toHaveLength(ABOUT_FAQS.length);
+      faqRows().forEach((row, index) => {
+        const entry = ABOUT_FAQS[index]!;
+        expect(row.querySelector("summary")).toHaveTextContent(entry.question);
+        expect(row).toHaveAttribute("id", entry.id);
+      });
+      for (const entry of ABOUT_FAQS) expect(container).toHaveTextContent(entry.answer[0]!);
+    });
+
+    it("opens one question at a time, apart from the values", () => {
+      render(<AboutPage />);
+      faqRows().forEach((row) => expect(row).toHaveAttribute("name", "about-faq"));
+    });
+
+    it("sets only the FAQ's title at the smaller, form-side size", () => {
+      // A long title at the section size dwarfed the form beside it; the
+      // About sections keep the larger size from the mockup.
+      render(<AboutPage />);
+      const classes = screen
+        .getAllByRole("heading", { level: 2 })
+        .map((h) => [h.textContent, h.className]);
+      expect(classes).toEqual([
+        ["Our Approach", "approachTitle"],
+        ["Mission", "title"],
+        ["Vision", "title"],
+        ["Values", "title"],
+        ["Frequently Asked Questions", "titleSmall"],
+      ]);
+    });
+
+    it("puts the FAQ last, directly below the enquiry", () => {
+      // 2026-10-07, at Shivanshu's call: the form, then the questions.
+      const { container } = render(<AboutPage />);
+      const sections = container.querySelectorAll("section");
+      expect(sections[sections.length - 1]).toHaveAttribute("data-about-faqs");
+      expect(sections[sections.length - 2]).toHaveAttribute("data-testid", "home-enquiry");
+    });
+
+    it("emits no FAQPage structured data, only the page's own", () => {
+      // The contact page's rule: FAQ rich results are not what this is for,
+      // and one JSON-LD block keeps the page's graph single.
+      const { container } = render(<AboutPage />);
+      const scripts = container.querySelectorAll('script[type="application/ld+json"]');
+      expect(scripts).toHaveLength(1);
+      expect(scripts[0]!.textContent).not.toContain("FAQPage");
     });
   });
 

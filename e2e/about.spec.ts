@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 
 import { test, expect } from "./fixtures";
 import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
+import { line, sentMail, uniqueName } from "./mail";
 
 /**
  * /about: a parallax hero, then mission, vision and values. What only a
@@ -21,11 +22,19 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/about");
 });
 
-test("sets out the hero, approach, mission, vision and values, in that order", async ({ page }) => {
+test("sets out every section in order, ending on the FAQ", async ({ page }) => {
   const order = await page
     .locator("main section")
     .evaluateAll((all) => all.map((el) => el.getAttribute("aria-labelledby")));
-  expect(order).toEqual(["about-title", "approach", "mission", "vision", "values"]);
+  expect(order).toEqual([
+    "about-title",
+    "approach",
+    "mission",
+    "vision",
+    "values",
+    "home-enquiry",
+    "about-faqs",
+  ]);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("About Us");
 });
 
@@ -183,6 +192,17 @@ test.describe("approach", () => {
       }),
     );
     for (const style of styles) expect(style).toEqual(["rgba(216, 199, 172, 0.5)", "1px", "0px"]);
+  });
+
+  test("sets each card's text 4px under body size, at 70% of the ink", async ({ page }) => {
+    // 2026-10-07: the titles lead, the detail sits back. 5.97:1 on the tint.
+    const bodies = await region(page, "Our Approach")
+      .locator("li p")
+      .evaluateAll((all) =>
+        all.map((el) => [getComputedStyle(el).fontSize, getComputedStyle(el).color]),
+      );
+    expect(bodies).toHaveLength(6);
+    for (const body of bodies) expect(body).toEqual(["12px", "rgba(20, 17, 14, 0.7)"]);
   });
 
   test("loads every icon", async ({ page }) => {
@@ -437,5 +457,108 @@ test.describe("200% zoom @zoom", () => {
     await rows(page).nth(0).locator("summary").click();
     await expect(rows(page).nth(0)).toHaveAttribute("open", "");
     await expectNoHorizontalOverflow(page);
+  });
+});
+
+test.describe("faq", () => {
+  const faqRows = (page: Page) => region(page, "Frequently Asked Questions").locator("details");
+
+  test("opens one question at a time, without touching the values", async ({ page }) => {
+    await rows(page).nth(0).locator("summary").click();
+    await faqRows(page).nth(0).locator("summary").click();
+    await expect(faqRows(page).nth(0)).toHaveAttribute("open", "");
+    await faqRows(page).nth(3).locator("summary").click();
+    await expect(faqRows(page).nth(3)).toHaveAttribute("open", "");
+    await expect(faqRows(page).nth(0)).not.toHaveAttribute("open");
+    // A separate group: opening a question leaves the value open.
+    await expect(rows(page).nth(0)).toHaveAttribute("open", "");
+  });
+
+  test("sets its title at the enquiry's size, not the larger section size", async ({ page }) => {
+    const size = (name: string) =>
+      region(page, name)
+        .getByRole("heading", { level: 2 })
+        .evaluate((el) => getComputedStyle(el).fontSize);
+    const enquiry = await page
+      .locator('section[aria-labelledby="home-enquiry"] h2')
+      .evaluate((el) => getComputedStyle(el).fontSize);
+    expect(await size("Frequently Asked Questions")).toBe(enquiry);
+    expect(parseFloat(await size("Values"))).toBeGreaterThan(parseFloat(enquiry));
+  });
+
+  test("does not open on hover; the questions are click-only, as on /contact", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "Hover is for a mouse.");
+    await faqRows(page).nth(1).locator("summary").hover();
+    await expect(faqRows(page).nth(1)).not.toHaveAttribute("open");
+  });
+
+  test("opens from the keyboard", async ({ page, isMobile }) => {
+    test.skip(isMobile, "WebKit on iPhone skips summaries on Tab; the click test covers touch.");
+    await faqRows(page).nth(2).locator("summary").focus();
+    await page.keyboard.press("Enter");
+    await expect(faqRows(page).nth(2)).toHaveAttribute("open", "");
+  });
+
+  test("is accessible with a question open", async ({ page }) => {
+    await faqRows(page).nth(4).locator("summary").click();
+    await expect(faqRows(page).nth(4)).toHaveAttribute("open", "");
+    await expectAccessible(page, { include: "[data-about-faqs]" });
+    await expectNoEmDash(region(page, "Frequently Asked Questions"));
+  });
+
+  test("sets the title on the left half and the questions on the right, from lg", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "Stacked on a phone.");
+    const section = region(page, "Frequently Asked Questions");
+    const heading = (await section.getByRole("heading", { level: 2 }).boundingBox())!;
+    const first = (await faqRows(page).first().boundingBox())!;
+    expect(first.x).toBeGreaterThan(heading.x + heading.width);
+  });
+});
+
+test.describe("enquiry", () => {
+  const enquiry = (page: Page) => page.locator('section[aria-labelledby="home-enquiry"]');
+
+  test("shows the homepage's short form, above the FAQ", async ({ page }) => {
+    const section = enquiry(page);
+    await expect(section.getByRole("heading", { level: 2 })).toHaveText("Book a site visit");
+    for (const label of ["Name", "Email", "Phone", "Message"]) {
+      await expect(section.getByLabel(label)).toBeVisible();
+    }
+    const sectionBox = (await section.boundingBox())!;
+    const faqBox = (await region(page, "Frequently Asked Questions").boundingBox())!;
+    expect(faqBox.y).toBeGreaterThanOrEqual(sectionBox.y + sectionBox.height - 1);
+  });
+
+  test("sends a lead from /about, as from the homepage, and thanks them", async ({ page }) => {
+    // The form is the homepage's own, so this checks the wiring on this page:
+    // one email reaches the inbox, addressed with the lead's name.
+    const name = uniqueName("Emma");
+    const section = enquiry(page);
+    await section.getByLabel("Name").fill(name);
+    await section.getByLabel("Phone").fill("0543755150");
+    await section.getByLabel("Email").fill("emma@example.com");
+    await section.getByRole("button", { name: "Book a site visit" }).click();
+    await expect(page.getByRole("status")).toContainText(name);
+    const mail = await sentMail(name);
+    expect(line(mail, "Name")).toBe(name);
+    expect(line(mail, "Phone")).toBe("+971543755150");
+  });
+
+  test("still names the field when the number is wrong", async ({ page }) => {
+    const section = enquiry(page);
+    await section.getByLabel("Name").fill("Emma");
+    await section.getByLabel("Phone").fill("12345");
+    await section.getByRole("button", { name: "Book a site visit" }).click();
+    await expect(section.getByRole("alert")).toContainText("+971");
+  });
+
+  test("names one form on the page, so its ids cannot clash", async ({ page }) => {
+    await expect(page.locator("main form")).toHaveCount(1);
   });
 });

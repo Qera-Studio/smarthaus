@@ -12,6 +12,8 @@
  * that stops being true comes out of this file before it comes out of the
  * business.
  */
+import type { FaqEntry } from "./faq";
+
 export type Statement = {
   /** The one-line answer, set large. */
   lead: string;
@@ -62,6 +64,51 @@ export const APPROACH: readonly ApproachStep[] = [
     title: "We stay afterwards.",
     body: "Maintenance, updates and one number to call. The install is the beginning of the relationship, not the end of it.",
     icon: "aftercare.svg",
+  },
+];
+
+/**
+ * The page's short FAQ, above the enquiry. Every answer restates a fact the
+ * site already holds as confirmed, and adds none: the licence numbers and the
+ * Maple Technologies relationship (AGENTS.md), the TIS and Fibaro
+ * partnerships (src/content/partners.ts), and the approach and values above.
+ * A new question whose answer needs a new fact is asked first, not written.
+ */
+export const ABOUT_FAQS: readonly FaqEntry[] = [
+  {
+    id: "who-is-behind-smarthaus",
+    question: "Who is behind Smarthaus?",
+    answer: [
+      "Maple Technologies Security Systems LLC, a Dubai company licensed by SIRA, the Security Industry Regulatory Agency (licence SSP202210037219, trade licence 897839). Smarthaus is its home division: the same team and the same accountability.",
+    ],
+  },
+  {
+    id: "what-do-you-install",
+    question: "Which systems do you install?",
+    answer: [
+      "Cameras, gate and door entry, audio and home automation. We are a partner of TIS and Fibaro and install both makers' systems.",
+    ],
+  },
+  {
+    id: "who-looks-after-it",
+    question: "Who looks after the system once it is in?",
+    answer: [
+      "The team that installed it. Maintenance, updates and one number to call, so you are never passed between companies.",
+    ],
+  },
+  {
+    id: "what-do-i-keep",
+    question: "What do I keep at handover?",
+    answer: [
+      "A record of what was installed, where it sits and how it is configured. It is yours, which means you are never locked to us.",
+    ],
+  },
+  {
+    id: "is-my-home-private",
+    question: "Will you photograph my home or share its details?",
+    answer: [
+      "No. We don't photograph finished homes, publish addresses or share plans, and camera footage stays on equipment in your house.",
+    ],
   },
 ];
 

@@ -3,9 +3,11 @@ import type { ReactNode } from "react";
 
 import { ValuesHover } from "../../components/About/ValuesHover";
 import styles from "../../components/About/About.module.scss";
+import { FaqAccordion } from "../../components/Faq";
 import faq from "../../components/Faq/Faq.module.scss";
+import { HomeEnquiry } from "../../components/HomeEnquiry";
 import { JsonLd, pageGraph } from "../../components/Schema";
-import { APPROACH, MISSION, VALUES, VISION, type Statement } from "../../content/about";
+import { ABOUT_FAQS, APPROACH, MISSION, VALUES, VISION, type Statement } from "../../content/about";
 import { pageMetadata } from "../../lib/metadata";
 
 const PAGE = {
@@ -20,7 +22,8 @@ export const metadata = pageMetadata(PAGE);
 
 /**
  * The About page: a hero, the approach, then mission, vision and values,
- * from Shivanshu's mockups of 2026-10-07. A Server Component; the only client code is the
+ * from Shivanshu's mockups of 2026-10-07, closing on the homepage's
+ * enquiry form and a short FAQ. A Server Component; the only client code is the
  * values' hover (ValuesHover), and the hero's parallax is CSS.
  *
  * Both photographs are decorative (empty alt): the words carry the meaning,
@@ -99,7 +102,7 @@ export default function AboutPage() {
 
       <section className={styles.ruled} aria-labelledby="values" data-about-values="">
         <Pattern id="values" title="Values">
-          <ValuesHover className={styles.values}>
+          <ValuesHover className={styles.rows}>
             {VALUES.map((value, index) => (
               <details key={value.title} className={faq.entry} name="values">
                 <summary className={faq.question}>
@@ -116,15 +119,40 @@ export default function AboutPage() {
           </ValuesHover>
         </Pattern>
       </section>
+
+      {/* The homepage's own enquiry, then a short FAQ in the contact page's
+          pattern below it (Shivanshu, 2026-10-07). */}
+      <HomeEnquiry />
+
+      <section className={styles.ruled} aria-labelledby="about-faqs" data-about-faqs="">
+        <Pattern id="about-faqs" title="Frequently Asked Questions" small>
+          <div className={styles.rows}>
+            {ABOUT_FAQS.map((entry) => (
+              <FaqAccordion key={entry.id} entry={entry} group="about-faq" />
+            ))}
+          </div>
+        </Pattern>
+      </section>
     </div>
   );
 }
 
 /** The house section pattern: the title on the left half, the content on the right. */
-function Pattern({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+function Pattern({
+  id,
+  title,
+  small = false,
+  children,
+}: {
+  id: string;
+  title: string;
+  /** The contact page's section size, for a title that sits beside the form. */
+  small?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div className={styles.pattern}>
-      <h2 className={styles.title} id={id}>
+      <h2 className={small ? styles.titleSmall : styles.title} id={id}>
         {title}
       </h2>
       <div className={styles.content}>{children}</div>

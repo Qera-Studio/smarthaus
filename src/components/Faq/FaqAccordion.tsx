@@ -17,9 +17,11 @@ import styles from "./Faq.module.scss";
  * whole page is indexable and readable by a screen reader without a single
  * interaction — which is the point of putting 34 answers behind disclosures.
  */
-export function FaqAccordion({ entry }: { entry: FaqEntry }) {
+export function FaqAccordion({ entry, group }: { entry: FaqEntry; group?: string }) {
   return (
-    <details className={styles.entry} id={entry.id}>
+    // `group` becomes the native `name`: rows sharing one open one at a time,
+    // as the contact page's do. /faq leaves it unset, so several can be open.
+    <details className={styles.entry} id={entry.id} name={group}>
       {/*
         No role and no aria-expanded. Both would be redundant: Chromium exposes
         a bare <summary> as role DisclosureTriangle carrying an `expanded`

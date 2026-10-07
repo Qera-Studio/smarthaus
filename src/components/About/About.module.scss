@@ -155,10 +155,15 @@ $parallax-travel: 8%;
     text-wrap: balance;
   }
 
+  // 4px under body size and at 70% (Shivanshu, 2026-10-07), so the titles
+  // lead. No token sits at 12px; written against the base size so it still
+  // scales with the visitor's own setting. brown-900 at 70% on the card's
+  // tint is 5.97:1, over AA for text this size.
   .approachBody {
     margin-block-start: $space-2;
-    font-size: var(--type-body);
+    font-size: calc(#{$font-size-base} - 4px);
     line-height: $line-height-normal;
+    color: rgba($brown-900, 0.7);
     text-wrap: pretty;
   }
 
@@ -234,6 +239,15 @@ $parallax-travel: 8%;
     color: inherit;
   }
 
+  // The FAQ's title, at the size the enquiry above it and the contact page's
+  // sections use: a long title at h2 size dwarfed the form beside it.
+  .titleSmall {
+    font-size: var(--type-h3);
+    font-weight: $font-weight-regular;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+  }
+
   .content {
     min-inline-size: 0;
   }
@@ -260,9 +274,10 @@ $parallax-travel: 8%;
 
   // --- Values -----------------------------------------------------------------
 
-  // The FAQ's rows (Faq.module.scss), with each answer at body size rather
-  // than the legal pages' small print.
-  .values {
+  // The FAQ's rows (Faq.module.scss), for the values and the page's own
+  // FAQ, with each answer at body size rather than the legal pages' small
+  // print.
+  .rows {
     --legal-body-size: var(--type-body);
   }
 

@@ -21,6 +21,16 @@ const marks = (container: HTMLElement) =>
   Array.from(container.querySelectorAll("[data-placeholder]")).map((m) => m.textContent);
 
 describe("FaqAccordion", () => {
+  it("joins a named group when given one, so one row opens at a time", () => {
+    const { container } = render(<FaqAccordion entry={entry()} group="about-faq" />);
+    expect(container.querySelector("details")).toHaveAttribute("name", "about-faq");
+  });
+
+  it("stays ungrouped by default, as /faq wants", () => {
+    const { container } = render(<FaqAccordion entry={entry()} />);
+    expect(container.querySelector("details")).not.toHaveAttribute("name");
+  });
+
   it("is a closed native disclosure, anchored by the entry's id", () => {
     const { container } = render(<FaqAccordion entry={entry()} />);
     const details = container.querySelector("details")!;
