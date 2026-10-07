@@ -251,11 +251,19 @@ test.describe("the timer and the slide", () => {
   test("stays put once paused", async ({ page }) => {
     // Paused before the interval is shortened: on a phone the cards are on
     // screen at load, so a 400ms timer could run out before the click lands.
-    await section(page).getByRole("button", { name: "Pause the partner cards" }).click();
+    // Whichever card is showing when the pause lands is the one that must
+    // stay: on a slow runner the real 6s timer had already moved to Fibaro
+    // before the click (iPhone 17 on CI, 2026-10-07), so this no longer
+    // assumes TIS.
+    const pause = section(page).getByRole("button", { name: "Pause the partner cards" });
+    await pause.click();
+    await expect(pause).toHaveAttribute("aria-pressed", "true");
+    const selected = () => section(page).getByRole("tab", { selected: true }).textContent();
+    const paused = await selected();
     await shorten(page);
     await section(page).scrollIntoViewIfNeeded();
     await page.waitForTimeout(1500);
-    await expect(tab(page, "TIS")).toHaveAttribute("aria-selected", "true");
+    expect(await selected()).toBe(paused);
   });
 
   test("slides the incoming card in from the end, and back from the start", async ({ page }) => {
