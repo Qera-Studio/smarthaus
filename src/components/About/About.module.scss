@@ -1,10 +1,26 @@
 @use "../../styles/variables" as *;
 @use "../../styles/mixins" as *;
 
-// How far the hero image travels, each way, as a share of its own layer. The
-// layer is 120% of the frame (10% spare above and below), and 8% of 120% is
-// 9.6%, so the edge never comes into view.
-$parallax-travel: 8%;
+// How far each photograph travels, as a share of its own layer.
+//
+// The hero's layer is 125% of its frame, its 25% spare all above, since it
+// only ever moves down. It sinks a quarter of the frame (20% of 125%) over
+// the first 60% of a screen of scrolling (30% on a phone, whose hero is
+// half the height), so it starts with the first pixel
+// and is plain to see, and its top meets the frame's top as it stops.
+//
+// The mission photograph's layer is 130%, 15% spare each way, and drifts 10%
+// of that (13% of the frame) each way across its whole pass.
+//
+// The first version moved the hero 8% across its whole pass while it was
+// already on screen at load: about 35px over a screen of scrolling, which
+// read as no effect at all (Shivanshu, 2026-10-07). The second timed it on
+// the layer's own exit, and the layer, nearly a screen tall on a desktop,
+// only began to exit 400px down.
+$hero-spare: 25%;
+$hero-travel: 20%;
+$mission-spare: 15%;
+$mission-travel: 10%;
 
 @layer components {
   .page {
@@ -33,47 +49,68 @@ $parallax-travel: 8%;
 
   .heroLayer {
     position: absolute;
-    inset-block: -10%;
+    inset-block: (-$hero-spare) 0;
     inset-inline: 0;
-
-    // brown-900 at 20% over the whole photograph. The title is brown-50 on
-    // the sky, and the lightest sky behind it measured 2.68:1 bare, under the
-    // 3:1 floor for large text; under this veil it is 3.86:1. On the layer,
-    // not the frame, so it travels with the picture and the title stays above
-    // it by source order.
-    &::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background-color: rgba($brown-900, 0.2);
-    }
   }
 
-  // Scroll-driven, so no script: the picture drifts down more slowly than the
-  // page as the hero passes through the screen. Where the timeline is not
-  // supported (Firefox today), or motion is reduced, it simply sits still.
+  // Scroll-driven, so no script: each picture moves more slowly than the
+  // page. The hero is always at the top of the page, so it runs on the page's
+  // own scroll from the first pixel; the mission photograph across its own
+  // pass through the screen. Where the timeline is not supported (Firefox, Safari before 26), or
+  // motion is reduced, both simply sit still.
   @media (prefers-reduced-motion: no-preference) {
     @supports (animation-timeline: view()) {
-      .heroLayer {
-        animation-name: about-parallax;
+      .heroLayer,
+      .mediaLayer {
         animation-timing-function: linear;
         animation-fill-mode: both;
+      }
+
+      .heroLayer {
+        animation-name: about-hero-parallax;
+        animation-timeline: scroll(root);
+        animation-range: 0 60svh;
+
+        // A phone's hero is half a desktop's height, so the same quarter of
+        // it is half the distance: it travels over half the scroll to move
+        // at the same rate.
+        @include bp-max($bp-lg) {
+          animation-range: 0 30svh;
+        }
+      }
+
+      .mediaLayer {
+        animation-name: about-mission-parallax;
         animation-timeline: view();
         animation-range: cover;
       }
     }
   }
 
-  @keyframes about-parallax {
+  @keyframes about-hero-parallax {
     from {
-      translate: 0 (-$parallax-travel);
+      translate: 0 0;
     }
 
     to {
-      translate: 0 $parallax-travel;
+      translate: 0 $hero-travel;
     }
   }
 
+  @keyframes about-mission-parallax {
+    from {
+      translate: 0 (-$mission-travel);
+    }
+
+    to {
+      translate: 0 $mission-travel;
+    }
+  }
+
+  // brown-50 straight on the photograph, untreated, at Shivanshu's call
+  // (2026-10-07): 2.68:1 on a desktop, about 1.6:1 on a phone, under the 3:1
+  // floor. An accepted risk, docs/launch-gate/accepted-risks.md, to resolve
+  // before launch.
   .heroTitle {
     position: relative;
     align-self: start;
@@ -170,12 +207,13 @@ $parallax-travel: 8%;
   // --- Mission ----------------------------------------------------------------
 
   // Edge to edge: the photograph under a brown-900 veil, 60% of a screen
-  // tall, then the copy on brown-900 at its own height. The band used to be
-  // held at 40% of a screen, which left a dark gap under the copy on a large
-  // screen (Shivanshu, 2026-10-07); now its padding is the only space.
-  .mission {
+  // tall, then Mission and Vision on brown-900 at their own height. The band
+  // used to be held at 40% of a screen, which left a dark gap under the copy
+  // on a large screen (Shivanshu, 2026-10-07); now its padding is the only
+  // space.
+  .dark {
     display: grid;
-    grid-template-rows: 60svh auto;
+    grid-template-rows: 60svh auto auto;
     margin-block-start: $space-24;
     // Past body's gutter, as the Process sheets do; the copy gives it back.
     margin-inline: calc(-1 * var(--page-gutter));
@@ -185,7 +223,9 @@ $parallax-travel: 8%;
 
   .missionMedia {
     position: relative;
+    overflow: clip;
 
+    // Above the moving layer by source order, so the veil never travels.
     &::after {
       content: "";
       position: absolute;
@@ -194,14 +234,31 @@ $parallax-travel: 8%;
     }
   }
 
-  .missionBody {
+  .mediaLayer {
+    position: absolute;
+    inset-block: (-$mission-spare);
+    inset-inline: 0;
+  }
+
+  .darkSection {
     padding-block: $space-12;
     padding-inline: var(--page-gutter);
   }
 
+  // Vision, under Mission: a rule between them inside the gutters, as the
+  // light sections are ruled, one step up the ramp so it reads on brown-900.
+  .darkRuled {
+    padding-block-start: 0;
+
+    > * {
+      padding-block-start: $space-12;
+      border-block-start: 1px solid $brown-800;
+    }
+  }
+
   // --- The section pattern ----------------------------------------------------
 
-  // Vision and Values: a rule across the top with 96px above it, as the
+  // Values and the FAQ: a rule across the top with 96px above it, as the
   // homepage's figures and enquiry have. Two in a row share one gap.
   .ruled {
     margin-block-start: $space-24;
@@ -268,7 +325,7 @@ $parallax-travel: 8%;
   }
 
   // On the dark ground: brown-100 at 70%, 8.0:1 on brown-900.
-  .mission .body {
+  .dark .body {
     color: rgba($brown-100, 0.7);
   }
 
@@ -279,6 +336,12 @@ $parallax-travel: 8%;
   // print.
   .rows {
     --legal-body-size: var(--type-body);
+
+    // The section's rule already sits just above the first row, so that
+    // row's own top rule read as a double line (Shivanshu, 2026-10-07).
+    > :first-child {
+      border-block-start-width: 0;
+    }
   }
 
   .number {

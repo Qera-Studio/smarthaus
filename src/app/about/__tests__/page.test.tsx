@@ -55,12 +55,20 @@ describe("About page", () => {
       images.forEach((img) => expect(img).toHaveAttribute("alt", ""));
     });
 
-    it("marks the mission's ground dark, for the focus ring and cursor", () => {
+    it("holds Mission and Vision in one dark ground, for the focus ring and cursor", () => {
       render(<AboutPage />);
-      expect(screen.getByRole("region", { name: "Mission" })).toHaveAttribute(
-        "data-ground",
-        "dark",
-      );
+      const mission = screen.getByRole("region", { name: "Mission" });
+      const vision = screen.getByRole("region", { name: "Vision" });
+      const ground = mission.closest('[data-ground="dark"]');
+      expect(ground).not.toBeNull();
+      expect(vision.closest('[data-ground="dark"]')).toBe(ground);
+    });
+
+    it("gives each photograph its own parallax layer", () => {
+      const { container } = render(<AboutPage />);
+      const layers = Array.from(container.querySelectorAll("[data-parallax]"));
+      expect(layers.map((el) => el.getAttribute("data-parallax"))).toEqual(["hero", "mission"]);
+      layers.forEach((layer) => expect(layer.querySelector("img")).not.toBeNull());
     });
   });
 

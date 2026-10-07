@@ -35,7 +35,7 @@ export default function AboutPage() {
       <JsonLd data={pageGraph(PAGE)} />
 
       <section className={styles.hero} aria-labelledby="about-title" data-about-hero="">
-        <div className={styles.heroLayer} data-parallax="">
+        <div className={styles.heroLayer} data-parallax="hero">
           <Image
             src="/about/aboutUs_hero.png"
             alt=""
@@ -78,27 +78,35 @@ export default function AboutPage() {
         </ul>
       </section>
 
-      <section
-        className={styles.mission}
-        aria-labelledby="mission"
-        data-about-mission=""
-        data-ground="dark"
-      >
-        <div className={styles.missionMedia}>
-          <Image src="/about/mission_Img.png" alt="" fill sizes="100vw" className={styles.cover} />
+      {/* One dark band for the photograph, Mission and Vision (Shivanshu,
+          2026-10-07): two sections in it, so each keeps its own landmark. */}
+      <div className={styles.dark} data-about-dark="" data-ground="dark">
+        <div className={styles.missionMedia} data-about-mission-media="">
+          <div className={styles.mediaLayer} data-parallax="mission">
+            <Image
+              src="/about/mission_Img.png"
+              alt=""
+              fill
+              sizes="100vw"
+              className={styles.cover}
+            />
+          </div>
         </div>
-        <div className={styles.missionBody}>
+        <section className={styles.darkSection} aria-labelledby="mission" data-about-mission="">
           <Pattern id="mission" title="Mission">
             <StatementCopy statement={MISSION} />
           </Pattern>
-        </div>
-      </section>
-
-      <section className={styles.ruled} aria-labelledby="vision">
-        <Pattern id="vision" title="Vision">
-          <StatementCopy statement={VISION} />
-        </Pattern>
-      </section>
+        </section>
+        <section
+          className={`${styles.darkSection} ${styles.darkRuled}`}
+          aria-labelledby="vision"
+          data-about-vision=""
+        >
+          <Pattern id="vision" title="Vision">
+            <StatementCopy statement={VISION} />
+          </Pattern>
+        </section>
+      </div>
 
       <section className={styles.ruled} aria-labelledby="values" data-about-values="">
         <Pattern id="values" title="Values">

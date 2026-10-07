@@ -38,76 +38,106 @@ test("sets out every section in order, ending on the FAQ", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("About Us");
 });
 
-test("drifts the hero image as the page scrolls", async ({ page, browserName }) => {
-  test.skip(browserName === "firefox", "No scroll-driven animations in Firefox yet.");
-  const before = await page
-    .locator("[data-parallax]")
-    .evaluate((el) => getComputedStyle(el).translate);
-  await page.evaluate(() => window.scrollBy(0, 200));
-  await expect
-    .poll(() => page.locator("[data-parallax]").evaluate((el) => getComputedStyle(el).translate))
-    .not.toBe(before);
+// The layer's vertical offset inside its frame, in px.
+const shift = (page: Page, which: "hero" | "mission") =>
+  page.locator(`[data-parallax="${which}"]`).evaluate((el) => {
+    const frame = el.parentElement!.getBoundingClientRect();
+    return el.getBoundingClientRect().top - frame.top;
+  });
+
+test("sinks the hero image visibly as it scrolls away", async ({ page }) => {
+  // At least a fifth of the distance scrolled: the first version moved about
+  // 35px across a whole screen and read as no effect (2026-10-07).
+  await page.evaluate(() => window.scrollTo(0, 100));
+  const before = await shift(page, "hero");
+  await page.evaluate(() => window.scrollTo(0, 200));
+  await expect.poll(async () => (await shift(page, "hero")) - before).toBeGreaterThanOrEqual(20);
+});
+
+test("drifts the mission photograph as it passes", async ({ page }) => {
+  const media = page.locator("[data-about-mission-media]");
+  await media.evaluate((el) => el.scrollIntoView({ block: "end" }));
+  const before = await shift(page, "mission");
+  await page.evaluate(() => window.scrollBy(0, 300));
+  await expect.poll(async () => (await shift(page, "mission")) - before).toBeGreaterThanOrEqual(20);
 });
 
 test.describe("under reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
 
-  test("keeps the hero image still", async ({ page }) => {
-    const still = () =>
-      page.locator("[data-parallax]").evaluate((el) => getComputedStyle(el).animationName);
-    expect(await still()).toBe("none");
-    await page.evaluate(() => window.scrollBy(0, 200));
-    expect(await still()).toBe("none");
+  test("keeps both photographs still", async ({ page }) => {
+    const names = () =>
+      page
+        .locator("[data-parallax]")
+        .evaluateAll((all) => all.map((el) => getComputedStyle(el).animationName));
+    expect(await names()).toEqual(["none", "none"]);
+    const before = await shift(page, "hero");
+    await page.evaluate(() => window.scrollTo(0, 300));
+    expect(await shift(page, "hero")).toBe(before);
   });
 });
 
-test("keeps the image's edge out of sight while it travels", async ({ page }) => {
-  // The layer overhangs the frame above and below at every scroll position.
-  for (const y of [0, 150, 300]) {
+test("keeps each photograph's edge out of sight while it travels", async ({ page }) => {
+  // Each layer overhangs its frame above and below at every scroll position.
+  const height = await page.evaluate(() => document.documentElement.scrollHeight);
+  for (const y of [0, 150, 300, 600, height * 0.25, height * 0.35, height * 0.45]) {
     await page.evaluate((top) => window.scrollTo(0, top), y);
-    const { frame, layer } = await page.locator("[data-about-hero]").evaluate((hero) => ({
-      frame: hero.getBoundingClientRect().toJSON() as DOMRect,
-      layer: hero.querySelector("[data-parallax]")!.getBoundingClientRect().toJSON() as DOMRect,
-    }));
-    expect(layer.top).toBeLessThanOrEqual(frame.top);
-    expect(layer.bottom).toBeGreaterThanOrEqual(frame.bottom);
+    const overhangs = await page.locator("[data-parallax]").evaluateAll((all) =>
+      all.map((el) => {
+        const frame = el.parentElement!.getBoundingClientRect();
+        const layer = el.getBoundingClientRect();
+        return layer.top <= frame.top + 0.5 && layer.bottom >= frame.bottom - 0.5;
+      }),
+    );
+    expect(overhangs, `at scrollY ${y}`).toEqual([true, true]);
   }
 });
 
-test("keeps the title at 3:1 or better over the brightest sky behind it", async ({ page }) => {
-  // Sample the hero as painted, with the title hidden, under where it sits.
-  // Measured before it is hidden: a hidden heading leaves the role tree.
-  const title = page.locator("h1");
-  const box = (await title.boundingBox())!;
-  await title.evaluate((el) => ((el as HTMLElement).style.visibility = "hidden"));
-  const shot = await page.screenshot({ clip: box });
-  await title.evaluate((el) => ((el as HTMLElement).style.visibility = ""));
-  const ratio = await page.evaluate(async (png) => {
-    const img = new Image();
-    img.src = `data:image/png;base64,${png}`;
-    await img.decode();
-    const canvas = new OffscreenCanvas(img.width, img.height);
-    const ctx = canvas.getContext("2d")!;
-    ctx.drawImage(img, 0, 0);
-    const { data } = ctx.getImageData(0, 0, img.width, img.height);
-    const lum = (r: number, g: number, b: number) =>
-      [r, g, b]
-        .map((v) => v / 255)
-        .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
-        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i]!, 0);
-    const text = lum(0xf8, 0xf5, 0xf0);
-    let brightest = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      brightest = Math.max(brightest, lum(data[i]!, data[i + 1]!, data[i + 2]!));
-    }
-    return (text + 0.05) / (brightest + 0.05);
-  }, shot.toString("base64"));
-  expect(ratio).toBeGreaterThanOrEqual(3);
-});
+{
+  // Skipped, not deleted: the title is shipped below 3:1 on purpose, as an
+  // accepted risk (docs/launch-gate/accepted-risks.md, 2026-10-07). Unskip it
+  // when that row is resolved; it should then pass.
+  test.skip(`keeps the title at 3:1 or better over the photo`, async ({ page }) => {
+    // Sampled under the words alone, with their ink made transparent.
+    const title = page.locator("h1");
+    const box = await title.evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const r = range.getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width, height: r.height };
+    });
+    await title.evaluate((el) => ((el as HTMLElement).style.color = "transparent"));
+    const shot = await page.screenshot({ clip: box });
+    await title.evaluate((el) => ((el as HTMLElement).style.color = ""));
+    const ratio = await page.evaluate(async (png) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${png}`;
+      await img.decode();
+      const canvas = new OffscreenCanvas(img.width, img.height);
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0);
+      const { data } = ctx.getImageData(0, 0, img.width, img.height);
+      const lum = (r: number, g: number, b: number) =>
+        [r, g, b]
+          .map((v) => v / 255)
+          .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+          .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i]!, 0);
+      const text = lum(0xf8, 0xf5, 0xf0);
+      let brightest = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        brightest = Math.max(brightest, lum(data[i]!, data[i + 1]!, data[i + 2]!));
+      }
+      return (text + 0.05) / (brightest + 0.05);
+    }, shot.toString("base64"));
+    expect(ratio).toBeGreaterThanOrEqual(3);
+  });
+}
 
 test.describe("mission", () => {
+  const dark = (page: Page) => page.locator("[data-about-dark]");
+
   test("runs from edge to edge", async ({ page }) => {
-    const { box, vw } = await region(page, "Mission").evaluate((el) => ({
+    const { box, vw } = await dark(page).evaluate((el) => ({
       box: el.getBoundingClientRect().toJSON() as DOMRect,
       vw: document.documentElement.clientWidth,
     }));
@@ -115,10 +145,10 @@ test.describe("mission", () => {
     expect(box.right).toBeGreaterThanOrEqual(vw - 0.5);
   });
 
-  test("ends the dark band 48px under the copy, with no gap beyond it", async ({ page }) => {
+  test("ends the dark band 48px under the vision, with no gap beyond it", async ({ page }) => {
     // 2026-10-07: the band was held at 40% of a screen and left a dark gap
     // under the copy on a large screen. Its padding is now the only space.
-    const { gap } = await region(page, "Mission").evaluate((el) => {
+    const { gap } = await dark(page).evaluate((el) => {
       const paragraphs = el.querySelectorAll("p");
       const last = paragraphs[paragraphs.length - 1]!.getBoundingClientRect();
       return { gap: el.getBoundingClientRect().bottom - last.bottom };
@@ -129,8 +159,8 @@ test.describe("mission", () => {
   test("gives the photograph the top 60% of the screen, under a brown-900 veil", async ({
     page,
   }) => {
-    const { media, veil, vh } = await region(page, "Mission").evaluate((el) => {
-      const first = el.firstElementChild!;
+    const { media, veil, vh } = await dark(page).evaluate((el) => {
+      const first = el.querySelector("[data-about-mission-media]")!;
       return {
         media: first.getBoundingClientRect().height,
         veil: getComputedStyle(first, "::after").backgroundColor,
@@ -141,11 +171,32 @@ test.describe("mission", () => {
     expect(veil).toBe("rgba(20, 17, 14, 0.7)");
   });
 
-  test("sets the lead in brown-100 and the body at 70% of it", async ({ page }) => {
-    const colours = await region(page, "Mission")
-      .locator("p")
-      .evaluateAll((all) => all.map((el) => getComputedStyle(el).color));
-    expect(colours).toEqual(["rgb(240, 233, 221)", "rgba(240, 233, 221, 0.7)"]);
+  for (const name of ["Mission", "Vision"]) {
+    test(`sets ${name}'s lead in brown-100 and its body at 70% of it`, async ({ page }) => {
+      const colours = await region(page, name)
+        .locator("p")
+        .evaluateAll((all) => all.map((el) => getComputedStyle(el).color));
+      expect(colours).toEqual(["rgb(240, 233, 221)", "rgba(240, 233, 221, 0.7)"]);
+    });
+  }
+
+  test("holds Vision in the same dark band, under a rule, after Mission", async ({ page }) => {
+    // 2026-10-07: Vision moved from its own light section into Mission's band.
+    const { inside, ground, rule, order } = await dark(page).evaluate((el) => {
+      const vision = el.querySelector('[aria-labelledby="vision"]')!;
+      const mission = el.querySelector('[aria-labelledby="mission"]')!;
+      const ruled = vision.firstElementChild!;
+      return {
+        inside: el.contains(vision) && el.contains(mission),
+        ground: getComputedStyle(el).backgroundColor,
+        rule: [getComputedStyle(ruled).borderTopWidth, getComputedStyle(ruled).borderTopColor],
+        order: mission.compareDocumentPosition(vision) & Node.DOCUMENT_POSITION_FOLLOWING,
+      };
+    });
+    expect(inside).toBe(true);
+    expect(ground).toBe("rgb(20, 17, 14)");
+    expect(rule).toEqual(["1px", "rgb(43, 36, 29)"]);
+    expect(order).toBeTruthy();
   });
 });
 
@@ -351,11 +402,11 @@ test("loads the hero photograph first, as the page's largest paint", async ({ pa
   await expect(img).toHaveAttribute("fetchpriority", "high");
   await expect(img).not.toHaveAttribute("loading", "lazy");
   // The mission photograph is below the fold and waits its turn.
-  await expect(region(page, "Mission").locator("img")).toHaveAttribute("loading", "lazy");
+  await expect(page.locator("[data-about-mission-media] img")).toHaveAttribute("loading", "lazy");
 });
 
 test("loads both photographs, rather than leaving empty frames", async ({ page }) => {
-  for (const selector of ["[data-about-hero] img", "[data-about-mission] img"]) {
+  for (const selector of ["[data-about-hero] img", "[data-about-mission-media] img"]) {
     const img = page.locator(selector);
     await img.scrollIntoViewIfNeeded();
     await expect
@@ -561,4 +612,16 @@ test.describe("enquiry", () => {
   test("names one form on the page, so its ids cannot clash", async ({ page }) => {
     await expect(page.locator("main form")).toHaveCount(1);
   });
+});
+
+test("rules the values and questions without a double line at the top", async ({ page }) => {
+  // The section's rule sits just above the first row, so the first row draws
+  // none of its own (2026-10-07); every other row keeps its divider.
+  for (const name of ["Values", "Frequently Asked Questions"]) {
+    const tops = await region(page, name)
+      .locator("details")
+      .evaluateAll((all) => all.map((el) => getComputedStyle(el).borderTopWidth));
+    expect(tops[0], name).toBe("0px");
+    for (const top of tops.slice(1)) expect(top, name).toBe("1px");
+  }
 });
