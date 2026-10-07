@@ -4,7 +4,7 @@ import { test, expect } from "./fixtures";
 import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
 
 /**
- * "By the numbers", under the partner cards. What only a browser shows: that
+ * "By the numbers", under the hardware carousel. What only a browser shows: that
  * the four cards really are one size, that they sit two by two at every
  * width, that the title takes the left half once the columns are side by
  * side, and that the cards' ground is the tint asked for, not the canvas.
@@ -26,9 +26,9 @@ test.beforeEach(async ({ page }) => {
   await section(page).scrollIntoViewIfNeeded();
 });
 
-test("sits directly after the partner cards", async ({ page }) => {
+test("sits directly after the hardware carousel", async ({ page }) => {
   const next = await page
-    .locator("main > section[data-partners]")
+    .locator('main > section[aria-labelledby="hardware"]')
     .evaluate((el) => el.nextElementSibling?.getAttribute("aria-labelledby"));
   expect(next).toBe("stats");
 });
@@ -88,11 +88,15 @@ test("grounds each card in brown-200 at half strength over the canvas", async ({
   expect(new Set(backgrounds)).toEqual(new Set(["rgba(216, 199, 172, 0.5)"]));
 });
 
-test("draws the cards square, as every surface on the site is", async ({ page }) => {
-  const radii = await cards(page).evaluateAll((all) =>
-    all.map((el) => getComputedStyle(el).borderTopLeftRadius),
+test("draws the cards square and borderless, on their ground alone", async ({ page }) => {
+  // The 1px border came off on 2026-10-07, at Shivanshu's call.
+  const edges = await cards(page).evaluateAll((all) =>
+    all.map((el) => {
+      const style = getComputedStyle(el);
+      return [style.borderTopLeftRadius, style.borderTopWidth, style.borderLeftWidth];
+    }),
   );
-  radii.forEach((radius) => expect(radius).toBe("0px"));
+  edges.forEach((edge) => expect(edge).toEqual(["0px", "0px", "0px"]));
 });
 
 test("is accessible, and fits the screen", async ({ page }) => {

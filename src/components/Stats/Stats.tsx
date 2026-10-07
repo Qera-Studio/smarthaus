@@ -2,7 +2,7 @@ import { STATS } from "../../content/stats";
 import styles from "./Stats.module.scss";
 
 /**
- * Four figures under the partner cards: the evidence James & Emma look for
+ * Four figures under the hardware carousel: the evidence James & Emma look for
  * before trusting a young brand. Laid out as the enquiry's section pattern,
  * title on the left, a two by two grid of equal cards on the right.
  *

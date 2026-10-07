@@ -64,9 +64,6 @@
     min-block-size: clamp(#{$space-32}, 18vw, #{$space-32 * 2});
     padding: clamp(#{$space-4}, 2vw, #{$space-6});
     background-color: rgba($brown-200, 0.5);
-    border-style: solid;
-    border-width: 1px;
-    border-color: var(--color-border);
   }
 
   .value {
