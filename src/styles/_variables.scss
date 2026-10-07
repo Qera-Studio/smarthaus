@@ -21,18 +21,20 @@
 
 // --- L0: Color Primitives ---------------------------------------------------
 // Full brown ramp. Components never reference these directly — use L1 semantics.
+// Each step's name is for talking about the palette, not for code: the
+// variables stay numbered so their order is obvious.
 
-$brown-950: #0a0807;
-$brown-900: #14110e;
-$brown-800: #2b241d;
-$brown-700: #523c2a;
-$brown-600: #7a5537;
-$brown-500: #956a43;
-$brown-400: #b0804f;
-$brown-300: #c4a37d;
-$brown-200: #d8c7ac;
-$brown-100: #f0e9dd;
-$brown-50: #f8f5f0;
+$brown-950: #0a0807; // soot
+$brown-900: #14110e; // espresso
+$brown-800: #2b241d; // dark roast
+$brown-700: #523c2a; // walnut
+$brown-600: #7a5537; // cocoa
+$brown-500: #956a43; // leather
+$brown-400: #b0804f; // toffee
+$brown-300: #c4a37d; // sand
+$brown-200: #d8c7ac; // oat
+$brown-100: #f0e9dd; // linen
+$brown-50: #f8f5f0; // porcelain
 
 :root {
   // L0 primitives — available but not for direct component use
