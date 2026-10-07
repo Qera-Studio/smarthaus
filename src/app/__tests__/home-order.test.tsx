@@ -26,6 +26,7 @@ function mockSection(name: string) {
 jest.mock("../../components/FluidHero", () => ({ FluidHero: mockSection("hero") }));
 jest.mock("../../components/Maple", () => ({ Maple: mockSection("maple") }));
 jest.mock("../../components/Partners", () => ({ Partners: mockSection("partners") }));
+jest.mock("../../components/Stats", () => ({ Stats: mockSection("stats") }));
 jest.mock("../../components/Hardware", () => ({ Hardware: mockSection("hardware") }));
 jest.mock("../../components/Process", () => ({ Process: mockSection("process") }));
 jest.mock("../../components/Pricing", () => ({ Pricing: mockSection("pricing") }));
@@ -44,6 +45,7 @@ describe("Home page", () => {
       "hero",
       "partners",
       "hardware",
+      "stats",
       "process",
       "pricing",
       "enquiry",
@@ -77,6 +79,14 @@ describe("Home page", () => {
     const { container } = render(<Home />);
     const sections = order(container);
     expect(sections.indexOf("hardware")).toBe(sections.indexOf("partners") + 1);
+  });
+
+  it("puts the figures directly under the hardware carousel", () => {
+    // 2026-10-07, at Shivanshu's call: what the house is made of, then what
+    // Smarthaus has done with it.
+    const { container } = render(<Home />);
+    const sections = order(container);
+    expect(sections.indexOf("stats")).toBe(sections.indexOf("hardware") + 1);
   });
 
   it("keeps the enquiry last, directly above the footer", () => {
