@@ -16,6 +16,12 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    # @types/node follows the Node the site runs on (22, in CI and on
+    # Vercel), not the newest Node: types for a newer runtime let code compile
+    # that then fails in production. Move this cap with the runtime.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule:
