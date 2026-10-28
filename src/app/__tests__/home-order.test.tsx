@@ -45,8 +45,8 @@ describe("Home page", () => {
     expect(order(container)).toEqual([
       "hero",
       "partners",
-      "hardware",
       "stats",
+      "hardware",
       "process",
       "pricing",
       "enquiry",
@@ -83,18 +83,18 @@ describe("Home page", () => {
     expect(sections.indexOf("partners")).toBe(sections.indexOf("hero") + 1);
   });
 
-  it("puts the hardware carousel directly after the partner cards", () => {
+  it("puts the figures directly after the partner cards", () => {
     const { container } = render(<Home />);
     const sections = order(container);
-    expect(sections.indexOf("hardware")).toBe(sections.indexOf("partners") + 1);
+    expect(sections.indexOf("stats")).toBe(sections.indexOf("partners") + 1);
   });
 
-  it("puts the figures directly under the hardware carousel", () => {
-    // 2026-10-07, at Shivanshu's call: what the house is made of, then what
-    // Smarthaus has done with it.
+  it("puts the hardware carousel directly under the figures", () => {
+    // 2026-10-28, at Shivanshu's call: the figures moved above the carousel.
+    // They sat below it from 2026-10-07.
     const { container } = render(<Home />);
     const sections = order(container);
-    expect(sections.indexOf("stats")).toBe(sections.indexOf("hardware") + 1);
+    expect(sections.indexOf("hardware")).toBe(sections.indexOf("stats") + 1);
   });
 
   it("keeps the enquiry last, directly above the footer", () => {

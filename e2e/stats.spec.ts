@@ -26,10 +26,11 @@ test.beforeEach(async ({ page }) => {
   await section(page).scrollIntoViewIfNeeded();
 });
 
-test("sits directly after the hardware carousel", async ({ page }) => {
+test("sits directly above the hardware carousel", async ({ page }) => {
+  // 2026-10-28, at Shivanshu's call; it sat below the carousel before.
   const next = await page
     .locator('main > section[aria-labelledby="hardware"]')
-    .evaluate((el) => el.nextElementSibling?.getAttribute("aria-labelledby"));
+    .evaluate((el) => el.previousElementSibling?.getAttribute("aria-labelledby"));
   expect(next).toBe("stats");
 });
 

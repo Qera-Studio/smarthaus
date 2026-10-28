@@ -34,10 +34,10 @@ export default function Home() {
       {/* Who stands behind the systems, before anything asks to be trusted.
           Took the Maple banner's place; src/components/Maple stays unmounted. */}
       <Partners />
-      {/* What the house is made of, what Smarthaus has done with it, then how
-          it gets installed. */}
-      <Hardware />
+      {/* What Smarthaus has done, what the house is made of, then how it gets
+          installed. */}
       <Stats />
+      <Hardware />
       <Process />
       {/* Care (the maintenance plan) is unmounted, not deleted, until the
           section is rewritten; src/components/Care stays intact. */}
