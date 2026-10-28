@@ -8,6 +8,9 @@ import { useEffect, useRef, useState } from "react";
  */
 export const DRAG_MIN_PX = 6;
 
+/** How far from the screen's edge a keyboard-focused card is brought to. */
+export const REVEAL_GUTTER_PX = 16;
+
 /**
  * The strip's pause button, above it, and the hand on the strip itself.
  *
@@ -47,8 +50,15 @@ export function StripControls({
     const el = strip();
     if (!el) return;
 
-    /** Move the strip by dx pixels: right is positive, as the hand moves. */
-    const move = (dx: number) => {
+    /**
+     * Move the strip by dx pixels: right is positive, as the hand moves.
+     *
+     * A drag wraps round the pass, since the two copies make it the same
+     * picture. A reveal of a focused card clamps instead: the focused link
+     * is in the first copy, and a wrap would hand its place to the inert
+     * second copy and throw it a whole copy's width off screen.
+     */
+    const move = (dx: number, wrap = true) => {
       const track = el.firstElementChild as HTMLElement | null;
       const [animation] = track?.getAnimations() ?? [];
       if (!animation || !track) {
@@ -59,7 +69,9 @@ export function StripControls({
       // One pass carries the strip one copy's width, half the track.
       const msPerPx = duration / (track.getBoundingClientRect().width / 2);
       const next = Number(animation.currentTime ?? 0) - dx * msPerPx;
-      animation.currentTime = ((next % duration) + duration) % duration;
+      animation.currentTime = wrap
+        ? ((next % duration) + duration) % duration
+        : Math.min(Math.max(next, 0), duration - 1);
     };
 
     let press: { id: number; x: number; last: number } | null = null;
@@ -120,12 +132,48 @@ export function StripControls({
     // The browser's own image drag would steal the gesture.
     const onDragStart = (event: DragEvent) => event.preventDefault();
 
+    // Keyboard focus on a card the strip has carried off screen. The browser
+    // reveals it by scrolling the strip's clipped box, which it did only part
+    // of the way (3px of a card showing, measured 2026-10-28) and never undid,
+    // so the offset sat on top of the drift and opened a blank gap past the
+    // second copy when the loop wrapped. While the strip animates, the offset
+    // is handed to the animation instead (the same picture, scrollLeft back to
+    // 0), and the focused card is brought fully into view, a gutter from the
+    // edge. Under reduced motion the strip is a real scroller and the
+    // browser's own reveal is right.
+    const settle = () => {
+      const track = el.firstElementChild as HTMLElement | null;
+      if (!track?.getAnimations().length) return;
+      if (el.scrollLeft !== 0) {
+        move(-el.scrollLeft, false);
+        el.scrollLeft = 0;
+      }
+      const card = document.activeElement?.closest("li");
+      if (!card || !track.contains(card)) return;
+      const view = el.getBoundingClientRect();
+      const box = card.getBoundingClientRect();
+      const start = view.left + REVEAL_GUTTER_PX;
+      const end = view.right - REVEAL_GUTTER_PX;
+      // Too wide for the gap between the gutters: its start edge wins.
+      if (box.left < start || box.width > end - start) move(start - box.left, false);
+      else if (box.right > end) move(end - box.right, false);
+    };
+    // In the focus event itself: the browser scrolls a focused element into
+    // view only after the event's handlers have run, so a card already put on
+    // screen here gives it nothing to scroll, and nothing is left to settle.
+    // The scroll listener catches whatever it scrolls anyway.
+    const onFocusIn = settle;
+
     el.addEventListener("pointerdown", onDown);
+    el.addEventListener("focusin", onFocusIn);
+    el.addEventListener("scroll", settle);
     el.addEventListener("click", onClick, true);
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("dragstart", onDragStart);
     return () => {
       el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("focusin", onFocusIn);
+      el.removeEventListener("scroll", settle);
       stopFollowing();
       el.removeEventListener("click", onClick, true);
       el.removeEventListener("wheel", onWheel);

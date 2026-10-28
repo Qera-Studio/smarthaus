@@ -354,3 +354,21 @@ test("the timer runs 3s a slide", async ({ page }) => {
   );
   expect(interval).toBe("3s");
 });
+
+test("keyboard focus on a slide's CTA holds the slide still", async ({ page }) => {
+  // The 3s timer used to move the slide on under the focused link.
+  const s = section(page);
+  const cta = s.getByRole("link", { name: "View smart locks" });
+  await s.getByRole("tab", { name: "Smart lock" }).focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  // Wherever Tab landed, put it on the CTA the keyboard's way.
+  await cta.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(cta).toBeFocused();
+  await page.waitForTimeout(4_000);
+  await expect(cta).toBeFocused();
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
+});

@@ -409,6 +409,35 @@ test.describe("keyboard", () => {
     }
   });
 
+  test("every card Tab reaches is brought fully on screen, and the strip never scrolls", async ({
+    page,
+  }) => {
+    // Found 2026-10-28: the browser half-revealed off-screen cards by
+    // scrolling the clipped strip and left the offset behind.
+    test.skip(
+      test.info().project.name === "iPhone 17",
+      "WebKit emulation does not scroll Tab focus into view (focus-visible.spec.ts)",
+    );
+    await expectHydrated(page);
+    await page.getByRole("button", { name: "Pause the images" }).focus();
+    const width = await page.evaluate(() => document.documentElement.clientWidth);
+    for (let i = 0; i < 8; i += 1) {
+      await page.keyboard.press("Tab");
+      // The reveal runs just after the focus lands.
+      await expect
+        .poll(
+          () =>
+            page.evaluate((w) => {
+              const b = document.activeElement!.getBoundingClientRect();
+              return b.left >= 0 && b.right <= w ? "on screen" : `${b.left}..${b.right}`;
+            }, width),
+          { message: `card ${i}` },
+        )
+        .toBe("on screen");
+    }
+    await expect.poll(() => strip(page).evaluate((el) => el.scrollLeft)).toBe(0);
+  });
+
   test("a focused card's link draws a visible ring", async ({ page }) => {
     const link = cards(page).first().getByRole("link");
     await link.focus();

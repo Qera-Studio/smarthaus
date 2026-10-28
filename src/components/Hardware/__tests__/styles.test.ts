@@ -32,4 +32,21 @@ describe("Hardware.module.scss", () => {
     expect(rule(".title")).toMatch(/margin-block-start:\s*auto/);
     expect(rule(".copy")).toMatch(/flex-direction:\s*column/);
   });
+
+  test("keyboard focus on a slide's CTA holds the timer, as focus on a tab does", () => {
+    // Found 2026-10-28: the slide moved on under a focused CTA.
+    expect(css).toMatch(
+      /\.stageRoot:has\(\.tabs :focus-visible, \.stage :focus-visible\) \.progress\s*\{\s*animation-play-state:\s*paused/,
+    );
+    expect(css).not.toMatch(/:has\(\.tabs :focus-visible\) /);
+  });
+
+  test("the pause glyph reads play while that focus holds it", () => {
+    expect(css).toMatch(
+      /\.stageRoot:has\(\.tabs :focus-visible, \.stage :focus-visible\) \.glyphPause/,
+    );
+    expect(css).toMatch(
+      /\.stageRoot:has\(\.tabs :focus-visible, \.stage :focus-visible\) \.glyphPlay/,
+    );
+  });
 });

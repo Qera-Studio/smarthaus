@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import { DRAG_MIN_PX, StripControls } from "../StripControls";
+import { DRAG_MIN_PX, REVEAL_GUTTER_PX, StripControls } from "../StripControls";
 
 /**
  * The strip's pause button, and the hand on the strip: a mouse or finger
@@ -270,6 +270,100 @@ describe("StripControls", () => {
         new WheelEvent("wheel", { deltaX: 50, deltaY: 0, bubbles: true, cancelable: true }),
       );
       expect(strip.scrollLeft).toBe(250);
+    });
+  });
+
+  describe("keyboard focus on a card off screen", () => {
+    // A 360px screen, and a card wherever each test puts it.
+    function place(strip: HTMLElement, left: number, width = 200) {
+      strip.getBoundingClientRect = () => ({ left: 0, right: 360, width: 360 }) as DOMRect;
+      const card = strip.querySelector("li")!;
+      card.getBoundingClientRect = () => ({ left, right: left + width, width }) as DOMRect;
+      return card;
+    }
+
+    // Synchronous: the reveal happens in the focus event, before the browser
+    // would scroll anything.
+    const focusCard = (link: HTMLElement) => link.focus();
+
+    it("brings a card past the right edge fully in, a gutter from the edge", () => {
+      const { strip, animation, link } = setup({ at: 10_000 });
+      place(strip, 300);
+      focusCard(link);
+      // Its right edge was 500; it goes to 360 - gutter, so 156px left.
+      const moved = 500 - (360 - REVEAL_GUTTER_PX);
+      expect(animation.currentTime).toBeCloseTo(10_000 + moved * MS_PER_PX);
+    });
+
+    it("brings a card past the left edge fully in", () => {
+      const { strip, animation, link } = setup({ at: 10_000 });
+      place(strip, -120);
+      focusCard(link);
+      const moved = REVEAL_GUTTER_PX - -120;
+      expect(animation.currentTime).toBeCloseTo(10_000 - moved * MS_PER_PX);
+    });
+
+    it("lines a card wider than the gap up by its start edge", () => {
+      const { strip, animation, link } = setup({ at: 10_000 });
+      place(strip, 40, 348);
+      focusCard(link);
+      const moved = REVEAL_GUTTER_PX - 40;
+      expect(animation.currentTime).toBeCloseTo(10_000 - moved * MS_PER_PX);
+    });
+
+    it("never wraps a reveal round the pass: it stops at the pass's start", () => {
+      // Found 2026-10-28: near the start of a pass, a small nudge right
+      // wrapped to the end, where the first copy (the focusable one) sits a
+      // whole copy's width off screen.
+      const { strip, animation, link } = setup({ at: 5 * MS_PER_PX });
+      place(strip, -10);
+      focusCard(link);
+      expect(animation.currentTime).toBe(0);
+    });
+
+    it("nor past its end", () => {
+      const { strip, animation, link } = setup({ at: DURATION - 5 * MS_PER_PX });
+      place(strip, 300);
+      focusCard(link);
+      expect(animation.currentTime).toBe(DURATION - 1);
+    });
+
+    it("a drag still wraps, since there the picture is all that matters", () => {
+      const { strip, animation } = setup({ at: 5 * MS_PER_PX });
+      drag(strip, [400, 420]);
+      expect(animation.currentTime).toBeCloseTo(DURATION - 15 * MS_PER_PX);
+    });
+
+    it("leaves a card that is already in view where it is", () => {
+      const { strip, animation, link } = setup({ at: 10_000 });
+      place(strip, 60);
+      focusCard(link);
+      expect(animation.currentTime).toBe(10_000);
+    });
+
+    it("hands the browser's scroll to the animation and puts the scroll back to 0", () => {
+      const { strip, animation, link } = setup({ at: 10_000 });
+      place(strip, 60);
+      strip.scrollLeft = 300;
+      focusCard(link);
+      expect(strip.scrollLeft).toBe(0);
+      expect(animation.currentTime).toBeCloseTo(10_000 + 300 * MS_PER_PX);
+    });
+
+    it("does the same for a scroll that came from anywhere else", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      strip.scrollLeft = 120;
+      fireEvent.scroll(strip);
+      expect(strip.scrollLeft).toBe(0);
+      expect(animation.currentTime).toBeCloseTo(10_000 + 120 * MS_PER_PX);
+    });
+
+    it("leaves a reduced-motion strip to the browser, which scrolls it properly", () => {
+      const { strip, link } = setup({ animated: false });
+      place(strip, 300);
+      strip.scrollLeft = 300;
+      focusCard(link);
+      expect(strip.scrollLeft).toBe(300);
     });
   });
 
