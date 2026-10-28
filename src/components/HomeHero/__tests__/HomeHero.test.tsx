@@ -101,6 +101,14 @@ describe("HomeHero", () => {
       expect(titles).toEqual(HERO_CAROUSEL_ITEMS.map((item) => item.title));
     });
 
+    it("exposes each card link once to AT, though the DOM holds two copies", () => {
+      render(<HomeHero />);
+      for (const { cta } of HERO_CAROUSEL_ITEMS) {
+        expect(screen.getAllByRole("link", { name: cta })).toHaveLength(1);
+        expect(screen.getAllByRole("link", { name: cta, hidden: true })).toHaveLength(2);
+      }
+    });
+
     it("has its pause button inside it", () => {
       render(<HomeHero />);
       const pause = screen.getByRole("button", { name: "Pause the images" });
