@@ -29,10 +29,16 @@ describe("AnnouncementBar.module.scss", () => {
     expect(css.match(/@layer\s+\w+/g)).toEqual(["@layer components"]);
   });
 
-  test("brown-300 text on a brown-900 ground", () => {
+  test("brown-100 text at 70% on a brown-900 ground", () => {
     const bar = rule(".bar");
     expect(bar).toMatch(/background-color:\s*var\(--brown-900\)/);
-    expect(bar).toMatch(/color:\s*var\(--brown-300\)/);
+    expect(bar).toMatch(
+      /(?:^|;)\s*color:\s*color-mix\(in srgb, var\(--brown-100\) 70%, transparent\)/,
+    );
+  });
+
+  test("is exactly the height the homepage hero subtracts", () => {
+    expect(rule(".bar")).toMatch(/min-block-size:\s*var\(--announce-block-size\)/);
   });
 
   test("runs edge to edge, out of body's guttered column", () => {

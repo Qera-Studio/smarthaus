@@ -5,9 +5,6 @@
   .hero {
     // L2 component tokens.
     //
-    // One card, 400 by 300 at desktop (the Figma frame), smaller on a phone.
-    --hero-card-inline: 18rem;
-    --hero-card-block: 13.5rem;
     // One pass of the eight cards. Slow on purpose: the strip is texture
     // while the copy is read, not something to watch.
     --hero-strip-duration: 80s;
@@ -15,47 +12,71 @@
     // and the blur behind it, both rising linearly from nothing at the top.
     --hero-card-shade: rgb(0 0 0 / 30%);
     --hero-card-blur: 12px;
-    // The five faces overlap by a third of their width (Figma: 37.5 at 25.5).
-    --hero-face-size: 38px;
-    --hero-face-overlap: -12px;
+    // What sits above the hero, so it ends exactly at the bottom of the
+    // screen. Below lg the nav floats at the bottom instead, and the strip
+    // ends just above it.
+    --hero-above: var(--announce-block-size);
+    --hero-below: calc(
+      var(--nav-bar-block-size) + var(--nav-float-inset) + env(safe-area-inset-bottom)
+    );
+    // The floor, for a screen too short to share: the strip keeps a usable
+    // height and the page scrolls instead.
+    --hero-min-block: 36rem;
 
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(#{$space-10}, 6vh, #{$space-16});
-    padding-block: clamp(#{$space-10}, 8vh, #{$space-20}) $space-12;
+    gap: $space-4;
+    // A definite height, not a minimum: the strip's cards size from it.
+    // svh, never vh or dvh: Footer.module.scss has the long version.
+    block-size: max(var(--hero-min-block), calc(100svh - var(--hero-above) - var(--hero-below)));
+    padding-block-start: clamp(#{$space-6}, 4vh, #{$space-12});
     text-align: center;
 
     @include bp-lg {
-      --hero-card-inline: 25rem;
-      --hero-card-block: 18.75rem;
+      --hero-above: calc(
+        var(--announce-block-size) + var(--nav-rest-inset) + var(--nav-top-block-size)
+      );
+      --hero-below: 0px;
     }
   }
 
   .copy {
     display: flex;
+    flex: none;
     flex-direction: column;
     align-items: center;
     padding-inline: $space-4;
   }
 
-  // The rating above the title: a square, outlined label, no fill, so it
-  // reads as a note on the page rather than a second button. The border is
-  // the input border token, the one that clears 3:1 (WCAG 1.4.11).
-  .rating {
-    display: inline-flex;
+  // The rating and the project count on one line, split by a drawn rule. No
+  // outline (2026-10-28). On a phone the two stack and the rule goes.
+  .proof {
+    display: flex;
+    flex-direction: column;
     align-items: center;
     gap: $space-1;
-    margin-block-end: $space-6;
-    padding-block: $space-1;
-    padding-inline: $space-3;
-    border-style: solid;
-    border-width: 1px;
-    border-color: var(--color-border-input);
+    margin-block-end: $space-4;
     font-size: var(--font-size-sm);
     font-weight: $font-weight-medium;
     line-height: $line-height-normal;
     color: var(--color-text-primary);
+
+    @include bp-sm {
+      flex-direction: row;
+      gap: $space-3;
+    }
+  }
+
+  .divider {
+    display: none;
+
+    @include bp-sm {
+      display: block;
+      inline-size: 1px;
+      block-size: 1em;
+      background-color: currentcolor;
+    }
   }
 
   .title {
@@ -68,7 +89,7 @@
   }
 
   .lede {
-    margin-block-start: $space-4;
+    margin-block-start: $space-3;
     max-inline-size: 54rem;
     font-size: var(--type-body-lg);
     line-height: $line-height-normal;
@@ -81,7 +102,55 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: $space-4;
-    margin-block-start: clamp(#{$space-8}, 5vh, #{$space-12});
+    margin-block-start: clamp(#{$space-6}, 3vh, #{$space-8});
+  }
+
+  .byline {
+    margin-block-start: $space-4;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+  }
+
+  // --- The strip's controls -------------------------------------------------
+
+  // Above the strip, at the end of the content column.
+  .controls {
+    display: flex;
+    flex: none;
+    align-self: stretch;
+    justify-content: flex-end;
+    gap: $space-2;
+  }
+
+  // The hardware carousel's arrows and pause, as they are drawn there
+  // (Hardware.module.scss .pause, .arrow): a 48px square of glass, the glyph
+  // at 45% until hover or pressed, the ground stepping a shade on hover.
+  .control {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: $space-12;
+    block-size: $space-12;
+    flex-shrink: 0;
+    @include glass(0);
+    transition-property: background-color;
+    transition-duration: var(--duration-fast);
+    @include focus-ring($offset: -4px);
+
+    svg {
+      opacity: 0.45;
+      transition-property: opacity;
+      transition-duration: var(--duration-fast);
+    }
+
+    &:hover svg,
+    &[aria-pressed="true"] svg {
+      opacity: 1;
+    }
+
+    &:hover {
+      background-color: rgb(var(--glass-tint) / 0.5);
+    }
   }
 
   // --- The strip --------------------------------------------------------------
@@ -89,9 +158,12 @@
   // Edge to edge, out of body's capped, guttered column: body is centred, so
   // half its width minus half the viewport lands on the screen edge. html
   // carries overflow-x: clip (globals.scss), so the track running past it is
-  // never sideways scroll.
+  // never sideways scroll. It takes every pixel the copy leaves, so the
+  // cards end at the bottom of the screen.
   .strip {
     position: relative;
+    flex: 1 1 0;
+    min-block-size: 0;
     inline-size: 100vw;
     margin-inline: calc(50% - 50vw);
     overflow: hidden;
@@ -103,10 +175,12 @@
   .track {
     display: flex;
     inline-size: max-content;
+    block-size: 100%;
   }
 
   .list {
     display: flex;
+    block-size: 100%;
     list-style: none;
     gap: $space-2;
     padding-inline-end: $space-2;
@@ -122,12 +196,17 @@
 
     // Hover stops it (Shivanshu's spec), and so does focus on a card, so one
     // a keyboard user has reached does not slide away under them. On the
-    // track, not the strip: the pause button keeps focus after a press, and
-    // on the strip that focus would hold it still after "play".
+    // track, not the strip, so focus on a control never holds it.
     .track:hover,
     .track:focus-within,
     .strip[data-paused] .track {
       animation-play-state: paused;
+    }
+
+    // An arrow's glide runs even while paused (StripControls); after the
+    // rule above, so it wins at equal specificity.
+    .strip[data-nudging] .track {
+      animation-play-state: running;
     }
   }
 
@@ -137,11 +216,13 @@
     }
   }
 
+  // As tall as the strip, 4:3: the height is the space left, the width
+  // follows it.
   .card {
     position: relative;
     flex: none;
-    inline-size: var(--hero-card-inline);
-    block-size: var(--hero-card-block);
+    block-size: 100%;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
     isolation: isolate;
 
@@ -180,7 +261,7 @@
     align-items: flex-start;
     justify-content: flex-end;
     gap: $space-1;
-    padding: $space-3;
+    padding: $space-4;
     text-align: start;
     color: var(--color-text-inverse);
     background-image: linear-gradient(to bottom, transparent, var(--hero-card-shade));
@@ -222,31 +303,16 @@
   }
 
   .cardLine {
+    max-inline-size: 28rem;
     font-size: var(--font-size-sm);
     line-height: $line-height-normal;
   }
 
-  // Top corner: the cards' CTAs sit at the foot, and on a phone the overlay
-  // is always showing.
-  .pause {
-    position: absolute;
-    z-index: 3;
-    inset-block-start: $space-2;
-    inset-inline-end: $space-2;
-    display: grid;
-    place-items: center;
-    inline-size: var(--size-touch-target);
-    block-size: var(--size-touch-target);
-    border: 0;
-    background-color: var(--color-bg-canvas);
-    color: var(--color-text-primary);
-    @include focus-ring;
-  }
-
-  // After .card and .pause, so these win at equal specificity.
+  // After .card and .control, so these win at equal specificity.
   //
-  // Nothing moves: the strip scrolls sideways under the visitor's own hand,
-  // and the second copy and the pause button have nothing to do.
+  // Nothing moves: the strip scrolls sideways under the visitor's own hand
+  // (or the arrows), and the second copy and the pause button have nothing
+  // to do.
   @media (prefers-reduced-motion: reduce) {
     .strip {
       overflow-x: auto;
@@ -258,61 +324,8 @@
     }
 
     .list[data-copy],
-    .pause {
+    .control[data-pause] {
       display: none;
     }
-  }
-
-  // --- Proof --------------------------------------------------------------------
-
-  .proof {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $space-6;
-    padding-inline: $space-4;
-  }
-
-  .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: $space-4;
-    padding-block: $space-2;
-    padding-inline: $space-2 $space-6;
-    border-style: solid;
-    border-width: 1px;
-    border-color: var(--color-text-primary);
-    border-radius: var(--radius-full);
-    font-size: var(--type-body-lg);
-    font-weight: $font-weight-medium;
-    color: var(--color-text-primary);
-    text-align: start;
-
-    @include bp-lg {
-      font-size: var(--font-size-lg);
-    }
-  }
-
-  .faces {
-    display: flex;
-    flex: none;
-  }
-
-  .face {
-    inline-size: var(--hero-face-size);
-    block-size: var(--hero-face-size);
-    border-style: solid;
-    border-width: 1px;
-    border-color: var(--brown-600);
-    border-radius: var(--radius-full);
-
-    & + & {
-      margin-inline-start: var(--hero-face-overlap);
-    }
-  }
-
-  .byline {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-primary);
   }
 }

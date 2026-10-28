@@ -2,13 +2,15 @@
 @use "../../styles/mixins" as *;
 
 @layer components {
-  // brown-900 ground, brown-300 text: 7.9:1.
+  // brown-900 ground, brown-100 text at 70%: 8.6:1.
   .bar {
     // Edge to edge, out of body's capped, guttered column: body is centred,
     // so half its width minus half the viewport lands on the screen edge.
     margin-inline: calc(50% - 50vw);
+    // Exactly this tall: the homepage hero subtracts it.
+    min-block-size: var(--announce-block-size);
     background-color: var(--brown-900);
-    color: var(--brown-300);
+    color: color-mix(in srgb, var(--brown-100) 70%, transparent);
     font-size: var(--font-size-sm);
     line-height: $line-height-normal;
   }
@@ -47,7 +49,7 @@
       color: var(--brown-100);
     }
 
-    @include focus-ring(var(--brown-300), -2px);
+    @include focus-ring(var(--brown-100), -2px);
   }
 
   .arrow {
@@ -63,7 +65,7 @@
       color: var(--brown-100);
     }
 
-    @include focus-ring(var(--brown-300), -2px);
+    @include focus-ring(var(--brown-100), -2px);
   }
 
   // From md: all three in one centred row, split by a rule.

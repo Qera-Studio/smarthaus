@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "./fixtures";
-import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
+import {
+  expectAccessible,
+  expectHydrated,
+  expectNoEmDash,
+  expectNoHorizontalOverflow,
+  withConsentDecided,
+} from "./checks";
 
 /**
  * The homepage hero in a browser, on all three devices: the strip drifts,
@@ -15,10 +21,17 @@ const cards = (page: Page) => strip(page).locator("ul:not([data-copy]) > li");
 const overlayOf = (page: Page, index: number) => cards(page).nth(index).locator("> div");
 const pause = (page: Page) => page.getByRole("button", { name: "Pause the images" });
 
-/** Hover a card by coordinates: hover() waits for a still element, and this one moves. */
+/**
+ * Hover a card by coordinates: hover() waits for a still element, and this
+ * one moves. Near the card's top, clear of the consent banner in the bottom
+ * corner, and kept on screen: the cards are wide enough that the third
+ * one's centre can sit past the right edge.
+ */
 async function hoverCard(page: Page, index: number) {
   const box = (await cards(page).nth(index).boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const width = page.viewportSize()!.width;
+  const x = Math.min(box.x + box.width / 2, width - 8);
+  await page.mouse.move(Math.max(x, box.x + 8), box.y + box.height * 0.2);
 }
 
 /** The track's offset now and a little later: equal means it is not moving. */
@@ -90,32 +103,124 @@ test("each card's CTA leads to the solutions page", async ({ page }) => {
   await expect(page).toHaveURL(/\/solutions$/);
 });
 
-test("the projects pill and the byline sit under the strip", async ({ page }) => {
-  const pill = page.getByText("180+ projects completed across Dubai");
-  const byline = page.getByText("SIRA Licence | Smarthaus by Maple Technologies.");
-  await pill.scrollIntoViewIfNeeded();
-  await expect(pill).toBeVisible();
-  await expect(byline).toBeVisible();
-  const stripBox = await strip(page).boundingBox();
-  const pillBox = await pill.boundingBox();
-  const bylineBox = await byline.boundingBox();
-  expect(pillBox!.y).toBeGreaterThan(stripBox!.y + stripBox!.height);
-  expect(bylineBox!.y).toBeGreaterThan(pillBox!.y + pillBox!.height);
+test("the proof line, title, CTAs and SIRA line read top to bottom above the strip", async ({
+  page,
+}) => {
+  const order = [
+    page.getByText("180+ projects completed across Dubai"),
+    page.getByRole("heading", { level: 1 }),
+    page.getByRole("link", { name: "WhatsApp", exact: true }),
+    page.getByText("SIRA Licence | Smarthaus by Maple Technologies."),
+    pause(page),
+    strip(page),
+  ];
+  const tops = [];
+  for (const locator of order) tops.push((await locator.boundingBox())!.y);
+  expect(tops).toEqual([...tops].sort((a, b) => a - b));
 });
 
-test("the pause button does not cover any card's CTA", async ({ page }) => {
-  await pause(page).click();
-  const button = (await pause(page).boundingBox())!;
-  for (const link of await cards(page).getByRole("link").all()) {
-    const box = await link.boundingBox();
-    if (!box) continue;
-    const overlaps =
-      box.x < button.x + button.width &&
-      button.x < box.x + box.width &&
-      box.y < button.y + button.height &&
-      button.y < box.y + box.height;
-    expect(overlaps).toBe(false);
+test("the rating and the project count share one line on a wide screen", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 640, "phones stack the two");
+  const rating = (await page.getByText(/4\.8 on Google reviews/).boundingBox())!;
+  const count = (await page.getByText("180+ projects completed across Dubai").boundingBox())!;
+  expect(Math.abs(rating.y - count.y)).toBeLessThan(2);
+  expect(count.x).toBeGreaterThan(rating.x + rating.width);
+  const fontSize = (text: RegExp | string) =>
+    page.getByText(text).evaluate((el) => getComputedStyle(el).fontSize);
+  expect(await fontSize("180+ projects completed across Dubai")).toBe(
+    await fontSize(/4\.8 on Google reviews/),
+  );
+});
+
+test("the rating line has no outline", async ({ page }) => {
+  const line = page.getByText(/4\.8 on Google reviews/).locator("xpath=..");
+  await expect(line).toHaveCSS("border-top-style", "none");
+});
+
+test("the strip ends exactly at the bottom of the screen, or just above a phone's nav", async ({
+  page,
+}) => {
+  await page.evaluate(() => scrollTo(0, 0));
+  const stripBox = (await strip(page).boundingBox())!;
+  const bottom = stripBox.y + stripBox.height;
+  const height = page.viewportSize()!.height;
+  if ((page.viewportSize()?.width ?? 0) >= 1024) {
+    expect(Math.abs(bottom - height)).toBeLessThanOrEqual(1);
+  } else {
+    const nav = (await page.locator("header").boundingBox())!;
+    expect(bottom).toBeLessThanOrEqual(nav.y);
+    expect(nav.y - bottom).toBeLessThan(24);
   }
+});
+
+test("the cards are as tall as the strip, at 4:3", async ({ page }) => {
+  const stripBox = (await strip(page).boundingBox())!;
+  const card = (await cards(page).first().boundingBox())!;
+  expect(Math.abs(card.height - stripBox.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(card.width / card.height - 4 / 3)).toBeLessThan(0.01);
+});
+
+test.describe("the arrows", () => {
+  // The glide's length (StripControls NUDGE_MS) and a frame or two to land.
+  const NUDGE_SETTLE = 700;
+  const next = (page: Page) => page.getByRole("button", { name: "Next image" });
+  const prev = (page: Page) => page.getByRole("button", { name: "Previous image" });
+  const firstX = (page: Page) =>
+    cards(page)
+      .first()
+      .evaluate((el) => el.getBoundingClientRect().x);
+  const cardWidth = async (page: Page) => (await cards(page).first().boundingBox())!.width;
+
+  test.beforeEach(async ({ page }) => {
+    await expectHydrated(page);
+    // Paused, so only the arrows move it.
+    await pause(page).click();
+  });
+
+  test("next carries the strip one card left, to a card's edge", async ({ page }) => {
+    const width = await cardWidth(page);
+    const before = await firstX(page);
+    await next(page).click();
+    await page.waitForTimeout(NUDGE_SETTLE);
+    const after = await firstX(page);
+    // Lands on an edge: the first card is a whole number of steps along.
+    const step = width + 8;
+    expect(before - after).toBeGreaterThan(0);
+    expect(before - after).toBeLessThanOrEqual(step + 1);
+    const offset = ((-after % step) + step) % step;
+    expect(Math.min(offset, step - offset)).toBeLessThan(1.5);
+  });
+
+  test("previous carries it back the other way", async ({ page }) => {
+    await next(page).click();
+    await page.waitForTimeout(NUDGE_SETTLE);
+    await next(page).click();
+    await page.waitForTimeout(NUDGE_SETTLE);
+    const before = await firstX(page);
+    await prev(page).click();
+    await page.waitForTimeout(NUDGE_SETTLE);
+    expect(await firstX(page)).toBeGreaterThan(before);
+  });
+
+  test("leave a paused strip paused", async ({ page }) => {
+    await next(page).click();
+    await page.waitForTimeout(NUDGE_SETTLE);
+    await page.mouse.move(0, 0);
+    const [a, b] = await drift(page);
+    expect(a).toBe(b);
+    await expect(pause(page)).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("look like the hardware carousel's buttons", async ({ page }) => {
+    const hardwarePause = page.getByRole("button", { name: "Pause automatic advance" });
+    const props = ["inline-size", "block-size", "border-top-style", "background-color"];
+    const read = (locator: import("@playwright/test").Locator) =>
+      locator.evaluate(
+        (el, names) => names.map((n) => getComputedStyle(el).getPropertyValue(n)),
+        props,
+      );
+    expect(await read(next(page))).toEqual(await read(hardwarePause));
+  });
 });
 
 test.describe("with a mouse", () => {
@@ -178,6 +283,12 @@ test.describe("under reduced motion", () => {
     expect(await track(page).evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
   });
 
+  test("the arrows scroll the strip a card instead of gliding it", async ({ page }) => {
+    await expectHydrated(page);
+    await page.getByRole("button", { name: "Next image" }).click();
+    await expect.poll(() => strip(page).evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+  });
+
   test("drops the loop's second copy and the pause button", async ({ page }) => {
     await expect(strip(page).locator("ul[data-copy]")).toBeHidden();
     await expect(pause(page)).toBeHidden();
@@ -211,9 +322,12 @@ test.describe("under reduced motion", () => {
 });
 
 test.describe("keyboard", () => {
-  test("Tab runs CTAs, then each card's link once, then the pause button", async ({ page }) => {
+  test("Tab runs CTAs, the three controls, then each card's link once", async ({ page }) => {
     await page.getByRole("link", { name: "WhatsApp", exact: true }).focus();
     const expected = [
+      "Previous image",
+      "Pause the images",
+      "Next image",
       "View lighting",
       "View curtains",
       "View cameras",
@@ -222,7 +336,6 @@ test.describe("keyboard", () => {
       "View garage doors",
       "View air conditioning",
       "View audio",
-      "Pause the images",
     ];
     for (const name of expected) {
       await page.keyboard.press("Tab");
@@ -307,14 +420,19 @@ test.describe("200% zoom @zoom", () => {
     await expect(page.getByRole("link", { name: "Book a site visit" }).first()).toBeVisible();
   });
 
-  test("the pill wraps inside the screen rather than running off it", async ({ page }) => {
+  test("the proof line stays inside the screen", async ({ page }) => {
     await page.goto("/");
-    const pill = page.getByText("180+ projects completed across Dubai");
-    await pill.scrollIntoViewIfNeeded();
-    const box = (await pill.boundingBox())!;
+    const line = page.getByText(/4\.8 on Google reviews/).locator("xpath=..");
+    const box = (await line.boundingBox())!;
     const width = await page.evaluate(() => document.documentElement.clientWidth);
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(width);
+  });
+
+  test("a screen too short to share keeps the strip usable", async ({ page }) => {
+    await page.goto("/");
+    const height = (await strip(page).boundingBox())!.height;
+    expect(height).toBeGreaterThan(120);
   });
 });
 
@@ -387,6 +505,9 @@ test.describe("the loop", () => {
 test.describe("every card, with a mouse", () => {
   test.beforeEach(async ({ hasTouch, page }) => {
     test.skip(hasTouch, "hover is a pointer behaviour");
+    // The banner covers the first cards on a 1280x720 screen.
+    await withConsentDecided(page);
+    await page.goto("/");
     await pause(page).click();
     await page.mouse.move(0, 0);
   });
@@ -442,18 +563,6 @@ test("the largest paint is the h1 or an eager strip image, never a lazy one", as
   }
 });
 
-test("cards are 400 by 300 on a wide screen and smaller on a phone", async ({ page }) => {
-  const box = (await cards(page).first().boundingBox())!;
-  const wide = (page.viewportSize()?.width ?? 0) >= 1024;
-  if (wide) {
-    expect(Math.round(box.width)).toBe(400);
-    expect(Math.round(box.height)).toBe(300);
-  } else {
-    expect(Math.round(box.width)).toBe(288);
-    expect(Math.round(box.height)).toBe(216);
-  }
-});
-
 test("every card's overlay content stays inside its card", async ({ page }) => {
   await pause(page).click();
   for (const index of [0, 2, 7]) {
@@ -467,37 +576,8 @@ test("every card's overlay content stays inside its card", async ({ page }) => {
   }
 });
 
-test.describe("the projects pill", () => {
-  const faces = (page: Page) =>
-    hero(page).locator(
-      "img[src*='s1.png'], img[src*='s2.png'], img[src*='s3.png'], img[src*='s4.png'], img[src*='s5.png']",
-    );
-
-  test("shows five round faces, each loaded, with the brown-600 ring", async ({ page }) => {
-    await page.getByText("180+ projects completed across Dubai").scrollIntoViewIfNeeded();
-    await expect(faces(page)).toHaveCount(5);
-    for (const face of await faces(page).all()) {
-      await expect(face).toHaveCSS("border-top-color", "rgb(122, 85, 55)");
-      await expect
-        .poll(() => face.evaluate((el) => (el as HTMLImageElement).naturalWidth))
-        .toBeGreaterThan(0);
-    }
-  });
-
-  test("overlaps each face onto the last", async ({ page }) => {
-    const boxes = await faces(page).evaluateAll((all) =>
-      all.map((el) => el.getBoundingClientRect()),
-    );
-    for (let i = 1; i < boxes.length; i += 1) {
-      expect(boxes[i]!.x).toBeLessThan(boxes[i - 1]!.x + boxes[i - 1]!.width);
-    }
-  });
-
-  test("keeps the faces out of the accessibility tree", async ({ page }) => {
-    for (const face of await faces(page).all()) {
-      await expect(face).toHaveAttribute("alt", "");
-    }
-  });
+test("no faces are left on the page", async ({ page }) => {
+  await expect(hero(page).locator("img[src*='s1.png']")).toHaveCount(0);
 });
 
 test.describe("under reduced motion, with a mouse", () => {
@@ -505,6 +585,8 @@ test.describe("under reduced motion, with a mouse", () => {
 
   test("hovering a card still shows its overlay", async ({ page, hasTouch }) => {
     test.skip(hasTouch, "hover is a pointer behaviour");
+    await withConsentDecided(page);
+    await page.goto("/");
     await hoverCard(page, 1);
     await expect(overlayOf(page, 1)).toHaveCSS("opacity", "1");
   });

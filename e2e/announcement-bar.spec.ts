@@ -29,14 +29,17 @@ test("passes axe and does not overflow", async ({ page }) => {
   await expectNoHorizontalOverflow(page);
 });
 
-test("sits above the nav, edge to edge, on brown-900", async ({ page }) => {
+test("sits above the nav, edge to edge, brown-100 at 70% on brown-900", async ({ page }) => {
   const barBox = (await bar(page).boundingBox())!;
   const width = await page.evaluate(() => document.documentElement.clientWidth);
   expect(Math.round(barBox.y)).toBe(0);
   expect(Math.round(barBox.x)).toBe(0);
   expect(Math.round(barBox.width)).toBe(width);
   await expect(bar(page)).toHaveCSS("background-color", "rgb(20, 17, 14)");
-  await expect(bar(page)).toHaveCSS("color", "rgb(196, 163, 125)");
+  // brown-100 at 70%: Chromium reports the mix as color(srgb ... / 0.7).
+  const color = await bar(page).evaluate((el) => getComputedStyle(el).color);
+  expect(color).toMatch(/0\.7\)$/);
+  expect(color).toMatch(/^color\(srgb 0\.94\d* 0\.91\d* 0\.86\d*|^rgba\(240, 233, 221/);
 });
 
 test("is on inner pages too", async ({ page }) => {

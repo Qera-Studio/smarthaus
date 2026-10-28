@@ -90,7 +90,15 @@ describe("HomeHero.module.scss", () => {
       ]);
     });
 
-    test("does not stop on focus anywhere in the strip, or the pause button would hold it", () => {
+    test("an arrow's glide runs even while paused, and wins by coming later", () => {
+      const motion = media("(prefers-reduced-motion: no-preference)");
+      expect(rule(".strip[data-nudging] .track", motion)).toMatch(
+        /animation-play-state:\s*running/,
+      );
+      expect(motion.indexOf("[data-nudging]")).toBeGreaterThan(motion.indexOf("[data-paused]"));
+    });
+
+    test("does not stop on focus anywhere in the strip, or a control would hold it", () => {
       expect(css).not.toMatch(/\.strip:focus-within/);
       expect(css).not.toMatch(/\.strip:hover/);
     });
@@ -105,16 +113,19 @@ describe("HomeHero.module.scss", () => {
       expect(rule(".card", reduce())).toMatch(/scroll-snap-align:\s*start/);
     });
 
-    test("drops the loop's second copy and the pause button", () => {
-      expect(reduce()).toMatch(/\.list\[data-copy\],\s*\.pause\s*\{\s*display:\s*none/);
+    test("drops the loop's second copy and the pause button, keeping the arrows", () => {
+      expect(reduce()).toMatch(
+        /\.list\[data-copy\],\s*\.control\[data-pause\]\s*\{\s*display:\s*none/,
+      );
+      expect(reduce()).not.toMatch(/\.control\s*\{/);
     });
 
-    test("comes after .card and .pause, so it wins at equal specificity", () => {
+    test("comes after .card and .control, so it wins at equal specificity", () => {
       const at = css.indexOf("@media (prefers-reduced-motion: reduce)");
       const after = at + reduce().length;
-      expect(css.lastIndexOf(".pause {", at)).toBeGreaterThan(-1);
+      expect(css.lastIndexOf(".control {", at)).toBeGreaterThan(-1);
       expect(css.lastIndexOf(".card {", at)).toBeGreaterThan(-1);
-      expect(css.indexOf(".pause {", after)).toBe(-1);
+      expect(css.indexOf(".control {", after)).toBe(-1);
       expect(css.indexOf(".card {", after)).toBe(-1);
     });
   });
@@ -186,34 +197,71 @@ describe("HomeHero.module.scss", () => {
       expect(strip).toMatch(/overflow:\s*hidden/);
     });
 
-    test("cards are 400 by 300 from lg, smaller on a phone", () => {
-      expect(rule(".hero")).toMatch(/--hero-card-inline:\s*18rem/);
-      expect(css).toMatch(/--hero-card-inline:\s*25rem/);
-      expect(css).toMatch(/--hero-card-block:\s*18\.75rem/);
+    test("the hero is exactly the screen under what sits above it, with a floor", () => {
+      const hero = rule(".hero");
+      expect(hero).toMatch(
+        // Sass drops the calc() inside max(); the arithmetic is the same.
+        /block-size:\s*max\(var\(--hero-min-block\), (?:calc\()?100svh - var\(--hero-above\) - var\(--hero-below\)\)?\)/,
+      );
+      expect(hero).not.toMatch(/min-block-size/);
+      expect(hero).not.toMatch(/padding-block-end/);
+    });
+
+    test("below lg it ends above the floating nav; from lg the nav is above", () => {
+      expect(rule(".hero")).toMatch(/--hero-above:\s*var\(--announce-block-size\)/);
+      expect(rule(".hero")).toMatch(/--hero-below:\s*calc\(\s*var\(--nav-bar-block-size\)/);
+      expect(css).toMatch(
+        /--hero-above:\s*calc\(\s*var\(--announce-block-size\) \+ var\(--nav-rest-inset\) \+ var\(--nav-top-block-size\)\s*\)/,
+      );
+      expect(css).toMatch(/--hero-below:\s*0px/);
+    });
+
+    test("the strip takes every pixel the copy leaves", () => {
+      const strip = rule(".strip");
+      expect(strip).toMatch(/flex:\s*1 1 0/);
+      expect(strip).toMatch(/min-block-size:\s*0/);
+      expect(rule(".copy")).toMatch(/flex:\s*none/);
+      expect(rule(".controls")).toMatch(/flex:\s*none/);
+    });
+
+    test("cards are as tall as the strip, at 4:3", () => {
+      for (const selector of [".track", ".list", ".card"]) {
+        expect(rule(selector)).toMatch(/block-size:\s*100%/);
+      }
+      expect(rule(".card")).toMatch(/aspect-ratio:\s*4\s*\/\s*3/);
+      expect(rule(".card")).not.toMatch(/inline-size:/);
     });
 
     test("images fill their card without distortion", () => {
       expect(rule(".image")).toMatch(/object-fit:\s*cover/);
     });
 
-    test("the pause button is a full touch target, in the corner away from the CTAs", () => {
-      const pause = rule(".pause");
-      expect(pause).toMatch(/inline-size:\s*var\(--size-touch-target\)/);
-      expect(pause).toMatch(/block-size:\s*var\(--size-touch-target\)/);
-      expect(pause).toMatch(/inset-block-start:/);
-      expect(pause).not.toMatch(/inset-block-end:/);
+    test("the controls sit at the end of the column, above the strip", () => {
+      const controls = rule(".controls");
+      expect(controls).toMatch(/justify-content:\s*flex-end/);
+      expect(controls).toMatch(/align-self:\s*stretch/);
     });
 
-    test("the faces overlap and carry the brown-600 ring", () => {
-      expect(rule(".face")).toMatch(/border-color:\s*var\(--brown-600\)/);
-      expect(rule(".face")).toMatch(/border-radius:\s*var\(--radius-full\)/);
-      expect(rule(".face + .face")).toMatch(/margin-inline-start:\s*var\(--hero-face-overlap\)/);
+    test("each control is the hardware carousel's: a 48px glass square", () => {
+      const control = rule(".control");
+      expect(control).toMatch(/inline-size:\s*48px/);
+      expect(control).toMatch(/block-size:\s*48px/);
+      expect(control).toMatch(/backdrop-filter|background-color:\s*var\(--glass-bg/);
+      expect(css).toMatch(/\.control svg\s*\{\s*opacity:\s*0\.45/);
+      expect(css).toMatch(
+        /\.control:hover svg,\s*\.control\[aria-pressed=true\] svg\s*\{\s*opacity:\s*1/,
+      );
     });
 
-    test("the pill is an outlined capsule", () => {
-      const pill = rule(".pill");
-      expect(pill).toMatch(/border-radius:\s*var\(--radius-full\)/);
-      expect(pill).toMatch(/border-style:\s*solid/);
+    test("the rating and the count share a line from sm, split by a drawn rule", () => {
+      expect(rule(".proof")).toMatch(/flex-direction:\s*column/);
+      expect(css).toMatch(/\.proof\s*\{\s*flex-direction:\s*row/);
+      expect(rule(".divider")).toMatch(/display:\s*none/);
+      expect(css).toMatch(/\.divider\s*\{\s*display:\s*block;\s*inline-size:\s*1px/);
+    });
+
+    test("the rating line has no outline any more", () => {
+      expect(rule(".proof")).not.toMatch(/border/);
     });
 
     test("lists draw no bullets", () => {

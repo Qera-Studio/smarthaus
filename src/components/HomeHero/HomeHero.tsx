@@ -7,7 +7,7 @@ import {
 } from "../../content/hero-carousel";
 import { whatsappLink } from "../../lib/contact";
 import { Button } from "../Button";
-import { CarouselPause } from "./CarouselPause";
+import { StripControls } from "./StripControls";
 import styles from "./HomeHero.module.scss";
 
 /**
@@ -22,9 +22,6 @@ export const PROJECTS = "180+ projects completed across Dubai";
 
 /** Pre-filled per AGENTS.md: the page topic and the project type. */
 const WHATSAPP_MESSAGE = "Hi, I'm interested in home automation for my villa.";
-
-/** The five portraits in the projects pill, public/hero/s1.png to s5.png. */
-const FACES = ["s1", "s2", "s3", "s4", "s5"] as const;
 
 /**
  * How the card loads. "first" is the page's largest paint: fetched at high
@@ -42,7 +39,9 @@ function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
         width={item.image.width}
         height={item.image.height}
         alt={item.image.alt}
-        sizes="(min-width: 64rem) 25rem, 18rem"
+        // A card is as tall as the space under the copy, at 4:3: about 500px
+        // wide on a laptop, 300 on a phone.
+        sizes="(min-width: 64rem) 32rem, 20rem"
         loading={load === "lazy" ? "lazy" : "eager"}
         fetchPriority={load === "first" ? "high" : undefined}
       />
@@ -58,14 +57,16 @@ function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
 }
 
 /**
- * The homepage hero: rating, title, one line, two CTAs, then a strip of
- * images drifting right to left, and the projects pill under it.
+ * The homepage hero: the rating and the project count on one line, the
+ * title, one line, two CTAs and the SIRA byline, then the strip's controls
+ * and a strip of images drifting right to left that runs to the bottom of
+ * the screen.
  *
  * Server Component. The strip moves on a CSS animation over two copies of the
  * list; the second copy is inert and hidden from AT, so each card is read and
  * focused once. Hover or focus inside the strip stops it (the stylesheet), and
- * CarouselPause is the button WCAG 2.2.2 asks for. Under reduced motion the
- * strip does not move and scrolls sideways instead.
+ * StripControls holds the pause button WCAG 2.2.2 asks for and the arrows.
+ * Under reduced motion the strip does not move and scrolls sideways instead.
  *
  * Replaced FluidHero on 2026-10-28; src/components/FluidHero stays, unmounted.
  * The h1 is the page's only one. The LCP element is the first card's image
@@ -76,8 +77,14 @@ export function HomeHero() {
   return (
     <section className={styles.hero} aria-labelledby="hero-title" data-hero>
       <div className={styles.copy}>
-        <p className={styles.rating}>
-          <span aria-hidden="true">★</span> {RATING} on Google reviews
+        <p className={styles.proof}>
+          <span>
+            <span aria-hidden="true">★</span> {RATING} on Google reviews
+          </span>
+          {/* The rule is drawn, not read: a screen reader would say "vertical
+              bar". The two claims are separate spans either way. */}
+          <span className={styles.divider} aria-hidden="true" />
+          <span>{PROJECTS}</span>
         </p>
         <h1 className={styles.title} id="hero-title">
           Home at your fingertips
@@ -94,7 +101,10 @@ export function HomeHero() {
             WhatsApp
           </Button>
         </div>
+        <p className={styles.byline}>SIRA Licence | Smarthaus by Maple Technologies.</p>
       </div>
+
+      <StripControls className={styles.controls} buttonClassName={styles.control} />
 
       <div className={styles.strip} data-hero-strip>
         <div className={styles.track}>
@@ -113,26 +123,6 @@ export function HomeHero() {
             ))}
           </ul>
         </div>
-        <CarouselPause className={styles.pause} />
-      </div>
-
-      <div className={styles.proof}>
-        <p className={styles.pill}>
-          <span className={styles.faces} aria-hidden="true">
-            {FACES.map((face) => (
-              <Image
-                key={face}
-                className={styles.face}
-                src={`/hero/${face}.png`}
-                width={38}
-                height={38}
-                alt=""
-              />
-            ))}
-          </span>
-          {PROJECTS}
-        </p>
-        <p className={styles.byline}>SIRA Licence | Smarthaus by Maple Technologies.</p>
       </div>
     </section>
   );

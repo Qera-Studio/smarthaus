@@ -376,8 +376,20 @@ $page-gutter: $space-6;
   // Inline gutter, applied below the cap only (see globals.scss).
   --page-gutter: #{$page-gutter};
   --content-gutter: #{$space-6};
+  // The contact bar above the nav (AnnouncementBar), which sets its own
+  // height from this. 44px below md, where its arrows are full touch
+  // targets; 37px from md, one 14px line and 8px either side. The homepage
+  // hero subtracts it to end exactly at the bottom of the screen.
+  --announce-block-size: 44px;
+  // From lg, the gap between the contact bar and the nav at the top of the
+  // page (Shivanshu, 2026-10-28). The scrolled capsule keeps its own 16px.
+  --nav-rest-inset: #{$space-1};
+  // The nav's height at the top from lg, exactly: the hero sizes against it,
+  // so unlike --nav-capsule-block-size it is not rounded up. Measured 51px.
+  --nav-top-block-size: 51px;
 
   @media (min-width: 768px) {
     --content-gutter: #{$space-12};
+    --announce-block-size: 37px;
   }
 }

@@ -533,10 +533,13 @@
       // the viewport.
       margin-inline: calc(-1 * var(--nav-padding-stuck));
       // Reserved in BOTH states so sticking changes nothing in the document
-      // flow: the same value is the sticky inset, so the box's top edge is
-      // identical before and after, and the padding below is reduced so the
-      // bar's overall height — and everything under it — is unchanged.
-      margin-block-start: var(--nav-stuck-inset);
+      // flow, and the padding below is reduced so the bar's overall height —
+      // and everything under it — is unchanged.
+      //
+      // 4px, not the 16px sticky inset (2026-10-28, Shivanshu): the contact
+      // bar now sits above the nav, so the nav reaches its 16px sticky inset
+      // by scrolling, continuously, and the two no longer need to match.
+      margin-block-start: var(--nav-rest-inset);
       // The capsule's padding on all four sides, so nothing about the box's
       // inside changes on stick: the content row and the logo/CTA insets are
       // identical in both states, and only the box's width moves.

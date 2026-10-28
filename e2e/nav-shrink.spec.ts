@@ -160,12 +160,13 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
 
   // The contact bar (AnnouncementBar, 2026-10-28) sits above the nav in flow.
   // At the top of the page the nav starts below it; at 80px down the bar has
-  // scrolled away and the nav holds the 16px sticky inset.
+  // scrolled away and the nav holds the 16px sticky inset. At rest the gap
+  // under the bar is 4px (2026-10-28, Shivanshu), not the sticky 16.
   const barHeight = (await page
     .getByRole("complementary", { name: "Contact Smarthaus" })
     .boundingBox())!.height;
   expect(barHeight, "the contact bar scrolls away before 80px").toBeLessThan(80);
-  const topAt = { shrink: 16, "expand back": 16 + barHeight } as const;
+  const topAt = { shrink: 16, "expand back": 4 + barHeight } as const;
 
   const { frames: shrink, settled: shrinkSettled, why } = await sample(page, 80);
   expect(shrinkSettled, `shrink finished within 5s: ${why}`).toBe(true);

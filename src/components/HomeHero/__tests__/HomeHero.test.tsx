@@ -109,10 +109,16 @@ describe("HomeHero", () => {
       }
     });
 
-    it("has its pause button inside it", () => {
+    it("has its controls above it, outside the moving track", () => {
       render(<HomeHero />);
-      const pause = screen.getByRole("button", { name: "Pause the images" });
-      expect(strip()).toContainElement(pause);
+      const names = ["Previous image", "Pause the images", "Next image"];
+      const buttons = names.map((name) => screen.getByRole("button", { name }));
+      for (const button of buttons) {
+        expect(strip()).not.toContainElement(button);
+        expect(
+          button.compareDocumentPosition(strip()) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+      }
     });
 
     it("loads the first cards eagerly and the rest lazily", () => {
@@ -147,19 +153,40 @@ describe("HomeHero", () => {
   });
 
   describe("the proof", () => {
+    const proof = () => screen.getByText(/on Google reviews/).closest("p") as HTMLElement;
+
     it("states the approved project count", () => {
       render(<HomeHero />);
       expect(PROJECTS).toBe("180+ projects completed across Dubai");
       expect(screen.getByText(PROJECTS)).toBeInTheDocument();
     });
 
-    it("shows five faces, decorative, so AT reads only the claim", () => {
+    it("puts the rating and the project count on one line, rating first", () => {
+      render(<HomeHero />);
+      const count = screen.getByText(PROJECTS);
+      expect(proof()).toContainElement(count);
+      expect(proof().textContent).toMatch(/^★ 4\.8 on Google reviews.*180\+ projects/);
+    });
+
+    it("splits them with a drawn rule that AT does not read", () => {
+      render(<HomeHero />);
+      const spans = Array.from(proof().children);
+      expect(spans).toHaveLength(3);
+      expect(spans[1]).toHaveAttribute("aria-hidden", "true");
+      expect(spans[1]?.textContent).toBe("");
+    });
+
+    it("sits above the title", () => {
+      render(<HomeHero />);
+      const title = screen.getByRole("heading", { level: 1 });
+      expect(
+        proof().compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("shows no faces any more", () => {
       const markup = renderToStaticMarkup(<HomeHero />);
-      const faces = [...markup.matchAll(/<img[^>]*hero(?:\/|%2F)s[1-5]\.png[^>]*>/g)].map(
-        (m) => m[0],
-      );
-      expect(faces).toHaveLength(5);
-      for (const face of faces) expect(face).toMatch(/alt=""/);
+      expect(markup).not.toMatch(/hero(?:\/|%2F)s[1-5]\.png/);
     });
 
     it("names one SIRA licence, not several", () => {
@@ -170,10 +197,20 @@ describe("HomeHero", () => {
       expect(document.body.textContent).not.toMatch(/Licences/);
     });
 
-    it("comes after the strip", () => {
+    it("puts the SIRA line under the two CTAs, above the strip", () => {
       render(<HomeHero />);
-      const pill = screen.getByText(PROJECTS);
-      expect(strip().compareDocumentPosition(pill) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      const sira = screen.getByText(/^SIRA Licence/);
+      const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
+      expect(
+        whatsapp.compareDocumentPosition(sira) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(sira.compareDocumentPosition(strip()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("leaves nothing after the strip", () => {
+      render(<HomeHero />);
+      const hero = document.querySelector("section[data-hero]") as HTMLElement;
+      expect(hero.lastElementChild).toBe(strip());
     });
   });
 
