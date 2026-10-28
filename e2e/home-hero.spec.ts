@@ -336,3 +336,82 @@ test.describe("forced colours @forced-colors", () => {
     expect(box.width).toBeGreaterThanOrEqual(24);
   });
 });
+
+test.describe("the loop", () => {
+  /** Seek the strip's animation to a fraction of one pass, and hold it there. */
+  async function seek(page: Page, fraction: number) {
+    await track(page).evaluate((el, f) => {
+      const [animation] = el.getAnimations();
+      if (!animation) throw new Error("the strip is not animating");
+      const duration = Number(animation.effect?.getComputedTiming().duration);
+      animation.pause();
+      animation.currentTime = duration * f;
+    }, fraction);
+  }
+
+  /** Where the first card of each copy sits, in viewport pixels. */
+  const firsts = (page: Page) =>
+    strip(page)
+      .locator("ul")
+      .evaluateAll((lists) => lists.map((ul) => ul.firstElementChild!.getBoundingClientRect().x));
+
+  test("has no seam: the copy lands exactly where the first copy started", async ({ page }) => {
+    await seek(page, 0);
+    const [start] = await firsts(page);
+    await seek(page, 1 - 1e-9);
+    const [, copyAtEnd] = await firsts(page);
+    expect(Math.abs(copyAtEnd! - start!)).toBeLessThan(1);
+  });
+
+  test("the two copies are exactly one copy's width apart", async ({ page }) => {
+    await seek(page, 0.3);
+    const [first, copy] = await firsts(page);
+    const width = await strip(page)
+      .locator("ul")
+      .first()
+      .evaluate((ul) => ul.getBoundingClientRect().width);
+    expect(Math.abs(copy! - first! - width)).toBeLessThan(1);
+  });
+
+  test("drifts slowly: tens of pixels a second, not hundreds", async ({ page }) => {
+    const speed = await track(page).evaluate((el) => {
+      const [animation] = el.getAnimations();
+      const duration = Number(animation!.effect!.getComputedTiming().duration) / 1000;
+      return el.getBoundingClientRect().width / 2 / duration;
+    });
+    expect(speed).toBeGreaterThan(10);
+    expect(speed).toBeLessThan(80);
+  });
+});
+
+test.describe("every card, with a mouse", () => {
+  test.beforeEach(async ({ hasTouch, page }) => {
+    test.skip(hasTouch, "hover is a pointer behaviour");
+    await pause(page).click();
+    await page.mouse.move(0, 0);
+  });
+
+  test("shows its own title and CTA on hover, and only its own", async ({ page }) => {
+    const titles = [
+      ["Lighting", "View lighting"],
+      ["Curtains", "View curtains"],
+      ["Cameras", "View cameras"],
+    ] as const;
+    for (const [index, [title, cta]] of titles.entries()) {
+      await hoverCard(page, index);
+      await expect(overlayOf(page, index)).toHaveCSS("opacity", "1");
+      await expect(overlayOf(page, index).getByText(title, { exact: true })).toBeVisible();
+      await expect(overlayOf(page, index).getByRole("link", { name: cta })).toBeVisible();
+      const other = (index + 1) % titles.length;
+      await expect(overlayOf(page, other)).toHaveCSS("opacity", "0");
+    }
+  });
+
+  test("the CTA is brown-900 on brown-100, at full opacity", async ({ page }) => {
+    await hoverCard(page, 0);
+    const link = overlayOf(page, 0).getByRole("link");
+    await expect(link).toHaveCSS("background-color", "rgb(240, 233, 221)");
+    await expect(link).toHaveCSS("color", "rgb(20, 17, 14)");
+    await expect(link).toHaveCSS("opacity", "1");
+  });
+});

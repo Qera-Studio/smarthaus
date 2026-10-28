@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { HARDWARE_ITEMS } from "../hardware";
 import { HERO_CAROUSEL_HREF, HERO_CAROUSEL_ITEMS } from "../hero-carousel";
 
 /**
@@ -36,6 +37,14 @@ describe("hero carousel content", () => {
     expect(HERO_CAROUSEL_ITEMS).toHaveLength(8);
     const ids = HERO_CAROUSEL_ITEMS.map((item) => item.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("shows the same eight parts the hardware carousel describes, by the same names", () => {
+    // The strip's lines summarise hardware.ts; a part added to one and not
+    // the other would leave a card with nothing published behind it.
+    const strip = HERO_CAROUSEL_ITEMS.map((item) => item.title).sort();
+    const hardware = HARDWARE_ITEMS.map((item) => item.title).sort();
+    expect(strip).toEqual(hardware);
   });
 
   it("sends every card to the solutions page", () => {
