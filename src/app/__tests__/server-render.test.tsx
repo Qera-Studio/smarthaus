@@ -35,8 +35,8 @@ describe("the homepage", () => {
     const pages = nodes(html).filter((node) => node["@type"] === "WebPage");
     expect(pages).toEqual([expect.objectContaining({ url: "https://smarthaus.ae" })]);
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
-    // The fluid hero has no poster: the h1 is the LCP element, and it is in
-    // the server HTML. The villa poster's own check is in
+    // The hero has no poster: the h1 is the LCP element, and it is in the
+    // server HTML. The villa poster's own check is in
     // src/components/Hero/__tests__/Hero.test.tsx, where the villa hero lives
     // unmounted.
     expect(html).toMatch(/<h1[^>]*id="hero-title"/);

@@ -1,6 +1,6 @@
 import { Hardware } from "../components/Hardware";
+import { HomeHero } from "../components/HomeHero";
 import { Partners } from "../components/Partners";
-import { FluidHero } from "../components/FluidHero";
 import { HomeEnquiry } from "../components/HomeEnquiry";
 import { Pricing } from "../components/Pricing";
 import { Process } from "../components/Process";
@@ -28,7 +28,9 @@ export default function Home() {
   return (
     <>
       <JsonLd data={pageGraph(PAGE)} />
-      <FluidHero />
+      {/* FluidHero is unmounted, not deleted (2026-10-28), like the villa;
+          src/components/FluidHero stays intact. */}
+      <HomeHero />
       {/* Who stands behind the systems, before anything asks to be trusted.
           Took the Maple banner's place; src/components/Maple stays unmounted. */}
       <Partners />

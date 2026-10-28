@@ -1,6 +1,6 @@
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
@@ -441,6 +441,7 @@ Consent is owned by **Legal System §6** (Consent, Cookies & Tracking). Earlier 
   - **Regulated sector consequence:** a SIRA licence puts Smarthaus in a regulated sector, which Legal System §0 makes a `(counsel)` item — sector rules stack on top of privacy law. Open items are tracked in the privacy policy's placeholder register
 - **The About page's promises are confirmed** (Shivanshu, 2026-10-07, as true of every job today): one team designs, installs and maintains; no finished home is photographed, no address published, no plan shared; footage stays on equipment in the house; no quote without a visit. The approach cards' facts were confirmed the same day: a technician and a technical lead spend about 90 minutes at the visit, the price that follows is fixed and itemised, and most jobs are in homes already lived in. Copy in `src/content/about.ts`. Its two photographs (`public/about/`) were chosen by Shivanshu as final after the cold-blue, non-residential look was raised against the visual direction. **Open:** confirm both are licensed for commercial use
 - **TIS and Fibaro partnerships are confirmed** (formalised, confirmed by Shivanshu on 2026-10-06). The homepage's partner cards (`src/components/Partners/`, copy in `src/content/partners.ts`) say Smarthaus is a partner and installs each maker's systems, and nothing more: no tier ("certified", "authorised"), no figure and no superlative until one is confirmed with a source. `src/components/Partners/__tests__/Partners.test.tsx` fails if one slips in. Any other partner or brand reference still needs asking first
+- **"180+ projects completed across Dubai" is confirmed** (Shivanshu, 2026-10-28) for the hero's projects pill. `PROJECTS` in `src/components/HomeHero/HomeHero.tsx`; its test pins the wording. The byline names one SIRA licence, singular
 - **The four homepage figures are confirmed** (Shivanshu, 2026-10-07): Smarthaus's own record, not Maple Technologies', backed by its project and maintenance-contract records. They live in `src/content/stats.ts` and change only when those records do; `src/components/Stats/__tests__/Stats.test.tsx` pins them
 - The company founding year is a placeholder. Never invent one
 - "Sustainable Tomorrows" and similar unevidenced claims must not appear
@@ -458,6 +459,8 @@ No client photography exists and none will be sourced. Client privacy makes it p
 - Typography and confident use of space
 - Schematic diagrams
 - The brand's visual identity
+
+**One exception, temporary: the homepage hero strip** (`public/hero/hero_carousel/`, decided 2026-10-28). The client asked for lifestyle images there and Shivanshu confirmed they are licensed for our use. They are a stand-in, not a reversal of the rule: every row in `src/content/hero-carousel.ts` carries `pendingImage`, and `src/content/__tests__/hero-carousel.test.ts` fails once the last marker is cleared. The same goes for the five portraits in the projects pill (`public/hero/s1.png` to `s5.png`), which the client required: they are stock, they are not clients, so they are decorative (`alt=""`) and nothing names or quotes them.
 
 ---
 

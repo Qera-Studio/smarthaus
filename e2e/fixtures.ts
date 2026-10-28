@@ -35,6 +35,9 @@ export { expect, devices, type Locator, type Page } from "@playwright/test";
  * which honours the same Save-Data gate, so this fixture keeps it off in the
  * same way and `villa: true` opts back in to whichever hero canvas is mounted.
  * The option keeps its name: renaming it touches every spec for no behaviour.
+ *
+ * 2026-10-28: HomeHero replaced the fluid hero and has no canvas, so the
+ * option currently changes nothing on the homepage. infra.spec.ts pins that.
  */
 type Options = { villa: boolean; splash: boolean; clientAddress: string | undefined };
 

@@ -158,6 +158,15 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
     )
     .not.toBe("");
 
+  // The contact bar (AnnouncementBar, 2026-10-28) sits above the nav in flow.
+  // At the top of the page the nav starts below it; at 80px down the bar has
+  // scrolled away and the nav holds the 16px sticky inset.
+  const barHeight = (await page
+    .getByRole("complementary", { name: "Contact Smarthaus" })
+    .boundingBox())!.height;
+  expect(barHeight, "the contact bar scrolls away before 80px").toBeLessThan(80);
+  const topAt = { shrink: 16, "expand back": 16 + barHeight } as const;
+
   const { frames: shrink, settled: shrinkSettled, why } = await sample(page, 80);
   expect(shrinkSettled, `shrink finished within 5s: ${why}`).toBe(true);
 
@@ -203,8 +212,9 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
     const first = frames[0]!;
     for (const [index, f] of frames.entries()) {
       const at = `frame ${index} of ${frames.length}, stuck=${f.stuck}, ${f.widths}`;
-      // The box top is the shared inset on every frame — never 0.
-      expect(Math.round(f.top), `${label}: bar top`).toBe(16);
+      // The box top is the shared inset on every frame (below the contact
+      // bar at the top of the page), never 0.
+      expect(Math.round(f.top), `${label}: bar top`).toBe(Math.round(topAt[label]));
       // Nothing in the row moves: the links on either axis, or the CTA's row.
       expect(Math.abs(f.linksX - first.linksX), `${label}: links moved on x`).toBeLessThan(1);
       expect(Math.abs(f.linksY - first.linksY), `${label}: links moved on y`).toBeLessThan(1);

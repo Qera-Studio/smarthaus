@@ -1,0 +1,98 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer components {
+  // brown-900 ground, brown-300 text: 7.9:1.
+  .bar {
+    // Edge to edge, out of body's capped, guttered column: body is centred,
+    // so half its width minus half the viewport lands on the screen edge.
+    margin-inline: calc(50% - 50vw);
+    background-color: var(--brown-900);
+    color: var(--brown-300);
+    font-size: var(--font-size-sm);
+    line-height: $line-height-normal;
+  }
+
+  // Below md: arrow, one item, arrow.
+  .scroller {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+  }
+
+  .viewport {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .items {
+    display: flex;
+    list-style: none;
+  }
+
+  .item {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+    text-align: center;
+  }
+
+  .link {
+    display: inline-block;
+    padding-block: $space-2;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--brown-100);
+    }
+
+    @include focus-ring(var(--brown-300), -2px);
+  }
+
+  .arrow {
+    display: grid;
+    place-items: center;
+    inline-size: var(--size-touch-target);
+    block-size: var(--size-touch-target);
+    border: 0;
+    background: none;
+    color: inherit;
+
+    &:hover {
+      color: var(--brown-100);
+    }
+
+    @include focus-ring(var(--brown-300), -2px);
+  }
+
+  // From md: all three in one centred row, split by a rule.
+  @include bp-md {
+    .scroller {
+      display: block;
+    }
+
+    .arrow {
+      display: none;
+    }
+
+    .viewport {
+      overflow: visible;
+    }
+
+    .items {
+      justify-content: center;
+      gap: $space-6;
+    }
+
+    .item {
+      flex: none;
+    }
+
+    .item + .item::before {
+      // The alt text after the slash is empty: the rule is decoration.
+      content: "|" / "";
+      margin-inline-end: $space-6;
+    }
+  }
+}

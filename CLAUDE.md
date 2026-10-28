@@ -239,8 +239,10 @@ WCAG 1.2.5 applies to "prerecorded video content in synchronized media" — vide
 
 Server Components first. `'use client'` limited to:
 
-- Fluid hero canvas (`FluidHero/FluidCanvas.tsx` — raw WebGL2, dynamically imported; keeps the CSS ground and loads nothing under reduced motion, Save-Data, slow connections, or any WebGL failure. Touch is in. The canvas bleeds past the section on all four sides at a negative z level, so the liquid runs under the nav and the next section; the pointer feeds it only from inside the section. See the third motion-stack exception below)
-- Hero villa canvas (`Hero/VillaCanvas.tsx` — three.js, dynamically imported; falls back to the server-rendered poster and loads no three.js on touch, reduced motion, Save-Data, slow connections or any WebGL failure). **Unmounted, not deleted:** the homepage renders `FluidHero` in its place while the hero's content is written. `src/components/Hero/` stays intact so the villa can come back
+- Hero strip pause (`HomeHero/CarouselPause.tsx` — one toggle that sets `data-paused` on the strip). The homepage hero (`HomeHero/`) is a Server Component: its image strip drifts on a CSS animation over two copies of the list, stops on hover and on focus inside the track, and never moves under reduced motion, where it scrolls sideways instead. The button is the WCAG 2.2.2 stop that hover is not
+- Contact bar arrows (`AnnouncementBar/AnnouncementScroller.tsx` — steps the bar's one-item-wide scroll-snap row and wraps at both ends). The bar sits above the nav on every page; swiping is native scroll snap, and from md up all three items share one row with no arrows
+- Fluid hero canvas (`FluidHero/FluidCanvas.tsx` — raw WebGL2, dynamically imported; keeps the CSS ground and loads nothing under reduced motion, Save-Data, slow connections, or any WebGL failure. Touch is in. The canvas bleeds past the section on all four sides at a negative z level, so the liquid runs under the nav and the next section; the pointer feeds it only from inside the section. See the third motion-stack exception below). **Unmounted, not deleted** (2026-10-28, at Shivanshu's call): `HomeHero` replaced it, dot grid included. `src/components/FluidHero/` stays intact
+- Hero villa canvas (`Hero/VillaCanvas.tsx` — three.js, dynamically imported; falls back to the server-rendered poster and loads no three.js on touch, reduced motion, Save-Data, slow connections or any WebGL failure). **Unmounted, not deleted:** the homepage renders `HomeHero` in its place. `src/components/Hero/` stays intact so the villa can come back
 - Hero service tabs (`Hero/ServiceTabs.tsx` — ARIA tablist, selection state). Unmounted with the villa
 - About page values (`About/ValuesHover.tsx` — delegated pointer listeners that open a value while a mouse rests on it and close it when the mouse leaves, unless it was clicked; the rows are native `<details name="values">`, so one-at-a-time, click, keyboard and no-JS are the browser's)
 - Hardware carousel (`Hardware/HardwareStage.tsx` — ARIA tablist, active slide, one IntersectionObserver; the timer is a CSS animation whose `animationend` advances the slide, and it never starts under reduced motion)
@@ -288,6 +290,8 @@ The Process rail's requestAnimationFrame fallback (`ProcessFallback.tsx`) was th
 ### The third exception: the fluid hero
 
 `src/components/FluidHero/FluidCanvas.tsx` runs a `requestAnimationFrame` loop that drives a GPU fluid simulation (`fluid.ts`, `shaders.ts`) on a `<canvas>` under the hero's copy. It replaced the villa hero on the homepage on 2026-09-28, as a temporary hero while the content is written, and it is the third and last place in the codebase animating outside the stack above.
+
+**Dormant since 2026-10-28.** `HomeHero`, which animates in CSS alone, replaced it on the homepage, and the component is unmounted rather than deleted. Nothing ships it today. The exception and its conditions below stand for the day it comes back, and the number is not reused.
 
 **Why it was allowed:**
 

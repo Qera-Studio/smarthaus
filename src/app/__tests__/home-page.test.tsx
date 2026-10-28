@@ -4,15 +4,12 @@ import Home from "../page";
 
 /**
  * The homepage rendered to the HTML the server sends. The hero swap of
- * 2026-09-28 is what this pins: the fluid hero is mounted, the villa is not,
- * the page still has exactly one h1, and the other sections are where they were. Rendering the whole tree also runs every server component the
+ * 2026-10-28 is what this pins: HomeHero is mounted, the fluid hero and the
+ * villa are not, the page still has exactly one h1, and the other sections are
+ * where they were. Rendering the whole tree also runs every server component the
  * page composes, so a section that throws at render fails here, not in CI's
  * production build.
  */
-
-jest.mock("../../components/FluidHero/FluidCanvas", () => ({
-  FluidCanvas: () => <canvas data-testid="fluid" aria-hidden="true" />,
-}));
 
 // The enquiry form imports the server action, which imports Resend, which
 // wants a TextEncoder jsdom does not have. The action is not under test here.
@@ -24,7 +21,7 @@ jest.mock("../contact/actions", () => ({
 const html = () => renderToStaticMarkup(<Home />);
 
 describe("the homepage", () => {
-  test("renders the fluid hero as the first section, with its data-hero hook", () => {
+  test("renders the hero as the first section, with its data-hero hook", () => {
     const markup = html();
     const heroAt = markup.indexOf("data-hero");
     expect(heroAt).toBeGreaterThan(-1);
@@ -33,9 +30,11 @@ describe("the homepage", () => {
     expect(before).not.toMatch(/<section|<h[1-6]|<p\b/);
   });
 
-  test("mounts the fluid canvas and not the villa", () => {
+  test("mounts HomeHero, not the fluid canvas or the villa", () => {
     const markup = html();
-    expect(markup).toContain('data-testid="fluid"');
+    expect(markup).toContain("data-hero-strip");
+    expect(markup).not.toContain("<canvas");
+    expect(markup).not.toContain("data-hero-quiet");
     expect(markup).not.toContain("/hero/grid/");
     expect(markup).not.toContain("villa.glb");
     expect(markup).not.toContain("Explore the villa");
@@ -61,22 +60,9 @@ describe("the homepage", () => {
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
-  test("the canvas precedes the copy inside the hero, so it paints underneath", () => {
-    const markup = html();
-    const canvasAt = markup.indexOf('data-testid="fluid"');
-    const titleAt = markup.indexOf('id="hero-title"');
-    expect(canvasAt).toBeGreaterThan(-1);
-    expect(canvasAt).toBeLessThan(titleAt);
-  });
-
   test("the hero is a labelled section, once", () => {
     const markup = html();
     expect(markup.match(/aria-labelledby="hero-title"/g)).toHaveLength(1);
-  });
-
-  test("marks the hero's copy, CTAs and closing paragraph as quiet zones for the glyph layer", () => {
-    const markup = html();
-    expect(markup.match(/data-hero-quiet/g)).toHaveLength(3);
   });
 
   test("contains no em dash", () => {

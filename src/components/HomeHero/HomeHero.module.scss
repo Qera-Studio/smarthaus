@@ -1,0 +1,318 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer blocks {
+  .hero {
+    // L2 component tokens.
+    //
+    // One card, 400 by 300 at desktop (the Figma frame), smaller on a phone.
+    --hero-card-inline: 18rem;
+    --hero-card-block: 13.5rem;
+    // One pass of the eight cards. Slow on purpose: the strip is texture
+    // while the copy is read, not something to watch.
+    --hero-strip-duration: 80s;
+    // The hover shade, pure black at the foot of the card (Shivanshu's spec),
+    // and the blur behind it, both rising linearly from nothing at the top.
+    --hero-card-shade: rgb(0 0 0 / 30%);
+    --hero-card-blur: 12px;
+    // The five faces overlap by a third of their width (Figma: 37.5 at 25.5).
+    --hero-face-size: 38px;
+    --hero-face-overlap: -12px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(#{$space-10}, 6vh, #{$space-16});
+    padding-block: clamp(#{$space-10}, 8vh, #{$space-20}) $space-12;
+    text-align: center;
+
+    @include bp-lg {
+      --hero-card-inline: 25rem;
+      --hero-card-block: 18.75rem;
+    }
+  }
+
+  .copy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-inline: $space-4;
+  }
+
+  // The rating above the title: a square, outlined label, no fill, so it
+  // reads as a note on the page rather than a second button. The border is
+  // the input border token, the one that clears 3:1 (WCAG 1.4.11).
+  .rating {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-1;
+    margin-block-end: $space-6;
+    padding-block: $space-1;
+    padding-inline: $space-3;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--color-border-input);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-normal;
+    color: var(--color-text-primary);
+  }
+
+  .title {
+    font-size: var(--type-display);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin-block-start: $space-4;
+    max-inline-size: 54rem;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-normal;
+    color: var(--color-text-primary);
+    text-wrap: pretty;
+  }
+
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $space-4;
+    margin-block-start: clamp(#{$space-8}, 5vh, #{$space-12});
+  }
+
+  // --- The strip --------------------------------------------------------------
+
+  // Edge to edge, out of body's capped, guttered column: body is centred, so
+  // half its width minus half the viewport lands on the screen edge. html
+  // carries overflow-x: clip (globals.scss), so the track running past it is
+  // never sideways scroll.
+  .strip {
+    position: relative;
+    inline-size: 100vw;
+    margin-inline: calc(50% - 50vw);
+    overflow: hidden;
+  }
+
+  // Two copies of the list side by side. Moving the pair left by half its
+  // width puts the second copy exactly where the first started, so the loop
+  // has no seam. Each list ends in the gap, which keeps that half exact.
+  .track {
+    display: flex;
+    inline-size: max-content;
+  }
+
+  .list {
+    display: flex;
+    list-style: none;
+    gap: $space-2;
+    padding-inline-end: $space-2;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .track {
+      animation-name: hero-strip;
+      animation-duration: var(--hero-strip-duration);
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
+
+    // Hover stops it (Shivanshu's spec), and so does focus on a card, so one
+    // a keyboard user has reached does not slide away under them. On the
+    // track, not the strip: the pause button keeps focus after a press, and
+    // on the strip that focus would hold it still after "play".
+    .track:hover,
+    .track:focus-within,
+    .strip[data-paused] .track {
+      animation-play-state: paused;
+    }
+  }
+
+  @keyframes hero-strip {
+    to {
+      translate: -50% 0;
+    }
+  }
+
+  .card {
+    position: relative;
+    flex: none;
+    inline-size: var(--hero-card-inline);
+    block-size: var(--hero-card-block);
+    overflow: hidden;
+    isolation: isolate;
+
+    // The blur, behind the shade: one full blur, masked from nothing at the
+    // top to all of it at the foot. On the card, not inside .overlay: an
+    // ancestor at opacity below 1 cuts backdrop-filter off from the image, so
+    // inside the fading overlay the blur would only appear once the fade
+    // ended. It animates its own radius instead.
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      backdrop-filter: blur(0);
+      mask-image: linear-gradient(to bottom, transparent, black);
+      transition-property: backdrop-filter;
+      transition-duration: var(--duration-normal);
+      transition-timing-function: var(--ease-out);
+    }
+  }
+
+  .image {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  // Shown on hover and on focus; always shown where there is no hover, since
+  // a touch screen would otherwise never see it.
+  .overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: $space-1;
+    padding: $space-3;
+    text-align: start;
+    color: var(--color-text-inverse);
+    background-image: linear-gradient(to bottom, transparent, var(--hero-card-shade));
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-out);
+
+    // The Button sets no outer spacing; the gap above it does.
+    > :last-child {
+      margin-block-start: $space-4;
+    }
+  }
+
+  .card:hover .overlay,
+  .card:focus-within .overlay {
+    opacity: 1;
+  }
+
+  .card:hover::before,
+  .card:focus-within::before {
+    backdrop-filter: blur(var(--hero-card-blur));
+  }
+
+  @media (hover: none) {
+    .overlay {
+      opacity: 1;
+    }
+
+    .card::before {
+      backdrop-filter: blur(var(--hero-card-blur));
+    }
+  }
+
+  .cardTitle {
+    font-size: var(--font-size-xl);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-tight;
+  }
+
+  .cardLine {
+    font-size: var(--font-size-sm);
+    line-height: $line-height-normal;
+  }
+
+  // Top corner: the cards' CTAs sit at the foot, and on a phone the overlay
+  // is always showing.
+  .pause {
+    position: absolute;
+    z-index: 3;
+    inset-block-start: $space-2;
+    inset-inline-end: $space-2;
+    display: grid;
+    place-items: center;
+    inline-size: var(--size-touch-target);
+    block-size: var(--size-touch-target);
+    border: 0;
+    background-color: var(--color-bg-canvas);
+    color: var(--color-text-primary);
+    @include focus-ring;
+  }
+
+  // After .card and .pause, so these win at equal specificity.
+  //
+  // Nothing moves: the strip scrolls sideways under the visitor's own hand,
+  // and the second copy and the pause button have nothing to do.
+  @media (prefers-reduced-motion: reduce) {
+    .strip {
+      overflow-x: auto;
+      scroll-snap-type: x proximity;
+    }
+
+    .card {
+      scroll-snap-align: start;
+    }
+
+    .list[data-copy],
+    .pause {
+      display: none;
+    }
+  }
+
+  // --- Proof --------------------------------------------------------------------
+
+  .proof {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-6;
+    padding-inline: $space-4;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-4;
+    padding-block: $space-2;
+    padding-inline: $space-2 $space-6;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--color-text-primary);
+    border-radius: var(--radius-full);
+    font-size: var(--type-body-lg);
+    font-weight: $font-weight-medium;
+    color: var(--color-text-primary);
+    text-align: start;
+
+    @include bp-lg {
+      font-size: var(--font-size-lg);
+    }
+  }
+
+  .faces {
+    display: flex;
+    flex: none;
+  }
+
+  .face {
+    inline-size: var(--hero-face-size);
+    block-size: var(--hero-face-size);
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--brown-600);
+    border-radius: var(--radius-full);
+
+    & + & {
+      margin-inline-start: var(--hero-face-overlap);
+    }
+  }
+
+  .byline {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+  }
+}
