@@ -97,6 +97,29 @@ describe("hero carousel content", () => {
     }
   });
 
+  it("describes each image in its own words, without announcing it as an image", () => {
+    const alts = HERO_CAROUSEL_ITEMS.map((item) => item.image.alt);
+    expect(new Set(alts).size).toBe(alts.length);
+    for (const alt of alts) {
+      // A screen reader already says "image"; saying it again is noise.
+      expect(alt).not.toMatch(/^(image|picture|photo) of/i);
+      expect(alt).not.toMatch(/\.$/);
+    }
+  });
+
+  it("starts each line with a capital and ends it with a full stop, no question", () => {
+    for (const { line } of HERO_CAROUSEL_ITEMS) {
+      expect(line).toMatch(/^[A-Z].*\.$/);
+      expect(line).not.toContain("?");
+    }
+  });
+
+  it("names each CTA after its card, in lower case after View", () => {
+    for (const { cta } of HERO_CAROUSEL_ITEMS) {
+      expect(cta).toMatch(/^View [a-z]/);
+    }
+  });
+
   it("uses each image once", () => {
     const files = HERO_CAROUSEL_ITEMS.map((item) => item.image.src);
     expect(new Set(files).size).toBe(files.length);

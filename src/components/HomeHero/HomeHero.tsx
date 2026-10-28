@@ -26,7 +26,14 @@ const WHATSAPP_MESSAGE = "Hi, I'm interested in home automation for my villa.";
 /** The five portraits in the projects pill, public/hero/s1.png to s5.png. */
 const FACES = ["s1", "s2", "s3", "s4", "s5"] as const;
 
-function Card({ item, priority }: { item: HeroCarouselItem; priority: boolean }) {
+/**
+ * How the card loads. "first" is the page's largest paint: fetched at high
+ * priority. "eager" is on screen at load. "lazy" is everything after.
+ * Next 16 deprecated `priority`; these are the attributes it now points to.
+ */
+type Load = "first" | "eager" | "lazy";
+
+function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
   return (
     <li className={styles.card}>
       <Image
@@ -36,7 +43,8 @@ function Card({ item, priority }: { item: HeroCarouselItem; priority: boolean })
         height={item.image.height}
         alt={item.image.alt}
         sizes="(min-width: 64rem) 25rem, 18rem"
-        priority={priority}
+        loading={load === "lazy" ? "lazy" : "eager"}
+        fetchPriority={load === "first" ? "high" : undefined}
       />
       <div className={styles.overlay}>
         <p className={styles.cardTitle}>{item.title}</p>
@@ -61,8 +69,8 @@ function Card({ item, priority }: { item: HeroCarouselItem; priority: boolean })
  *
  * Replaced FluidHero on 2026-10-28; src/components/FluidHero stays, unmounted.
  * The h1 is the page's only one. The LCP element is the first card's image
- * (measured 2026-10-28, desktop and phone), which is why the first four cards
- * are priority loads and the rest lazy.
+ * (measured 2026-10-28, desktop and phone), which is why it alone is fetched
+ * at high priority, the next three eagerly, and the rest lazily.
  */
 export function HomeHero() {
   return (
@@ -92,12 +100,16 @@ export function HomeHero() {
         <div className={styles.track}>
           <ul className={styles.list} aria-label="What we install">
             {HERO_CAROUSEL_ITEMS.map((item, index) => (
-              <Card key={item.id} item={item} priority={index < 4} />
+              <Card
+                key={item.id}
+                item={item}
+                load={index === 0 ? "first" : index < 4 ? "eager" : "lazy"}
+              />
             ))}
           </ul>
           <ul className={styles.list} aria-hidden="true" inert data-copy>
             {HERO_CAROUSEL_ITEMS.map((item) => (
-              <Card key={item.id} item={item} priority={false} />
+              <Card key={item.id} item={item} load="lazy" />
             ))}
           </ul>
         </div>

@@ -115,6 +115,19 @@ describe("HomeHero", () => {
       expect(imgs.slice(4).every((img) => /loading="lazy"/.test(img))).toBe(true);
     });
 
+    it("fetches the first card at high priority, since it is the largest paint", () => {
+      const markup = renderToStaticMarkup(<HomeHero />);
+      const imgs = [...markup.matchAll(/<img[^>]*hero_carousel[^>]*>/g)].map((m) => m[0]);
+      expect(imgs[0]).toMatch(/fetchpriority="high"/i);
+      for (const img of imgs.slice(1, HERO_CAROUSEL_ITEMS.length)) {
+        expect(img).not.toMatch(/fetchpriority="high"/i);
+      }
+      // The inert copy never competes for bandwidth with the first.
+      for (const img of imgs.slice(HERO_CAROUSEL_ITEMS.length)) {
+        expect(img).not.toMatch(/fetchpriority="high"/i);
+      }
+    });
+
     it("reserves every image's box with its width and height", () => {
       const markup = renderToStaticMarkup(<HomeHero />);
       for (const { image } of HERO_CAROUSEL_ITEMS) {

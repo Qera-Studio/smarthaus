@@ -68,6 +68,13 @@ describe("CarouselPause", () => {
     expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 
+  it("does not throw with no strip around it", () => {
+    render(<CarouselPause />);
+    const button = screen.getByRole("button", { name: "Pause the images" });
+    expect(() => fireEvent.click(button)).not.toThrow();
+    expect(button).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("passes its class through", () => {
     const { button } = renderInStrip();
     expect(button).toHaveClass("pause");
