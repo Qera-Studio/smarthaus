@@ -209,3 +209,130 @@ test.describe("under reduced motion", () => {
     await expectAccessible(page, { include: "section[data-hero]" });
   });
 });
+
+test.describe("keyboard", () => {
+  test("Tab runs CTAs, then each card's link once, then the pause button", async ({ page }) => {
+    await page.getByRole("link", { name: "WhatsApp", exact: true }).focus();
+    const expected = [
+      "View lighting",
+      "View curtains",
+      "View cameras",
+      "View controllers",
+      "View smart locks",
+      "View garage doors",
+      "View air conditioning",
+      "View audio",
+      "Pause the images",
+    ];
+    for (const name of expected) {
+      await page.keyboard.press("Tab");
+      const now = await page.evaluate(
+        () =>
+          document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent,
+      );
+      expect(now?.trim()).toBe(name);
+    }
+  });
+
+  test("a focused card's link draws a visible ring", async ({ page }) => {
+    const link = cards(page).first().getByRole("link");
+    await link.focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    const outline = await link.evaluate((el) => getComputedStyle(el).outlineStyle);
+    expect(outline).not.toBe("none");
+  });
+
+  test("Space on the pause button toggles it", async ({ page }) => {
+    await pause(page).focus();
+    await page.keyboard.press("Space");
+    await expect(pause(page)).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("Space");
+    await expect(pause(page)).toHaveAttribute("aria-pressed", "false");
+  });
+});
+
+test("the hero does not shift as its images arrive", async ({ page }) => {
+  await page.goto("/", { waitUntil: "commit" });
+  const shift = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        let total = 0;
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as (PerformanceEntry & {
+            value: number;
+            hadRecentInput: boolean;
+          })[]) {
+            if (!entry.hadRecentInput) total += entry.value;
+          }
+        }).observe({ type: "layout-shift", buffered: true });
+        addEventListener("load", () => setTimeout(() => resolve(total), 500));
+        if (document.readyState === "complete") setTimeout(() => resolve(total), 500);
+      }),
+  );
+  // CLAUDE.md's project target is CLS under 0.05 for the page.
+  expect(shift).toBeLessThan(0.05);
+});
+
+test.describe("without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("the hero, the strip and the proof are all in the server HTML", async ({ page }) => {
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Home at your fingertips");
+    await expect(cards(page)).toHaveCount(8);
+    await expect(page.getByText("180+ projects completed across Dubai")).toBeVisible();
+  });
+
+  test("the strip still drifts, since it is CSS", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "the drift check below moves the mouse off the strip");
+    await page.mouse.move(0, 0);
+    const [a, b] = await drift(page);
+    expect(a).not.toBe(b);
+  });
+
+  test("a card's link is a plain link", async ({ page }) => {
+    await page.goto("/solutions");
+    await page.goBack();
+    const href = await cards(page).first().getByRole("link").getAttribute("href");
+    expect(href).toBe("/solutions");
+  });
+});
+
+// Runs only in the zoom-200 project: a 1440px laptop at 200% zoom, 720 CSS px.
+test.describe("200% zoom @zoom", () => {
+  test("the hero fits the width and its copy is readable", async ({ page }) => {
+    await page.goto("/");
+    await expectNoHorizontalOverflow(page);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Book a site visit" }).first()).toBeVisible();
+  });
+
+  test("the pill wraps inside the screen rather than running off it", async ({ page }) => {
+    await page.goto("/");
+    const pill = page.getByText("180+ projects completed across Dubai");
+    await pill.scrollIntoViewIfNeeded();
+    const box = (await pill.boundingBox())!;
+    const width = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+  });
+});
+
+// Runs only in the forced-colors project.
+test.describe("forced colours @forced-colors", () => {
+  test("a focused card still shows its title, line and a bordered CTA", async ({ page }) => {
+    await page.goto("/");
+    const link = cards(page).first().getByRole("link");
+    await link.focus();
+    await expect(overlayOf(page, 0)).toHaveCSS("opacity", "1");
+    await expect(cards(page).first().getByText("Lighting", { exact: true })).toBeVisible();
+    expect(await link.evaluate((el) => getComputedStyle(el).borderTopStyle)).toBe("solid");
+  });
+
+  test("the pause button stays visible against the page", async ({ page }) => {
+    await page.goto("/");
+    await expect(pause(page)).toBeVisible();
+    const box = (await pause(page).boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(24);
+  });
+});

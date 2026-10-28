@@ -121,3 +121,96 @@ test.describe("below md", () => {
     await expect.poll(() => shown(page)).toBe(2);
   });
 });
+
+test.describe("without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("every link is in the HTML and works as a plain link", async ({ page }) => {
+    await page.goto("/");
+    for (const name of LINKS) {
+      await expect(bar(page).getByRole("link", { name })).toHaveCount(1);
+    }
+    expect(await bar(page).getByRole("link", { name: LINKS[0] }).getAttribute("href")).toBe(
+      "tel:+971543755150",
+    );
+  });
+
+  test("a phone can still swipe to the other items", async ({ page }) => {
+    test.skip(isWide(page), "wide screens show every item");
+    await page.goto("/");
+    await viewport(page).evaluate((el) => {
+      el.scrollLeft = el.clientWidth;
+    });
+    await expect.poll(() => shown(page)).toBe(1);
+  });
+});
+
+test.describe("keyboard, from md up", () => {
+  test("Tab reaches the three links in reading order, and no arrow", async ({ page }) => {
+    test.skip(!isWide(page), "phones get the arrows in the order");
+    await page.goto("/");
+    await expectHydrated(page);
+    await page.getByRole("link", { name: "Skip to main content" }).focus();
+    for (const name of LINKS) {
+      await page.keyboard.press("Tab");
+      await expect(bar(page).getByRole("link", { name })).toBeFocused();
+    }
+  });
+});
+
+test.describe("keyboard, below md", () => {
+  test("Tab runs previous arrow, the links, then the next arrow", async ({ page }) => {
+    test.skip(isWide(page), "wide screens hide the arrows");
+    test.skip(
+      test.info().project.name === "iPhone 17",
+      "WebKit only tabs to links with the Safari option set",
+    );
+    await page.goto("/");
+    await expectHydrated(page);
+    await page.getByRole("link", { name: "Skip to main content" }).focus();
+    const stops = [
+      prev(page),
+      ...LINKS.map((name) => bar(page).getByRole("link", { name })),
+      next(page),
+    ];
+    for (const stop of stops) {
+      await page.keyboard.press("Tab");
+      await expect(stop).toBeFocused();
+    }
+  });
+
+  test("Enter on next steps the bar", async ({ page }) => {
+    test.skip(isWide(page), "wide screens hide the arrows");
+    await page.goto("/");
+    await expectHydrated(page);
+    await next(page).focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(() => shown(page)).toBe(1);
+  });
+});
+
+// Runs only in the zoom-200 project: 720 CSS px, below md.
+test.describe("200% zoom @zoom", () => {
+  test("becomes the one-at-a-time bar, and still fits", async ({ page }) => {
+    await page.goto("/");
+    await expect(next(page)).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await next(page).click();
+    await expect.poll(() => shown(page)).toBe(1);
+  });
+});
+
+// Runs only in the forced-colors project.
+test.describe("forced colours @forced-colors", () => {
+  test("the links stay readable on the bar", async ({ page }) => {
+    await page.goto("/");
+    for (const name of LINKS) {
+      await expect(bar(page).getByRole("link", { name })).toBeVisible();
+    }
+    const [fg, bg] = await bar(page).evaluate((el) => [
+      getComputedStyle(el).color,
+      getComputedStyle(el).backgroundColor,
+    ]);
+    expect(fg).not.toBe(bg);
+  });
+});
