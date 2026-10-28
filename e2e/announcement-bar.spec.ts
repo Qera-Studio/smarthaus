@@ -251,3 +251,41 @@ test.describe("on a wide screen", () => {
     expect(rule).toContain("|");
   });
 });
+
+// Every page, since the bar lives in the root layout: above the nav, never
+// inside main, so the skip link still lands past it.
+for (const route of ["/about", "/pricing", "/faq", "/privacy", "/terms", "/solutions"]) {
+  test(`${route}: the bar is the first thing on the page, outside main`, async ({ page }) => {
+    await page.goto(route);
+    await expect(bar(page)).toBeVisible();
+    expect(Math.round((await bar(page).boundingBox())!.y)).toBe(0);
+    await expect(page.locator("main aside[aria-label='Contact Smarthaus']")).toHaveCount(0);
+  });
+}
+
+test.describe("on the narrowest phone", () => {
+  test("every item fits between the arrows without clipping", async ({ page }) => {
+    test.skip(isWide(page), "wide screens show every item on one row");
+    await expectHydrated(page);
+    const view = (await viewport(page).boundingBox())!;
+    for (const [index, name] of LINKS.entries()) {
+      const link = bar(page).getByRole("link", { name });
+      // Measured where the item sits when it is the one shown.
+      const width = await link.evaluate((el) => el.getBoundingClientRect().width);
+      const text = await link.evaluate((el) => el.scrollWidth);
+      expect(width, `item ${index} is wider than the space between the arrows`).toBeLessThanOrEqual(
+        view.width,
+      );
+      expect(text).toBeLessThanOrEqual(Math.ceil(width));
+    }
+  });
+
+  test("the arrows sit at the two ends of the bar", async ({ page }) => {
+    test.skip(isWide(page), "wide screens hide the arrows");
+    const barBox = (await bar(page).boundingBox())!;
+    const left = (await prev(page).boundingBox())!;
+    const right = (await next(page).boundingBox())!;
+    expect(Math.round(left.x)).toBe(Math.round(barBox.x));
+    expect(Math.round(right.x + right.width)).toBe(Math.round(barBox.x + barBox.width));
+  });
+});
