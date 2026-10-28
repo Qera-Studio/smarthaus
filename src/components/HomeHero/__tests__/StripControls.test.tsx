@@ -1,32 +1,45 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
-import { CARDS_PER_PASS, EDGE_SLACK, NUDGE_MS, StripControls } from "../StripControls";
+import { DRAG_MIN_PX, StripControls } from "../StripControls";
 
 /**
- * The strip's buttons. Pause toggles data-paused on the strip; the arrows
- * glide the strip's CSS animation one card and pin it on the card's edge.
- * jsdom runs no CSS animation, so the track carries a stand-in with the
- * three things the arrows touch: its duration, currentTime and playbackRate.
+ * The strip's pause button, and the hand on the strip: a mouse or finger
+ * drag and a sideways trackpad swipe move it. jsdom runs no CSS animation and
+ * lays nothing out, so the track carries a stand-in animation (duration and
+ * currentTime) and a width, and the strip a scrollLeft.
  */
 
-const DURATION = 80_000;
-const CARD = DURATION / CARDS_PER_PASS;
+const DURATION = 64_000;
+// The track holds two copies; one copy is 1600px, so one pixel is 40ms.
+const TRACK_WIDTH = 3200;
+const MS_PER_PX = DURATION / (TRACK_WIDTH / 2);
 
-type FakeAnimation = {
-  currentTime: number;
-  playbackRate: number;
-  effect: unknown;
-  pause: jest.Mock;
-};
+// jsdom has no PointerEvent; without one fireEvent drops clientX and
+// pointerId. Same shim as HardwareStage.test.tsx.
+class FakePointerEvent extends MouseEvent {
+  pointerId: number;
+  pointerType: string;
+  constructor(type: string, init: PointerEventInit = {}) {
+    super(type, init);
+    this.pointerId = init.pointerId ?? 0;
+    this.pointerType = init.pointerType ?? "";
+  }
+}
+
+beforeAll(() => {
+  Object.defineProperty(window, "PointerEvent", { configurable: true, value: FakePointerEvent });
+});
 
 function setup({ animated = true, at = 0 }: { animated?: boolean; at?: number } = {}) {
-  render(
+  const utils = render(
     <section data-hero>
       <StripControls className="controls" buttonClassName="control" />
       <div data-hero-strip data-testid="strip">
         <div data-testid="track">
           <ul>
-            <li>card</li>
+            <li>
+              <a href="/solutions">View cameras</a>
+            </li>
           </ul>
         </div>
       </div>
@@ -34,41 +47,46 @@ function setup({ animated = true, at = 0 }: { animated?: boolean; at?: number } 
   );
   const strip = screen.getByTestId("strip");
   const track = screen.getByTestId("track");
-  const animation: FakeAnimation = {
+  const animation = {
     currentTime: at,
-    playbackRate: 1,
     effect: { getComputedTiming: () => ({ duration: DURATION }) },
-    pause: jest.fn(),
   };
   track.getAnimations = () => (animated ? [animation as unknown as Animation] : []);
-  strip.scrollBy = jest.fn() as unknown as typeof strip.scrollBy;
-  // jsdom lays nothing out; a card is 300px wide here.
-  strip.querySelector("li")!.getBoundingClientRect = () => ({ width: 300 }) as DOMRect;
+  track.getBoundingClientRect = () => ({ width: TRACK_WIDTH }) as DOMRect;
+  strip.setPointerCapture = jest.fn();
   return {
+    ...utils,
     strip,
     animation,
-    prev: screen.getByRole("button", { name: "Previous image" }),
+    link: screen.getByRole("link", { name: "View cameras" }),
     pause: screen.getByRole("button", { name: "Pause the images" }),
-    next: screen.getByRole("button", { name: "Next image" }),
   };
 }
 
-beforeEach(() => jest.useFakeTimers());
-afterEach(() => jest.useRealTimers());
+/** A press at x, dragged to each of the later xs, then released. */
+function drag(target: Element, xs: number[], init: PointerEventInit = {}) {
+  const [first, ...rest] = xs;
+  fireEvent.pointerDown(target, { pointerId: 1, button: 0, clientX: first, ...init });
+  for (const x of rest) fireEvent.pointerMove(target, { pointerId: 1, clientX: x, ...init });
+  fireEvent.pointerUp(target, { pointerId: 1, clientX: rest.at(-1) ?? first, ...init });
+}
 
 describe("StripControls", () => {
-  it("renders previous, pause, next, in that order, as real buttons", () => {
-    const { prev, pause, next } = setup();
-    const buttons = screen.getAllByRole("button");
-    expect(buttons).toEqual([prev, pause, next]);
-    for (const button of buttons) {
-      expect(button).toHaveAttribute("type", "button");
-      expect(button).toHaveClass("control");
-      expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
-    }
-  });
-
   describe("pause", () => {
+    it("is the one button, small, with a hidden glyph", () => {
+      const { pause } = setup();
+      expect(screen.getAllByRole("button")).toEqual([pause]);
+      expect(pause).toHaveAttribute("type", "button");
+      expect(pause).toHaveClass("control");
+      expect(pause.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+      expect(pause.querySelector("svg")).toHaveAttribute("width", "16");
+    });
+
+    it("has no arrows any more", () => {
+      setup();
+      expect(screen.queryByRole("button", { name: /Previous|Next/ })).toBeNull();
+    });
+
     it("starts unpressed, with the strip running", () => {
       const { strip, pause } = setup();
       expect(pause).toHaveAttribute("aria-pressed", "false");
@@ -94,140 +112,183 @@ describe("StripControls", () => {
       expect(glyph()).not.toBe(running);
     });
 
-    it("is the one control the stylesheet hides under reduced motion", () => {
-      const { prev, pause, next } = setup();
+    it("is marked for the stylesheet to hide under reduced motion", () => {
+      const { pause } = setup();
       expect(pause).toHaveAttribute("data-pause");
-      expect(prev).not.toHaveAttribute("data-pause");
-      expect(next).not.toHaveAttribute("data-pause");
     });
   });
 
-  describe("the arrows, with the strip animating", () => {
-    it("next glides forward to the next card's edge in NUDGE_MS", () => {
-      const { strip, animation, next } = setup({ at: CARD * 2.5 });
-      fireEvent.click(next);
-      expect(strip).toHaveAttribute("data-nudging");
-      expect(animation.playbackRate).toBeCloseTo((CARD * 3 - CARD * 2.5) / NUDGE_MS);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.currentTime).toBeCloseTo(CARD * 3);
-      expect(animation.playbackRate).toBe(1);
-      expect(strip).not.toHaveAttribute("data-nudging");
+  describe("dragging, with the strip animating", () => {
+    it("moves the strip with the hand: left is forward in the pass", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      drag(strip, [500, 450, 400]);
+      expect(animation.currentTime).toBeCloseTo(10_000 + 100 * MS_PER_PX);
     });
 
-    it("next from exactly on an edge goes a whole card", () => {
-      const { animation, next } = setup({ at: CARD * 2 });
-      fireEvent.click(next);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.currentTime).toBeCloseTo(CARD * 3);
+    it("dragging right runs the pass backwards", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      drag(strip, [400, 460]);
+      expect(animation.currentTime).toBeCloseTo(10_000 - 60 * MS_PER_PX);
     });
 
-    it("previous glides backwards to the card edge behind", () => {
-      const { animation, prev } = setup({ at: CARD * 2.5 });
-      fireEvent.click(prev);
-      expect(animation.playbackRate).toBeLessThan(0);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.currentTime).toBeCloseTo(CARD * 2);
+    it("wraps below zero into the end of the pass, the same picture", () => {
+      const { strip, animation } = setup({ at: 0 });
+      drag(strip, [400, 450]);
+      expect(animation.currentTime).toBeCloseTo(DURATION - 50 * MS_PER_PX);
     });
 
-    it("previous from the very start wraps a pass on, never below zero", () => {
-      const { animation, prev } = setup({ at: 0 });
-      fireEvent.click(prev);
-      expect(animation.currentTime).toBeCloseTo(DURATION);
-      expect(animation.playbackRate).toBeCloseTo(-CARD / NUDGE_MS);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.currentTime).toBeCloseTo(DURATION - CARD);
+    it("wraps past the end of a pass back to its start", () => {
+      const { strip, animation } = setup({ at: DURATION - 10 * MS_PER_PX });
+      drag(strip, [500, 470]);
+      expect(animation.currentTime).toBeCloseTo(20 * MS_PER_PX);
     });
 
-    it("next past the end of a pass lands back inside it", () => {
-      const { animation, next } = setup({ at: DURATION - CARD / 2 });
-      fireEvent.click(next);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.currentTime).toBeCloseTo(0);
+    it("ignores a wobble shorter than DRAG_MIN_PX", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      drag(strip, [500, 500 - (DRAG_MIN_PX - 1)]);
+      expect(animation.currentTime).toBe(10_000);
+      expect(strip.setPointerCapture).not.toHaveBeenCalled();
     });
 
-    it("two quick presses add up to two cards", () => {
-      const { animation, next } = setup({ at: CARD });
-      fireEvent.click(next);
-      act(() => jest.advanceTimersByTime(NUDGE_MS / 2));
-      fireEvent.click(next);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.currentTime).toBeCloseTo(CARD * 3);
+    it("holds the strip still under the hand, and lets it go after", () => {
+      const { strip } = setup();
+      fireEvent.pointerDown(strip, { pointerId: 1, button: 0, clientX: 500 });
+      fireEvent.pointerMove(strip, { pointerId: 1, clientX: 450 });
+      expect(strip).toHaveAttribute("data-dragging");
+      expect(strip.setPointerCapture).toHaveBeenCalledWith(1);
+      fireEvent.pointerUp(strip, { pointerId: 1, clientX: 450 });
+      expect(strip).not.toHaveAttribute("data-dragging");
     });
 
-    it("a glide runs while paused and leaves the strip paused", () => {
-      const { strip, pause, next } = setup({ at: CARD });
-      fireEvent.click(pause);
-      fireEvent.click(next);
-      expect(strip).toHaveAttribute("data-nudging");
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(strip).not.toHaveAttribute("data-nudging");
-      expect(strip).toHaveAttribute("data-paused");
+    it("lets go when the browser takes the gesture", () => {
+      const { strip } = setup();
+      fireEvent.pointerDown(strip, { pointerId: 1, button: 0, clientX: 500 });
+      fireEvent.pointerMove(strip, { pointerId: 1, clientX: 450 });
+      fireEvent.pointerCancel(strip, { pointerId: 1 });
+      expect(strip).not.toHaveAttribute("data-dragging");
     });
 
-    it("previous from a frame past an edge steps back a whole card", () => {
-      // A landing overshoots by a frame before the stylesheet pauses it;
-      // found in Chrome on 2026-10-28, where previous moved 17ms and stopped.
-      const { animation, prev } = setup({ at: CARD * 2 + 17 });
-      fireEvent.click(prev);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.currentTime).toBeCloseTo(CARD);
+    it("ignores a right or middle button", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      drag(strip, [500, 400], { button: 2 });
+      expect(animation.currentTime).toBe(10_000);
     });
 
-    it("next from a frame short of an edge goes on to the edge after it", () => {
-      const { animation, next } = setup({ at: CARD * 2 - CARD * (EDGE_SLACK / 2) });
-      fireEvent.click(next);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.currentTime).toBeCloseTo(CARD * 3);
+    it("follows the hand off the strip, over whatever covers it", () => {
+      // Found 2026-10-28: a drag that crossed the consent banner before the
+      // threshold lost every move to the banner and never started.
+      const { strip, animation } = setup({ at: 10_000 });
+      const banner = document.createElement("div");
+      document.body.append(banner);
+      fireEvent.pointerDown(strip, { pointerId: 1, button: 0, clientX: 500 });
+      fireEvent.pointerMove(banner, { pointerId: 1, clientX: 450 });
+      fireEvent.pointerMove(banner, { pointerId: 1, clientX: 400 });
+      fireEvent.pointerUp(banner, { pointerId: 1, clientX: 400 });
+      expect(animation.currentTime).toBeCloseTo(10_000 + 100 * MS_PER_PX);
+      expect(strip).not.toHaveAttribute("data-dragging");
+      banner.remove();
     });
 
-    it("outside the slack, a part-way strip goes to the nearer edge ahead", () => {
-      const { animation, prev } = setup({ at: CARD * 2 + CARD * EDGE_SLACK * 2 });
-      fireEvent.click(prev);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.currentTime).toBeCloseTo(CARD * 2);
+    it("stops following once the press is released", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      drag(strip, [500, 450]);
+      const after = animation.currentTime;
+      fireEvent.pointerMove(document.body, { pointerId: 1, clientX: 100 });
+      expect(animation.currentTime).toBe(after);
     });
 
-    it("pins a paused strip exactly on the edge as it lands", () => {
-      const { animation, pause, next } = setup({ at: CARD });
-      fireEvent.click(pause);
-      fireEvent.click(next);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.pause).toHaveBeenCalledTimes(1);
-    });
-
-    it("leaves a running strip to run on after landing", () => {
-      const { animation, next } = setup({ at: CARD });
-      fireEvent.click(next);
-      act(() => jest.advanceTimersByTime(NUDGE_MS));
-      expect(animation.pause).not.toHaveBeenCalled();
-    });
-
-    it("never scrolls the strip while it animates", () => {
-      const { strip, next } = setup();
-      fireEvent.click(next);
-      expect(strip.scrollBy).not.toHaveBeenCalled();
+    it("ignores a second pointer's moves", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      fireEvent.pointerDown(strip, { pointerId: 1, button: 0, clientX: 500 });
+      fireEvent.pointerMove(strip, { pointerId: 2, clientX: 300 });
+      expect(animation.currentTime).toBe(10_000);
     });
   });
 
-  describe("the arrows, under reduced motion", () => {
-    it("scroll the strip one card either way, with no glide", () => {
-      const { strip, prev, next } = setup({ animated: false });
-      fireEvent.click(next);
-      fireEvent.click(prev);
-      const calls = (strip.scrollBy as jest.Mock).mock.calls.map(([options]) => options);
-      expect(calls).toHaveLength(2);
-      expect(calls).toEqual([
-        { left: 300, behavior: "auto" },
-        { left: -300, behavior: "auto" },
-      ]);
-      expect(strip).not.toHaveAttribute("data-nudging");
+  describe("a card's link", () => {
+    const click = (link: Element) => {
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      link.dispatchEvent(event);
+      return event;
+    };
+
+    it("opens on a plain click", () => {
+      const { link } = setup();
+      expect(click(link).defaultPrevented).toBe(false);
+    });
+
+    it("does not open when a drag ended on it", () => {
+      const { strip, link } = setup();
+      drag(strip, [500, 400]);
+      expect(click(link).defaultPrevented).toBe(true);
+    });
+
+    it("opens again on the next plain click after a drag", () => {
+      const { strip, link } = setup();
+      drag(strip, [500, 400]);
+      click(link);
+      fireEvent.pointerDown(strip, { pointerId: 1, button: 0, clientX: 500 });
+      fireEvent.pointerUp(strip, { pointerId: 1, clientX: 500 });
+      expect(click(link).defaultPrevented).toBe(false);
     });
   });
 
-  it("does nothing, and does not throw, with no strip on the page", () => {
+  describe("a trackpad", () => {
+    const wheel = (target: Element, deltaX: number, deltaY: number) => {
+      const event = new WheelEvent("wheel", { deltaX, deltaY, bubbles: true, cancelable: true });
+      target.dispatchEvent(event);
+      return event;
+    };
+
+    it("swiped sideways moves the strip and keeps the page still", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      const event = wheel(strip, 30, 2);
+      expect(animation.currentTime).toBeCloseTo(10_000 + 30 * MS_PER_PX);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it("swiped up or down is left to the page", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      const event = wheel(strip, 3, 40);
+      expect(animation.currentTime).toBe(10_000);
+      expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
+  describe("under reduced motion, with no animation", () => {
+    it("a drag scrolls the strip instead", () => {
+      const { strip } = setup({ animated: false });
+      strip.scrollLeft = 200;
+      drag(strip, [500, 440]);
+      expect(strip.scrollLeft).toBe(260);
+    });
+
+    it("a sideways swipe scrolls it too", () => {
+      const { strip } = setup({ animated: false });
+      strip.scrollLeft = 200;
+      strip.dispatchEvent(
+        new WheelEvent("wheel", { deltaX: 50, deltaY: 0, bubbles: true, cancelable: true }),
+      );
+      expect(strip.scrollLeft).toBe(250);
+    });
+  });
+
+  it("stops the browser's own image drag from taking the gesture", () => {
+    const { strip } = setup();
+    const event = new Event("dragstart", { bubbles: true, cancelable: true });
+    strip.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("lets go of the strip when it unmounts", () => {
+    const { strip, animation, unmount } = setup({ at: 10_000 });
+    unmount();
+    drag(strip, [500, 400]);
+    expect(animation.currentTime).toBe(10_000);
+  });
+
+  it("does not throw with no strip on the page", () => {
     render(<StripControls />);
-    for (const name of ["Previous image", "Next image"]) {
-      expect(() => fireEvent.click(screen.getByRole("button", { name }))).not.toThrow();
-    }
+    expect(() => fireEvent.click(screen.getByRole("button"))).not.toThrow();
   });
 });

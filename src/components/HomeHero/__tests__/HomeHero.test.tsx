@@ -109,16 +109,14 @@ describe("HomeHero", () => {
       }
     });
 
-    it("has its controls above it, outside the moving track", () => {
+    it("has its pause button above it, outside the moving track, and no arrows", () => {
       render(<HomeHero />);
-      const names = ["Previous image", "Pause the images", "Next image"];
-      const buttons = names.map((name) => screen.getByRole("button", { name }));
-      for (const button of buttons) {
-        expect(strip()).not.toContainElement(button);
-        expect(
-          button.compareDocumentPosition(strip()) & Node.DOCUMENT_POSITION_FOLLOWING,
-        ).toBeTruthy();
-      }
+      const pause = screen.getByRole("button", { name: "Pause the images" });
+      expect(strip()).not.toContainElement(pause);
+      expect(
+        pause.compareDocumentPosition(strip()) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /Previous image|Next image/ })).toBeNull();
     });
 
     it("loads the first cards eagerly and the rest lazily", () => {
@@ -191,10 +189,32 @@ describe("HomeHero", () => {
 
     it("names one SIRA licence, not several", () => {
       render(<HomeHero />);
-      expect(
-        screen.getByText("SIRA Licence | Smarthaus by Maple Technologies."),
-      ).toBeInTheDocument();
+      const sira = screen.getByText(/^SIRA Licence/).closest("p") as HTMLElement;
+      // Read aloud with a comma where the rule is drawn.
+      expect(sira.textContent).toBe("SIRA Licence,Smarthaus by Maple Technologies.");
       expect(document.body.textContent).not.toMatch(/Licences/);
+    });
+
+    it("draws the SIRA line exactly as the rating line: same parts, same classes", () => {
+      render(<HomeHero />);
+      const sira = screen.getByText(/^SIRA Licence/).closest("p") as HTMLElement;
+      expect(sira.className).toBe(proof().className);
+      const shape = (p: HTMLElement) => Array.from(p.children).map((el) => el.className);
+      expect(shape(sira)).toEqual(shape(proof()));
+    });
+
+    it("types no vertical bar anywhere: the rules are drawn", () => {
+      render(<HomeHero />);
+      const hero = document.querySelector("section[data-hero]") as HTMLElement;
+      expect(hero.textContent).not.toContain("|");
+    });
+
+    it("keeps each half apart for a screen reader with a hidden comma", () => {
+      render(<HomeHero />);
+      for (const p of [proof(), screen.getByText(/^SIRA Licence/).closest("p") as HTMLElement]) {
+        const hidden = p.querySelector(".visually-hidden");
+        expect(hidden?.textContent).toBe(",");
+      }
     });
 
     it("puts the SIRA line under the two CTAs, above the strip", () => {

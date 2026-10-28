@@ -4,10 +4,14 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import type { HardwareItem } from "../../content/hardware";
+import { Button } from "../Button";
 import styles from "./Hardware.module.scss";
 import { latestEntry } from "@/lib/observer";
 
 type Props = { items: readonly HardwareItem[] };
+
+/** Where each slide's CTA goes, as the hero strip's cards do. */
+export const SOLUTIONS_HREF = "/solutions";
 
 /**
  * How far a finger has to travel sideways before a swipe counts. Below this,
@@ -383,6 +387,14 @@ export function HardwareStage({ items }: Props) {
               />
               <h3 className={styles.title}>{item.title}</h3>
               <p className={styles.body}>{item.description}</p>
+              {/* Under the description, at the foot of the column with it. A
+                  hidden slide is visibility: hidden, so its link is out of
+                  the tab order with the rest of it. */}
+              <div className={styles.cta}>
+                <Button href={SOLUTIONS_HREF} size="sm">
+                  {item.cta}
+                </Button>
+              </div>
             </div>
             <div className={styles.frame}>
               <Image

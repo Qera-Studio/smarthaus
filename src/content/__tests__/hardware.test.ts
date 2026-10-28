@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { HARDWARE_ITEMS } from "../hardware";
+import { HERO_CAROUSEL_ITEMS } from "../hero-carousel";
 
 /**
  * Same invariants as process.test.ts: the carousel reads this array blind, so
@@ -13,6 +14,21 @@ describe("hardware content", () => {
     expect(HARDWARE_ITEMS).toHaveLength(8);
     const ids = HARDWARE_ITEMS.map((item) => item.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("words each CTA as the hero strip's card for the same part", () => {
+    // One name per component for its link, wherever it appears (2026-10-28).
+    for (const item of HARDWARE_ITEMS) {
+      const card = HERO_CAROUSEL_ITEMS.find((c) => c.title === item.title);
+      expect(card).toBeDefined();
+      expect(item.cta).toBe(card!.cta);
+    }
+  });
+
+  it("gives every CTA its own text", () => {
+    const ctas = HARDWARE_ITEMS.map((item) => item.cta);
+    expect(new Set(ctas).size).toBe(ctas.length);
+    for (const cta of ctas) expect(cta).toMatch(/^View [a-z]/);
   });
 
   it("opens on the house and ends on the cameras", () => {

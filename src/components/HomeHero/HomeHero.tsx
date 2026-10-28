@@ -57,15 +57,38 @@ function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
 }
 
 /**
+ * Two short statements either side of a drawn rule, the rule on the page's
+ * centre line, whatever the two lengths: the start right-aligned, the end
+ * left-aligned (HomeHero.module.scss .pair). Centring the whole line put
+ * the rule wherever the shorter half left it, which is what read as off
+ * centre (2026-10-28). The rule is drawn rather than typed, since a screen
+ * reader would say "vertical bar"; a hidden comma keeps the two apart when
+ * read aloud. The rating line and the SIRA line share it, so they match.
+ */
+function Pair({ start, end }: { start: React.ReactNode; end: React.ReactNode }) {
+  return (
+    <p className={styles.pair}>
+      <span className={styles.pairStart}>
+        {start}
+        <span className="visually-hidden">,</span>
+      </span>
+      <span className={styles.divider} aria-hidden="true" />
+      <span className={styles.pairEnd}>{end}</span>
+    </p>
+  );
+}
+
+/**
  * The homepage hero: the rating and the project count on one line, the
- * title, one line, two CTAs and the SIRA byline, then the strip's controls
- * and a strip of images drifting right to left that runs to the bottom of
- * the screen.
+ * title, one line, two CTAs and the SIRA line, then the strip's pause button
+ * and a strip of images drifting right to left, pinned to the bottom of the
+ * screen.
  *
  * Server Component. The strip moves on a CSS animation over two copies of the
  * list; the second copy is inert and hidden from AT, so each card is read and
  * focused once. Hover or focus inside the strip stops it (the stylesheet), and
- * StripControls holds the pause button WCAG 2.2.2 asks for and the arrows.
+ * StripControls holds the pause button WCAG 2.2.2 asks for, and lets a mouse
+ * drag or a trackpad swipe move the strip.
  * Under reduced motion the strip does not move and scrolls sideways instead.
  *
  * Replaced FluidHero on 2026-10-28; src/components/FluidHero stays, unmounted.
@@ -77,15 +100,14 @@ export function HomeHero() {
   return (
     <section className={styles.hero} aria-labelledby="hero-title" data-hero>
       <div className={styles.copy}>
-        <p className={styles.proof}>
-          <span>
-            <span aria-hidden="true">★</span> {RATING} on Google reviews
-          </span>
-          {/* The rule is drawn, not read: a screen reader would say "vertical
-              bar". The two claims are separate spans either way. */}
-          <span className={styles.divider} aria-hidden="true" />
-          <span>{PROJECTS}</span>
-        </p>
+        <Pair
+          start={
+            <>
+              <span aria-hidden="true">★</span> {RATING} on Google reviews
+            </>
+          }
+          end={PROJECTS}
+        />
         <h1 className={styles.title} id="hero-title">
           Home at your fingertips
         </h1>
@@ -101,7 +123,7 @@ export function HomeHero() {
             WhatsApp
           </Button>
         </div>
-        <p className={styles.byline}>SIRA Licence | Smarthaus by Maple Technologies.</p>
+        <Pair start="SIRA Licence" end="Smarthaus by Maple Technologies." />
       </div>
 
       <StripControls className={styles.controls} buttonClassName={styles.control} />

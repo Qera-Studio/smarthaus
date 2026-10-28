@@ -5,9 +5,13 @@
   .hero {
     // L2 component tokens.
     //
-    // One pass of the eight cards. Slow on purpose: the strip is texture
+    // One pass of the eight cards: 8s a card (Shivanshu, 2026-10-28: 2s
+    // faster than the 10s it was). Slow on purpose: the strip is texture
     // while the copy is read, not something to watch.
-    --hero-strip-duration: 80s;
+    --hero-strip-duration: 64s;
+    // The strip's height: a share of the screen, so it stays the same
+    // proportion on any laptop, and gives way when the copy needs the room.
+    --hero-strip-block: 42svh;
     // The hover shade, pure black at the foot of the card (Shivanshu's spec),
     // and the blur behind it, both rising linearly from nothing at the top.
     --hero-card-shade: rgb(0 0 0 / 30%);
@@ -41,7 +45,10 @@
     }
   }
 
+  // Auto margins centre the copy in whatever the strip leaves, which keeps
+  // the pause button and the strip pinned to the bottom of the screen.
   .copy {
+    margin-block: auto;
     display: flex;
     flex: none;
     flex-direction: column;
@@ -49,22 +56,38 @@
     padding-inline: $space-4;
   }
 
-  // The rating and the project count on one line, split by a drawn rule. No
-  // outline (2026-10-28). On a phone the two stack and the rule goes.
-  .proof {
+  // Two statements either side of a drawn rule (HomeHero.tsx Pair): the
+  // rating line and the SIRA line, styled alike. From sm the rule sits on
+  // the centre line: equal outer tracks, the start pushed against it from
+  // the left and the end from the right. On a phone the two stack and the
+  // rule goes.
+  .pair {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: $space-1;
-    margin-block-end: $space-4;
+    inline-size: 100%;
     font-size: var(--font-size-sm);
-    font-weight: $font-weight-medium;
     line-height: $line-height-normal;
     color: var(--color-text-primary);
 
     @include bp-sm {
-      flex-direction: row;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
       gap: $space-3;
+    }
+  }
+
+  .pairStart {
+    @include bp-sm {
+      text-align: end;
+    }
+  }
+
+  .pairEnd {
+    @include bp-sm {
+      text-align: start;
     }
   }
 
@@ -77,6 +100,15 @@
       block-size: 1em;
       background-color: currentcolor;
     }
+  }
+
+  // The rating line opens the copy; the SIRA line closes it.
+  .copy > .pair:first-child {
+    margin-block-end: $space-4;
+  }
+
+  .copy > .pair:last-child {
+    margin-block-start: $space-4;
   }
 
   .title {
@@ -105,13 +137,7 @@
     margin-block-start: clamp(#{$space-6}, 3vh, #{$space-8});
   }
 
-  .byline {
-    margin-block-start: $space-4;
-    font-size: var(--font-size-sm);
-    color: var(--color-text-primary);
-  }
-
-  // --- The strip's controls -------------------------------------------------
+  // --- The pause button ----------------------------------------------------
 
   // Above the strip, at the end of the content column.
   .controls {
@@ -119,23 +145,29 @@
     flex: none;
     align-self: stretch;
     justify-content: flex-end;
-    gap: $space-2;
   }
 
-  // The hardware carousel's arrows and pause, as they are drawn there
-  // (Hardware.module.scss .pause, .arrow): a 48px square of glass, the glyph
-  // at 45% until hover or pressed, the ground stepping a shade on hover.
+  // The hardware carousel's pause button (Hardware.module.scss .pause), at
+  // 32px rather than 48 (2026-10-28): glass, the glyph at 45% until hover or
+  // pressed, the ground stepping a shade on hover. The tap area stays 44px
+  // through an invisible ::after; glass has the ::before.
   .control {
     position: relative;
     display: grid;
     place-items: center;
-    inline-size: $space-12;
-    block-size: $space-12;
+    inline-size: $space-8;
+    block-size: $space-8;
     flex-shrink: 0;
     @include glass(0);
     transition-property: background-color;
     transition-duration: var(--duration-fast);
     @include focus-ring($offset: -4px);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: calc((#{$space-8} - var(--size-touch-target)) / 2);
+    }
 
     svg {
       opacity: 0.45;
@@ -160,10 +192,15 @@
   // carries overflow-x: clip (globals.scss), so the track running past it is
   // never sideways scroll. It takes every pixel the copy leaves, so the
   // cards end at the bottom of the screen.
+  // A share of the screen, shrinking first when the copy needs the room.
+  // touch-action leaves vertical scroll to the page and gives sideways
+  // movement to StripControls, which drags the strip with it.
   .strip {
     position: relative;
-    flex: 1 1 0;
+    flex: 0 1 var(--hero-strip-block);
     min-block-size: 0;
+    touch-action: pan-y pinch-zoom;
+    user-select: none;
     inline-size: 100vw;
     margin-inline: calc(50% - 50vw);
     overflow: hidden;
@@ -203,10 +240,9 @@
       animation-play-state: paused;
     }
 
-    // An arrow's glide runs even while paused (StripControls); after the
-    // rule above, so it wins at equal specificity.
-    .strip[data-nudging] .track {
-      animation-play-state: running;
+    // Held still under a dragging hand, mouse or finger (StripControls).
+    .strip[data-dragging] .track {
+      animation-play-state: paused;
     }
   }
 
@@ -310,13 +346,18 @@
 
   // After .card and .control, so these win at equal specificity.
   //
-  // Nothing moves: the strip scrolls sideways under the visitor's own hand
-  // (or the arrows), and the second copy and the pause button have nothing
-  // to do.
+  // Nothing moves: the strip scrolls sideways under the visitor's own hand,
+  // and the second copy and the pause button have nothing to do.
   @media (prefers-reduced-motion: reduce) {
     .strip {
       overflow-x: auto;
       scroll-snap-type: x proximity;
+    }
+
+    // Not while a hand drags it: each small step of a drag was snapped
+    // straight back to the card it left. It settles on release.
+    .strip[data-dragging] {
+      scroll-snap-type: none;
     }
 
     .card {

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 
 import type { HardwareItem } from "../../../content/hardware";
 import {
@@ -24,6 +24,7 @@ const ITEMS: readonly HardwareItem[] = ["Cameras", "Smart lock", "Curtains"].map
   id: `item-${i}`,
   title,
   description: `${title} description`,
+  cta: `View ${title.toLowerCase()}`,
   icon: `icon-${i}.svg`,
   image: { src: `image-${i}.avif`, width: 1600, height: 1200, alt: `${title} render` },
 }));
@@ -139,6 +140,35 @@ describe("HardwareStage", () => {
         expect(tab(item.title)).toHaveAttribute("aria-controls", `hardware-panel-item-${i}`);
         expect(panel(i)).toHaveAttribute("aria-labelledby", `hardware-tab-item-${i}`);
       });
+    });
+  });
+
+  describe("each slide's CTA", () => {
+    it("links its own component to the solutions page", () => {
+      render(<HardwareStage items={ITEMS} />);
+      ITEMS.forEach((item, i) => {
+        const link = within(panel(i)).getByRole("link", { name: item.cta, hidden: true });
+        expect(link).toHaveAttribute("href", "/solutions");
+      });
+    });
+
+    it("sits under the description, last in the copy column", () => {
+      render(<HardwareStage items={ITEMS} />);
+      ITEMS.forEach((item, i) => {
+        const body = within(panel(i)).getByText(item.description);
+        const link = within(panel(i)).getByRole("link", { name: item.cta, hidden: true });
+        expect(body.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        const column = body.parentElement as HTMLElement;
+        expect(column.lastElementChild).toContainElement(link);
+      });
+    });
+
+    it("is not inside the picture, so the image stays a picture", () => {
+      render(<HardwareStage items={ITEMS} />);
+      const img = within(panel(0)).getByRole("img", { name: `${ITEMS[0]!.title} render` });
+      expect(img.closest("div")).not.toContainElement(
+        within(panel(0)).getByRole("link", { name: ITEMS[0]!.cta }),
+      );
     });
   });
 

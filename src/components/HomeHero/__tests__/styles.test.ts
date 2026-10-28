@@ -64,7 +64,8 @@ describe("HomeHero.module.scss", () => {
       expect(track).toMatch(/animation-timing-function:\s*linear/);
       expect(track).toMatch(/animation-iteration-count:\s*infinite/);
       expect(track).not.toMatch(/\banimation:/);
-      expect(rule(".hero")).toMatch(/--hero-strip-duration:\s*80s/);
+      // 8s a card, eight cards: 2s a card faster than the 10s it was.
+      expect(rule(".hero")).toMatch(/--hero-strip-duration:\s*64s/);
     });
 
     test("moves exactly half the track, the width of one copy, right to left", () => {
@@ -90,12 +91,12 @@ describe("HomeHero.module.scss", () => {
       ]);
     });
 
-    test("an arrow's glide runs even while paused, and wins by coming later", () => {
+    test("holds still under a dragging hand", () => {
       const motion = media("(prefers-reduced-motion: no-preference)");
-      expect(rule(".strip[data-nudging] .track", motion)).toMatch(
-        /animation-play-state:\s*running/,
+      expect(rule(".strip[data-dragging] .track", motion)).toMatch(
+        /animation-play-state:\s*paused/,
       );
-      expect(motion.indexOf("[data-nudging]")).toBeGreaterThan(motion.indexOf("[data-paused]"));
+      expect(css).not.toMatch(/data-nudging/);
     });
 
     test("does not stop on focus anywhere in the strip, or a control would hold it", () => {
@@ -107,13 +108,17 @@ describe("HomeHero.module.scss", () => {
   describe("under reduced motion", () => {
     const reduce = () => media("(prefers-reduced-motion: reduce)");
 
+    test("does not snap under a dragging hand, or the drag could not move it", () => {
+      expect(rule(".strip[data-dragging]", reduce())).toMatch(/scroll-snap-type:\s*none/);
+    });
+
     test("the strip scrolls sideways by hand, snapping to cards", () => {
       expect(rule(".strip", reduce())).toMatch(/overflow-x:\s*auto/);
       expect(rule(".strip", reduce())).toMatch(/scroll-snap-type:\s*x proximity/);
       expect(rule(".card", reduce())).toMatch(/scroll-snap-align:\s*start/);
     });
 
-    test("drops the loop's second copy and the pause button, keeping the arrows", () => {
+    test("drops the loop's second copy and the pause button", () => {
       expect(reduce()).toMatch(
         /\.list\[data-copy\],\s*\.control\[data-pause\]\s*\{\s*display:\s*none/,
       );
@@ -216,12 +221,26 @@ describe("HomeHero.module.scss", () => {
       expect(css).toMatch(/--hero-below:\s*0px/);
     });
 
-    test("the strip takes every pixel the copy leaves", () => {
+    test("the strip is a share of the screen, giving way when the copy needs room", () => {
       const strip = rule(".strip");
-      expect(strip).toMatch(/flex:\s*1 1 0/);
+      expect(rule(".hero")).toMatch(/--hero-strip-block:\s*42svh/);
+      expect(strip).toMatch(/flex:\s*0 1 var\(--hero-strip-block\)/);
       expect(strip).toMatch(/min-block-size:\s*0/);
-      expect(rule(".copy")).toMatch(/flex:\s*none/);
       expect(rule(".controls")).toMatch(/flex:\s*none/);
+    });
+
+    test("the copy is centred in what is left, so the strip stays at the bottom", () => {
+      const copy = rule(".copy");
+      expect(copy).toMatch(/margin-block:\s*auto/);
+      expect(copy).toMatch(/flex:\s*none/);
+      // The strip is the hero's last box and the hero ends at the screen's foot.
+      expect(rule(".hero")).not.toMatch(/padding-block-end/);
+    });
+
+    test("the strip leaves vertical scroll to the page and sideways to the drag", () => {
+      const strip = rule(".strip");
+      expect(strip).toMatch(/touch-action:\s*pan-y pinch-zoom/);
+      expect(strip).toMatch(/user-select:\s*none/);
     });
 
     test("cards are as tall as the strip, at 4:3", () => {
@@ -242,26 +261,38 @@ describe("HomeHero.module.scss", () => {
       expect(controls).toMatch(/align-self:\s*stretch/);
     });
 
-    test("each control is the hardware carousel's: a 48px glass square", () => {
+    test("the pause button is the hardware carousel's, at 32px", () => {
       const control = rule(".control");
-      expect(control).toMatch(/inline-size:\s*48px/);
-      expect(control).toMatch(/block-size:\s*48px/);
-      expect(control).toMatch(/backdrop-filter|background-color:\s*var\(--glass-bg/);
+      expect(control).toMatch(/inline-size:\s*32px/);
+      expect(control).toMatch(/block-size:\s*32px/);
+      expect(control).toMatch(/background-color:\s*var\(--glass-bg/);
       expect(css).toMatch(/\.control svg\s*\{\s*opacity:\s*0\.45/);
       expect(css).toMatch(
         /\.control:hover svg,\s*\.control\[aria-pressed=true\] svg\s*\{\s*opacity:\s*1/,
       );
     });
 
-    test("the rating and the count share a line from sm, split by a drawn rule", () => {
-      expect(rule(".proof")).toMatch(/flex-direction:\s*column/);
-      expect(css).toMatch(/\.proof\s*\{\s*flex-direction:\s*row/);
+    test("its tap area stays 44px around the smaller face", () => {
+      expect(rule(".control::after")).toMatch(
+        /inset:\s*calc\(\(32px - var\(--size-touch-target\)\) \/ 2\)/,
+      );
+    });
+
+    test("both lines are the same pair: stacked on a phone, ruled on the centre from sm", () => {
+      expect(rule(".pair")).toMatch(/flex-direction:\s*column/);
+      expect(css).toMatch(/\.pair\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*1fr auto 1fr/);
+      expect(css).toMatch(/\.pairStart\s*\{\s*text-align:\s*end/);
+      expect(css).toMatch(/\.pairEnd\s*\{\s*text-align:\s*start/);
       expect(rule(".divider")).toMatch(/display:\s*none/);
       expect(css).toMatch(/\.divider\s*\{\s*display:\s*block;\s*inline-size:\s*1px/);
     });
 
-    test("the rating line has no outline any more", () => {
-      expect(rule(".proof")).not.toMatch(/border/);
+    test("the pair is set as the SIRA line always was: small, regular, no outline", () => {
+      const pair = rule(".pair");
+      expect(pair).toMatch(/font-size:\s*var\(--font-size-sm\)/);
+      expect(pair).not.toMatch(/font-weight/);
+      expect(pair).not.toMatch(/border/);
+      expect(css).not.toMatch(/\.proof|\.byline|\.rating/);
     });
 
     test("lists draw no bullets", () => {

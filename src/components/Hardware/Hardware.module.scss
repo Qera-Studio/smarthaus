@@ -11,7 +11,10 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
 
 @layer components {
   .hardware {
-    --hardware-interval: 5s;
+    // How long each slide shows before the next. 3s (Shivanshu, 2026-10-28:
+    // 2s faster than the 5s it was). The pause button and the focus pause
+    // are what make that pace safe for a slow reader (WCAG 2.2.2).
+    --hardware-interval: 3s;
     padding-block: $space-24;
   }
 
@@ -325,6 +328,12 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
     // 70% of brown-950 on brown-100, well clear of 4.5:1.
     opacity: 0.7;
     text-wrap: pretty;
+  }
+
+  // The slide's CTA, under the description and pinned to the foot with the
+  // title and body (the title's auto margin carries all three down).
+  .cta {
+    margin-block-start: $space-8;
   }
 
   .frame {

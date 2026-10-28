@@ -110,7 +110,7 @@ test("the proof line, title, CTAs and SIRA line read top to bottom above the str
     page.getByText("180+ projects completed across Dubai"),
     page.getByRole("heading", { level: 1 }),
     page.getByRole("link", { name: "WhatsApp", exact: true }),
-    page.getByText("SIRA Licence | Smarthaus by Maple Technologies."),
+    page.getByText(/^SIRA Licence/),
     pause(page),
     strip(page),
   ];
@@ -137,6 +137,13 @@ test("the rating line has no outline", async ({ page }) => {
   await expect(line).toHaveCSS("border-top-style", "none");
 });
 
+test("the strip is a share of the screen: about 42% of its height, or less", async ({ page }) => {
+  const box = (await strip(page).boundingBox())!;
+  const height = page.viewportSize()!.height;
+  expect(box.height).toBeLessThanOrEqual(height * 0.42 + 1);
+  expect(box.height).toBeGreaterThan(120);
+});
+
 test("the strip ends exactly at the bottom of the screen, or just above a phone's nav", async ({
   page,
 }) => {
@@ -160,67 +167,116 @@ test("the cards are as tall as the strip, at 4:3", async ({ page }) => {
   expect(Math.abs(card.width / card.height - 4 / 3)).toBeLessThan(0.01);
 });
 
-test.describe("the arrows", () => {
-  // The glide's length (StripControls NUDGE_MS) and a frame or two to land.
-  const NUDGE_SETTLE = 700;
-  const next = (page: Page) => page.getByRole("button", { name: "Next image" });
-  const prev = (page: Page) => page.getByRole("button", { name: "Previous image" });
+test.describe("the hand on the strip", () => {
   const firstX = (page: Page) =>
     cards(page)
       .first()
       .evaluate((el) => el.getBoundingClientRect().x);
-  const cardWidth = async (page: Page) => (await cards(page).first().boundingBox())!.width;
 
   test.beforeEach(async ({ page }) => {
+    // The banner would sit over the strip on a 1280x720 screen.
+    await withConsentDecided(page);
+    await page.goto("/");
     await expectHydrated(page);
-    // Paused, so only the arrows move it.
+    // Paused, so only the hand moves it.
     await pause(page).click();
   });
 
-  test("next carries the strip one card left, to a card's edge", async ({ page }) => {
-    const width = await cardWidth(page);
+  test("a mouse dragged left carries the strip left with it", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "a mouse drag");
+    const box = (await strip(page).boundingBox())!;
+    const y = box.y + box.height * 0.2;
     const before = await firstX(page);
-    await next(page).click();
-    await page.waitForTimeout(NUDGE_SETTLE);
-    const after = await firstX(page);
-    // Lands on an edge: the first card is a whole number of steps along.
-    const step = width + 8;
-    expect(before - after).toBeGreaterThan(0);
-    expect(before - after).toBeLessThanOrEqual(step + 1);
-    const offset = ((-after % step) + step) % step;
-    expect(Math.min(offset, step - offset)).toBeLessThan(1.5);
+    await page.mouse.move(box.x + 600, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 500, y, { steps: 5 });
+    await page.mouse.move(box.x + 400, y, { steps: 5 });
+    await page.mouse.up();
+    const moved = before - (await firstX(page));
+    // 200px of hand, give or take the wrap of one pass.
+    expect(Math.abs(moved - 200)).toBeLessThan(2);
   });
 
-  test("previous carries it back the other way", async ({ page }) => {
-    await next(page).click();
-    await page.waitForTimeout(NUDGE_SETTLE);
-    await next(page).click();
-    await page.waitForTimeout(NUDGE_SETTLE);
-    const before = await firstX(page);
-    await prev(page).click();
-    await page.waitForTimeout(NUDGE_SETTLE);
-    expect(await firstX(page)).toBeGreaterThan(before);
+  test("a drag that ends on a card's link does not open it", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "a mouse drag");
+    const link = (await cards(page).first().getByRole("link").boundingBox())!;
+    await cards(page).first().getByRole("link").focus();
+    await page.mouse.move(link.x + link.width / 2 + 120, link.y + link.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(link.x + link.width / 2, link.y + link.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+    await expect(page).toHaveURL(/\/$/);
   });
 
-  test("leave a paused strip paused", async ({ page }) => {
-    await next(page).click();
-    await page.waitForTimeout(NUDGE_SETTLE);
+  test("a trackpad swiped sideways moves it; up and down still scrolls the page", async ({
+    page,
+    hasTouch,
+  }) => {
+    test.skip(hasTouch, "a trackpad");
+    const box = (await strip(page).boundingBox())!;
+    await page.mouse.move(box.x + 300, box.y + box.height * 0.2);
+    const before = await firstX(page);
+    await page.mouse.wheel(120, 0);
+    await expect.poll(async () => before - (await firstX(page))).toBeGreaterThan(100);
+    const scrolled = await page.evaluate(() => scrollY);
+    await page.mouse.wheel(0, 200);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(scrolled);
+  });
+
+  test("leaves a paused strip paused", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "a mouse drag");
+    const box = (await strip(page).boundingBox())!;
+    const y = box.y + box.height * 0.2;
+    await page.mouse.move(box.x + 600, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 450, y, { steps: 5 });
+    await page.mouse.up();
     await page.mouse.move(0, 0);
     const [a, b] = await drift(page);
     expect(a).toBe(b);
-    await expect(pause(page)).toHaveAttribute("aria-pressed", "true");
   });
+});
 
-  test("look like the hardware carousel's buttons", async ({ page }) => {
-    const hardwarePause = page.getByRole("button", { name: "Pause automatic advance" });
-    const props = ["inline-size", "block-size", "border-top-style", "background-color"];
-    const read = (locator: import("@playwright/test").Locator) =>
-      locator.evaluate(
-        (el, names) => names.map((n) => getComputedStyle(el).getPropertyValue(n)),
-        props,
-      );
-    expect(await read(next(page))).toEqual(await read(hardwarePause));
-  });
+test("the pause button is the hardware carousel's glass, at 32px", async ({ page }) => {
+  const hardwarePause = page.getByRole("button", { name: "Pause automatic advance" });
+  const props = ["border-top-style", "background-color", "box-shadow"];
+  const read = (locator: import("@playwright/test").Locator) =>
+    locator.evaluate(
+      (el, names) => names.map((n) => getComputedStyle(el).getPropertyValue(n)),
+      props,
+    );
+  expect(await read(pause(page))).toEqual(await read(hardwarePause));
+  const box = (await pause(page).boundingBox())!;
+  expect(Math.round(box.width)).toBe(32);
+  expect(Math.round(box.height)).toBe(32);
+});
+
+test("there are no arrows on the strip any more", async ({ page }) => {
+  await expect(page.getByRole("button", { name: /Previous image|Next image/ })).toHaveCount(0);
+});
+
+test("the two ruled lines put their rule on the page's centre line", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 640, "phones stack the halves, no rule");
+  const centre = await page.evaluate(() => document.documentElement.clientWidth / 2);
+  const rules = hero(page).locator("p > span[aria-hidden='true']:not(:has(*))");
+  await expect(rules).toHaveCount(2);
+  for (const rule of await rules.all()) {
+    const box = (await rule.boundingBox())!;
+    expect(Math.abs(box.x + box.width / 2 - centre)).toBeLessThan(1);
+  }
+});
+
+test("the rating line is set exactly as the SIRA line", async ({ page }) => {
+  const style = (text: RegExp) =>
+    page
+      .getByText(text)
+      .first()
+      .evaluate((el) => {
+        const s = getComputedStyle(el.closest("p")!);
+        return [s.fontSize, s.fontWeight, s.lineHeight, s.color, s.letterSpacing].join(" ");
+      });
+  expect(await style(/on Google reviews/)).toBe(await style(/^SIRA Licence/));
 });
 
 test.describe("with a mouse", () => {
@@ -283,9 +339,17 @@ test.describe("under reduced motion", () => {
     expect(await track(page).evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
   });
 
-  test("the arrows scroll the strip a card instead of gliding it", async ({ page }) => {
+  test("a mouse drag scrolls the strip instead", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "a mouse drag");
+    await withConsentDecided(page);
+    await page.goto("/");
     await expectHydrated(page);
-    await page.getByRole("button", { name: "Next image" }).click();
+    const box = (await strip(page).boundingBox())!;
+    const y = box.y + box.height * 0.2;
+    await page.mouse.move(box.x + 600, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 300, y, { steps: 6 });
+    await page.mouse.up();
     await expect.poll(() => strip(page).evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
   });
 
@@ -325,9 +389,7 @@ test.describe("keyboard", () => {
   test("Tab runs CTAs, the three controls, then each card's link once", async ({ page }) => {
     await page.getByRole("link", { name: "WhatsApp", exact: true }).focus();
     const expected = [
-      "Previous image",
       "Pause the images",
-      "Next image",
       "View lighting",
       "View curtains",
       "View cameras",
@@ -499,6 +561,11 @@ test.describe("the loop", () => {
     });
     expect(speed).toBeGreaterThan(10);
     expect(speed).toBeLessThan(80);
+    // 8s a card, eight cards to a pass (2s a card faster than it was).
+    const duration = await track(page).evaluate((el) =>
+      Number(el.getAnimations()[0]!.effect!.getComputedTiming().duration),
+    );
+    expect(duration).toBe(64_000);
   });
 });
 

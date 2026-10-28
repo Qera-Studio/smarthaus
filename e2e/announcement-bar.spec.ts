@@ -60,6 +60,23 @@ test.describe("from md up", () => {
     test.skip(!isWide(page), "phones get the one-at-a-time bar");
   });
 
+  test("puts the middle item on the centre line, a rule either side", async ({ page }) => {
+    const centre = await page.evaluate(() => document.documentElement.clientWidth / 2);
+    const middle = (await bar(page).getByRole("link", { name: LINKS[1] }).boundingBox())!;
+    expect(Math.abs(middle.x + middle.width / 2 - centre)).toBeLessThan(1);
+    const [before, after] = await bar(page)
+      .locator("li")
+      .nth(1)
+      .evaluate((el) =>
+        ["::before", "::after"].map((p) => {
+          const s = getComputedStyle(el, p);
+          return `${s.width} ${s.backgroundColor === "rgba(0, 0, 0, 0)" ? "none" : "drawn"}`;
+        }),
+      );
+    expect(before).toBe("1px drawn");
+    expect(after).toBe("1px drawn");
+  });
+
   test("shows all three on one row, with no arrows", async ({ page }) => {
     const boxes = [];
     for (const name of LINKS) {
@@ -247,11 +264,12 @@ test.describe("on a wide screen", () => {
   test("the rules between items are in the paint, not the text", async ({ page }) => {
     const text = await bar(page).evaluate((el) => el.textContent ?? "");
     expect(text).not.toContain("|");
+    // Drawn, not typed: an empty box with a background, not a "|" glyph.
     const rule = await bar(page)
       .locator("li")
       .nth(1)
       .evaluate((el) => getComputedStyle(el, "::before").content);
-    expect(rule).toContain("|");
+    expect(rule).toBe('""');
   });
 });
 

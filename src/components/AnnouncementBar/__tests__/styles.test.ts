@@ -73,15 +73,25 @@ describe("AnnouncementBar.module.scss", () => {
     test("hides the arrows and lets every item show", () => {
       expect(rule(".arrow", wide())).toMatch(/display:\s*none/);
       expect(rule(".viewport", wide())).toMatch(/overflow:\s*visible/);
-      expect(rule(".item", wide())).toMatch(/flex:\s*none/);
     });
 
-    test("centres the row", () => {
-      expect(rule(".items", wide())).toMatch(/justify-content:\s*center/);
+    test("puts the middle item on the centre line, the others pushed against it", () => {
+      const items = rule(".items", wide());
+      expect(items).toMatch(/display:\s*grid/);
+      expect(items).toMatch(/grid-template-columns:\s*1fr auto 1fr/);
+      expect(rule(".item:first-child", wide())).toMatch(/justify-content:\s*flex-end/);
+      expect(rule(".item:last-child", wide())).toMatch(/justify-content:\s*flex-start/);
     });
 
-    test("splits the items by a rule that AT does not read", () => {
-      expect(rule(".item + .item::before", wide())).toMatch(/content:\s*"\|"\s*\/\s*""/);
+    test("draws a 1px rule either side of the middle item, with nothing to read", () => {
+      const rules =
+        wide().match(
+          /\.item:nth-child\(2\)::before,\s*\.item:nth-child\(2\)::after\s*\{([^}]*)\}/,
+        )?.[1] ?? "";
+      expect(rules).toMatch(/content:\s*""/);
+      expect(rules).toMatch(/inline-size:\s*1px/);
+      expect(rules).toMatch(/background-color:\s*currentcolor/);
+      expect(wide()).not.toMatch(/content:\s*"\|"/);
     });
   });
 

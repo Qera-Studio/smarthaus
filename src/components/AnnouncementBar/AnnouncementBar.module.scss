@@ -68,7 +68,10 @@
     @include focus-ring(var(--brown-100), -2px);
   }
 
-  // From md: all three in one centred row, split by a rule.
+  // From md: all three in one row, the middle one on the page's centre line
+  // and the other two pushed against it, so the two rules sit equally either
+  // side of the middle item whatever the three lengths (2026-10-28: centring
+  // the row as a whole left the middle item, and so both rules, off centre).
   @include bp-md {
     .scroller {
       display: block;
@@ -83,18 +86,33 @@
     }
 
     .items {
-      justify-content: center;
-      gap: $space-6;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      column-gap: $space-6;
     }
 
     .item {
-      flex: none;
+      display: flex;
+      align-items: center;
+      gap: $space-6;
     }
 
-    .item + .item::before {
-      // The alt text after the slash is empty: the rule is decoration.
-      content: "|" / "";
-      margin-inline-end: $space-6;
+    .item:first-child {
+      justify-content: flex-end;
+    }
+
+    .item:last-child {
+      justify-content: flex-start;
+    }
+
+    // The rules: drawn, 1px, as the hero's are, either side of the middle
+    // item. Decoration, so nothing for a screen reader to say.
+    .item:nth-child(2)::before,
+    .item:nth-child(2)::after {
+      content: "";
+      inline-size: 1px;
+      block-size: 1em;
+      background-color: currentcolor;
     }
   }
 }
