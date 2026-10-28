@@ -294,6 +294,10 @@ describe("HomeHero.module.scss", () => {
     test("the pair is set as the SIRA line always was: small, regular, no outline", () => {
       const pair = rule(".pair");
       expect(pair).toMatch(/font-size:\s*var\(--font-size-sm\)/);
+      expect(pair).toMatch(
+        /color:\s*color-mix\(in srgb, var\(--color-text-primary\) 70%, transparent\)/,
+      );
+      expect(pair).not.toMatch(/opacity/);
       expect(pair).not.toMatch(/font-weight/);
       expect(pair).not.toMatch(/border/);
       expect(css).not.toMatch(/\.proof|\.byline|\.rating/);

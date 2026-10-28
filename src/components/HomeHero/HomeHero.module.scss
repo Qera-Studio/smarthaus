@@ -67,7 +67,9 @@
     gap: $space-1;
     font-size: var(--font-size-sm);
     line-height: $line-height-normal;
-    color: var(--color-text-primary);
+    // At 70% (2026-10-28), as the contact bar is. The colour, not opacity,
+    // so the drawn rule (currentcolor) goes with it: 6.4:1 on brown-100.
+    color: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
 
     @include bp-sm {
       flex-direction: row;
