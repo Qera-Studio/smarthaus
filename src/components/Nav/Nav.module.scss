@@ -851,28 +851,70 @@
       clip-path: inset(0 -#{$space-12} -#{$space-12});
     }
 
-    // The capsule's blur, on a layer behind its content rather than on the
-    // header itself. An element with backdrop-filter is a backdrop root: the
-    // panel inside it could blur only what the header had painted, not the
-    // page, so it showed the page sharp through a tint and read as a
-    // different ground from the bar (2026-10-28). The tint, frame and grain
-    // stay on the header; only the blur moves, and blurring the even tint
-    // with the page gives the same glass.
+    // --- One glass for the capsule and the panel --------------------------
+
+    // The capsule's glass, blur and tint, is a layer behind its content, not
+    // the header's own background, so that it can reach down over the panel
+    // when the menu opens and the two are one sheet of glass (2026-10-28).
+    //
+    // Two surfaces, each with its own blur, never match at a seam: a blur
+    // has to invent what lies past its own edge, and the bar's foot and the
+    // panel's head invent it differently. And a header that carries
+    // backdrop-filter is a backdrop root, so a panel inside it cannot blur
+    // the page at all. So: one layer, one blur, one tint. Its edges sit
+    // inside the frames, so both frames lie over the same thing, and under
+    // the grain (-1), which must not be blurred.
+    //
+    // Present in both states and faded, as the glass always was; the frame,
+    // shadow and grain stay on the header.
     .nav[data-stuck] {
+      background-color: transparent;
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }
 
-    .nav[data-stuck]::after {
+    .nav::after {
       content: "";
       position: absolute;
-      // Over the 1px frame too, so the edge is blurred like the rest.
-      inset: -1px;
-      // Under the grain (-1), which must not be blurred.
+      inset: 0;
       z-index: -2;
       pointer-events: none;
+      background-color: var(--glass-bg);
       -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
       backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      opacity: 0;
+      // This is the closed, unstuck state: the glass fades out on the bar's
+      // way back, and the reach over the panel folds with the panel.
+      transition-property: opacity, inset-block-end;
+      transition-duration: var(--nav-expand-back-duration), var(--nav-collapse-duration);
+      transition-delay: 0s, var(--nav-collapse-hold);
+      transition-timing-function: var(--nav-stuck-ease), var(--nav-expand-ease);
+    }
+
+    .nav[data-stuck]::after {
+      opacity: 1;
+      transition-duration: var(--nav-stuck-duration), var(--nav-collapse-duration);
+    }
+
+    // Down over the panel: its two clear frame rows at the seam and its open
+    // height, which NavShell measures (--nav-menu-block). On the panel's own
+    // duration, curve and delay, so the glass and the panel's rows move as
+    // one: both interpolate a length on the same clock.
+    .nav[data-stuck][data-menu]::after {
+      inset-block-end: calc(-2px - var(--nav-menu-block, 0px));
+      transition-duration: var(--nav-stuck-duration), var(--nav-expand-duration);
+      transition-delay: 0s;
+    }
+
+    .nav[data-menu="focus"]::after {
+      transition-duration: var(--nav-stuck-duration), 0s;
+    }
+
+    // Joined, the panel has no glass of its own: the capsule's covers it.
+    .nav[data-stuck] .menu {
+      background-color: transparent;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
     }
 
     // Joined, the two read as one box: no frame between them, and no shadow

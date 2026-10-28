@@ -41,6 +41,33 @@ class FakeIO {
   }
 }
 
+class FakeRO {
+  static all: FakeRO[] = [];
+  targets: Element[] = [];
+  disconnected = false;
+  constructor(public callback: ResizeObserverCallback) {
+    FakeRO.all.push(this);
+  }
+  observe(target: Element) {
+    this.targets.push(target);
+  }
+  unobserve() {}
+  disconnect() {
+    this.disconnected = true;
+  }
+  deliver(target: Element, blockSize: number) {
+    this.callback(
+      [
+        {
+          target,
+          borderBoxSize: [{ blockSize, inlineSize: 500 }],
+        } as unknown as ResizeObserverEntry,
+      ],
+      this as unknown as ResizeObserver,
+    );
+  }
+}
+
 let wide = true;
 let noHover = false;
 const breakpointListeners: Array<() => void> = [];
@@ -62,11 +89,8 @@ beforeEach(() => {
   breakpointListeners.length = 0;
   FakeIO.all = [];
   window.IntersectionObserver = FakeIO as unknown as typeof IntersectionObserver;
-  window.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  } as unknown as typeof ResizeObserver;
+  FakeRO.all = [];
+  window.ResizeObserver = FakeRO as unknown as typeof ResizeObserver;
   window.matchMedia = ((query: string) => ({
     get matches() {
       return query.includes("hover: none") ? noHover : wide;
@@ -98,8 +122,12 @@ function renderNav() {
             <li data-menu-zone>
               <a href="/solutions">Solutions</a>
               <div data-menu-panel>
-                <a href="/solutions">Cameras</a>
-                <a href="/solutions">Lighting</a>
+                <div>
+                  <div data-testid="menu-body">
+                    <a href="/solutions">Cameras</a>
+                    <a href="/solutions">Lighting</a>
+                  </div>
+                </div>
               </div>
             </li>
             <li>
@@ -342,6 +370,37 @@ describe("NavShell: the Solutions menu, from lg", () => {
       expect(trigger).toHaveAttribute("aria-expanded", "false");
       fireEvent.pointerEnter(zone, { pointerType: "mouse" });
       expect(trigger).toHaveAttribute("aria-expanded", "true");
+    });
+  });
+
+  describe("the panel's open height, for the capsule's glass", () => {
+    const watching = (body: Element) => FakeRO.all.find((ro) => ro.targets.includes(body));
+
+    it("watches the panel's content, which keeps its height while the panel opens", () => {
+      renderNav();
+      expect(watching(screen.getByTestId("menu-body"))).toBeDefined();
+    });
+
+    it("writes it on the header for the stylesheet", () => {
+      const { header } = renderNav();
+      const body = screen.getByTestId("menu-body");
+      act(() => watching(body)!.deliver(body, 360));
+      expect(header.style.getPropertyValue("--nav-menu-block")).toBe("360px");
+    });
+
+    it("keeps it current when the content changes height", () => {
+      const { header } = renderNav();
+      const body = screen.getByTestId("menu-body");
+      act(() => watching(body)!.deliver(body, 360));
+      act(() => watching(body)!.deliver(body, 412.5));
+      expect(header.style.getPropertyValue("--nav-menu-block")).toBe("412.5px");
+    });
+
+    it("stops watching when it unmounts", () => {
+      const { unmount } = renderNav();
+      const observer = watching(screen.getByTestId("menu-body"))!;
+      unmount();
+      expect(observer.disconnected).toBe(true);
     });
   });
 

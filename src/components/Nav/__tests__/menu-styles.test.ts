@@ -140,17 +140,72 @@ describe("Nav.module.scss: the Solutions menu", () => {
       );
     });
 
-    test("the capsule blurs on a layer behind it, so the panel inside can blur the page too", () => {
-      // An element with backdrop-filter is a backdrop root: the panel inside
-      // the header showed the page sharp through its tint (2026-10-28).
-      expect(rule(".nav[data-stuck]", desktop())).toMatch(/(^|;)\s*backdrop-filter:\s*none/);
-      const layer = rule(".nav[data-stuck]::after", desktop());
-      expect(layer).toMatch(
-        /backdrop-filter:\s*blur\(var\(--glass-blur\)\) saturate\(var\(--glass-saturate\)\)/,
-      );
-      expect(layer).toMatch(/inset:\s*-1px/);
-      expect(layer).toMatch(/z-index:\s*-2/);
-      expect(layer).toMatch(/pointer-events:\s*none/);
+    describe("one glass for the capsule and the panel", () => {
+      test("the capsule's glass is a layer behind it, not the header's own ground", () => {
+        // A header with backdrop-filter is a backdrop root: the panel inside
+        // could not blur the page (2026-10-28).
+        const stuck = rule(".nav[data-stuck]", desktop());
+        expect(stuck).toMatch(/(^|;)\s*backdrop-filter:\s*none/);
+        expect(stuck).toMatch(/background-color:\s*transparent/);
+        const layer = rule(".nav::after", desktop());
+        expect(layer).toMatch(
+          /backdrop-filter:\s*blur\(var\(--glass-blur\)\) saturate\(var\(--glass-saturate\)\)/,
+        );
+        expect(layer).toMatch(/background-color:\s*var\(--glass-bg\)/);
+        expect(layer).toMatch(/z-index:\s*-2/);
+        expect(layer).toMatch(/pointer-events:\s*none/);
+      });
+
+      test("sits inside the frames, so it never paints over a border", () => {
+        // At -1px it covered the bar's frame, which then read unlike the panel's.
+        expect(rule(".nav::after", desktop())).toMatch(/inset:\s*0/);
+      });
+
+      test("fades in with the capsule and out on the way back, as the glass did", () => {
+        expect(rule(".nav::after", desktop())).toMatch(/opacity:\s*0/);
+        const stuck = rule(".nav[data-stuck]::after", desktop());
+        expect(stuck).toMatch(/opacity:\s*1/);
+        expect(stuck).toMatch(/transition-duration:\s*var\(--nav-stuck-duration\)/);
+        expect(rule(".nav::after", desktop())).toMatch(
+          /transition-duration:\s*var\(--nav-expand-back-duration\)/,
+        );
+      });
+
+      test("reaches down over the open panel, both seam rows included", () => {
+        expect(rule(".nav[data-stuck][data-menu]::after", desktop())).toMatch(
+          /inset-block-end:\s*calc\(-2px - var\(--nav-menu-block, 0px\)\)/,
+        );
+      });
+
+      test("on the panel's own clock both ways, so the two move as one", () => {
+        const closed = rule(".nav::after", desktop());
+        expect(closed).toMatch(/transition-property:\s*opacity, inset-block-end/);
+        expect(closed).toMatch(/transition-delay:\s*0s, var\(--nav-collapse-hold\)/);
+        expect(closed).toMatch(
+          /transition-timing-function:\s*var\(--nav-stuck-ease\), var\(--nav-expand-ease\)/,
+        );
+        expect(closed).toMatch(/var\(--nav-collapse-duration\)/);
+        const open = rule(".nav[data-stuck][data-menu]::after", desktop());
+        expect(open).toMatch(
+          /transition-duration:\s*var\(--nav-stuck-duration\), var\(--nav-expand-duration\)/,
+        );
+        expect(open).toMatch(/transition-delay:\s*0s/);
+        // The panel's rows: the same values.
+        expect(rule(".nav[data-menu] .menu", desktop())).toMatch(/var\(--nav-expand-duration\)/);
+        expect(rule(".menu", desktop())).toMatch(/var\(--nav-collapse-hold\)/);
+      });
+
+      test("and at once when the keyboard opened it, as the panel does", () => {
+        expect(rule(".nav[data-menu=focus]::after", desktop())).toMatch(
+          /transition-duration:\s*var\(--nav-stuck-duration\), 0s/,
+        );
+      });
+
+      test("joined, the panel has no glass of its own", () => {
+        const joined = rule(".nav[data-stuck] .menu", desktop());
+        expect(joined).toMatch(/background-color:\s*transparent/);
+        expect(joined).toMatch(/(^|;)\s*backdrop-filter:\s*none/);
+      });
     });
 
     test("joined, no shadow crosses the seam", () => {

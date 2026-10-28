@@ -316,6 +316,22 @@ export function NavShell({ brandMark, brandFull, links, solutions, cta, footer }
     return () => header.removeEventListener("click", onClick);
   }, [isDesktop, menu]);
 
+  // The Solutions panel's open height, for the capsule's glass to reach down
+  // over it as one sheet once the two are joined (Nav.module.scss). Its
+  // content's height, which does not move while the panel opens.
+  useEffect(() => {
+    const header = headerRef.current;
+    const body = header?.querySelector("[data-menu-panel] > * > *");
+    if (!header || !body) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        header.style.setProperty("--nav-menu-block", `${entry.borderBoxSize[0]!.blockSize}px`);
+      }
+    });
+    observer.observe(body);
+    return () => observer.disconnect();
+  }, []);
+
   // The capsule's geometry uses the widths this platform renders: measure.ts.
   useEffect(() => trackNavWidths(headerRef.current!, linksRef.current!, ctaRef.current!), []);
 

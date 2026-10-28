@@ -113,12 +113,23 @@ test.describe("from lg", () => {
     // And no shadow across the seam: the bar's own would show through the
     // panel's glass as a band.
     await expect(header(page)).toHaveCSS("box-shadow", "none");
-    // The same glass on both: the panel blurs the page, which it cannot do
-    // inside a header that carries backdrop-filter itself.
+    // One glass for both: the capsule's layer reaches down over the panel,
+    // which has none of its own, and ends just inside the panel's frame.
     await expect(header(page)).toHaveCSS("backdrop-filter", "none");
-    expect(
-      await header(page).evaluate((el) => getComputedStyle(el, "::after").backdropFilter),
-    ).toBe(await panel(page).evaluate((el) => getComputedStyle(el).backdropFilter));
+    await expect(panel(page)).toHaveCSS("backdrop-filter", "none");
+    await expect(panel(page)).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect
+      .poll(async () => {
+        const reach = await header(page).evaluate(
+          (el) => -parseFloat(getComputedStyle(el, "::after").bottom),
+        );
+        const bar = await box(page, "header");
+        const menu = await box(page, "[data-menu-panel]");
+        // The layer's foot: the bar's padding edge, plus its reach.
+        return Math.round(bar.bottom - 1 + reach - (menu.bottom - 1));
+      })
+      .toBe(0);
+    expect(await header(page).evaluate((el) => getComputedStyle(el, "::after").opacity)).toBe("1");
   });
 
   test("on the shrunk bar it opens downward from the capsule's foot", async ({ page }) => {
