@@ -57,37 +57,21 @@
   }
 
   // Two statements either side of a drawn rule (HomeHero.tsx Pair): the
-  // rating line and the SIRA line, styled alike. From sm the rule sits on
-  // the centre line: equal outer tracks, the start pushed against it from
-  // the left and the end from the right. On a phone the two stack and the
-  // rule goes.
+  // rating line and the SIRA line, styled alike. From sm the two share one
+  // centred line; on a phone they stack and the rule goes. (The rule sat on
+  // the page's centre line for a day, 2026-10-28, and was reverted.)
   .pair {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: $space-1;
-    inline-size: 100%;
     font-size: var(--font-size-sm);
     line-height: $line-height-normal;
     color: var(--color-text-primary);
 
     @include bp-sm {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
+      flex-direction: row;
       gap: $space-3;
-    }
-  }
-
-  .pairStart {
-    @include bp-sm {
-      text-align: end;
-    }
-  }
-
-  .pairEnd {
-    @include bp-sm {
-      text-align: start;
     }
   }
 

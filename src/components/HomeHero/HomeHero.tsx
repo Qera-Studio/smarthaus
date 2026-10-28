@@ -57,23 +57,20 @@ function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
 }
 
 /**
- * Two short statements either side of a drawn rule, the rule on the page's
- * centre line, whatever the two lengths: the start right-aligned, the end
- * left-aligned (HomeHero.module.scss .pair). Centring the whole line put
- * the rule wherever the shorter half left it, which is what read as off
- * centre (2026-10-28). The rule is drawn rather than typed, since a screen
- * reader would say "vertical bar"; a hidden comma keeps the two apart when
- * read aloud. The rating line and the SIRA line share it, so they match.
+ * Two short statements either side of a drawn rule, centred as one line
+ * (HomeHero.module.scss .pair). The rule is drawn rather than typed, since a
+ * screen reader would say "vertical bar"; a hidden comma keeps the two apart
+ * when read aloud. The rating line and the SIRA line share it, so they match.
  */
 function Pair({ start, end }: { start: React.ReactNode; end: React.ReactNode }) {
   return (
     <p className={styles.pair}>
-      <span className={styles.pairStart}>
+      <span>
         {start}
         <span className="visually-hidden">,</span>
       </span>
       <span className={styles.divider} aria-hidden="true" />
-      <span className={styles.pairEnd}>{end}</span>
+      <span>{end}</span>
     </p>
   );
 }

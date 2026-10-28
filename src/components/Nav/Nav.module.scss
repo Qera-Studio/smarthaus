@@ -31,12 +31,9 @@
     // Half the link row plus one gap: the distance from the middle track's
     // centre to an edge track's inner boundary.
     --nav-links-half: calc(var(--nav-links-row) / 2 + var(--nav-gap));
-    // How far the link row sits off the bar's centre. Zero since 2026-10-28
-    // (Shivanshu): the links are centred on the viewport, in both states. It
-    // was half the difference between the two end pieces, which kept the
-    // capsule's two gaps equal at the cost of a row 53px left of centre; now
-    // the gap beside the mark is the larger one. See the desktop band.
-    --nav-end-offset: 0px;
+    // Half the difference between the two end pieces. See the grid note in
+    // the desktop band for why the link row sits this far off centre.
+    --nav-end-offset: calc((var(--nav-cta-width) - 23px) / 2);
     // The capsule hugs its content: mark, gap, links, gap, CTA, plus padding
     // and border. Derived rather than a round number, so it cannot drift out
     // of step with the tracks above.
@@ -494,12 +491,11 @@
       // 1fr auto 1fr against auto 1fr auto, snapped the CTA 379px in one
       // frame; it was the mismatch, not the fr edges.)
       //
-      // Equal gaps and a centred link row cannot both hold. Until 2026-10-28
-      // the gaps won and the row sat 53px left of centre; now the row wins
-      // (--nav-end-offset is 0), so the tracks are equal and the capsule's
-      // gap beside the 23px mark is 106px wider than the one beside the CTA.
-      // The offset is still a constant at every width, so the links still
-      // never travel during the shrink.
+      // The consequence, and it is deliberate: with equal gaps the link row
+      // cannot also sit on the page's centre line. It settles 53px (on macOS) to the
+      // start of it — half the difference between the two end pieces — and,
+      // because that offset is the SAME constant at every width, it is already
+      // there in the tall bar and never travels during the shrink.
       grid-template-columns:
         calc(50% - var(--nav-links-half) - var(--nav-end-offset)) auto
         calc(50% - var(--nav-links-half) + var(--nav-end-offset));

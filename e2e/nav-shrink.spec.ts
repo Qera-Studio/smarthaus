@@ -11,11 +11,10 @@ import { test, expect, type Page } from "./fixtures";
  *     centre is a constant, because the edge tracks are half the leftover
  *     space shifted by half the difference between the two end pieces, which
  *     is the same shift at any width;
- *   - the link row sits on the viewport's centre line on every frame
- *     (2026-10-28, Shivanshu). Until then the two gaps around it were held
- *     equal instead, which put the row 53px left of centre; now the gap
- *     beside the 23px mark is the CTA's gap plus the difference between the
- *     two end pieces;
+ *   - the two gaps around the link row stay equal on every frame of the
+ *     shrink. That is what the shifted tracks buy: with symmetric edges, all
+ *     106px of the capsule's slack pooled beside the 23px mark while the
+ *     129px CTA had none;
  *   - the mark and the CTA keep a constant inset from the frame and only
  *     slide inward with it;
  *   - the two brand lockups cross-fade on one centre line (both in flow).
@@ -179,10 +178,10 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
   // from what this browser rendered, measured here independently of how
   // NavShell measures it. On macOS this is 520px wide with 77px gaps.
   //
-  // The equations: width = 2 * (cta + 24 + 8 + 1) + row; the gap beside the
-  // CTA is 24 and the gap beside the mark 24 + (cta - 23), where 23 is the
-  // mark the stylesheet assumes. A gap off by more than a pixel means the
-  // capsule was built from widths the page did not render.
+  // The equations: width = 2 * (cta + 24 + 8 + 1) + row, and each gap is
+  // 24 + (cta - 23) / 2, where 23 is the mark the stylesheet assumes. A gap
+  // off by more than a pixel means the capsule was built from widths the page
+  // did not render: the CTA poking out, or slack beside the mark.
   const settled = shrink.at(-1)!;
   expect(settled.stuck, "settled in the capsule").toBe(true);
   const geometry = await page.evaluate(() => {
@@ -197,13 +196,14 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
     };
   });
   expect(Math.abs(geometry.width - (2 * (geometry.cta + 33) + geometry.row))).toBeLessThan(1);
-  const markGap = 24 + (geometry.cta - 23);
+  const gap = 24 + (geometry.cta - 23) / 2;
+  expect(Math.abs(settled.leftGap - gap), `left gap ${settled.leftGap}, want ${gap}`).toBeLessThan(
+    1,
+  );
   expect(
-    Math.abs(settled.leftGap - markGap),
-    `mark gap ${settled.leftGap}, want ${markGap}`,
+    Math.abs(settled.rightGap - gap),
+    `right gap ${settled.rightGap}, want ${gap}`,
   ).toBeLessThan(1);
-  expect(Math.abs(settled.rightGap - 24), `CTA gap ${settled.rightGap}, want 24`).toBeLessThan(1);
-  const centre = await page.evaluate(() => document.documentElement.clientWidth / 2);
 
   for (const [label, frames] of [
     ["shrink", shrink],
@@ -226,9 +226,13 @@ test("the capsule closes around a fixed row with the gaps held equal", async ({ 
       // The two lockups cross-fade on one centre line. Their heights differ by
       // ~5px so the tops never match; the centres must.
       expect(Math.abs(f.markMid - f.fullMid), `${label}: lockup centres`).toBeLessThan(3);
-      // The links on the viewport's centre line, in the tall bar and the
-      // capsule alike.
-      expect(Math.abs(f.linksX - centre), `${label}: links off centre at ${at}`).toBeLessThan(1);
+      // Equal gaps, but only once the capsule owns the row. In the tall bar
+      // the visible lockup is the 133px wordmark rather than the 23px mark, so
+      // the two gaps around it genuinely differ by the lockup's extra width —
+      // the cross-fade is what resolves it, on the first stuck frame.
+      if (f.stuck) {
+        expect(Math.abs(f.leftGap - f.rightGap), `${label}: gaps unequal at ${at}`).toBeLessThan(1);
+      }
     }
   }
 });

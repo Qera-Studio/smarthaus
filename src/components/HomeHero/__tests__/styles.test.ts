@@ -278,11 +278,11 @@ describe("HomeHero.module.scss", () => {
       );
     });
 
-    test("both lines are the same pair: stacked on a phone, ruled on the centre from sm", () => {
+    test("both lines are the same pair: stacked on a phone, one centred line from sm", () => {
       expect(rule(".pair")).toMatch(/flex-direction:\s*column/);
-      expect(css).toMatch(/\.pair\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*1fr auto 1fr/);
-      expect(css).toMatch(/\.pairStart\s*\{\s*text-align:\s*end/);
-      expect(css).toMatch(/\.pairEnd\s*\{\s*text-align:\s*start/);
+      expect(rule(".pair")).toMatch(/align-items:\s*center/);
+      expect(css).toMatch(/\.pair\s*\{\s*flex-direction:\s*row/);
+      expect(css).not.toMatch(/1fr auto 1fr|pairStart|pairEnd/);
       expect(rule(".divider")).toMatch(/display:\s*none/);
       expect(css).toMatch(/\.divider\s*\{\s*display:\s*block;\s*inline-size:\s*1px/);
     });

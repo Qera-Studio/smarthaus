@@ -256,14 +256,18 @@ test("there are no arrows on the strip any more", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Previous image|Next image/ })).toHaveCount(0);
 });
 
-test("the two ruled lines put their rule on the page's centre line", async ({ page }) => {
+test("the two ruled lines are each centred as a whole, rule and both halves", async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 640, "phones stack the halves, no rule");
   const centre = await page.evaluate(() => document.documentElement.clientWidth / 2);
   const rules = hero(page).locator("p > span[aria-hidden='true']:not(:has(*))");
   await expect(rules).toHaveCount(2);
   for (const rule of await rules.all()) {
-    const box = (await rule.boundingBox())!;
-    expect(Math.abs(box.x + box.width / 2 - centre)).toBeLessThan(1);
+    const [start, end] = await rule.evaluate((el) => {
+      const first = el.previousElementSibling!.getBoundingClientRect();
+      const last = el.nextElementSibling!.getBoundingClientRect();
+      return [first.left, last.right];
+    });
+    expect(Math.abs((start + end) / 2 - centre)).toBeLessThan(1);
   }
 });
 
