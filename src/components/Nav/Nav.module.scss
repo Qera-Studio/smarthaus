@@ -141,6 +141,23 @@
     // --nav-float-inset is global (see _variables.scss) — `main` reserves it
     // as well, so it cannot live on this component.
 
+    // --- The Solutions menu --------------------------------------------------
+    // How far the desktop panel floats below the tall bar. It closes to 0 as
+    // the bar shrinks, and the panel joins the capsule (see the lg band).
+    --nav-menu-gap: #{$space-2};
+    // The panel lists eight solutions against the phone menu's three links,
+    // so its stagger steps are 3/8 of the phone's: the same window, the same
+    // feel, rather than eight full steps that leave the last item waiting.
+    --nav-menu-step: calc(var(--nav-stagger-step) * 3 / 8);
+    --nav-menu-step-out: calc(var(--nav-stagger-step-out) * 3 / 8);
+    // On a phone, the links leave sideways first, then the menu changes
+    // height, then the solutions arrive; and the same in reverse for Back.
+    --nav-sub-slide: #{$duration-normal};
+    --nav-sub-resize: #{$duration-slow};
+    // The tallest the solutions may stand before they scroll: the screen less
+    // the bar, its float gutters and the footer lockup under them.
+    --nav-sub-max: calc(100svh - 14rem);
+
     color: var(--nav-ink);
   }
 
@@ -331,6 +348,12 @@
     &:hover {
       opacity: 0.85;
     }
+  }
+
+  // The Solutions panel exists from lg only; below it the phone menu shows
+  // the solutions in place of the links instead (.sub).
+  .menu {
+    display: none;
   }
 
   // --- Hamburger ------------------------------------------------------------
@@ -737,6 +760,182 @@
     .nav[data-at-footer] {
       transform: translateY(-100%);
     }
+
+    // The phone's solutions and the wrapper that swaps them with the links
+    // have no part here.
+    .sub {
+      display: none;
+    }
+
+    .main {
+      display: contents;
+    }
+
+    // --- The Solutions panel -------------------------------------------------
+
+    // Always the capsule's width and place, in both states of the bar, so a
+    // menu open while the bar shrinks never changes size: the bar closes in to
+    // meet it. Under the tall bar it floats --nav-menu-gap below with a frame
+    // of its own; once the bar has shrunk the gap is gone and the frame
+    // between the two is dropped, so they read as one box.
+    //
+    // It hangs from the Solutions item, so hovering it is hovering the item
+    // (NavShell), but it is placed against the header: the item is not
+    // positioned, the sticky header is. 50% of the header is the page's
+    // centre in both states, as the capsule's own auto margins are.
+    .menu {
+      position: absolute;
+      // Just under the bar's 1px frame.
+      inset-block-start: calc(100% + 1px);
+      inset-inline-start: 50%;
+      inline-size: var(--nav-stuck-size);
+      translate: -50% var(--nav-menu-gap);
+      // Height by the 0fr/1fr row, as the phone menu opens.
+      display: grid;
+      grid-template-rows: 0fr;
+      visibility: hidden;
+
+      @include glass(0);
+
+      // This is the CLOSED state, so these are the closing values: the
+      // panel waits for its items to leave, then folds up, then hides. The
+      // gap and the frame move with the bar's own shrink.
+      transition-property: grid-template-rows, translate, border-color, visibility;
+      transition-duration:
+        var(--nav-collapse-duration), var(--nav-stuck-duration), var(--nav-stuck-duration), 0s;
+      transition-delay:
+        var(--nav-collapse-hold), 0s, 0s,
+        calc(var(--nav-collapse-hold) + var(--nav-collapse-duration));
+      transition-timing-function:
+        var(--nav-expand-ease), var(--nav-stuck-ease), var(--nav-stuck-ease), linear;
+
+      // Bridges the gap to the bar, so the pointer crossing it stays inside
+      // the Solutions item. Only while the panel shows: hidden, it takes no
+      // pointer. ::before is the glass's grain.
+      &::after {
+        content: "";
+        position: absolute;
+        inset-inline: 0;
+        inset-block-end: 100%;
+        block-size: calc(var(--nav-menu-gap) + 1px + var(--nav-padding-stuck));
+      }
+    }
+
+    .nav[data-menu] .menu {
+      grid-template-rows: 1fr;
+      visibility: visible;
+      transition-duration:
+        var(--nav-expand-duration), var(--nav-stuck-duration), var(--nav-stuck-duration), 0s;
+      transition-delay: 0s;
+    }
+
+    // Opened by the keyboard: no expansion and no stagger to wait for. The
+    // gap and the frame still move with the bar's shrink.
+    .nav[data-menu="focus"] .menu {
+      transition-duration: 0s, var(--nav-stuck-duration), var(--nav-stuck-duration), 0s;
+    }
+
+    .nav[data-menu="focus"] .menuItem,
+    .nav[data-menu="focus"] .menuMedia {
+      transition-delay: 0s;
+      transition-duration: 0s;
+    }
+
+    .nav[data-stuck] .menu {
+      translate: -50% 0;
+      border-block-start-color: transparent;
+    }
+
+    // The capsule's own bottom frame goes too while the panel hangs from it.
+    .nav[data-stuck][data-menu] {
+      border-block-end-color: transparent;
+    }
+
+    // MUST carry no padding: it is what the 0fr row sizes (see .panelInner).
+    .menuInner {
+      min-block-size: 0;
+      overflow: clip;
+    }
+
+    // Figma 4678:50257: the list on the left, the picture beside it.
+    .menuBody {
+      display: flex;
+      gap: $space-12;
+      padding-block: $space-8 $space-3;
+      padding-inline: $space-3;
+    }
+
+    .menuList {
+      display: flex;
+      flex: none;
+      flex-direction: column;
+      gap: $space-3;
+      list-style: none;
+    }
+
+    .menuLink {
+      display: block;
+      padding-block: $space-1;
+      padding-inline: $space-3;
+      font-size: var(--nav-link-size);
+      font-weight: var(--nav-link-weight);
+      line-height: $line-height-normal;
+      color: var(--nav-link-ink);
+      text-decoration: none;
+      white-space: nowrap;
+      transition-property: background-color;
+      transition-duration: var(--duration-fast);
+
+      @include focus-ring;
+
+      // The solution whose picture is showing. brown-200, the Figma's fill.
+      &[data-shown] {
+        background-color: var(--brown-200);
+      }
+    }
+
+    .menuMedia {
+      position: relative;
+      display: block;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    // Every picture is there, stacked; the active one fades up over the rest.
+    .menuImage {
+      object-fit: cover;
+      opacity: 0;
+      transition-property: opacity;
+      transition-duration: var(--duration-normal);
+      transition-timing-function: var(--ease-out);
+
+      &[data-shown] {
+        opacity: 1;
+      }
+    }
+
+    // The phone menu's choreography: items rise and fade in once the panel
+    // is 90% open, one step apart, and leave in reverse before it folds. The
+    // picture comes with the first item. This is the CLOSING state.
+    .menuItem,
+    .menuMedia {
+      opacity: 0;
+      transform: translateY(var(--nav-link-rise));
+      transition-property: opacity, transform;
+      transition-duration: var(--nav-item-duration-out);
+      transition-timing-function: var(--nav-expand-ease);
+      transition-delay: calc((7 - var(--link-index, 7)) * var(--nav-menu-step-out));
+    }
+
+    .nav[data-menu] .menuItem,
+    .nav[data-menu] .menuMedia {
+      opacity: 1;
+      transform: none;
+      transition-duration: var(--nav-item-duration);
+      transition-delay: calc(
+        var(--nav-expand-duration) * 0.9 + var(--link-index, 0) * var(--nav-menu-step)
+      );
+    }
   }
 
   // --- Below lg: fixed bottom bar, glass, disclosure panel ------------------
@@ -876,6 +1075,173 @@
       font-size: var(--font-size-lg);
     }
 
+    // --- The solutions, in place of the links -------------------------------
+
+    // Each its own 0fr/1fr row, one closing as the other opens, so the menu
+    // changes height smoothly between the two. Two rows of ONE grid would
+    // not do: with no definite height the 1fr row sizes to the taller of the
+    // two contents, so the menu would stand as tall as the solutions even on
+    // the links. The rows wait for the side that is leaving to slide away.
+    .sub,
+    .main {
+      display: grid;
+      transition-property: grid-template-rows;
+      transition-duration: var(--nav-sub-resize);
+      transition-timing-function: var(--nav-expand-ease);
+      transition-delay: var(--nav-sub-slide);
+    }
+
+    .sub {
+      grid-template-rows: 0fr;
+      // The panel centres its children, which suits the links; the solutions
+      // run the full width, picture and list flush to the start edge.
+      align-self: stretch;
+    }
+
+    .main {
+      grid-template-rows: 1fr;
+    }
+
+    .nav[data-sub] .sub {
+      grid-template-rows: 1fr;
+    }
+
+    .nav[data-sub] .main {
+      grid-template-rows: 0fr;
+      // Clips the links to their shrinking row. Only on this side: on the
+      // links the stagger's rise must be free to overflow it.
+      overflow: clip;
+    }
+
+    // The 0fr child. No padding of its own, as .panelInner. It scrolls when
+    // the solutions are taller than the screen leaves room for.
+    .subInner {
+      display: flex;
+      flex-direction: column;
+      gap: $space-3;
+      min-block-size: 0;
+      max-block-size: var(--nav-sub-max);
+      overflow-y: auto;
+    }
+
+    .panelLinks {
+      min-block-size: 0;
+    }
+
+    // The links leave to the left, the solutions arrive from the right, and
+    // Back reverses it. The base rules are the links' side: the solutions
+    // leave at once and the links return after the height has changed.
+    .subInner {
+      opacity: 0;
+      translate: 100% 0;
+      transition-property: opacity, translate;
+      transition-duration: var(--nav-sub-slide);
+      transition-timing-function: var(--nav-expand-ease);
+    }
+
+    .panelLinks {
+      transition-property: opacity, translate;
+      transition-duration: var(--nav-sub-slide);
+      transition-timing-function: var(--nav-expand-ease);
+      transition-delay: calc(var(--nav-sub-slide) + var(--nav-sub-resize) * 0.9);
+    }
+
+    .nav[data-sub] .panelLinks {
+      opacity: 0;
+      translate: -100% 0;
+      transition-delay: 0s;
+    }
+
+    .nav[data-sub] .subInner {
+      opacity: 1;
+      translate: 0 0;
+      transition-delay: calc(var(--nav-sub-slide) + var(--nav-sub-resize) * 0.9);
+    }
+
+    .back {
+      display: flex;
+      align-self: flex-start;
+      align-items: center;
+      gap: $space-1;
+      margin-block-start: $space-3;
+      padding-block: $space-1;
+      padding-inline: $space-2;
+      font-size: var(--font-size-base);
+      font-weight: var(--nav-link-weight);
+      color: var(--nav-link-ink);
+      background: none;
+      border: 0;
+
+      @include focus-ring;
+
+      svg {
+        inline-size: $space-4;
+        block-size: $space-4;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+    }
+
+    // The picture on top, the eight below it, left-aligned.
+    .subBody {
+      display: flex;
+      flex-direction: column;
+      gap: $space-3;
+    }
+
+    // First visually, last in the source: it is out of the tab order and
+    // hidden from AT, so the order it reads in does not change.
+    .subMedia {
+      position: relative;
+      display: block;
+      order: -1;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      // Vertical movement stays the page's; sideways is the swipe.
+      touch-action: pan-y;
+      user-select: none;
+    }
+
+    .subImage {
+      object-fit: cover;
+      opacity: 0;
+      transition-property: opacity;
+      transition-duration: var(--duration-normal);
+      transition-timing-function: var(--ease-out);
+
+      &[data-shown] {
+        opacity: 1;
+      }
+    }
+
+    .subList {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: $space-1;
+      list-style: none;
+    }
+
+    .subLink {
+      display: block;
+      padding-block: $space-1;
+      padding-inline: $space-2;
+      font-size: var(--font-size-base);
+      font-weight: var(--nav-link-weight);
+      line-height: $line-height-normal;
+      color: var(--nav-link-ink);
+      text-decoration: none;
+
+      @include focus-ring;
+
+      &[data-shown] {
+        background-color: var(--brown-200);
+      }
+    }
+
     // Pinned close to the bar, after a deliberate gap from the links.
     .panelFooter {
       margin-block-start: $space-12;
@@ -938,7 +1304,21 @@
     .nav[data-open] .panelFooter,
     .item,
     .panelFooter,
-    .panel {
+    .panel,
+    .nav[data-menu] .menu,
+    .nav[data-menu] .menuItem,
+    .nav[data-menu] .menuMedia,
+    .menu,
+    .menuItem,
+    .menuMedia,
+    .nav[data-sub] .sub,
+    .nav[data-sub] .main,
+    .nav[data-sub] .panelLinks,
+    .nav[data-sub] .subInner,
+    .sub,
+    .main,
+    .panelLinks,
+    .subInner {
       transition-delay: 0s;
     }
 
@@ -950,7 +1330,9 @@
     }
 
     .item,
-    .panelFooter {
+    .panelFooter,
+    .menuItem,
+    .menuMedia {
       // A 0ms rise reads as a glitch; let opacity alone carry the state.
       transform: none;
     }

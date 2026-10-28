@@ -11,6 +11,12 @@ import { trackNavWidths } from "./measure";
  */
 const FOOTER_HIDE_RATIO = 0.7;
 
+/**
+ * How long the Solutions menu waits before closing once the pointer leaves
+ * it, so crossing the bar between the link and the panel does not shut it.
+ */
+export const MENU_CLOSE_DELAY_MS = 150;
+
 type NavShellProps = {
   /** Mark-only lockup, shown below lg where there is no room for the wordmark. */
   brandMark: ReactNode;
@@ -18,6 +24,8 @@ type NavShellProps = {
   brandFull: ReactNode;
   /** The <ul> of primary links, server-rendered. */
   links: ReactNode;
+  /** The eight solutions, for the phone menu: shown in place of the links. */
+  solutions: ReactNode;
   cta: ReactNode;
   /** Wordmark + parent-company line, pinned under the links when open. */
   footer: ReactNode;
@@ -35,8 +43,17 @@ type NavShellProps = {
  * State reaches CSS as data attributes on <header>; all the choreography lives
  * in Nav.module.scss.
  */
-export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellProps) {
+export function NavShell({ brandMark, brandFull, links, solutions, cta, footer }: NavShellProps) {
   const [open, setOpen] = useState(false);
+  // The Solutions menu from lg: the panel under the bar. "focus" when the
+  // keyboard opened it, which the stylesheet shows at once: the next Tab
+  // lands in the panel, and must not land on an item still fading in.
+  const [menu, setMenu] = useState<false | "hover" | "focus">(false);
+  // Below lg: the open menu shows the eight solutions in place of the links.
+  const [sub, setSub] = useState(false);
+  // The phone's copy of the solutions is mounted on the first tap that shows
+  // it, and kept: no visitor pays its elements and pictures until then.
+  const [subUsed, setSubUsed] = useState(false);
   const [stuck, setStuck] = useState(false);
   // True once the footer covers FOOTER_HIDE_RATIO of the viewport.
   const [atFooter, setAtFooter] = useState(false);
@@ -52,6 +69,13 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
   const headerRef = useRef<HTMLElement>(null);
   const linksRef = useRef<HTMLElement>(null);
   const ctaRef = useRef<HTMLSpanElement>(null);
+  const backRef = useRef<HTMLButtonElement>(null);
+  // Set by a click that moves between the links and the solutions, so focus
+  // follows it once the side it lands on is no longer inert.
+  const focusAfterSub = useRef(false);
+  // Set while Escape hands focus back to the Solutions link, so that focus
+  // does not open the menu it has just closed.
+  const returningFocus = useRef(false);
 
   // Desktop capsule trigger. A sentinel plus IntersectionObserver rather than a
   // scroll listener, which AGENTS.md rules out — this fires twice per crossing
@@ -93,7 +117,10 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
         const hide = entry.isIntersecting;
         setAtFooter(hide);
         // A menu left open would be stranded off-screen with the bar.
-        if (hide) setOpen(false);
+        if (hide) {
+          setOpen(false);
+          setMenu(false);
+        }
       },
       // rootMargin, not thresholds.
       //
@@ -127,6 +154,7 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
     const sync = () => {
       setIsDesktop(mq.matches);
       if (mq.matches) setOpen(false);
+      else setMenu(false);
     };
     sync();
     mq.addEventListener("change", sync);
@@ -168,6 +196,126 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
     return () => document.removeEventListener("pointerdown", onPointerDown, { capture: true });
   }, [open]);
 
+  // The Solutions menu, from lg. It opens while the pointer or focus is
+  // anywhere in the Solutions item, which holds both the link and the panel,
+  // and closes a moment after the pointer leaves or at once when focus does.
+  // Listeners on the item rather than :hover in the stylesheet: a closing
+  // delay, Escape and a touch screen's first tap all need a say.
+  useEffect(() => {
+    const zone = headerRef.current?.querySelector<HTMLElement>("[data-menu-zone]");
+    if (!zone || !isDesktop) return;
+    let timer: number | undefined;
+    const show = (how: "hover" | "focus") => {
+      window.clearTimeout(timer);
+      // Hover never downgrades a menu the keyboard already has open.
+      setMenu((now) => (now === "focus" ? now : how));
+    };
+    const onFocusIn = () => {
+      if (!returningFocus.current) show("focus");
+    };
+    const hide = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setMenu(false), MENU_CLOSE_DELAY_MS);
+    };
+    const onPointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") show("hover");
+    };
+    const onPointerLeave = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") hide();
+    };
+    const onFocusOut = (event: FocusEvent) => {
+      if (zone.contains(event.relatedTarget as Node | null)) return;
+      window.clearTimeout(timer);
+      setMenu(false);
+    };
+    zone.addEventListener("pointerenter", onPointerEnter);
+    zone.addEventListener("pointerleave", onPointerLeave);
+    zone.addEventListener("focusin", onFocusIn);
+    zone.addEventListener("focusout", onFocusOut);
+    return () => {
+      window.clearTimeout(timer);
+      zone.removeEventListener("pointerenter", onPointerEnter);
+      zone.removeEventListener("pointerleave", onPointerLeave);
+      zone.removeEventListener("focusin", onFocusIn);
+      zone.removeEventListener("focusout", onFocusOut);
+    };
+  }, [isDesktop]);
+
+  // Escape closes the Solutions menu and hands focus back to its link; a tap
+  // outside it closes it too, as it does the phone menu.
+  useEffect(() => {
+    if (!menu) return;
+    const zone = headerRef.current?.querySelector<HTMLElement>("[data-menu-zone]");
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMenu(false);
+      // Focus events are synchronous, so the flag covers exactly this one.
+      returningFocus.current = true;
+      zone?.querySelector<HTMLElement>(":scope > a")?.focus();
+      returningFocus.current = false;
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && zone?.contains(event.target)) return;
+      setMenu(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown, { capture: true });
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown, { capture: true });
+    };
+  }, [menu]);
+
+  // The panel is out of the tab order and the accessibility tree while it is
+  // shut. It is server markup inside the links, so it is reached by selector;
+  // the Solutions link says whether its menu is open, on either side of lg.
+  useEffect(() => {
+    const zone = headerRef.current?.querySelector<HTMLElement>("[data-menu-zone]");
+    zone?.querySelector("[data-menu-panel]")?.toggleAttribute("inert", !menu);
+    zone
+      ?.querySelector(":scope > a")
+      ?.setAttribute("aria-expanded", String(isDesktop ? Boolean(menu) : sub));
+  }, [menu, sub, isDesktop]);
+
+  // Focus follows a move between the links and the solutions on a phone: to
+  // Back on the way in, to the Solutions link on the way out.
+  useEffect(() => {
+    if (!focusAfterSub.current) return;
+    focusAfterSub.current = false;
+    if (sub) backRef.current?.focus();
+    else headerRef.current?.querySelector<HTMLElement>("[data-menu-zone] > a")?.focus();
+  }, [sub]);
+
+  // The Solutions link itself. On a phone it opens the solutions in place of
+  // the links rather than leaving the page; from lg on a screen with no hover,
+  // the first tap opens the panel and the second follows the link. Without
+  // JavaScript it is a plain link either way. A link in the panel closes it.
+  // One listener on the header for every link click, Enter included.
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const onClick = (event: MouseEvent) => {
+      const link = (event.target as Element).closest("a");
+      if (!link) return;
+      if (link.closest("[data-menu-panel]")) {
+        setMenu(false);
+        return;
+      }
+      if (!link.parentElement?.hasAttribute("data-menu-zone")) return;
+      if (!isDesktop) {
+        event.preventDefault();
+        focusAfterSub.current = true;
+        setSubUsed(true);
+        setSub(true);
+      } else if (!menu && window.matchMedia("(hover: none)").matches) {
+        event.preventDefault();
+        setMenu("hover");
+      }
+    };
+    header.addEventListener("click", onClick);
+    return () => header.removeEventListener("click", onClick);
+  }, [isDesktop, menu]);
+
   // The capsule's geometry uses the widths this platform renders: measure.ts.
   useEffect(() => trackNavWidths(headerRef.current!, linksRef.current!, ctaRef.current!), []);
 
@@ -182,6 +330,8 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
         data-open={open || undefined}
         data-stuck={stuck || undefined}
         data-at-footer={atFooter || undefined}
+        data-menu={menu || undefined}
+        data-sub={sub || undefined}
         // A faded-out bar is still focusable and still in the accessibility
         // tree, so Tab would stop on controls nobody can see. `visibility:
         // hidden` in the CSS handles that too, but only after the fade — this
@@ -210,11 +360,51 @@ export function NavShell({ brandMark, brandFull, links, cta, footer }: NavShellP
           keyboard and screen-reader users phantom stops on a hidden menu.
           React needs `undefined` rather than `false` to drop the attribute.
         */}
-        <div id={panelId} className={styles.panel} inert={(!isDesktop && !open) || undefined}>
+        <div
+          id={panelId}
+          className={styles.panel}
+          inert={(!isDesktop && !open) || undefined}
+          // A menu closed on the solutions opens next time on the links. Once
+          // it has finished closing, so the swap back is never seen.
+          onTransitionEnd={(event) => {
+            if (!open && event.target === event.currentTarget) setSub(false);
+          }}
+        >
           <div className={styles.panelInner}>
-            <nav ref={linksRef} className={styles.panelLinks} aria-label="Primary">
-              {links}
-            </nav>
+            {/*
+              Below lg the solutions sit above the links and each has its own
+              0fr/1fr row: one shrinks as the other grows, so the menu changes
+              height as smoothly as it opens. From lg this is not rendered.
+            */}
+            <div className={styles.sub} inert={!sub || undefined}>
+              <div className={styles.subInner}>
+                <button
+                  ref={backRef}
+                  type="button"
+                  className={styles.back}
+                  onClick={() => {
+                    focusAfterSub.current = true;
+                    setSub(false);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M15 6l-6 6 6 6" />
+                  </svg>
+                  Back
+                </button>
+                {subUsed && solutions}
+              </div>
+            </div>
+            <div className={styles.main}>
+              <nav
+                ref={linksRef}
+                className={styles.panelLinks}
+                aria-label="Primary"
+                inert={(!isDesktop && sub) || undefined}
+              >
+                {links}
+              </nav>
+            </div>
             <div className={styles.panelFooter}>{footer}</div>
           </div>
         </div>

@@ -196,6 +196,7 @@ describe("NavShell", () => {
       <NavShell
         brandMark={<span>mark</span>}
         brandFull={<span>full</span>}
+        solutions={<span>solutions</span>}
         links={<ul />}
         cta={<a href="/contact">Book</a>}
         footer={<span>foot</span>}
