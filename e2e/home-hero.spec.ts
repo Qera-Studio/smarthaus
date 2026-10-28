@@ -224,6 +224,57 @@ test.describe("the hand on the strip", () => {
     await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(scrolled);
   });
 
+  // Found 2026-10-28: the browser recomputes :hover only when the pointer
+  // moves, so a swipe under a still pointer left the overlay on the card it
+  // began on and none on the card it ended on.
+  test("a swipe under a still pointer moves the overlay to the card now under it", async ({
+    page,
+    hasTouch,
+  }) => {
+    test.skip(hasTouch, "a trackpad");
+    const first = (await cards(page).nth(1).boundingBox())!;
+    const x = first.x + first.width / 2;
+    const y = first.y + first.height / 2;
+    await page.mouse.move(x, y);
+    await expect(overlayOf(page, 1)).toHaveCSS("opacity", "1");
+    // One card and a bit: the next card ends up under the pointer.
+    for (let i = 0; i < 10; i++) await page.mouse.wheel(first.width / 8, 0);
+    const under = await page.evaluate(
+      ([px, py]) => {
+        const li = document.elementFromPoint(px!, py!)?.closest("li");
+        return [...li!.parentElement!.children].indexOf(li!);
+      },
+      [x, y],
+    );
+    expect(under).not.toBe(1);
+    await expect(overlayOf(page, under)).toHaveCSS("opacity", "1");
+    await expect(overlayOf(page, 1)).toHaveCSS("opacity", "0");
+  });
+
+  test("a mouse drag leaves the overlay on the card the hand ends on", async ({
+    page,
+    hasTouch,
+  }) => {
+    test.skip(hasTouch, "a mouse drag");
+    const start = (await cards(page).nth(1).boundingBox())!;
+    const y = start.y + start.height / 2;
+    await page.mouse.move(start.x + start.width - 20, y);
+    await page.mouse.down();
+    await page.mouse.move(start.x + 20, y, { steps: 10 });
+    await page.mouse.up();
+    const under = await page.evaluate(
+      ([px, py]) => {
+        const li = document.elementFromPoint(px!, py!)?.closest("li");
+        return [...li!.parentElement!.children].indexOf(li!);
+      },
+      [start.x + 20, y],
+    );
+    await expect(overlayOf(page, under)).toHaveCSS("opacity", "1");
+    for (const other of [0, 1, 2, 3].filter((i) => i !== under)) {
+      await expect(overlayOf(page, other)).toHaveCSS("opacity", "0");
+    }
+  });
+
   test("leaves a paused strip paused", async ({ page, hasTouch }) => {
     test.skip(hasTouch, "a mouse drag");
     const box = (await strip(page).boundingBox())!;

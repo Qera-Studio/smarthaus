@@ -26,6 +26,12 @@ export const REVEAL_GUTTER_PX = 16;
  * data-dragging holds it still under the hand. Under reduced motion there is
  * no animation and the strip is a plain scroller, so the drag scrolls it. A
  * vertical trackpad swipe is left to the page.
+ *
+ * Hover (2026-10-28): the browser works out :hover only when the pointer
+ * moves, so a swipe or a drag that carried the cards under a still pointer
+ * left the overlay on the card the gesture began on, and none on the card
+ * now under it. This marks that card data-hover after every move instead,
+ * and the stylesheet shows the overlay by it once data-hand is set.
  */
 export function StripControls({
   className,
@@ -49,6 +55,30 @@ export function StripControls({
   useEffect(() => {
     const el = strip();
     if (!el) return;
+    el.setAttribute("data-hand", "");
+
+    // The card under the pointer, by hit test rather than :hover.
+    let pointer: { x: number; y: number } | null = null;
+    let hovered: Element | null = null;
+    const mark = () => {
+      const card = pointer ? document.elementFromPoint(pointer.x, pointer.y)?.closest("li") : null;
+      const next = card && el.contains(card) ? card : null;
+      if (next === hovered) return;
+      hovered?.removeAttribute("data-hover");
+      next?.setAttribute("data-hover", "");
+      hovered = next;
+    };
+    const point = (event: MouseEvent) => {
+      pointer = { x: event.clientX, y: event.clientY };
+      mark();
+    };
+    const onHover = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") point(event);
+    };
+    const onLeave = () => {
+      pointer = null;
+      mark();
+    };
 
     /**
      * Move the strip by dx pixels: right is positive, as the hand moves.
@@ -63,6 +93,7 @@ export function StripControls({
       const [animation] = track?.getAnimations() ?? [];
       if (!animation || !track) {
         el.scrollLeft -= dx;
+        mark();
         return;
       }
       const duration = Number(animation.effect?.getComputedTiming().duration);
@@ -72,6 +103,7 @@ export function StripControls({
       animation.currentTime = wrap
         ? ((next % duration) + duration) % duration
         : Math.min(Math.max(next, 0), duration - 1);
+      mark();
     };
 
     let press: { id: number; x: number; last: number } | null = null;
@@ -98,6 +130,7 @@ export function StripControls({
         el.setAttribute("data-dragging", "");
         el.setPointerCapture?.(event.pointerId);
       }
+      if (event.pointerType !== "touch") pointer = { x: event.clientX, y: event.clientY };
       move(event.clientX - press.last);
       press.last = event.clientX;
     };
@@ -126,6 +159,7 @@ export function StripControls({
     const onWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
       event.preventDefault();
+      pointer = { x: event.clientX, y: event.clientY };
       move(-event.deltaX);
     };
 
@@ -165,6 +199,8 @@ export function StripControls({
     const onFocusIn = settle;
 
     el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onHover);
+    el.addEventListener("pointerleave", onLeave);
     el.addEventListener("focusin", onFocusIn);
     el.addEventListener("scroll", settle);
     el.addEventListener("click", onClick, true);
@@ -172,6 +208,10 @@ export function StripControls({
     el.addEventListener("dragstart", onDragStart);
     return () => {
       el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointermove", onHover);
+      el.removeEventListener("pointerleave", onLeave);
+      el.removeAttribute("data-hand");
+      hovered?.removeAttribute("data-hover");
       el.removeEventListener("focusin", onFocusIn);
       el.removeEventListener("scroll", settle);
       stopFollowing();

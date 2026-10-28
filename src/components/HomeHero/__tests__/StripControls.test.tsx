@@ -30,6 +30,11 @@ beforeAll(() => {
   Object.defineProperty(window, "PointerEvent", { configurable: true, value: FakePointerEvent });
 });
 
+// jsdom has no hit test either: by default nothing is under the pointer.
+beforeEach(() => {
+  document.elementFromPoint = () => null;
+});
+
 function setup({ animated = true, at = 0 }: { animated?: boolean; at?: number } = {}) {
   const utils = render(
     <section data-hero>
@@ -364,6 +369,84 @@ describe("StripControls", () => {
       strip.scrollLeft = 300;
       focusCard(link);
       expect(strip.scrollLeft).toBe(300);
+    });
+  });
+
+  describe("the card under the pointer", () => {
+    // jsdom has no layout, so no hit test: the pointer's x picks the card.
+    function cards() {
+      const { strip, unmount } = setup();
+      const list = strip.querySelector("ul")!;
+      list.append(document.createElement("li"));
+      const [a, b] = Array.from(list.children) as [Element, Element];
+      let under: Element | null = a;
+      document.elementFromPoint = jest.fn((x: number) => (x < 0 ? null : under));
+      const moveUnder = (card: Element | null) => (under = card);
+      return { strip, unmount, a, b, moveUnder };
+    }
+
+    it("tells the stylesheet hover is tracked here", () => {
+      const { strip } = setup();
+      expect(strip).toHaveAttribute("data-hand");
+    });
+
+    it("marks the card the mouse is over, and only that one", () => {
+      const { strip, a, b, moveUnder } = cards();
+      fireEvent.pointerMove(strip, { pointerType: "mouse", clientX: 10, clientY: 10 });
+      expect(a).toHaveAttribute("data-hover");
+      moveUnder(b);
+      fireEvent.pointerMove(strip, { pointerType: "mouse", clientX: 20, clientY: 10 });
+      expect(b).toHaveAttribute("data-hover");
+      expect(a).not.toHaveAttribute("data-hover");
+    });
+
+    it("moves the mark when a swipe carries a new card under a still pointer", () => {
+      const { strip, a, b, moveUnder } = cards();
+      fireEvent.pointerMove(strip, { pointerType: "mouse", clientX: 10, clientY: 10 });
+      moveUnder(b);
+      fireEvent.wheel(strip, { deltaX: 120, deltaY: 0, clientX: 10, clientY: 10 });
+      expect(b).toHaveAttribute("data-hover");
+      expect(a).not.toHaveAttribute("data-hover");
+    });
+
+    it("moves it when a drag ends with another card under the hand", () => {
+      const { strip, a, b, moveUnder } = cards();
+      fireEvent.pointerMove(strip, { pointerType: "mouse", clientX: 300, clientY: 10 });
+      expect(a).toHaveAttribute("data-hover");
+      moveUnder(b);
+      drag(strip, [300, 200, 100], { pointerType: "mouse" });
+      expect(b).toHaveAttribute("data-hover");
+      expect(a).not.toHaveAttribute("data-hover");
+    });
+
+    it("clears it when the pointer leaves the strip", () => {
+      const { strip, a } = cards();
+      fireEvent.pointerMove(strip, { pointerType: "mouse", clientX: 10, clientY: 10 });
+      fireEvent.pointerLeave(strip);
+      expect(a).not.toHaveAttribute("data-hover");
+    });
+
+    it("marks nothing for a finger, which has no hover", () => {
+      const { strip, a } = cards();
+      fireEvent.pointerMove(strip, { pointerType: "touch", clientX: 10, clientY: 10 });
+      expect(a).not.toHaveAttribute("data-hover");
+    });
+
+    it("marks nothing outside the strip", () => {
+      const { strip, a, moveUnder } = cards();
+      moveUnder(document.body);
+      fireEvent.pointerMove(strip, { pointerType: "mouse", clientX: 10, clientY: 10 });
+      expect(a).not.toHaveAttribute("data-hover");
+      fireEvent.pointerMove(strip, { pointerType: "mouse", clientX: -1, clientY: 10 });
+      expect(a).not.toHaveAttribute("data-hover");
+    });
+
+    it("takes its marks away when it unmounts", () => {
+      const { strip, a, unmount } = cards();
+      fireEvent.pointerMove(strip, { pointerType: "mouse", clientX: 10, clientY: 10 });
+      unmount();
+      expect(a).not.toHaveAttribute("data-hover");
+      expect(strip).not.toHaveAttribute("data-hand");
     });
   });
 

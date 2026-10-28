@@ -296,12 +296,17 @@
     }
   }
 
-  .card:hover .overlay,
+  // :hover only until StripControls sets data-hand: after that the card it
+  // marks data-hover is the one under the pointer, which :hover stops being
+  // once a swipe moves the cards under a still pointer.
+  :where(.strip:not([data-hand])) .card:hover .overlay,
+  .card[data-hover] .overlay,
   .card:focus-within .overlay {
     opacity: 1;
   }
 
-  .card:hover::before,
+  :where(.strip:not([data-hand])) .card:hover::before,
+  .card[data-hover]::before,
   .card:focus-within::before {
     backdrop-filter: blur(var(--hero-card-blur));
   }

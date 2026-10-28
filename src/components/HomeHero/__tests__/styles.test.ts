@@ -139,8 +139,12 @@ describe("HomeHero.module.scss", () => {
     test("is hidden until hover or focus", () => {
       expect(rule(".overlay")).toMatch(/opacity:\s*0/);
       expect(css).toMatch(
-        /\.card:hover \.overlay,\s*\.card:focus-within \.overlay\s*\{\s*opacity:\s*1/,
+        /:where\(\.strip:not\(\[data-hand\]\)\) \.card:hover \.overlay,\s*\.card\[data-hover\] \.overlay,\s*\.card:focus-within \.overlay\s*\{\s*opacity:\s*1/,
       );
+    });
+
+    test("trusts :hover only until StripControls marks the card under the pointer", () => {
+      expect(css).not.toMatch(/(^|[,}]\s*)\.card:hover/m);
     });
 
     test("always shows where there is no hover to reveal it", () => {
@@ -188,7 +192,7 @@ describe("HomeHero.module.scss", () => {
 
     test("blurs fully on hover and on focus, animating its own radius", () => {
       expect(css).toMatch(
-        /\.card:hover::before,\s*\.card:focus-within::before\s*\{\s*backdrop-filter:\s*blur\(var\(--hero-card-blur\)\)/,
+        /:where\(\.strip:not\(\[data-hand\]\)\) \.card:hover::before,\s*\.card\[data-hover\]::before,\s*\.card:focus-within::before\s*\{\s*backdrop-filter:\s*blur\(var\(--hero-card-blur\)\)/,
       );
       expect(rule(".card::before")).toMatch(/transition-property:\s*backdrop-filter/);
     });
