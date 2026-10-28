@@ -172,14 +172,44 @@ describe("Nav.module.scss: the Solutions menu", () => {
       });
 
       test("reaches down over the open panel, both seam rows included", () => {
-        expect(rule(".nav[data-stuck][data-menu]::after", desktop())).toMatch(
-          /inset-block-end:\s*calc\(-2px - var\(--nav-menu-block, 0px\)\)/,
+        expect(rule(".nav[data-stuck][data-menu]::after", desktop())).toMatch(/--nav-reach:\s*1/);
+        const layer = rule(".nav::after", desktop());
+        expect(layer).toMatch(/--nav-reach:\s*0/);
+        expect(layer).toMatch(
+          /inset-block-end:\s*calc\(-1 \* var\(--nav-reach\) \* \(2px \+ var\(--nav-menu-block, 0px\)\)\)/,
+        );
+      });
+
+      test("the reach is a registered number, so it interpolates", () => {
+        // Unregistered, a custom property flips at the end of its transition.
+        const registered = css.match(/@property --nav-reach \{([^}]*)\}/);
+        expect(registered?.[1]).toMatch(/syntax:\s*"<number>"/);
+        expect(registered?.[1]).toMatch(/initial-value:\s*0/);
+        expect(registered?.[1]).toMatch(/inherits:\s*false/);
+      });
+
+      test("below the bar's foot it is only the panel's width", () => {
+        // A menu open on the tall bar joins it while the bar is still
+        // shrinking; unclipped, the reach hung the bar's full width of glass
+        // under it (2026-10-28).
+        const layer = rule(".nav::after", desktop());
+        expect(layer).toMatch(
+          /--nav-reach-foot:\s*calc\(100% - var\(--nav-reach\) \* \(2px \+ var\(--nav-menu-block, 0px\)\)\)/,
+        );
+        expect(layer).toMatch(
+          /--nav-reach-start:\s*max\(0px, calc\(50% - var\(--nav-stuck-size\) \/ 2 \+ 1px\)\)/,
+        );
+        expect(layer).toMatch(
+          /--nav-reach-end:\s*min\(100%, calc\(50% \+ var\(--nav-stuck-size\) \/ 2 - 1px\)\)/,
+        );
+        expect(layer).toMatch(
+          /clip-path:\s*polygon\(0 0, 100% 0, 100% var\(--nav-reach-foot\), var\(--nav-reach-end\) var\(--nav-reach-foot\), var\(--nav-reach-end\) 100%, var\(--nav-reach-start\) 100%, var\(--nav-reach-start\) var\(--nav-reach-foot\), 0 var\(--nav-reach-foot\)\)/,
         );
       });
 
       test("on the panel's own clock both ways, so the two move as one", () => {
         const closed = rule(".nav::after", desktop());
-        expect(closed).toMatch(/transition-property:\s*opacity, inset-block-end/);
+        expect(closed).toMatch(/transition-property:\s*opacity, --nav-reach/);
         expect(closed).toMatch(/transition-delay:\s*0s, var\(--nav-collapse-hold\)/);
         expect(closed).toMatch(
           /transition-timing-function:\s*var\(--nav-stuck-ease\), var\(--nav-expand-ease\)/,

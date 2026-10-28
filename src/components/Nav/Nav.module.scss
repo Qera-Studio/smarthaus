@@ -1,6 +1,15 @@
 @use "../../styles/variables" as *;
 @use "../../styles/mixins" as *;
 
+// How far the capsule's glass reaches down over the open Solutions panel, 0
+// to 1 (see .nav::after). Registered so it interpolates; @property is only
+// valid at the top level of a sheet.
+@property --nav-reach {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
 @layer components {
   // Marks the top of the document. Once it leaves the viewport the nav is
   // "stuck" and picks up the glass. Zero-height so it occupies no space.
@@ -883,9 +892,31 @@
       -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
       backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
       opacity: 0;
+      // How far down over the panel, 0 to 1 (registered below so it
+      // interpolates). The foot and the clip both read it, so they agree on
+      // where the bar ends in every frame.
+      --nav-reach: 0;
+      inset-block-end: calc(-1 * var(--nav-reach) * (2px + var(--nav-menu-block, 0px)));
+      // Below the bar's foot the layer is only the panel's width. Joined,
+      // the two are the same width and this is the whole box; but a menu
+      // open on the tall bar joins it while the bar is still shrinking, and
+      // the reach then hung the bar's full width of glass under it.
+      --nav-reach-foot: calc(100% - var(--nav-reach) * (2px + var(--nav-menu-block, 0px)));
+      --nav-reach-start: max(0px, calc(50% - var(--nav-stuck-size) / 2 + 1px));
+      --nav-reach-end: min(100%, calc(50% + var(--nav-stuck-size) / 2 - 1px));
+      clip-path: polygon(
+        0 0,
+        100% 0,
+        100% var(--nav-reach-foot),
+        var(--nav-reach-end) var(--nav-reach-foot),
+        var(--nav-reach-end) 100%,
+        var(--nav-reach-start) 100%,
+        var(--nav-reach-start) var(--nav-reach-foot),
+        0 var(--nav-reach-foot)
+      );
       // This is the closed, unstuck state: the glass fades out on the bar's
       // way back, and the reach over the panel folds with the panel.
-      transition-property: opacity, inset-block-end;
+      transition-property: opacity, --nav-reach;
       transition-duration: var(--nav-expand-back-duration), var(--nav-collapse-duration);
       transition-delay: 0s, var(--nav-collapse-hold);
       transition-timing-function: var(--nav-stuck-ease), var(--nav-expand-ease);
@@ -901,7 +932,7 @@
     // duration, curve and delay, so the glass and the panel's rows move as
     // one: both interpolate a length on the same clock.
     .nav[data-stuck][data-menu]::after {
-      inset-block-end: calc(-2px - var(--nav-menu-block, 0px));
+      --nav-reach: 1;
       transition-duration: var(--nav-stuck-duration), var(--nav-expand-duration);
       transition-delay: 0s;
     }
