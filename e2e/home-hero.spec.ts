@@ -415,3 +415,97 @@ test.describe("every card, with a mouse", () => {
     await expect(link).toHaveCSS("opacity", "1");
   });
 });
+
+test("the largest paint is the h1 or an eager strip image, never a lazy one", async ({ page }) => {
+  await page.goto("/", { waitUntil: "load" });
+  const lcp = await page.evaluate(
+    () =>
+      new Promise<{ tag: string; id: string; loading: string | null; src: string }>((resolve) => {
+        new PerformanceObserver((list) => {
+          const entries = list.getEntries() as (PerformanceEntry & { element: Element | null })[];
+          const el = entries.at(-1)?.element;
+          resolve({
+            tag: el?.tagName ?? "",
+            id: el?.id ?? "",
+            loading: el?.getAttribute("loading") ?? null,
+            src: el?.getAttribute("src") ?? "",
+          });
+        }).observe({ type: "largest-contentful-paint", buffered: true });
+      }),
+  );
+  if (lcp.tag === "H1") {
+    expect(lcp.id).toBe("hero-title");
+  } else {
+    expect(lcp.tag).toBe("IMG");
+    expect(lcp.src).toContain("hero_carousel");
+    expect(lcp.loading).not.toBe("lazy");
+  }
+});
+
+test("cards are 400 by 300 on a wide screen and smaller on a phone", async ({ page }) => {
+  const box = (await cards(page).first().boundingBox())!;
+  const wide = (page.viewportSize()?.width ?? 0) >= 1024;
+  if (wide) {
+    expect(Math.round(box.width)).toBe(400);
+    expect(Math.round(box.height)).toBe(300);
+  } else {
+    expect(Math.round(box.width)).toBe(288);
+    expect(Math.round(box.height)).toBe(216);
+  }
+});
+
+test("every card's overlay content stays inside its card", async ({ page }) => {
+  await pause(page).click();
+  for (const index of [0, 2, 7]) {
+    await cards(page).nth(index).getByRole("link").focus();
+    const card = (await cards(page).nth(index).boundingBox())!;
+    const link = (await cards(page).nth(index).getByRole("link").boundingBox())!;
+    expect(link.x).toBeGreaterThanOrEqual(card.x);
+    expect(link.y).toBeGreaterThanOrEqual(card.y);
+    expect(link.x + link.width).toBeLessThanOrEqual(card.x + card.width + 0.5);
+    expect(link.y + link.height).toBeLessThanOrEqual(card.y + card.height + 0.5);
+  }
+});
+
+test.describe("the projects pill", () => {
+  const faces = (page: Page) =>
+    hero(page).locator(
+      "img[src*='s1.png'], img[src*='s2.png'], img[src*='s3.png'], img[src*='s4.png'], img[src*='s5.png']",
+    );
+
+  test("shows five round faces, each loaded, with the brown-600 ring", async ({ page }) => {
+    await page.getByText("180+ projects completed across Dubai").scrollIntoViewIfNeeded();
+    await expect(faces(page)).toHaveCount(5);
+    for (const face of await faces(page).all()) {
+      await expect(face).toHaveCSS("border-top-color", "rgb(122, 85, 55)");
+      await expect
+        .poll(() => face.evaluate((el) => (el as HTMLImageElement).naturalWidth))
+        .toBeGreaterThan(0);
+    }
+  });
+
+  test("overlaps each face onto the last", async ({ page }) => {
+    const boxes = await faces(page).evaluateAll((all) =>
+      all.map((el) => el.getBoundingClientRect()),
+    );
+    for (let i = 1; i < boxes.length; i += 1) {
+      expect(boxes[i]!.x).toBeLessThan(boxes[i - 1]!.x + boxes[i - 1]!.width);
+    }
+  });
+
+  test("keeps the faces out of the accessibility tree", async ({ page }) => {
+    for (const face of await faces(page).all()) {
+      await expect(face).toHaveAttribute("alt", "");
+    }
+  });
+});
+
+test.describe("under reduced motion, with a mouse", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  test("hovering a card still shows its overlay", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "hover is a pointer behaviour");
+    await hoverCard(page, 1);
+    await expect(overlayOf(page, 1)).toHaveCSS("opacity", "1");
+  });
+});

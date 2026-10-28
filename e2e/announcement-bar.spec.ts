@@ -214,3 +214,40 @@ test.describe("forced colours @forced-colors", () => {
     expect(fg).not.toBe(bg);
   });
 });
+
+test.describe("on a wide screen", () => {
+  test.beforeEach(({ page }) => {
+    test.skip(!isWide(page), "the one-row bar");
+  });
+
+  test("is one short line, as in the Figma", async ({ page }) => {
+    const box = (await bar(page).boundingBox())!;
+    expect(box.height).toBeLessThanOrEqual(40);
+    await expect(bar(page)).toHaveCSS("font-size", "14px");
+  });
+
+  test("a link lightens to brown-100 under the pointer", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "hover is a pointer behaviour");
+    const link = bar(page).getByRole("link", { name: LINKS[1] });
+    await link.hover();
+    await expect(link).toHaveCSS("color", "rgb(240, 233, 221)");
+  });
+
+  test("a focused link draws a ring", async ({ page }) => {
+    await page.getByRole("link", { name: "Skip to main content" }).focus();
+    await page.keyboard.press("Tab");
+    const link = bar(page).getByRole("link", { name: LINKS[0] });
+    await expect(link).toBeFocused();
+    expect(await link.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe("none");
+  });
+
+  test("the rules between items are in the paint, not the text", async ({ page }) => {
+    const text = await bar(page).evaluate((el) => el.textContent ?? "");
+    expect(text).not.toContain("|");
+    const rule = await bar(page)
+      .locator("li")
+      .nth(1)
+      .evaluate((el) => getComputedStyle(el, "::before").content);
+    expect(rule).toContain("|");
+  });
+});

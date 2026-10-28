@@ -60,7 +60,9 @@ function Card({ item, priority }: { item: HeroCarouselItem; priority: boolean })
  * strip does not move and scrolls sideways instead.
  *
  * Replaced FluidHero on 2026-10-28; src/components/FluidHero stays, unmounted.
- * The h1 is the page's only one and its LCP element.
+ * The h1 is the page's only one. The LCP element is the first card's image
+ * (measured 2026-10-28, desktop and phone), which is why the first four cards
+ * are priority loads and the rest lazy.
  */
 export function HomeHero() {
   return (
