@@ -140,6 +140,33 @@ describe("Nav.module.scss: the Solutions menu", () => {
       );
     });
 
+    test("the capsule blurs on a layer behind it, so the panel inside can blur the page too", () => {
+      // An element with backdrop-filter is a backdrop root: the panel inside
+      // the header showed the page sharp through its tint (2026-10-28).
+      expect(rule(".nav[data-stuck]", desktop())).toMatch(/(^|;)\s*backdrop-filter:\s*none/);
+      const layer = rule(".nav[data-stuck]::after", desktop());
+      expect(layer).toMatch(
+        /backdrop-filter:\s*blur\(var\(--glass-blur\)\) saturate\(var\(--glass-saturate\)\)/,
+      );
+      expect(layer).toMatch(/inset:\s*-1px/);
+      expect(layer).toMatch(/z-index:\s*-2/);
+      expect(layer).toMatch(/pointer-events:\s*none/);
+    });
+
+    test("joined, no shadow crosses the seam", () => {
+      expect(rule(".nav[data-stuck][data-menu]", desktop())).toMatch(/box-shadow:\s*none/);
+      expect(rule(".nav[data-stuck] .menu", desktop())).toMatch(
+        /clip-path:\s*inset\(0 -48px -48px\)/,
+      );
+    });
+
+    test("and the grain reaches over both clear frame rows at the seam", () => {
+      expect(rule(".nav[data-menu]::before", desktop())).toMatch(/inset-block-end:\s*-1px/);
+      expect(rule(".nav[data-stuck] .menu::before", desktop())).toMatch(
+        /inset-block-start:\s*-1px/,
+      );
+    });
+
     test("the gap and frame move on the bar's own shrink clock", () => {
       expect(rule(".menu", desktop())).toMatch(
         /transition-duration:\s*var\(--nav-collapse-duration\), var\(--nav-stuck-duration\), var\(--nav-stuck-duration\), 0s/,
@@ -252,10 +279,15 @@ describe("Nav.module.scss: the Solutions menu", () => {
       expect(inner).toMatch(/overflow-y:\s*auto/);
     });
 
-    test("the picture sits on top, the list below it, flush to the start edge", () => {
+    test("the picture sits on top and the eight are centred below it", () => {
       expect(rule(".subMedia", phone())).toMatch(/order:\s*-1/);
-      expect(rule(".subList", phone())).toMatch(/align-items:\s*flex-start/);
-      expect(rule(".back", phone())).toMatch(/align-self:\s*flex-start/);
+      expect(rule(".subList", phone())).toMatch(/align-items:\s*center/);
+    });
+
+    test("Back sits on the start edge, with no side padding", () => {
+      const back = rule(".back", phone());
+      expect(back).toMatch(/align-self:\s*flex-start/);
+      expect(back).toMatch(/padding-inline:\s*0/);
     });
 
     test("a sideways finger on the picture is the swipe, up and down the page's", () => {
@@ -301,7 +333,9 @@ describe("Nav.module.scss: the Solutions menu", () => {
     for (const selector of selectors.filter((s) => /menu|sub|main|back/.test(s))) {
       expect(selector).not.toMatch(/#/);
       for (const part of selector.split(",")) {
-        const classes = (part.match(/\.[\w-]+|\[[^\]]+\]|:(?!:)[\w-]+/g) ?? []).length;
+        // Classes, attributes and pseudo-classes; a ::pseudo-element counts as
+        // a type, not toward the 0,3,0 limit.
+        const classes = (part.match(/\.[\w-]+|\[[^\]]+\]|(?<!:):(?!:)[\w-]+/g) ?? []).length;
         expect(classes).toBeLessThanOrEqual(3);
       }
     }

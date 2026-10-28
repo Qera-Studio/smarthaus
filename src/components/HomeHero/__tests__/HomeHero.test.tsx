@@ -119,12 +119,28 @@ describe("HomeHero", () => {
       expect(screen.queryByRole("button", { name: /Previous image|Next image/ })).toBeNull();
     });
 
-    it("loads the first cards eagerly and the rest lazily", () => {
+    // Lazy cards stayed blank once the GPU carried them on screen (2026-10-28).
+    it("loads no card lazily, the copy included", () => {
       const markup = renderToStaticMarkup(<HomeHero />);
       const imgs = [...markup.matchAll(/<img[^>]*hero_carousel[^>]*>/g)].map((m) => m[0]);
       expect(imgs).toHaveLength(HERO_CAROUSEL_ITEMS.length * 2);
-      expect(imgs.slice(0, 4).every((img) => !/loading="lazy"/.test(img))).toBe(true);
-      expect(imgs.slice(4).every((img) => /loading="lazy"/.test(img))).toBe(true);
+      expect(imgs.some((img) => /loading="lazy"/.test(img))).toBe(false);
+    });
+
+    it("fetches the cards past the fourth, and the copy, behind the rest", () => {
+      const markup = renderToStaticMarkup(<HomeHero />);
+      const imgs = [...markup.matchAll(/<img[^>]*hero_carousel[^>]*>/g)].map((m) => m[0]);
+      expect(imgs.slice(1, 4).some((img) => /fetchPriority|fetchpriority/i.test(img))).toBe(false);
+      expect(imgs.slice(4).every((img) => /fetchpriority="low"/i.test(img))).toBe(true);
+    });
+
+    it("the copy asks for exactly the first copy's files, so it costs nothing more", () => {
+      const markup = renderToStaticMarkup(<HomeHero />);
+      const srcs = [...markup.matchAll(/<img[^>]*hero_carousel[^>]*>/g)].map(
+        (m) => m[0].match(/srcSet="([^"]*)"/i)?.[1],
+      );
+      const half = HERO_CAROUSEL_ITEMS.length;
+      expect(srcs.slice(half)).toEqual(srcs.slice(0, half));
     });
 
     it("fetches the first card at high priority, since it is the largest paint", () => {

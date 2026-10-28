@@ -422,8 +422,7 @@ test.describe("under reduced motion", () => {
     await expect.poll(() => strip(page).evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
   });
 
-  // Here, not above: the moving strip never holds still for scrollIntoView,
-  // and the lazy cards only load as they come near the screen.
+  // Here, not above: the moving strip never holds still for scrollIntoView.
   test("every card's image loads", async ({ page }) => {
     const images = cards(page).locator("img");
     await expect(images).toHaveCount(8);
@@ -433,6 +432,23 @@ test.describe("under reduced motion", () => {
         .poll(() => img.evaluate((el) => (el as HTMLImageElement).naturalWidth))
         .toBeGreaterThan(0);
     }
+  });
+
+  // Lazy cards stayed blank once the GPU carried them on screen: the strip
+  // seemed to run once and stop (2026-10-28). Every card, both copies, is
+  // loaded without being brought near the screen.
+  test("every image in both copies loads where it is, without being brought on screen", async ({
+    page,
+  }) => {
+    const images = strip(page).locator("img");
+    await expect(images).toHaveCount(16);
+    await expect
+      .poll(() =>
+        images.evaluateAll(
+          (all) => all.filter((img) => !(img as HTMLImageElement).naturalWidth).length,
+        ),
+      )
+      .toBe(0);
   });
 
   test("still passes axe", async ({ page }) => {

@@ -25,10 +25,17 @@ const WHATSAPP_MESSAGE = "Hi, I'm interested in home automation for my villa.";
 
 /**
  * How the card loads. "first" is the page's largest paint: fetched at high
- * priority. "eager" is on screen at load. "lazy" is everything after.
+ * priority. "eager" is on screen at load. "late" is everything after: fetched
+ * at once but behind the rest, at low priority.
+ *
+ * Not lazy (2026-10-28). A lazy image loads when it nears the screen, and the
+ * strip brings its cards there by a transform the GPU runs: in Chrome on a
+ * Mac the cards from the fifth on, and all of the second copy, stayed blank,
+ * so the strip seemed to run once and stop. The second copy shares the
+ * first's URLs, so loading it costs nothing more.
  * Next 16 deprecated `priority`; these are the attributes it now points to.
  */
-type Load = "first" | "eager" | "lazy";
+type Load = "first" | "eager" | "late";
 
 function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
   return (
@@ -42,8 +49,8 @@ function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
         // A card is as tall as the space under the copy, at 4:3: about 500px
         // wide on a laptop, 300 on a phone.
         sizes="(min-width: 64rem) 32rem, 20rem"
-        loading={load === "lazy" ? "lazy" : "eager"}
-        fetchPriority={load === "first" ? "high" : undefined}
+        loading="eager"
+        fetchPriority={load === "first" ? "high" : load === "late" ? "low" : undefined}
       />
       <div className={styles.overlay}>
         <p className={styles.cardTitle}>{item.title}</p>
@@ -132,13 +139,13 @@ export function HomeHero() {
               <Card
                 key={item.id}
                 item={item}
-                load={index === 0 ? "first" : index < 4 ? "eager" : "lazy"}
+                load={index === 0 ? "first" : index < 4 ? "eager" : "late"}
               />
             ))}
           </ul>
           <ul className={styles.list} aria-hidden="true" inert data-copy>
             {HERO_CAROUSEL_ITEMS.map((item) => (
-              <Card key={item.id} item={item} load="lazy" />
+              <Card key={item.id} item={item} load="late" />
             ))}
           </ul>
         </div>

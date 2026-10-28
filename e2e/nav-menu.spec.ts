@@ -110,6 +110,15 @@ test.describe("from lg", () => {
     // No frame between the two: both edges are transparent.
     await expect(header(page)).toHaveCSS("border-bottom-color", "rgba(0, 0, 0, 0)");
     await expect(panel(page)).toHaveCSS("border-top-color", "rgba(0, 0, 0, 0)");
+    // And no shadow across the seam: the bar's own would show through the
+    // panel's glass as a band.
+    await expect(header(page)).toHaveCSS("box-shadow", "none");
+    // The same glass on both: the panel blurs the page, which it cannot do
+    // inside a header that carries backdrop-filter itself.
+    await expect(header(page)).toHaveCSS("backdrop-filter", "none");
+    expect(
+      await header(page).evaluate((el) => getComputedStyle(el, "::after").backdropFilter),
+    ).toBe(await panel(page).evaluate((el) => getComputedStyle(el).backdropFilter));
   });
 
   test("on the shrunk bar it opens downward from the capsule's foot", async ({ page }) => {
@@ -244,7 +253,16 @@ test.describe("below lg", () => {
     await expectAccessible(page);
   });
 
-  test("the picture is on top at full width, the list below it flush left", async ({ page }) => {
+  test("Back's chevron sits on the panel's start edge, with no side padding", async ({ page }) => {
+    await openSolutions(page);
+    const button = (await back(page).boundingBox())!;
+    const chevron = (await back(page).locator("svg").boundingBox())!;
+    const inner = (await sub(page).boundingBox())!;
+    expect(Math.abs(button.x - inner.x)).toBeLessThan(1);
+    expect(Math.abs(chevron.x - button.x)).toBeLessThan(1);
+  });
+
+  test("the picture is on top at full width, the eight centred below it", async ({ page }) => {
     await openSolutions(page);
     const pic = (await picture(page).boundingBox())!;
     const list = (await sub(page).locator("ul").boundingBox())!;
@@ -252,7 +270,11 @@ test.describe("below lg", () => {
     const inner = (await sub(page).boundingBox())!;
     expect(pic.y + pic.height).toBeLessThanOrEqual(list.y + 1);
     expect(Math.abs(pic.width - inner.width)).toBeLessThan(1);
-    expect(Math.abs(first.x - inner.x)).toBeLessThan(1);
+    for (const link of await subLinks(page).all()) {
+      const b = (await link.boundingBox())!;
+      expect(Math.abs(b.x + b.width / 2 - (inner.x + inner.width / 2))).toBeLessThan(1);
+    }
+    expect(first.y).toBeGreaterThan(pic.y);
   });
 
   test("the whole menu stays on the screen", async ({ page }) => {

@@ -841,14 +841,58 @@
       transition-duration: 0s;
     }
 
+    // Joined to the shrunk bar. The clip cuts the panel's shadow off at its
+    // top edge so it does not rise over the bar (and with it the bridge,
+    // which the joined pair no longer needs: only the bar's 8px padding lies
+    // between the link and the panel, and the close delay covers it).
     .nav[data-stuck] .menu {
       translate: -50% 0;
       border-block-start-color: transparent;
+      clip-path: inset(0 -#{$space-12} -#{$space-12});
     }
 
-    // The capsule's own bottom frame goes too while the panel hangs from it.
+    // The capsule's blur, on a layer behind its content rather than on the
+    // header itself. An element with backdrop-filter is a backdrop root: the
+    // panel inside it could blur only what the header had painted, not the
+    // page, so it showed the page sharp through a tint and read as a
+    // different ground from the bar (2026-10-28). The tint, frame and grain
+    // stay on the header; only the blur moves, and blurring the even tint
+    // with the page gives the same glass.
+    .nav[data-stuck] {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
+    .nav[data-stuck]::after {
+      content: "";
+      position: absolute;
+      // Over the 1px frame too, so the edge is blurred like the rest.
+      inset: -1px;
+      // Under the grain (-1), which must not be blurred.
+      z-index: -2;
+      pointer-events: none;
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    }
+
+    // Joined, the two read as one box: no frame between them, and no shadow
+    // across the seam. The bar's shadow fell through the panel's glass as a
+    // dark band under the bar, and the panel's rose over the bar; the bar
+    // drops its own and the panel's is cut off at its top edge.
     .nav[data-stuck][data-menu] {
       border-block-end-color: transparent;
+      box-shadow: none;
+    }
+
+    // The grain (the glass's ::before) stops inside the frame, so the two
+    // clear frame rows at the seam showed as a 2px line with no grain. Each
+    // grain reaches over its own side of the seam.
+    .nav[data-menu]::before {
+      inset-block-end: -1px;
+    }
+
+    .nav[data-stuck] .menu::before {
+      inset-block-start: -1px;
     }
 
     // MUST carry no padding: it is what the 0fr row sizes (see .panelInner).
@@ -1165,7 +1209,8 @@
       gap: $space-1;
       margin-block-start: $space-3;
       padding-block: $space-1;
-      padding-inline: $space-2;
+      // None (2026-10-28): the chevron sits on the panel's start edge.
+      padding-inline: 0;
       font-size: var(--font-size-base);
       font-weight: var(--nav-link-weight);
       color: var(--nav-link-ink);
@@ -1185,7 +1230,8 @@
       }
     }
 
-    // The picture on top, the eight below it, left-aligned.
+    // The picture on top, the eight centred below it (2026-10-28: with the
+    // picture above rather than beside them, they centre as the links do).
     .subBody {
       display: flex;
       flex-direction: column;
@@ -1220,7 +1266,7 @@
     .subList {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
       gap: $space-1;
       list-style: none;
     }
