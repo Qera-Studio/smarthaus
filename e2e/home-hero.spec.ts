@@ -14,9 +14,6 @@ import {
  * reduced motion. The unit suite pins the markup; this pins the CSS.
  */
 
-// The strip is held still in every other spec (e2e/fixtures.ts).
-test.use({ strip: true });
-
 const hero = (page: Page) => page.locator("section[data-hero]");
 const strip = (page: Page) => page.locator("[data-hero-strip]");
 const track = (page: Page) => strip(page).locator("> div").first();
