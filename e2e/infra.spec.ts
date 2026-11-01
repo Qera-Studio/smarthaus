@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { STRIP_HOLD_CSS, expect, test, type Page } from "./fixtures";
 import type { Request } from "@playwright/test";
 
 // The e2e server is not the production server: next.config.ts drops two
@@ -262,6 +262,38 @@ test.describe("the hero's canvas in e2e", () => {
       await page.waitForTimeout(2_000);
       expect(heavyRequests).toEqual([]);
       await expect(page.locator("[data-hero] canvas")).toHaveCount(0);
+    });
+  });
+});
+
+// The strip's default lives in e2e/fixtures.ts, pinned both ways like the
+// canvas: held unless asked, drifting when asked.
+test.describe("the hero strip in e2e", () => {
+  const trackState = (page: Page) =>
+    page
+      .locator("[data-hero-strip] > div")
+      .first()
+      .evaluate((el) => getComputedStyle(el).animationPlayState);
+
+  test("is held still by default, and only the strip is", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("style[data-e2e-strip-hold]")).toHaveCount(1);
+    expect(await trackState(page)).toBe("paused");
+    // The hold is the strip's alone: one rule, scoped to it.
+    // textContent: a <style> has no innerText, which toHaveText reads.
+    expect(await page.locator("style[data-e2e-strip-hold]").evaluate((el) => el.textContent)).toBe(
+      STRIP_HOLD_CSS,
+    );
+    expect(STRIP_HOLD_CSS).toMatch(/^\[data-hero-strip\] \* \{[^}]*\}$/);
+  });
+
+  test.describe("when a spec opts in", () => {
+    test.use({ strip: true });
+
+    test("drifts as it ships", async ({ page }) => {
+      await page.goto("/");
+      await expect(page.locator("style[data-e2e-strip-hold]")).toHaveCount(0);
+      expect(await trackState(page)).toBe("running");
     });
   });
 });

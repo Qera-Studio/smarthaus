@@ -39,7 +39,35 @@ export { expect, devices, type Locator, type Page } from "@playwright/test";
  * 2026-10-28: HomeHero replaced the fluid hero and has no canvas, so the
  * option currently changes nothing on the homepage. infra.spec.ts pins that.
  */
-type Options = { villa: boolean; splash: boolean; clientAddress: string | undefined };
+type Options = {
+  villa: boolean;
+  strip: boolean;
+  splash: boolean;
+  clientAddress: string | undefined;
+};
+
+/*
+ * ## The hero strip stands still unless a spec asks for it
+ *
+ * HomeHero's image strip drifts on a CSS animation that never ends. WebKit on
+ * the Linux runner paints it without a GPU, and with sixteen photographs
+ * moving it never produced two frames in a row with a box unchanged, which is
+ * what Playwright waits for before any click or scroll. On PR #65
+ * (2026-11-01) 29 iPhone 17 tests on `/` timed out "waiting for element to be
+ * stable", reads passed and actions did not, every retry, while the same
+ * actions passed on every other route and on Chromium.
+ *
+ * Decided 2026-11-01, as for the villa: hold the strip still in e2e rather
+ * than change the product. A real phone has a GPU. The strip is held by a
+ * stylesheet the page did not ship, unlayered so it outranks the
+ * component layer, on the strip alone; nothing else on the page is paused.
+ * A spec that tests the strip opts back in with
+ *   test.use({ strip: true });
+ *
+ * The recorded cost: outside home-hero.spec.ts, e2e no longer measures what
+ * the drift does to input and scrolling on a slow machine.
+ */
+export const STRIP_HOLD_CSS = "[data-hero-strip] * { animation-play-state: paused; }";
 
 /*
  * ## The splash is seen unless a spec asks for it
@@ -74,7 +102,28 @@ export function addressFor(seed: string): string {
   return `10.${a}.${b}.${(c! % 254) + 1}`;
 }
 
-export const test = base.extend<Options & { villaGate: void; clientGate: void; splashGate: void }>({
+export const test = base.extend<
+  Options & { villaGate: void; stripGate: void; clientGate: void; splashGate: void }
+>({
+  strip: [false, { option: true }],
+  stripGate: [
+    async ({ page, strip }, use) => {
+      if (!strip) {
+        await page.addInitScript((css) => {
+          const hold = () => {
+            const style = document.createElement("style");
+            style.dataset.e2eStripHold = "";
+            style.textContent = css;
+            document.head.append(style);
+          };
+          if (document.head) hold();
+          else document.addEventListener("DOMContentLoaded", hold, { once: true });
+        }, STRIP_HOLD_CSS);
+      }
+      await use();
+    },
+    { auto: true },
+  ],
   splash: [false, { option: true }],
   splashGate: [
     async ({ page, splash }, use) => {
