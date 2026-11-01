@@ -1,65 +1,33 @@
 import { test } from "./fixtures";
 
-// Temporary diagnostic, never merged: why actions on / never find a stable box
-// in Linux WebKit.
-const VARIANTS: Record<string, string> = {
-  shipped: "",
-  noHero: "[data-hero] { display: none !important; }",
-  noBlur:
-    "* { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }",
-  allPaused: "*, *::before, *::after { animation-play-state: paused !important; transition: none !important; }",
-  noHeroImages: "[data-hero] img { display: none !important; }",
-};
-
+// Temporary diagnostic, never merged: what holds rendering on / in Linux WebKit.
 for (const route of ["/", "/about"]) {
-  for (const [name, css] of Object.entries(VARIANTS)) {
-    if (route === "/about" && name !== "shipped") continue;
-    test(`${route} ${name}`, async ({ page }) => {
-      test.setTimeout(40_000);
-      if (css)
-        await page.addInitScript((c) => {
-          const add = () => {
-            const s = document.createElement("style");
-            s.textContent = c;
-            document.head.append(s);
-          };
-          if (document.head) add();
-          else document.addEventListener("DOMContentLoaded", add, { once: true });
-        }, css);
-      await page.goto(route);
-      await page.waitForTimeout(2000);
-      const frames = await page.evaluate(
-        () =>
-          new Promise<string>((resolve) => {
-            let n = 0;
-            const gaps: number[] = [];
-            let last = performance.now();
-            const t0 = last;
-            const f = () => {
-              const now = performance.now();
-              gaps.push(Math.round(now - last));
-              last = now;
-              n++;
-              if (now - t0 < 2000) requestAnimationFrame(f);
-              else resolve(`frames=${n} maxGap=${Math.max(...gaps)}`);
-            };
-            requestAnimationFrame(f);
-            setTimeout(() => resolve(`TIMEOUT frames=${n} gaps=${gaps.slice(0, 5)}`), 8000);
-          }),
-      );
-      let click = "ok";
-      try {
-        await page
-          .getByRole("button", { name: "Decline", exact: true })
-          .first()
-          .click({ trial: true, timeout: 6000 });
-      } catch (e) {
-        click = String(e).split("\n").slice(0, 4).join(" | ");
-      }
-      const anims = await page.evaluate(() =>
-        document.getAnimations().filter((a) => a.playState === "running").length,
-      );
-      console.log(`DIAG ${route} ${name}: ${frames} runningAnims=${anims} click=${click}`);
+  test(`${route} resources`, async ({ page }) => {
+    test.setTimeout(40_000);
+    const pending = new Map<string, string>();
+    const failed: string[] = [];
+    page.on("request", (r) => pending.set(r.url(), r.resourceType()));
+    page.on("requestfinished", (r) => pending.delete(r.url()));
+    page.on("requestfailed", (r) => {
+      pending.delete(r.url());
+      failed.push(`${r.resourceType()} ${r.url()} ${r.failure()?.errorText}`);
     });
-  }
+    await page.goto(route);
+    await page.waitForTimeout(6000);
+    const state = await page.evaluate(() => ({
+      ready: document.readyState,
+      head: [...document.head.querySelectorAll("link")].map(
+        (l) =>
+          `${l.rel} as=${l.getAttribute("as")} blocking=${l.getAttribute("blocking")} sheet=${
+            l.rel === "stylesheet" ? Boolean(l.sheet) : "-"
+          } ${l.getAttribute("href") ?? l.getAttribute("imagesrcset")?.slice(0, 80)}`,
+      ),
+      blockingScripts: [...document.querySelectorAll("script[blocking],style[blocking]")].length,
+      visibility: document.visibilityState,
+    }));
+    console.log(`DIAG ${route} ready=${state.ready} vis=${state.visibility} blocking=${state.blockingScripts}`);
+    for (const h of state.head) console.log(`DIAG ${route} head ${h}`);
+    for (const [u, t] of pending) console.log(`DIAG ${route} PENDING ${t} ${u}`);
+    for (const f of failed) console.log(`DIAG ${route} FAILED ${f}`);
+  });
 }
