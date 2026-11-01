@@ -95,7 +95,11 @@ test.describe("without JavaScript", () => {
 });
 
 test("sits above the cookie banner, the nav and back to top", async ({ page }) => {
-  await page.goto("/", { waitUntil: "commit" });
+  // Parsed, not just begun: at "commit" the banner and back to top were not
+  // in the document yet on a long page, and there was nothing to compare
+  // (flaky on Desktop Chrome, PR #65). The splash is still up at this point;
+  // it waits for the load event.
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(html(page)).toHaveAttribute("data-splash", "show");
   // Compared by layer rather than by what is on top at one instant, so the
   // answer does not depend on catching the splash before it leaves.
