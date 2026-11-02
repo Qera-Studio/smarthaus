@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures";
 import {
   expectAccessible,
+  expectHydrated,
   expectNoEmDash,
   expectNoHorizontalOverflow,
   withConsentDecided,
@@ -69,6 +70,10 @@ test("reveals a row's description on click and hides it again", async ({ page })
 });
 
 test("collapses a whole section from its summary", async ({ page }) => {
+  // Hydrated first. On CI's iPhone 17 a click before it left the section open
+  // once (2026-11-01, passed on retry), as rate-limit.spec.ts saw a tap
+  // dropped mid-hydration.
+  await expectHydrated(page);
   const section = comparison(page).locator("details:not(details details)").first();
   await section.locator("> summary").click();
   await expect(section).not.toHaveAttribute("open", "");

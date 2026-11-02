@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { test as base } from "@playwright/test";
+import { test as base, type Page } from "@playwright/test";
 
 import { SPLASH_SEEN_KEY } from "../src/lib/splash-boot";
 
@@ -70,6 +70,30 @@ type Options = {
  *
  * The recorded cost: no e2e run checks the card blur in WebKit.
  */
+/**
+ * The card-blur hold, for a page or for a context a test creates itself,
+ * which the fixture never sees (rate-limit.spec.ts's second visitor stalled
+ * on `/` without it). Before first paint: the stall begins with the first
+ * frame, so a stylesheet added at DOMContentLoaded comes too late (measured).
+ */
+export async function takeCardBlurOff(target: Pick<Page, "addInitScript">) {
+  await target.addInitScript((css) => {
+    const add = () => {
+      const style = document.createElement("style");
+      style.dataset.e2eCardBlurOff = "";
+      style.textContent = css;
+      (document.head ?? document.documentElement).append(style);
+    };
+    if (document.documentElement) add();
+    else
+      new MutationObserver((_, observer) => {
+        if (!document.documentElement) return;
+        observer.disconnect();
+        add();
+      }).observe(document, { childList: true });
+  }, CARD_BLUR_OFF_CSS);
+}
+
 export const CARD_BLUR_OFF_CSS =
   "[data-hero-strip] *::before { -webkit-backdrop-filter: none; backdrop-filter: none; }";
 
@@ -112,25 +136,7 @@ export const test = base.extend<
   cardBlur: [false, { option: true }],
   cardBlurGate: [
     async ({ page, browserName, cardBlur }, use) => {
-      if (browserName === "webkit" && !cardBlur) {
-        // Before first paint: the stall begins with the first frame, so a
-        // stylesheet added at DOMContentLoaded comes too late (measured).
-        await page.addInitScript((css) => {
-          const add = () => {
-            const style = document.createElement("style");
-            style.dataset.e2eCardBlurOff = "";
-            style.textContent = css;
-            (document.head ?? document.documentElement).append(style);
-          };
-          if (document.documentElement) add();
-          else
-            new MutationObserver((_, observer) => {
-              if (!document.documentElement) return;
-              observer.disconnect();
-              add();
-            }).observe(document, { childList: true });
-        }, CARD_BLUR_OFF_CSS);
-      }
+      if (browserName === "webkit" && !cardBlur) await takeCardBlurOff(page);
       await use();
     },
     { auto: true },
