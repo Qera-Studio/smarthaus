@@ -11,10 +11,14 @@ import { test, expect } from "./fixtures";
  * the homepage at 852 and the footer at 429; the budgets below are those
  * counts plus about a quarter, so growth is a decision rather than a drift.
  *
+ * 2026-10-28: the homepage's raised to 1,100 (Shivanshu) for the nav's
+ * Solutions panel, which put it at 1,080. The phone's copy of the menu
+ * mounts on first use and is not counted here.
+ *
  * Desktop Chrome only: the markup is the same on every device.
  */
 const BUDGETS = [
-  { path: "/", page: 1070, footer: 540 },
+  { path: "/", page: 1100, footer: 540 },
   { path: "/contact", page: 830, footer: 540 },
   { path: "/pricing", page: 2000, footer: 540 },
 ];

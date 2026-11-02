@@ -128,5 +128,15 @@ export function createDeduper({ windowMs = 60 * 60_000, now = Date.now, maxKeys 
   };
 }
 
-/** Reports per client: generous for a real browser, a wall for a flood. */
-export const reportLimiter = createLimiter({ capacity: 30, windowMs: 60_000 });
+/**
+ * Reports per client a minute: generous for a real browser, a wall for a
+ * flood. Safari posts one report per violation, and the strict report-only
+ * policy reports every inline style, so one page load sends 33 to 35, and
+ * the homepage 68 (iPhone 17 WebKit, measured 2026-11-02; Chromium batches
+ * and sends none in that time). The limit of 30 it had before refused part
+ * of a single ordinary page view. 240 is about four pages a minute, the
+ * homepage among them: still a hard 4 a second per client, on an endpoint
+ * capped at 16KB a report that logs each distinct violation once an hour.
+ */
+export const REPORTS_PER_MINUTE = 240;
+export const reportLimiter = createLimiter({ capacity: REPORTS_PER_MINUTE, windowMs: 60_000 });

@@ -232,6 +232,13 @@ Every image in `public/hero/process/` is **placeholder stock** and every row in 
 
 Capsule transition: CSS `translate`, `border-radius`, `padding` with `--duration-normal`. Triggered by IntersectionObserver sentinel at the bottom of hero phase 1. No scroll event listeners.
 
+**The Solutions menu** (Figma 4678:50257, 2026-10-28). The eight solutions, each to `/solutions` for now, with a picture of the one hovered, focused or swiped to (`Nav/SolutionsMenu.tsx`, copy in `src/content/solutions-menu.ts`).
+
+- **From lg:** a panel hanging from the Solutions item, always exactly the scrolled capsule's width and place (`--nav-stuck-size`, centred on the header). Under the tall bar it floats 8px below with its own frame; once the bar shrinks the gap closes and the frame between them drops, so a menu open during the shrink never changes size and ends as one box with the capsule. It opens on hover (closing 150ms after the pointer leaves) and on focus, closes at once when focus leaves, on Escape (focus back to Solutions) and on a press outside. On a screen with no hover the first tap opens it. It opens by height, as the phone menu does, items arriving once it is 90% open.
+- **Below lg:** a tap on Solutions slides the links out to the left, the menu changes height, and the solutions slide in from the right, picture on top; Back reverses it. A sideways swipe on the picture moves through the solutions. Each side has its own `0fr`/`1fr` row: two rows of one grid would size both to the taller content.
+- **The capsule and the open panel are one sheet of glass.** The capsule's blur and tint live on its `::after`, inside its frame, and once the bar has shrunk that layer reaches down over the open panel (`--nav-menu-block`, measured by NavShell), on the panel's own duration and curve; the joined panel has no glass of its own. The reach is one registered number (`--nav-reach`, 0 to 1) that both the layer's foot and its `clip-path` read, and below the bar's foot the layer is clipped to the panel's width: a menu open on the tall bar joins it while the bar is still shrinking, and unclipped the glass hung the bar's full width under it. Two blurs never match at a seam (each invents what lies past its own edge differently), and a header that carries `backdrop-filter` is a backdrop root, so a panel inside it cannot blur the page at all. Do not move the glass back onto `.nav` or give the joined panel its own.
+- Without JavaScript, Solutions is a plain link to `/solutions`. `e2e/nav-menu.spec.ts` covers both bands.
+
 Mobile bottom nav must account for `env(safe-area-inset-bottom)` — iOS home indicator and Android gesture bar.
 
 ---
@@ -461,6 +468,8 @@ No client photography exists and none will be sourced. Client privacy makes it p
 - The brand's visual identity
 
 **One exception, temporary: the homepage hero strip** (`public/hero/hero_carousel/`, decided 2026-10-28). The client asked for lifestyle images there and Shivanshu confirmed they are licensed for our use. They are a stand-in, not a reversal of the rule: every row in `src/content/hero-carousel.ts` carries `pendingImage`, and `src/content/__tests__/hero-carousel.test.ts` fails once the last marker is cleared.
+
+**The same exception covers the nav's Solutions menu** (`public/hero/navBar/`, decided 2026-10-28): licensed stock, temporary, every row in `src/content/solutions-menu.ts` carries `pendingImage`, and `src/content/__tests__/solutions-menu.test.ts` fails once the last marker is cleared.
 
 ---
 

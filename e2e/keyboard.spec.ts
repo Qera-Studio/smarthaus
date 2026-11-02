@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "./fixtures";
 import { expectHydrated } from "./checks";
+import { SOLUTIONS_MENU_ITEMS } from "../src/content/solutions-menu";
 import { NAV_LINKS } from "../src/lib/nav-links";
 
 /**
@@ -70,6 +71,9 @@ test("the skip link moves the next Tab into the main content", async ({ page }) 
 // 2026-10-28: the contact bar sits above the nav, so its links come between
 // the skip link and home, in the order they read on screen. Its arrows are
 // hidden from md up and take no stop here.
+//
+// 2026-10-28: focus on Solutions opens its menu, and the eight solutions are
+// the next stops, before Pricing (e2e/nav-menu.spec.ts).
 test("the header reads in order: skip, the contact bar, home, every nav link, then the CTA", async ({
   page,
 }) => {
@@ -83,7 +87,14 @@ test("the header reads in order: skip, the contact bar, home, every nav link, th
     bar.getByRole("link", { name: /^mail us at/ }),
     bar.getByRole("link", { name: /^whatsapp at/ }),
     header.getByRole("link", { name: "Smarthaus — home" }).last(),
-    ...NAV_LINKS.map((link) => header.getByRole("link", { name: link.label, exact: true })),
+    ...NAV_LINKS.flatMap((link) => [
+      header.getByRole("link", { name: link.label, exact: true }),
+      ...(link.href === "/solutions"
+        ? SOLUTIONS_MENU_ITEMS.map((item) =>
+            header.locator("[data-menu-panel]").getByRole("link", { name: item.label }),
+          )
+        : []),
+    ]),
     header.getByRole("link", { name: "Book a site visit" }),
   ];
   for (const stop of stops) {

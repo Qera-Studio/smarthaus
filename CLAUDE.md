@@ -249,7 +249,7 @@ Server Components first. `'use client'` limited to:
 - Partner cards (`Partners/PartnerCarousel.tsx` — ARIA tablist over the TIS and Fibaro cards, one IntersectionObserver; the hardware carousel's pattern sideways: a CSS-animation timer whose `animationend` advances the card, a pause button, held under keyboard focus, never started under reduced motion)
 - Wireframe/scene reveal (Web Animations API)
 - Contact form (form state, Turnstile widget)
-- Mobile navigation (toggle state), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
+- Mobile navigation (toggle state, and the Solutions menu: open state from lg, the solutions in place of the links below it), `Nav/SolutionsMenu.tsx` (the solution in hand, and the swipe on its picture), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
 

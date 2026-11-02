@@ -175,6 +175,7 @@ describe("NavShell measures its own row and CTA", () => {
       <NavShell
         brandMark={<span>mark</span>}
         brandFull={<span>full</span>}
+        solutions={<span>solutions</span>}
         links={
           <ul>
             <li>Solutions</li>

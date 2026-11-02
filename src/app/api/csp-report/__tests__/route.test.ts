@@ -3,6 +3,7 @@
  */
 
 // The CSP report endpoint as a browser, or an attacker, reaches it.
+import { REPORTS_PER_MINUTE } from "../../../../lib/csp-report";
 import { POST } from "../route";
 
 let ipCounter = 0;
@@ -134,25 +135,36 @@ describe("POST /api/csp-report", () => {
     expect((await POST(report(padded))).status).toBe(204);
   });
 
-  it("rate-limits one client after 30 reports a minute", async () => {
+  it("lets a Safari visitor read four pages a minute, the homepage among them", () => {
+    // Safari posts one report per inline style: 68 for the homepage, up to
+    // 35 for any other page. The limit of 30 it had before refused part of a
+    // single page view (2026-11-02).
+    expect(REPORTS_PER_MINUTE).toBeGreaterThanOrEqual(68 + 3 * 35);
+  });
+
+  it("stays a hard wall: no more than 4 a second per client", () => {
+    expect(REPORTS_PER_MINUTE).toBeLessThanOrEqual(240);
+  });
+
+  it(`rate-limits one client after ${REPORTS_PER_MINUTE} reports a minute`, async () => {
     const ip = "198.19.0.1";
     const statuses: number[] = [];
-    for (let i = 0; i < 31; i += 1) {
+    for (let i = 0; i <= REPORTS_PER_MINUTE; i += 1) {
       statuses.push((await POST(report(legacy(`https://evil.example/${i}.js`), { ip }))).status);
     }
-    expect(statuses.slice(0, 30).every((s) => s === 204)).toBe(true);
-    expect(statuses[30]).toBe(429);
+    expect(statuses.slice(0, REPORTS_PER_MINUTE).every((s) => s === 204)).toBe(true);
+    expect(statuses[REPORTS_PER_MINUTE]).toBe(429);
   });
 
   it("checks the rate limit before reading the body", async () => {
     const ip = "198.19.0.2";
-    for (let i = 0; i < 30; i += 1) await POST(report(legacy("x"), { ip }));
+    for (let i = 0; i < REPORTS_PER_MINUTE; i += 1) await POST(report(legacy("x"), { ip }));
     expect((await POST(report("{not json", { ip }))).status).toBe(429);
   });
 
   it("keeps serving other clients while one is limited", async () => {
     const ip = "198.19.0.3";
-    for (let i = 0; i < 31; i += 1) await POST(report(legacy("x"), { ip }));
+    for (let i = 0; i <= REPORTS_PER_MINUTE; i += 1) await POST(report(legacy("x"), { ip }));
     expect((await POST(report(legacy("https://evil.example/other.js")))).status).toBe(204);
   });
 });
