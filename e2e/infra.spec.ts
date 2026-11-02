@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { CARD_BLUR_OFF_CSS, expect, test, type Page } from "./fixtures";
 import type { Request } from "@playwright/test";
 
 // The e2e server is not the production server: next.config.ts drops two
@@ -262,6 +262,35 @@ test.describe("the hero's canvas in e2e", () => {
       await page.waitForTimeout(2_000);
       expect(heavyRequests).toEqual([]);
       await expect(page.locator("[data-hero] canvas")).toHaveCount(0);
+    });
+  });
+});
+
+// The card-blur default lives in e2e/fixtures.ts, pinned both ways.
+test.describe("the hero cards' blur in e2e", () => {
+  const holds = (page: Page) => page.locator("style[data-e2e-card-blur-off]");
+
+  test("is off in WebKit and on in Chromium, and only the cards' is", async ({
+    page,
+    browserName,
+  }) => {
+    await page.goto("/");
+    await expect(holds(page)).toHaveCount(browserName === "webkit" ? 1 : 0);
+    expect(CARD_BLUR_OFF_CSS).toMatch(/^\[data-hero-strip\] \*::before \{[^}]*\}$/);
+    if (browserName === "webkit") {
+      // textContent: a <style> has no innerText, which toHaveText reads.
+      expect(await holds(page).evaluate((el) => el.textContent)).toBe(CARD_BLUR_OFF_CSS);
+    }
+  });
+
+  test.describe("when a spec opts in", () => {
+    test.use({ cardBlur: true });
+
+    test("ships no hold in any browser", async ({ page }) => {
+      // Not loaded: in WebKit on the Linux runner the page would never paint.
+      await page.route("**/*", (route) => route.fulfill({ body: "<html><body></body></html>" }));
+      await page.goto("/");
+      await expect(holds(page)).toHaveCount(0);
     });
   });
 });

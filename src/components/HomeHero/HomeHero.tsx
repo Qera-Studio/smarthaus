@@ -97,9 +97,10 @@ function Pair({ start, end }: { start: React.ReactNode; end: React.ReactNode }) 
  *
  * Replaced FluidHero on 2026-10-28; src/components/FluidHero stays, unmounted.
  * The h1 is the page's only one. The LCP element is the first card's image
- * (measured 2026-10-28, desktop and phone), which is why it alone is fetched
- * at high priority, the next three at the default, and the rest at low (see
- * Load).
+ * (measured 2026-10-28 in Chromium, desktop and phone; on an iPhone 17 in
+ * WebKit it is the subtitle, measured 2026-11-02), which is why it alone is
+ * fetched at high priority, the next three at the default, and the rest at
+ * low (see Load).
  */
 export function HomeHero() {
   return (

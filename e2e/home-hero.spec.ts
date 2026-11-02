@@ -89,6 +89,10 @@ test("the pause button stops it, and a second press starts it again", async ({ p
 });
 
 test("keyboard focus on a card stops the strip and shows its overlay", async ({ page }) => {
+  // Hydrated first: StripControls takes the strip's animation over when it
+  // mounts, and a focus before that read a strip reset to its start as a
+  // drift (iPhone 17 in CI, 2026-11-02).
+  await expectHydrated(page);
   const link = cards(page).first().getByRole("link");
   await link.focus();
   await expect(overlayOf(page, 0)).toHaveCSS("opacity", "1");
@@ -704,11 +708,25 @@ test.describe("every card, with a mouse", () => {
   });
 });
 
-test("the largest paint is the h1 or an eager strip image, never a lazy one", async ({ page }) => {
+// On an iPhone 17 (measured 2026-11-02) the subtitle is bigger on screen than
+// any one card, and is the largest paint; text in the hero copy is painted
+// from the server HTML, so it is as good as the h1. Consent decided first: on
+// a first visit the cookie banner's paragraph is larger still, which says
+// nothing about the hero (consent-boot.spec.ts covers the banner's paint).
+test("the largest paint is the hero's copy or an eager strip image, never a lazy one", async ({
+  page,
+}) => {
+  await withConsentDecided(page);
   await page.goto("/", { waitUntil: "load" });
   const lcp = await page.evaluate(
     () =>
-      new Promise<{ tag: string; id: string; loading: string | null; src: string }>((resolve) => {
+      new Promise<{
+        tag: string;
+        id: string;
+        loading: string | null;
+        src: string;
+        inCopy: boolean;
+      }>((resolve) => {
         new PerformanceObserver((list) => {
           const entries = list.getEntries() as (PerformanceEntry & { element: Element | null })[];
           const el = entries.at(-1)?.element;
@@ -717,12 +735,15 @@ test("the largest paint is the h1 or an eager strip image, never a lazy one", as
             id: el?.id ?? "",
             loading: el?.getAttribute("loading") ?? null,
             src: el?.getAttribute("src") ?? "",
+            inCopy: Boolean(el?.closest("[data-hero]") && !el.closest("[data-hero-strip]")),
           });
         }).observe({ type: "largest-contentful-paint", buffered: true });
       }),
   );
   if (lcp.tag === "H1") {
     expect(lcp.id).toBe("hero-title");
+  } else if (lcp.tag === "P") {
+    expect(lcp.inCopy).toBe(true);
   } else {
     expect(lcp.tag).toBe("IMG");
     expect(lcp.src).toContain("hero_carousel");

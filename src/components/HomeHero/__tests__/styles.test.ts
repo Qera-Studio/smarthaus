@@ -216,6 +216,18 @@ describe("HomeHero.module.scss", () => {
       expect(hero).not.toMatch(/padding-block-end/);
     });
 
+    test("on a short phone the copy sits tighter and the floor gives way", () => {
+      // An iPhone 17 in Safari: the strip was about 100px and ran 6px under
+      // the nav (2026-11-02). Below lg and under 45rem tall only.
+      const short = media("(max-width: 1023px) and (max-height: 45rem)");
+      expect(short).toMatch(/--hero-min-block:\s*34rem/);
+      expect(short).toMatch(/(^|[;{\s])gap:\s*8px/);
+      expect(short).toMatch(/padding-block-start:\s*8px/);
+      // The floor still sits under the 570px a short phone leaves, and above
+      // what the copy alone needs.
+      expect(rule(".hero")).toMatch(/--hero-min-block:\s*36rem/);
+    });
+
     test("below lg it ends above the floating nav; from lg the nav is above", () => {
       expect(rule(".hero")).toMatch(/--hero-above:\s*var\(--announce-block-size\)/);
       expect(rule(".hero")).toMatch(/--hero-below:\s*calc\(\s*var\(--nav-bar-block-size\)/);
