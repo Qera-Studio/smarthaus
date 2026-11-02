@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 
-import { DRAG_MIN_PX, REVEAL_GUTTER_PX, StripControls } from "../StripControls";
+import { DRAG_MIN_PX, REVEAL_GUTTER_PX, SCROLL_BOOST, StripControls } from "../StripControls";
 
 /**
  * The strip's pause button, and the hand on the strip: a mouse or finger
@@ -26,8 +26,26 @@ class FakePointerEvent extends MouseEvent {
   }
 }
 
+// Nor IntersectionObserver: the stand-in hands the test its callback, so a
+// test says when the strip is on screen.
+let onScreen: (visible: boolean) => void = () => {};
+let observersDisconnected = 0;
+class FakeIntersectionObserver {
+  constructor(callback: (entries: { isIntersecting: boolean }[]) => void) {
+    onScreen = (visible) => act(() => callback([{ isIntersecting: visible }]));
+  }
+  observe() {}
+  disconnect() {
+    observersDisconnected += 1;
+  }
+}
+
 beforeAll(() => {
   Object.defineProperty(window, "PointerEvent", { configurable: true, value: FakePointerEvent });
+  Object.defineProperty(window, "IntersectionObserver", {
+    configurable: true,
+    value: FakeIntersectionObserver,
+  });
 });
 
 // jsdom has no hit test either: by default nothing is under the pointer.
@@ -54,6 +72,7 @@ function setup({ animated = true, at = 0 }: { animated?: boolean; at?: number } 
   const track = screen.getByTestId("track");
   const animation = {
     currentTime: at,
+    playState: "running",
     effect: { getComputedTiming: () => ({ duration: DURATION }) },
   };
   track.getAnimations = () => (animated ? [animation as unknown as Animation] : []);
@@ -467,5 +486,118 @@ describe("StripControls", () => {
   it("does not throw with no strip on the page", () => {
     render(<StripControls />);
     expect(() => fireEvent.click(screen.getByRole("button"))).not.toThrow();
+  });
+
+  describe("the page's scroll", () => {
+    /** Scrolls the page to y and tells the listeners. */
+    const scrollTo = (y: number) => {
+      Object.defineProperty(window, "scrollY", { configurable: true, value: y });
+      fireEvent.scroll(window);
+    };
+
+    beforeEach(() => scrollTo(0));
+
+    test("runs the strip ahead by SCROLL_BOOST pixels for every pixel scrolled down", () => {
+      const { animation } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(100);
+      expect(animation.currentTime).toBeCloseTo(1000 + 100 * SCROLL_BOOST * MS_PER_PX);
+    });
+
+    test("scrolling up runs it ahead too: it is never slower than the drift", () => {
+      const { animation } = setup({ at: 1000 });
+      scrollTo(500);
+      onScreen(true);
+      scrollTo(300);
+      expect(animation.currentTime).toBeCloseTo(1000 + 200 * SCROLL_BOOST * MS_PER_PX);
+    });
+
+    test("follows each step, not the distance from where it started", () => {
+      const { animation } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(40);
+      scrollTo(100);
+      scrollTo(60);
+      expect(animation.currentTime).toBeCloseTo(1000 + 140 * SCROLL_BOOST * MS_PER_PX);
+    });
+
+    test("wraps round the pass, like a drag", () => {
+      const { animation } = setup({ at: DURATION - 10 });
+      onScreen(true);
+      scrollTo(10);
+      expect(animation.currentTime).toBeCloseTo(10 * SCROLL_BOOST * MS_PER_PX - 10);
+    });
+
+    test("does nothing until the strip is on screen, and nothing once it has left", () => {
+      const { animation } = setup({ at: 1000 });
+      scrollTo(100);
+      expect(animation.currentTime).toBe(1000);
+      onScreen(true);
+      onScreen(false);
+      scrollTo(300);
+      expect(animation.currentTime).toBe(1000);
+    });
+
+    test("counts from where the page was when the strip came on screen", () => {
+      const { animation } = setup({ at: 1000 });
+      scrollTo(900);
+      onScreen(true);
+      scrollTo(910);
+      expect(animation.currentTime).toBeCloseTo(1000 + 10 * SCROLL_BOOST * MS_PER_PX);
+    });
+
+    test("leaves a paused strip alone: hover, focus, the pause button or a drag", () => {
+      const { animation } = setup({ at: 1000 });
+      animation.playState = "paused";
+      onScreen(true);
+      scrollTo(100);
+      expect(animation.currentTime).toBe(1000);
+    });
+
+    test("leaves the strip alone under reduced motion, where it does not drift", () => {
+      const { strip } = setup({ animated: false });
+      strip.scrollLeft = 50;
+      onScreen(true);
+      scrollTo(100);
+      expect(strip.scrollLeft).toBe(50);
+    });
+
+    test("does nothing on a strip that has no track yet", () => {
+      render(
+        <section data-hero>
+          <StripControls />
+          <div data-hero-strip />
+        </section>,
+      );
+      onScreen(true);
+      expect(() => scrollTo(100)).not.toThrow();
+    });
+
+    test("stops listening and observing on unmount", () => {
+      const { animation, unmount } = setup({ at: 1000 });
+      onScreen(true);
+      const before = observersDisconnected;
+      unmount();
+      expect(observersDisconnected).toBe(before + 1);
+      scrollTo(100);
+      expect(animation.currentTime).toBe(1000);
+    });
+  });
+
+  describe("the opening", () => {
+    afterEach(() => document.documentElement.removeAttribute("data-intro"));
+
+    test("leaves data-intro on <html> while the hero is mounted", () => {
+      document.documentElement.setAttribute("data-intro", "");
+      setup();
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
+    });
+
+    test("takes it off on unmount, so a soft navigation back finds the hero at rest", () => {
+      document.documentElement.setAttribute("data-intro", "");
+      const { unmount } = setup();
+      unmount();
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(false);
+    });
   });
 });

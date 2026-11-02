@@ -339,4 +339,79 @@ describe("HomeHero.module.scss", () => {
       expect(css).not.toMatch(/(?:^|[\s,}])#[a-z]/im);
     });
   });
+
+  describe("the opening", () => {
+    // Selector lists on one line, so a list can be matched whole.
+    const motion = () => media("(prefers-reduced-motion: no-preference)").replace(/,\s+/g, ", ");
+    const gate = ":where(:root[data-intro])";
+    const held = ":where(:root[data-intro][data-splash=show])";
+
+    test("plays only for a visitor who has not asked for less motion", () => {
+      expect(css.match(/animation-name:\s*hero-in\b/g)).toHaveLength(1);
+      expect(css.match(/animation-name:\s*hero-arrive/g)).toHaveLength(1);
+      expect(motion()).toMatch(/animation-name:\s*hero-in\b/);
+      expect(motion()).toMatch(/animation-name:\s*hero-arrive/);
+    });
+
+    test("plays only while <html> carries data-intro", () => {
+      const fades = rule(
+        `${gate} .title, ${gate} .lede, ${gate} .ctas, ${gate} .copy > .pair, ${gate} .controls`,
+        motion(),
+      );
+      expect(fades).toMatch(/animation-name:\s*hero-in/);
+      expect(rule(`${gate} .strip`, motion())).toMatch(/animation-name:\s*hero-arrive/);
+    });
+
+    test("fills backwards only, so nothing is held once it has played", () => {
+      expect(css).not.toMatch(/animation-fill-mode:\s*(both|forwards)/);
+      expect(css.match(/animation-fill-mode:\s*backwards/g)).toHaveLength(2);
+    });
+
+    test("in order: title, subtitle, then the CTAs with the strip, then the two lines", () => {
+      expect(rule(`${gate} .lede`, motion())).toMatch(/animation-delay:\s*var\(--hero-in-lede\)/);
+      expect(rule(`${gate} .ctas`, motion())).toMatch(/animation-delay:\s*var\(--hero-in-cta\)/);
+      expect(rule(`${gate} .strip`, motion())).toMatch(/animation-delay:\s*var\(--hero-in-cta\)/);
+      // The list that opens right after a closing brace, not the tail of the
+      // longer list that sets the keyframes.
+      expect(
+        rule(`}\n${gate} .copy > .pair, ${gate} .controls`, motion().replace(/\}\s+/g, "}\n")),
+      ).toMatch(/animation-delay:\s*var\(--hero-in-rest\)/);
+      const hero = rule(".hero");
+      const ms = (name: string) => Number(hero.match(new RegExp(`--${name}:\\s*(\\d+)ms`))?.[1]);
+      expect(ms("hero-in-lede")).toBeLessThan(ms("hero-in-cta"));
+      expect(ms("hero-in-cta")).toBeLessThan(ms("hero-in-rest"));
+      // All of it in within two seconds.
+      expect(ms("hero-in-cta") + ms("hero-arrive-duration")).toBeLessThanOrEqual(2000);
+    });
+
+    test("the strip arrives from the screen's right edge on a braking curve", () => {
+      expect(css).toMatch(/@keyframes hero-arrive\s*\{\s*from\s*\{\s*translate:\s*100vw 0;?\s*\}/);
+      expect(rule(".hero")).toMatch(/--hero-arrive-ease:\s*cubic-bezier\(0\.16, 1, 0\.3, 1\)/);
+      expect(rule(`${gate} .strip`, motion())).toMatch(
+        /animation-timing-function:\s*var\(--hero-arrive-ease\)/,
+      );
+    });
+
+    test("the strip, not the track, so the drift runs on underneath", () => {
+      expect(() => rule(`${gate} .track`, motion())).toThrow();
+    });
+
+    test("the copy rises in from below as it fades", () => {
+      expect(css).toMatch(
+        /@keyframes hero-in\s*\{\s*from\s*\{\s*opacity:\s*0;\s*translate:\s*0 var\(--hero-in-shift\);?\s*\}/,
+      );
+    });
+
+    test("waits while the splash covers the page", () => {
+      const waiting = rule(
+        `${held} .title, ${held} .lede, ${held} .ctas, ${held} .copy > .pair, ${held} .controls, ${held} .strip`,
+        motion(),
+      );
+      expect(waiting).toMatch(/animation-play-state:\s*paused/);
+    });
+
+    test("its gate adds no specificity, under the 0,3,0 cap", () => {
+      expect(css).not.toMatch(/(?<!:where\():root\[/);
+    });
+  });
 });

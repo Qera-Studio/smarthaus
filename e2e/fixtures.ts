@@ -42,6 +42,7 @@ export { expect, devices, type Locator, type Page } from "@playwright/test";
 type Options = {
   villa: boolean;
   cardBlur: boolean;
+  intro: boolean;
   splash: boolean;
   clientAddress: string | undefined;
 };
@@ -98,6 +99,34 @@ export const CARD_BLUR_OFF_CSS =
   "[data-hero-strip] *::before { -webkit-backdrop-filter: none; backdrop-filter: none; }";
 
 /*
+ * ## The homepage opening is off unless a spec asks for it
+ *
+ * On every full load the splash boot script sets data-intro on <html>, and
+ * while it is there the homepage's copy, strip, nav and contact bar fade and
+ * slide in over about 1.75s (HomeHero.module.scss, "The opening"). Axe reads
+ * half-faded text as a contrast failure, and every click and screenshot would
+ * wait out the slide. So the attribute is taken off as soon as it is set, in
+ * the microtask after the boot script, before anything paints: the page is
+ * the one a soft navigation back to the homepage shows. e2e/intro.spec.ts
+ * opts back in with
+ *   test.use({ intro: true });
+ *
+ * The recorded cost: no other spec sees the page while it arrives.
+ */
+export async function takeIntroOff(target: Pick<Page, "addInitScript">) {
+  await target.addInitScript(() => {
+    new MutationObserver(() => {
+      document.documentElement?.removeAttribute("data-intro");
+    }).observe(document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["data-intro"],
+    });
+  });
+}
+
+/*
  * ## The splash is seen unless a spec asks for it
  *
  * The first full load in a tab shows the loading splash over the page for up
@@ -131,12 +160,26 @@ export function addressFor(seed: string): string {
 }
 
 export const test = base.extend<
-  Options & { villaGate: void; cardBlurGate: void; clientGate: void; splashGate: void }
+  Options & {
+    villaGate: void;
+    cardBlurGate: void;
+    introGate: void;
+    clientGate: void;
+    splashGate: void;
+  }
 >({
   cardBlur: [false, { option: true }],
   cardBlurGate: [
     async ({ page, browserName, cardBlur }, use) => {
       if (browserName === "webkit" && !cardBlur) await takeCardBlurOff(page);
+      await use();
+    },
+    { auto: true },
+  ],
+  intro: [false, { option: true }],
+  introGate: [
+    async ({ page, intro }, use) => {
+      if (!intro) await takeIntroOff(page);
       await use();
     },
     { auto: true },

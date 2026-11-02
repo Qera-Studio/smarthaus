@@ -97,4 +97,26 @@
       margin-inline-end: $space-6;
     }
   }
+
+  // The homepage opening, with the nav (Nav.module.scss): a fade only, since
+  // a band at the top of the page that moved would move the page under it.
+  @media (prefers-reduced-motion: no-preference) {
+    :where(:root[data-intro]:has([data-hero])) .bar {
+      animation-name: bar-in;
+      animation-duration: var(--duration-slower);
+      animation-timing-function: var(--ease-out);
+      animation-delay: 350ms;
+      animation-fill-mode: backwards;
+    }
+
+    :where(:root[data-intro][data-splash="show"]) .bar {
+      animation-play-state: paused;
+    }
+  }
+
+  @keyframes bar-in {
+    from {
+      opacity: 0;
+    }
+  }
 }

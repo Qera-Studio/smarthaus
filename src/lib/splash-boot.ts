@@ -40,6 +40,11 @@ export const SPLASH_EXIT_MS = 320;
  * Under prefers-reduced-motion the bar and count do not move: they show
  * complete, and the splash still leaves when the page is ready.
  *
+ * It also sets `data-intro` on every full load, splash or not: the homepage's
+ * opening sequence plays only while it is there (HomeHero.module.scss, "The
+ * opening"), and StripControls takes it off when the hero unmounts, so a soft
+ * navigation back to the homepage finds the hero at rest.
+ *
  * ES5, because it runs before any bundle, and Date.now rather than
  * performance.now so the unit suite's fake clock drives it. Allowed by its
  * SHA-256 hash in the strict CSP (next.config.ts), like the consent boot.
@@ -47,6 +52,8 @@ export const SPLASH_EXIT_MS = 320;
 export const SPLASH_BOOT_SCRIPT = [
   "(function(){",
   "var d=document.documentElement,w=window;",
+  // Every full load, before the storage check, so a reload plays it too.
+  "d.setAttribute('data-intro','');",
   `try{var k=${JSON.stringify(SPLASH_SEEN_KEY)},s=w.sessionStorage;`,
   "if(s.getItem(k)){d.setAttribute('data-splash','skip');return;}",
   "s.setItem(k,'1');}catch(err){return;}",

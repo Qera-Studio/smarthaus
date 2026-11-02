@@ -13,6 +13,18 @@ import { HomeHero, PROJECTS, RATING } from "../HomeHero";
 const strip = () => document.querySelector("[data-hero-strip]") as HTMLElement;
 const lists = () => Array.from(strip().querySelectorAll("ul"));
 
+// jsdom has no IntersectionObserver, which StripControls watches the strip
+// with; its scroll boost is tested in StripControls.test.tsx.
+beforeAll(() => {
+  Object.defineProperty(window, "IntersectionObserver", {
+    configurable: true,
+    value: class {
+      observe() {}
+      disconnect() {}
+    },
+  });
+});
+
 describe("HomeHero", () => {
   it("is a section named by its h1", () => {
     render(<HomeHero />);

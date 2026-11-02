@@ -222,6 +222,17 @@ Every image in `public/hero/process/` is **placeholder stock** and every row in 
 - **Above everything** on `--z-modal`, the consent banner included; the banner is painted underneath from the first frame.
 - **e2e marks it seen** for every spec through the product's own `sessionStorage` key (`e2e/fixtures.ts`); `e2e/splash.spec.ts` opts back in with `test.use({ splash: true })`.
 
+## The homepage opening
+
+On every full load the homepage builds itself in order (Shivanshu, 2026-11-02): the title, then the subtitle 80ms later; at 350ms the CTAs, the strip, the nav and the contact bar together; at 550ms the rating line, the SIRA line and the pause button. All of it is in by about 1.75s.
+
+- **The strip arrives like a train.** `.strip` slides in from the screen's right edge on `cubic-bezier(0.16, 1, 0.3, 1)` while the drift on `.track` runs underneath, so the slide's speed falls to nothing just as the drift carries on at its own. CSS only. After that, the page's scroll runs the strip ahead (StripControls, `SCROLL_BOOST`), never behind.
+- **Gated on `data-intro` on `<html>`.** `src/lib/splash-boot.ts` sets it on every full load, before its storage check. StripControls takes it off when the hero unmounts, so a soft navigation back to `/` finds the hero at rest, and a reload plays it again. Without JavaScript it is never set, and nothing waits on an animation. The gate sits in `:where()`, adding no specificity; the nav and the bar also need `:has([data-hero])`, so only the homepage plays it.
+- **Paused under the splash** (`data-splash="show"`), so it starts as the splash fades rather than finishing unseen.
+- **Fill backwards, never forwards.** Once an animation ends, opacity and translate are the element's own again; the nav's own states depend on that.
+- **Never under reduced motion.** Every rule sits inside `prefers-reduced-motion: no-preference`.
+- **e2e holds it off** for every spec but `e2e/intro.spec.ts` (`e2e/fixtures.ts`, `intro`), since axe reads half-faded text as low contrast.
+
 ## Nav behaviour
 
 | State                           | Desktop                                                 | Mobile                                       |

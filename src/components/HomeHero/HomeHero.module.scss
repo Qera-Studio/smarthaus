@@ -26,6 +26,18 @@
     // The floor, for a screen too short to share: the strip keeps a usable
     // height and the page scrolls instead.
     --hero-min-block: 36rem;
+    // The opening (Shivanshu, 2026-11-02): the title and subtitle, then the
+    // CTAs with the strip and the nav, then the two lines and the pause
+    // button, all in by about 1.75s. The strip arrives like a train: very
+    // fast, braking hard, its own speed reaching nothing exactly as the
+    // drift underneath carries on.
+    --hero-in-duration: var(--duration-slower);
+    --hero-in-shift: #{$space-4};
+    --hero-in-lede: 80ms;
+    --hero-in-cta: 350ms;
+    --hero-in-rest: 550ms;
+    --hero-arrive-duration: 1400ms;
+    --hero-arrive-ease: cubic-bezier(0.16, 1, 0.3, 1);
 
     display: flex;
     flex-direction: column;
@@ -243,6 +255,77 @@
     // Held still under a dragging hand, mouse or finger (StripControls).
     .strip[data-dragging] .track {
       animation-play-state: paused;
+    }
+
+    // --- The opening ---------------------------------------------------------
+    //
+    // Only while <html> carries data-intro: set by the splash boot script on
+    // every full load, and taken off by StripControls when the hero unmounts,
+    // so a soft navigation back here finds the hero at rest. Without
+    // JavaScript nothing is set and nothing waits on an animation.
+    //
+    // Fill backwards, never forwards: the start state holds through each
+    // delay, and once an animation ends it lets go of opacity and translate.
+    // Paused while the splash covers the page, so it begins as the splash
+    // fades rather than finishing unseen beneath it.
+    :where(:root[data-intro]) {
+      .title,
+      .lede,
+      .ctas,
+      .copy > .pair,
+      .controls {
+        animation-name: hero-in;
+        animation-duration: var(--hero-in-duration);
+        animation-timing-function: var(--ease-out);
+        animation-fill-mode: backwards;
+      }
+
+      .lede {
+        animation-delay: var(--hero-in-lede);
+      }
+
+      .ctas {
+        animation-delay: var(--hero-in-cta);
+      }
+
+      .copy > .pair,
+      .controls {
+        animation-delay: var(--hero-in-rest);
+      }
+
+      .strip {
+        animation-name: hero-arrive;
+        animation-duration: var(--hero-arrive-duration);
+        animation-timing-function: var(--hero-arrive-ease);
+        animation-delay: var(--hero-in-cta);
+        animation-fill-mode: backwards;
+      }
+    }
+
+    :where(:root[data-intro][data-splash="show"]) {
+      .title,
+      .lede,
+      .ctas,
+      .copy > .pair,
+      .controls,
+      .strip {
+        animation-play-state: paused;
+      }
+    }
+  }
+
+  @keyframes hero-in {
+    from {
+      opacity: 0;
+      translate: 0 var(--hero-in-shift);
+    }
+  }
+
+  // In from the screen's right edge. The strip, not the track, so the drift
+  // runs underneath and takes over as this slows to nothing.
+  @keyframes hero-arrive {
+    from {
+      translate: 100vw 0;
     }
   }
 

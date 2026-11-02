@@ -12,6 +12,12 @@ export const DRAG_MIN_PX = 6;
 export const REVEAL_GUTTER_PX = 16;
 
 /**
+ * How far the strip runs ahead for each pixel the page scrolls, either way.
+ * Tuned by eye (Shivanshu, 2026-11-02).
+ */
+export const SCROLL_BOOST = 0.6;
+
+/**
  * The strip's pause button, above it, and the hand on the strip itself.
  *
  * Pause sets data-paused on the strip, which the stylesheet stops it on: the
@@ -26,6 +32,16 @@ export const REVEAL_GUTTER_PX = 16;
  * data-dragging holds it still under the hand. Under reduced motion there is
  * no animation and the strip is a plain scroller, so the drag scrolls it. A
  * vertical trackpad swipe is left to the page.
+ *
+ * Scroll (2026-11-02): while the strip is on screen, every pixel the page
+ * scrolls, up or down, runs it SCROLL_BOOST pixels further along its drift,
+ * so a fast scroll speeds it and it is never slower than the drift. Again
+ * through the animation's currentTime, and not while it is paused (hover,
+ * focus, the pause button, a drag) or under reduced motion.
+ *
+ * The opening: the splash boot script sets data-intro on <html> on every full
+ * load, and the hero's opening plays only while it is there. It is taken off
+ * when this unmounts, so a soft navigation back finds the hero at rest.
  *
  * Hover (2026-10-28): the browser works out :hover only when the pointer
  * moves, so a swipe or a drag that carried the cards under a still pointer
@@ -148,6 +164,23 @@ export function StripControls({
       window.removeEventListener("pointercancel", onUp);
     };
 
+    // The page's scroll, as extra drift. Listened to only while the strip is
+    // on screen, and passive, so it never holds the scroll up.
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const dy = Math.abs(window.scrollY - lastY);
+      lastY = window.scrollY;
+      const [animation] = el.firstElementChild?.getAnimations() ?? [];
+      if (dy && animation && animation.playState !== "paused") move(-dy * SCROLL_BOOST);
+    };
+    const visible = new IntersectionObserver((entries) => {
+      lastY = window.scrollY;
+      if (entries.some((entry) => entry.isIntersecting))
+        window.addEventListener("scroll", onScroll, { passive: true });
+      else window.removeEventListener("scroll", onScroll);
+    });
+    visible.observe(el);
+
     // A drag ends on a card's link; the click it produces is not a click.
     const onClick = (event: MouseEvent) => {
       if (!dragged) return;
@@ -207,6 +240,9 @@ export function StripControls({
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("dragstart", onDragStart);
     return () => {
+      visible.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      document.documentElement.removeAttribute("data-intro");
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onHover);
       el.removeEventListener("pointerleave", onLeave);

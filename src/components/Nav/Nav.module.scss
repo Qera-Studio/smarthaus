@@ -1408,6 +1408,40 @@
   // divergence this replaces. A 400px capsule has no room for a link row, and
   // the footer belongs wherever the vertical menu is, which is now everywhere.
 
+  // --- The homepage opening -------------------------------------------------
+
+  // With the hero's CTAs and strip (HomeHero.module.scss, "The opening"), so
+  // the page arrives as one. Only on the homepage, only while <html> carries
+  // data-intro, and paused under the splash. Fill backwards only: once in,
+  // the bar's own opacity and translate are its own again.
+  @media (prefers-reduced-motion: no-preference) {
+    :where(:root[data-intro]:has([data-hero])) .nav {
+      // From below where the bar floats at the bottom, from above from lg.
+      --nav-intro-shift: #{$space-3};
+
+      animation-name: nav-in;
+      animation-duration: var(--duration-slower);
+      animation-timing-function: var(--ease-out);
+      animation-delay: 350ms;
+      animation-fill-mode: backwards;
+
+      @include bp-lg {
+        --nav-intro-shift: -#{$space-3};
+      }
+    }
+
+    :where(:root[data-intro][data-splash="show"]) .nav {
+      animation-play-state: paused;
+    }
+  }
+
+  @keyframes nav-in {
+    from {
+      opacity: 0;
+      translate: 0 var(--nav-intro-shift);
+    }
+  }
+
   // --- Reduced motion -------------------------------------------------------
 
   // The global reset zeroes transition-duration but NOT transition-delay, so

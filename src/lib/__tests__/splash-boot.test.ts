@@ -59,6 +59,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   sessionStorage.clear();
   html.removeAttribute("data-splash");
+  html.removeAttribute("data-intro");
   html.removeAttribute("style");
   document.body.innerHTML = '<span id="splash-pct">0</span>';
 });
@@ -90,6 +91,38 @@ describe("whether this load gets the splash", () => {
     });
     boot();
     expect(state()).toBeNull();
+  });
+});
+
+describe("the homepage opening", () => {
+  const intro = () => html.hasAttribute("data-intro");
+
+  it("is marked on the first load, with the splash", () => {
+    boot();
+    expect(intro()).toBe(true);
+  });
+
+  it("is marked on a reload too, when the splash is skipped", () => {
+    sessionStorage.setItem(SPLASH_SEEN_KEY, "1");
+    boot();
+    expect(state()).toBe("skip");
+    expect(intro()).toBe(true);
+  });
+
+  it("is marked even when storage is blocked and the splash stays hidden", () => {
+    jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("SecurityError");
+    });
+    boot();
+    expect(state()).toBeNull();
+    expect(intro()).toBe(true);
+  });
+
+  it("stays marked after the splash has gone", () => {
+    boot();
+    jest.advanceTimersByTime(SPLASH_MAX_MS + SPLASH_EXIT_MS);
+    expect(state()).toBe("done");
+    expect(intro()).toBe(true);
   });
 });
 

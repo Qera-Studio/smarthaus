@@ -294,3 +294,28 @@ test.describe("the hero cards' blur in e2e", () => {
     });
   });
 });
+
+// The opening's default lives in e2e/fixtures.ts, pinned both ways.
+test.describe("the homepage opening in e2e", () => {
+  test("is off: data-intro never survives to the page", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("[data-hero]")).toBeVisible();
+    await expect(page.locator("html")).not.toHaveAttribute("data-intro");
+    const playing = await page.evaluate(() =>
+      document
+        .getAnimations()
+        .map((a) => (a as CSSAnimation).animationName)
+        .filter((name) => /hero-in|hero-arrive|nav-in|bar-in/.test(name ?? "")),
+    );
+    expect(playing).toEqual([]);
+  });
+
+  test.describe("when a spec opts in", () => {
+    test.use({ intro: true });
+
+    test("the boot script's attribute stays", async ({ page }) => {
+      await page.goto("/");
+      await expect(page.locator("html")).toHaveAttribute("data-intro", "");
+    });
+  });
+});

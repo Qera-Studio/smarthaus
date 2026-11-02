@@ -100,4 +100,30 @@ describe("AnnouncementBar.module.scss", () => {
     expect(css).not.toMatch(/(?:^|[\s;{])(?:padding|margin)-(?:left|right|top|bottom)\s*:/m);
     expect(css).not.toMatch(/!important/);
   });
+
+  describe("the homepage opening", () => {
+    const motion = () => {
+      const start = css.indexOf("@media (prefers-reduced-motion: no-preference)");
+      if (start === -1) throw new Error("no motion block");
+      return css.slice(start);
+    };
+
+    test("fades in with the nav, only on the homepage while data-intro is set", () => {
+      const arrive = rule(":where(:root[data-intro]:has([data-hero])) .bar", motion());
+      expect(arrive).toMatch(/animation-name:\s*bar-in/);
+      expect(arrive).toMatch(/animation-delay:\s*350ms/);
+      expect(arrive).toMatch(/animation-fill-mode:\s*backwards/);
+      expect(css.match(/animation-name:\s*bar-in/g)).toHaveLength(1);
+    });
+
+    test("only fades: a band at the top that moved would move the page", () => {
+      expect(css).toMatch(/@keyframes bar-in\s*\{\s*from\s*\{\s*opacity:\s*0;?\s*\}\s*\}/);
+    });
+
+    test("waits while the splash covers the page", () => {
+      expect(rule(":where(:root[data-intro][data-splash=show]) .bar", motion())).toMatch(
+        /animation-play-state:\s*paused/,
+      );
+    });
+  });
 });
