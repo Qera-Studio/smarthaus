@@ -1410,23 +1410,23 @@
 
   // --- The homepage opening -------------------------------------------------
 
-  // With the hero's CTAs and strip (HomeHero.module.scss, "The opening"), so
-  // the page arrives as one. Only on the homepage, only while <html> carries
+  // With the hero's CTAs and strip, on the timings HomeHero.module.scss sets
+  // on <html> ("The opening"), so the page arrives as one. Only on the homepage, only while <html> carries
   // data-intro, and paused under the splash. Fill backwards only: once in,
   // the bar's own opacity and translate are its own again.
   @media (prefers-reduced-motion: no-preference) {
     :where(:root[data-intro]:has([data-hero])) .nav {
       // From below where the bar floats at the bottom, from above from lg.
-      --nav-intro-shift: #{$space-3};
+      --nav-intro-shift: #{$space-6};
 
       animation-name: nav-in;
-      animation-duration: var(--duration-slower);
+      animation-duration: var(--intro-duration);
       animation-timing-function: var(--ease-out);
-      animation-delay: 350ms;
+      animation-delay: var(--intro-together);
       animation-fill-mode: backwards;
 
       @include bp-lg {
-        --nav-intro-shift: -#{$space-3};
+        --nav-intro-shift: -#{$space-6};
       }
     }
 

@@ -4,8 +4,9 @@ import { expect, test, type Page } from "./fixtures";
 /**
  * The homepage opening (HomeHero.module.scss, "The opening"): the title and
  * subtitle, then the CTAs with the strip, the nav and the contact bar, then
- * the two lines and the pause button, all in within two seconds. Then the
- * page's scroll runs the strip ahead of its drift.
+ * the two lines and the pause button, all in within two and a half seconds.
+ * Then the page's scroll runs the strip on going down and back going up, and
+ * the photographs slide through their cards.
  *
  * Every other spec runs with the opening off (e2e/fixtures.ts).
  */
@@ -79,9 +80,9 @@ test.describe("the homepage opening", () => {
     expect(pair).toBeGreaterThan(ctas);
   });
 
-  test("everything is in, at full opacity, within two seconds", async ({ page }) => {
+  test("everything is in, at full opacity, within two and a half seconds", async ({ page }) => {
     await page.goto("/");
-    await page.waitForTimeout(2_000);
+    await page.waitForTimeout(2_500);
     expect(await running(page)).toBe(0);
     for (const target of [
       page.getByRole("heading", { level: 1 }),
@@ -179,32 +180,109 @@ test.describe("the homepage opening", () => {
 });
 
 test.describe("the page's scroll", () => {
-  test("runs the strip ahead of its drift, never behind it", async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.goto("/");
     await expect.poll(() => running(page), { timeout: 4_000 }).toBe(0);
-    // Off the strip, so hover does not pause it.
-    await page.mouse.move(1, 1);
+  });
 
-    const sample = () =>
-      page.locator("[data-hero-strip]").evaluate((el) => {
-        const [drift] = el.firstElementChild!.getAnimations();
-        const duration = Number(drift!.effect!.getComputedTiming().duration);
-        return { at: Number(drift!.currentTime), now: performance.now(), duration };
+  /**
+   * How far the drift has run, in ms of its own clock, since `from`, less
+   * what the clock alone ran: what the scroll added, signed, within half a
+   * pass either way.
+   */
+  const sample = (page: Page) =>
+    page.locator("[data-hero-strip]").evaluate((el) => {
+      const [drift] = el.firstElementChild!.getAnimations();
+      return {
+        at: Number(drift!.currentTime),
+        now: performance.now(),
+        paused: drift!.playState === "paused",
+        duration: Number(drift!.effect!.getComputedTiming().duration),
+      };
+    });
+  type Sample = Awaited<ReturnType<typeof sample>>;
+  const added = (before: Sample, after: Sample) => {
+    const clock = after.paused ? 0 : after.now - before.now;
+    const raw = after.at - before.at - clock;
+    const d = after.duration;
+    return ((((raw + d / 2) % d) + d) % d) - d / 2;
+  };
+
+  const scrollTo = async (page: Page, top: number) => {
+    await page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), top);
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+  };
+
+  // Off the strip, so hover does not hold the drift and muddy the clock.
+  test.beforeEach(async ({ page }) => page.mouse.move(1, 1));
+
+  test("runs the strip on as the page scrolls down, and back as it scrolls up", async ({
+    page,
+  }) => {
+    let before = await sample(page);
+    for (const y of [40, 80, 120, 160]) await scrollTo(page, y);
+    const down = added(before, await sample(page));
+    // 160px at two strip pixels each: well over a second of drift.
+    expect(down).toBeGreaterThan(1_000);
+
+    before = await sample(page);
+    for (const y of [120, 80, 40, 0]) await scrollTo(page, y);
+    expect(added(before, await sample(page))).toBeLessThan(-1_000);
+  });
+
+  test("responds while only a sliver of the strip is on screen", async ({ page }) => {
+    const bottom = await page
+      .locator("[data-hero-strip]")
+      .evaluate((el) => el.getBoundingClientRect().bottom);
+    // The strip's last few pixels at the top of the screen.
+    const sliver = Math.round(bottom - 6);
+    await scrollTo(page, sliver - 40);
+    await scrollTo(page, sliver);
+    const before = await sample(page);
+    await scrollTo(page, sliver - 40);
+    expect(added(before, await sample(page))).toBeLessThan(-200);
+  });
+
+  test("still runs while the pointer rests on the strip and its drift is held", async ({
+    page,
+  }) => {
+    test.skip(await page.evaluate(() => matchMedia("(hover: none)").matches), "no hover");
+    // By coordinates: hover() waits for the card to stop moving, and it drifts.
+    const box = (await page.locator("[data-hero-strip]").boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await expect.poll(async () => (await sample(page)).paused).toBe(true);
+    const before = await sample(page);
+    await scrollTo(page, 100);
+    expect(added(before, await sample(page))).toBeGreaterThan(500);
+  });
+
+  test("the photographs slide down through their cards, slower than the page", async ({ page }) => {
+    const supported = await page.evaluate(() => CSS.supports("animation-timeline: scroll()"));
+    test.skip(!supported, "no scroll timelines in this engine: the photographs sit still");
+    const image = page.locator("[data-hero-strip] img").first();
+    const offset = () =>
+      image.evaluate((el) => {
+        const card = el.closest("li")!.getBoundingClientRect();
+        return el.getBoundingClientRect().top - card.top;
       });
+    const start = await offset();
+    expect(start).toBeLessThan(0);
+    await scrollTo(page, 300);
+    const later = await offset();
+    expect(later).toBeGreaterThan(start);
+    expect(later).toBeLessThanOrEqual(0);
+  });
+});
 
-    // Down then up, a few pixels at a time, staying with the strip on screen.
-    const before = await sample();
-    for (const y of [40, 80, 120, 160, 120, 80, 40, 0]) {
-      await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), y);
-      await page.evaluate(() => new Promise(requestAnimationFrame));
-    }
-    const after = await sample();
-
-    const drift = after.now - before.now;
-    // Within one pass: the drift wraps round it.
-    const moved = (((after.at - before.at) % after.duration) + after.duration) % after.duration;
-    // 320px of scroll at SCROLL_BOOST, in ms of the animation: well over the
-    // clock's own advance, whichever way the page went.
-    expect(moved).toBeGreaterThan(drift + 1_000);
+test.describe("the strip's cards", () => {
+  test("four to the screen from lg", async ({ page }) => {
+    await page.goto("/");
+    const width = await page.evaluate(() => window.innerWidth);
+    test.skip(width < 1024, "below lg the cards keep their size");
+    const card = await page
+      .locator("[data-hero-strip] li")
+      .first()
+      .evaluate((el) => el.getBoundingClientRect().width);
+    expect(card).toBeCloseTo((width - 3 * 8) / 4, 0);
   });
 });

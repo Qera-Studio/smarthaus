@@ -111,7 +111,8 @@ describe("AnnouncementBar.module.scss", () => {
     test("fades in with the nav, only on the homepage while data-intro is set", () => {
       const arrive = rule(":where(:root[data-intro]:has([data-hero])) .bar", motion());
       expect(arrive).toMatch(/animation-name:\s*bar-in/);
-      expect(arrive).toMatch(/animation-delay:\s*350ms/);
+      expect(arrive).toMatch(/animation-delay:\s*var\(--intro-together\)/);
+      expect(arrive).toMatch(/animation-duration:\s*var\(--intro-duration\)/);
       expect(arrive).toMatch(/animation-fill-mode:\s*backwards/);
       expect(css.match(/animation-name:\s*bar-in/g)).toHaveLength(1);
     });

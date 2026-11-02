@@ -40,21 +40,22 @@ describe("Nav.module.scss: the homepage opening", () => {
     expect(css.match(/animation-name: nav-in/g)).toHaveLength(1);
   });
 
-  test("with the CTAs and the strip, 350ms in, filling backwards only", () => {
+  test("with the CTAs and the strip, on the opening's shared timings, filling backwards only", () => {
     const [arrive] = rules(gate, "(prefers-reduced-motion: no-preference)");
-    expect(arrive).toMatch(/animation-delay: 350ms/);
+    expect(arrive).toMatch(/animation-delay: var\(--intro-together\)/);
+    expect(arrive).toMatch(/animation-duration: var\(--intro-duration\)/);
     expect(arrive).toMatch(/animation-fill-mode: backwards/);
     expect(css).not.toMatch(/animation-fill-mode: (both|forwards)/);
   });
 
   test("rises from below where it floats at the bottom, drops from above from lg", () => {
     const [phone] = rules(gate, "(prefers-reduced-motion: no-preference)");
-    expect(phone).toMatch(/--nav-intro-shift: 12px/);
+    expect(phone).toMatch(/--nav-intro-shift: 24px/);
     const [desktop] = rules(
       gate,
       "(prefers-reduced-motion: no-preference) and (min-width: 1024px)",
     );
-    expect(desktop).toMatch(/--nav-intro-shift: -12px/);
+    expect(desktop).toMatch(/--nav-intro-shift: -24px/);
     expect(css).toMatch(
       /@keyframes nav-in \{ from \{ opacity: 0; translate: 0 var\(--nav-intro-shift\); \} \}/,
     );

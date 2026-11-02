@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
-import { DRAG_MIN_PX, REVEAL_GUTTER_PX, SCROLL_BOOST, StripControls } from "../StripControls";
+import { DRAG_MIN_PX, REVEAL_GUTTER_PX, SCROLL_SPEED, StripControls } from "../StripControls";
 
 /**
  * The strip's pause button, and the hand on the strip: a mouse or finger
@@ -72,7 +72,6 @@ function setup({ animated = true, at = 0 }: { animated?: boolean; at?: number } 
   const track = screen.getByTestId("track");
   const animation = {
     currentTime: at,
-    playState: "running",
     effect: { getComputedTiming: () => ({ duration: DURATION }) },
   };
   track.getAnimations = () => (animated ? [animation as unknown as Animation] : []);
@@ -494,41 +493,48 @@ describe("StripControls", () => {
       Object.defineProperty(window, "scrollY", { configurable: true, value: y });
       fireEvent.scroll(window);
     };
+    const ahead = (px: number) => px * SCROLL_SPEED * MS_PER_PX;
 
     beforeEach(() => scrollTo(0));
 
-    test("runs the strip ahead by SCROLL_BOOST pixels for every pixel scrolled down", () => {
-      const { animation } = setup({ at: 1000 });
+    test("runs the strip on by SCROLL_SPEED pixels for every pixel scrolled down", () => {
+      const { animation } = setup({ at: 10_000 });
       onScreen(true);
       scrollTo(100);
-      expect(animation.currentTime).toBeCloseTo(1000 + 100 * SCROLL_BOOST * MS_PER_PX);
+      expect(animation.currentTime).toBeCloseTo(10_000 + ahead(100));
     });
 
-    test("scrolling up runs it ahead too: it is never slower than the drift", () => {
-      const { animation } = setup({ at: 1000 });
+    test("runs it back as the page scrolls up", () => {
+      const { animation } = setup({ at: 30_000 });
       scrollTo(500);
       onScreen(true);
       scrollTo(300);
-      expect(animation.currentTime).toBeCloseTo(1000 + 200 * SCROLL_BOOST * MS_PER_PX);
+      expect(animation.currentTime).toBeCloseTo(30_000 - ahead(200));
     });
 
-    test("follows each step, not the distance from where it started", () => {
-      const { animation } = setup({ at: 1000 });
+    test("down and back up again leaves it where it was", () => {
+      const { animation } = setup({ at: 10_000 });
       onScreen(true);
       scrollTo(40);
-      scrollTo(100);
-      scrollTo(60);
-      expect(animation.currentTime).toBeCloseTo(1000 + 140 * SCROLL_BOOST * MS_PER_PX);
+      scrollTo(250);
+      scrollTo(0);
+      expect(animation.currentTime).toBeCloseTo(10_000);
     });
 
-    test("wraps round the pass, like a drag", () => {
+    test("has no limit either way: the pass wraps, like a drag", () => {
       const { animation } = setup({ at: DURATION - 10 });
       onScreen(true);
       scrollTo(10);
-      expect(animation.currentTime).toBeCloseTo(10 * SCROLL_BOOST * MS_PER_PX - 10);
+      expect(animation.currentTime).toBeCloseTo(ahead(10) - 10);
+      scrollTo(0);
+      expect(animation.currentTime).toBeCloseTo(DURATION - 10);
+      // Many passes down: still within one.
+      scrollTo(50_000);
+      expect(animation.currentTime).toBeGreaterThanOrEqual(0);
+      expect(animation.currentTime).toBeLessThan(DURATION);
     });
 
-    test("does nothing until the strip is on screen, and nothing once it has left", () => {
+    test("does nothing until any of the strip is on screen, and nothing once it has left", () => {
       const { animation } = setup({ at: 1000 });
       scrollTo(100);
       expect(animation.currentTime).toBe(1000);
@@ -543,15 +549,26 @@ describe("StripControls", () => {
       scrollTo(900);
       onScreen(true);
       scrollTo(910);
-      expect(animation.currentTime).toBeCloseTo(1000 + 10 * SCROLL_BOOST * MS_PER_PX);
+      expect(animation.currentTime).toBeCloseTo(1000 + ahead(10));
     });
 
-    test("leaves a paused strip alone: hover, focus, the pause button or a drag", () => {
-      const { animation } = setup({ at: 1000 });
-      animation.playState = "paused";
+    test("still runs while hover or the pause button holds the drift", () => {
+      const { strip, animation, pause } = setup({ at: 1000 });
+      fireEvent.click(pause);
+      expect(strip).toHaveAttribute("data-paused");
+      onScreen(true);
+      scrollTo(50);
+      expect(animation.currentTime).toBeCloseTo(1000 + ahead(50));
+    });
+
+    test("leaves the strip alone while keyboard focus is in it", () => {
+      const { animation, link } = setup({ at: 1000 });
+      // Focus brings the card on screen (settle), and then holds it there.
+      link.focus();
+      const focused = animation.currentTime;
       onScreen(true);
       scrollTo(100);
-      expect(animation.currentTime).toBe(1000);
+      expect(animation.currentTime).toBe(focused);
     });
 
     test("leaves the strip alone under reduced motion, where it does not drift", () => {

@@ -14,7 +14,7 @@ const strip = () => document.querySelector("[data-hero-strip]") as HTMLElement;
 const lists = () => Array.from(strip().querySelectorAll("ul"));
 
 // jsdom has no IntersectionObserver, which StripControls watches the strip
-// with; its scroll boost is tested in StripControls.test.tsx.
+// with; its scroll is tested in StripControls.test.tsx.
 beforeAll(() => {
   Object.defineProperty(window, "IntersectionObserver", {
     configurable: true,

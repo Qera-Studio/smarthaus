@@ -1,5 +1,9 @@
 @use "../../styles/variables" as *;
 @use "../../styles/mixins" as *;
+@use "sass:math";
+
+// How much taller each photograph is than its card, for the parallax.
+$hero-parallax-spare: 20%;
 
 @layer blocks {
   .hero {
@@ -26,18 +30,26 @@
     // The floor, for a screen too short to share: the strip keeps a usable
     // height and the page scrolls instead.
     --hero-min-block: 36rem;
-    // The opening (Shivanshu, 2026-11-02): the title and subtitle, then the
-    // CTAs with the strip and the nav, then the two lines and the pause
-    // button, all in by about 1.75s. The strip arrives like a train: very
-    // fast, braking hard, its own speed reaching nothing exactly as the
-    // drift underneath carries on.
-    --hero-in-duration: var(--duration-slower);
-    --hero-in-shift: #{$space-4};
-    --hero-in-lede: 80ms;
-    --hero-in-cta: 350ms;
-    --hero-in-rest: 550ms;
-    --hero-arrive-duration: 1400ms;
-    --hero-arrive-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    // The strip arrives like a train (Shivanshu, 2026-11-02): from the
+    // screen's right edge at one steady speed for the first 70% of the way,
+    // then braking to nothing as the drift underneath carries on. The curve
+    // is exact: constant speed to 53.8% of the time, then even braking.
+    --hero-arrive-duration: 1800ms;
+    --hero-arrive-ease: linear(
+      0,
+      0.7 53.8%,
+      0.775 60%,
+      0.847 67%,
+      0.905 74%,
+      0.944 80%,
+      0.972 86%,
+      0.991 92%,
+      1
+    );
+    // The photographs inside their cards: each is taller than its card by
+    // $hero-parallax-spare and slides down through it as the page scrolls,
+    // moving more slowly than the page, as the About page's pictures do.
+    --hero-parallax-range: 100svh;
 
     display: flex;
     flex-direction: column;
@@ -50,6 +62,10 @@
     text-align: center;
 
     @include bp-lg {
+      // Four cards to the screen (Shivanshu, 2026-11-02): the strip's height
+      // is a 4:3 card a quarter of the screen wide, less its share of the
+      // three gaps. It can still give way to the copy on a short screen.
+      --hero-strip-block: calc((100vw - 3 * #{$space-2}) * 3 / 16);
       --hero-above: calc(
         var(--announce-block-size) + var(--nav-rest-inset) + var(--nav-top-block-size)
       );
@@ -264,40 +280,57 @@
     // so a soft navigation back here finds the hero at rest. Without
     // JavaScript nothing is set and nothing waits on an animation.
     //
+    // The timings live on <html> for that time, so the nav and the contact
+    // bar (Nav.module.scss, AnnouncementBar.module.scss) arrive with the CTAs
+    // from the same numbers (Shivanshu, 2026-11-02: slower and smoother than
+    // the first cut): the title, the subtitle 150ms later, then the CTAs with
+    // the strip, the nav and the bar, then the two lines and the pause
+    // button. The copy rises into place; the rating line above it drops.
+    //
     // Fill backwards, never forwards: the start state holds through each
     // delay, and once an animation ends it lets go of opacity and translate.
     // Paused while the splash covers the page, so it begins as the splash
     // fades rather than finishing unseen beneath it.
     :where(:root[data-intro]) {
+      --intro-duration: 1100ms;
+      --intro-shift: #{$space-6};
+      --intro-lede: 150ms;
+      --intro-together: 500ms;
+      --intro-rest: 850ms;
+
       .title,
       .lede,
       .ctas,
       .copy > .pair,
       .controls {
         animation-name: hero-in;
-        animation-duration: var(--hero-in-duration);
+        animation-duration: var(--intro-duration);
         animation-timing-function: var(--ease-out);
         animation-fill-mode: backwards;
       }
 
       .lede {
-        animation-delay: var(--hero-in-lede);
+        animation-delay: var(--intro-lede);
       }
 
       .ctas {
-        animation-delay: var(--hero-in-cta);
+        animation-delay: var(--intro-together);
       }
 
       .copy > .pair,
       .controls {
-        animation-delay: var(--hero-in-rest);
+        animation-delay: var(--intro-rest);
+      }
+
+      .copy > .pair:first-child {
+        --intro-shift: -#{$space-6};
       }
 
       .strip {
         animation-name: hero-arrive;
         animation-duration: var(--hero-arrive-duration);
         animation-timing-function: var(--hero-arrive-ease);
-        animation-delay: var(--hero-in-cta);
+        animation-delay: var(--intro-together);
         animation-fill-mode: backwards;
       }
     }
@@ -317,7 +350,19 @@
   @keyframes hero-in {
     from {
       opacity: 0;
-      translate: 0 var(--hero-in-shift);
+      translate: 0 var(--intro-shift);
+    }
+  }
+
+  // From the photograph's foot showing to its head: as a share of its own
+  // height, the spare over the whole.
+  @keyframes hero-parallax {
+    from {
+      translate: 0 math.div($hero-parallax-spare, 100% + $hero-parallax-spare) * -100%;
+    }
+
+    to {
+      translate: 0 0;
     }
   }
 
@@ -367,6 +412,25 @@
     inline-size: 100%;
     block-size: 100%;
     object-fit: cover;
+  }
+
+  // --- The page's scroll ----------------------------------------------------
+  //
+  // After .image, so the photograph's parallax height wins over its own.
+  @media (prefers-reduced-motion: no-preference) {
+    // The photographs slide through their cards on the page's scroll, with
+    // no script. Where the timeline is not supported (Firefox), they sit
+    // still. The strip's own run on the scroll is StripControls'.
+    @supports (animation-timeline: scroll()) {
+      .image {
+        block-size: calc(100% + #{$hero-parallax-spare});
+        animation-name: hero-parallax;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: scroll(root);
+        animation-range: 0 var(--hero-parallax-range);
+      }
+    }
   }
 
   // Shown on hover and on focus; always shown where there is no hover, since

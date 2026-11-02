@@ -98,14 +98,15 @@
     }
   }
 
-  // The homepage opening, with the nav (Nav.module.scss): a fade only, since
-  // a band at the top of the page that moved would move the page under it.
+  // The homepage opening, with the nav, on the timings HomeHero.module.scss
+  // sets on <html>: a fade only, since a band at the top of the page that
+  // moved would move the page under it.
   @media (prefers-reduced-motion: no-preference) {
     :where(:root[data-intro]:has([data-hero])) .bar {
       animation-name: bar-in;
-      animation-duration: var(--duration-slower);
+      animation-duration: var(--intro-duration);
       animation-timing-function: var(--ease-out);
-      animation-delay: 350ms;
+      animation-delay: var(--intro-together);
       animation-fill-mode: backwards;
     }
 

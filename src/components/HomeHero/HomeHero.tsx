@@ -46,9 +46,9 @@ function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
         width={item.image.width}
         height={item.image.height}
         alt={item.image.alt}
-        // A card is as tall as the space under the copy, at 4:3: about 500px
-        // wide on a laptop, 300 on a phone.
-        sizes="(min-width: 64rem) 32rem, 20rem"
+        // From lg four cards share the screen; below it a card is as tall as
+        // the space under the copy, at 4:3, about 300px wide on a phone.
+        sizes="(min-width: 64rem) 25vw, 20rem"
         loading="eager"
         fetchPriority={load === "first" ? "high" : load === "late" ? "low" : undefined}
       />
