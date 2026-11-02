@@ -334,9 +334,17 @@ test.describe("each slide's CTA", () => {
     const body = slide.getByText(/^No keys to cut or lose/);
     const cta = slide.getByRole("link", { name: "View smart locks" });
     await expect(cta).toBeVisible();
-    const bodyBox = (await body.boundingBox())!;
-    const ctaBox = (await cta.boundingBox())!;
-    expect(ctaBox.y).toBeGreaterThan(bodyBox.y + bodyBox.height);
+    // Both read in one frame: the first slide is still sliding up as the page
+    // opens, and two separate reads caught it in two places, putting the CTA
+    // 0.67px into the description (Desktop Chrome on CI, 2026-11-02).
+    const { bodyBottom, ctaTop } = await body.evaluate(
+      (text, link) => ({
+        bodyBottom: text.getBoundingClientRect().bottom,
+        ctaTop: link!.getBoundingClientRect().top,
+      }),
+      await cta.elementHandle(),
+    );
+    expect(ctaTop).toBeGreaterThan(bodyBottom);
     await cta.click();
     await expect(page).toHaveURL(/\/solutions$/);
   });
