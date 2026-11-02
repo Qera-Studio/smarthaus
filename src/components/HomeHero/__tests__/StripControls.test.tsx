@@ -1,3 +1,5 @@
+import { StrictMode } from "react";
+
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import { DRAG_MIN_PX, REVEAL_GUTTER_PX, SCROLL_SPEED, StripControls } from "../StripControls";
@@ -604,17 +606,54 @@ describe("StripControls", () => {
   describe("the opening", () => {
     afterEach(() => document.documentElement.removeAttribute("data-intro"));
 
-    test("leaves data-intro on <html> while the hero is mounted", () => {
+    /** An animationend on `target`, named as CSS Modules hashes it. */
+    const ended = (target: Element, name: string) => {
+      const event = new Event("animationend", { bubbles: true });
+      Object.defineProperty(event, "animationName", { value: `HomeHero-module__x__${name}` });
+      fireEvent(target, event);
+    };
+
+    test("leaves data-intro on <html> while the opening plays", () => {
       document.documentElement.setAttribute("data-intro", "");
       setup();
       expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
     });
 
-    test("takes it off on unmount, so a soft navigation back finds the hero at rest", () => {
+    test("takes it off once the strip has arrived, so a soft navigation back finds the hero at rest", () => {
       document.documentElement.setAttribute("data-intro", "");
-      const { unmount } = setup();
-      unmount();
+      const { strip } = setup();
+      ended(strip, "hero-arrive");
       expect(document.documentElement.hasAttribute("data-intro")).toBe(false);
+    });
+
+    test("not when another animation ends, or one inside the strip", () => {
+      document.documentElement.setAttribute("data-intro", "");
+      const { strip, link } = setup();
+      ended(strip, "hero-in");
+      ended(link, "hero-arrive");
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
+    });
+
+    test("survives development's mount, unmount and mount again", () => {
+      document.documentElement.setAttribute("data-intro", "");
+      render(
+        <StrictMode>
+          <section data-hero>
+            <StripControls />
+            <div data-hero-strip />
+          </section>
+        </StrictMode>,
+      );
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
+    });
+
+    test("stops listening on unmount", () => {
+      document.documentElement.setAttribute("data-intro", "");
+      const { strip, unmount } = setup();
+      unmount();
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
+      ended(strip, "hero-arrive");
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
     });
   });
 });

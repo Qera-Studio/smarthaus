@@ -162,7 +162,16 @@ $hero-parallax-spare: 50%;
     flex-wrap: wrap;
     justify-content: center;
     gap: $space-4;
-    margin-block-start: clamp(#{$space-6}, 3vh, #{$space-8});
+    // Room between the subtitle and the buttons (Shivanshu, 2026-11-02):
+    // 32px on a phone, up to 48px on a tall screen. A short phone keeps 24px,
+    // or the strip under the copy falls below a usable height.
+    margin-block-start: clamp(#{$space-8}, 5vh, #{$space-12});
+
+    @include bp-max($bp-lg) {
+      @media (max-height: 45rem) {
+        margin-block-start: $space-6;
+      }
+    }
   }
 
   // --- The pause button ----------------------------------------------------
@@ -283,7 +292,7 @@ $hero-parallax-spare: 50%;
     // The timings live on <html> for that time, so the nav and the contact
     // bar (Nav.module.scss, AnnouncementBar.module.scss) arrive with the CTAs
     // from the same numbers (Shivanshu, 2026-11-02: slower and smoother than
-    // the first cut): the title, the subtitle 150ms later, then the CTAs with
+    // the first cut): the title, the subtitle 200ms later, then the CTAs with
     // the strip, the nav and the bar, then the two lines and the pause
     // button. The copy rises into place; the rating line above it drops.
     //
@@ -292,11 +301,11 @@ $hero-parallax-spare: 50%;
     // Paused while the splash covers the page, so it begins as the splash
     // fades rather than finishing unseen beneath it.
     :where(:root[data-intro]) {
-      --intro-duration: 1100ms;
+      --intro-duration: 1600ms;
       --intro-shift: #{$space-6};
-      --intro-lede: 150ms;
-      --intro-together: 500ms;
-      --intro-rest: 850ms;
+      --intro-lede: 200ms;
+      --intro-together: 600ms;
+      --intro-rest: 1000ms;
 
       .title,
       .lede,

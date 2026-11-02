@@ -372,7 +372,7 @@ describe("HomeHero.module.scss", () => {
 
     test("its timings sit on <html>, so the nav and the bar share them", () => {
       const root = rule(gate, motion());
-      expect(root).toMatch(/--intro-duration:\s*1100ms/);
+      expect(root).toMatch(/--intro-duration:\s*1600ms/);
       expect(root).toMatch(/--intro-shift:\s*24px/);
       expect(
         rule(
@@ -397,10 +397,10 @@ describe("HomeHero.module.scss", () => {
       const ms = (name: string) => Number(root.match(new RegExp(`--${name}:\\s*(\\d+)ms`))?.[1]);
       expect(ms("intro-lede")).toBeLessThan(ms("intro-together"));
       expect(ms("intro-together")).toBeLessThan(ms("intro-rest"));
-      // Slow, but all of it in within two and a half seconds.
+      // Very slow, but all of it in within three seconds.
       const arrive = Number(rule(".hero").match(/--hero-arrive-duration:\s*(\d+)ms/)?.[1]);
-      expect(ms("intro-together") + arrive).toBeLessThanOrEqual(2500);
-      expect(ms("intro-rest") + ms("intro-duration")).toBeLessThanOrEqual(2500);
+      expect(ms("intro-together") + arrive).toBeLessThanOrEqual(3000);
+      expect(ms("intro-rest") + ms("intro-duration")).toBeLessThanOrEqual(3000);
     });
 
     test("the rating line above the copy drops into place; the rest rises", () => {

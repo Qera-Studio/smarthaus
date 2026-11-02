@@ -4,7 +4,7 @@ import { expect, test, type Page } from "./fixtures";
 /**
  * The homepage opening (HomeHero.module.scss, "The opening"): the title and
  * subtitle, then the CTAs with the strip, the nav and the contact bar, then
- * the two lines and the pause button, all in within two and a half seconds.
+ * the two lines and the pause button, all in within three seconds.
  * Then the page's scroll runs the strip on going down and back going up, and
  * the photographs slide through their cards.
  *
@@ -80,9 +80,9 @@ test.describe("the homepage opening", () => {
     expect(pair).toBeGreaterThan(ctas);
   });
 
-  test("everything is in, at full opacity, within two and a half seconds", async ({ page }) => {
+  test("everything is in, at full opacity, within three seconds", async ({ page }) => {
     await page.goto("/");
-    await page.waitForTimeout(2_500);
+    await page.waitForTimeout(3_000);
     expect(await running(page)).toBe(0);
     for (const target of [
       page.getByRole("heading", { level: 1 }),

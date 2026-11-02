@@ -43,7 +43,10 @@ export const SCROLL_SPEED = 2;
  *
  * The opening: the splash boot script sets data-intro on <html> on every full
  * load, and the hero's opening plays only while it is there. It is taken off
- * when this unmounts, so a soft navigation back finds the hero at rest.
+ * once the strip has arrived, the opening's last step, so a soft navigation
+ * back finds the hero at rest. Not on unmount: in development React mounts,
+ * unmounts and mounts again at once, and that took it off before anything
+ * but the title had started (found 2026-11-02).
  *
  * Hover (2026-10-28): the browser works out :hover only when the pointer
  * moves, so a swipe or a drag that carried the cards under a still pointer
@@ -184,6 +187,13 @@ export function StripControls({
     });
     visible.observe(el);
 
+    // The opening is over once the strip has arrived (the class names are
+    // hashed, so by the end of the name).
+    const onArrived = (event: AnimationEvent) => {
+      if (event.target === el && event.animationName.endsWith("hero-arrive"))
+        document.documentElement.removeAttribute("data-intro");
+    };
+
     // A drag ends on a card's link; the click it produces is not a click.
     const onClick = (event: MouseEvent) => {
       if (!dragged) return;
@@ -242,10 +252,11 @@ export function StripControls({
     el.addEventListener("click", onClick, true);
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("dragstart", onDragStart);
+    el.addEventListener("animationend", onArrived);
     return () => {
       visible.disconnect();
       window.removeEventListener("scroll", onScroll);
-      document.documentElement.removeAttribute("data-intro");
+      el.removeEventListener("animationend", onArrived);
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onHover);
       el.removeEventListener("pointerleave", onLeave);
