@@ -483,15 +483,15 @@ describe("HomeHero.module.scss", () => {
 
     test("the photographs slide through their cards over the hero's height", () => {
       const image = rule(".image", timeline());
-      expect(image).toMatch(/block-size:\s*calc\(100% \+ 20%\)/);
+      expect(image).toMatch(/block-size:\s*calc\(100% \+ 50%\)/);
       expect(image).toMatch(/animation-name:\s*hero-parallax/);
       expect(image).toMatch(/animation-timeline:\s*scroll\(root\)/);
       expect(image).toMatch(/animation-range:\s*0 var\(--hero-parallax-range\)/);
-      // From the spare showing at the foot to none: 20 of 120.
+      // From the spare showing at the foot to none: 50 of 150.
       const from = css.match(
         /@keyframes hero-parallax\s*\{\s*from\s*\{\s*translate:\s*0 (-[\d.]+)%/,
       )?.[1];
-      expect(Number(from)).toBeCloseTo(-16.667, 2);
+      expect(Number(from)).toBeCloseTo(-33.333, 2);
     });
 
     test("only for a visitor who allows motion, on a browser with scroll timelines", () => {

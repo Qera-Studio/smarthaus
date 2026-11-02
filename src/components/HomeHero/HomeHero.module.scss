@@ -3,7 +3,7 @@
 @use "sass:math";
 
 // How much taller each photograph is than its card, for the parallax.
-$hero-parallax-spare: 20%;
+$hero-parallax-spare: 50%;
 
 @layer blocks {
   .hero {
