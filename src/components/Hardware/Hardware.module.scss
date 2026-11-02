@@ -11,7 +11,10 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
 
 @layer components {
   .hardware {
-    --hardware-interval: 5s;
+    // How long each slide shows before the next. 3s (Shivanshu, 2026-10-28:
+    // 2s faster than the 5s it was). The pause button and the focus pause
+    // are what make that pace safe for a slow reader (WCAG 2.2.2).
+    --hardware-interval: 3s;
     padding-block: $space-24;
   }
 
@@ -170,12 +173,12 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
   // without this the pause glyph sat there while nothing advanced and gave
   // the reader no reason why. Same two conditions as the timer.
   .glyphPlay,
-  .stageRoot:has(.tabs :focus-visible) .glyphPause,
+  .stageRoot:has(.tabs :focus-visible, .stage :focus-visible) .glyphPause,
   .pause[aria-pressed="true"] .glyphPause {
     display: none;
   }
 
-  .stageRoot:has(.tabs :focus-visible) .glyphPlay,
+  .stageRoot:has(.tabs :focus-visible, .stage :focus-visible) .glyphPlay,
   .pause[aria-pressed="true"] .glyphPlay {
     display: block;
   }
@@ -204,15 +207,19 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
   // Keyboard focus on a tab pauses without a render, so a reader arrowing
   // through the tabs is not raced by the timer.
   //
-  // :focus-visible inside .tabs, not :focus-within on the section. A click
+  // And keyboard focus on a slide's CTA (2026-10-28): without it the 3s timer
+  // moved the slide on, and the focused link with it, off the stage
+  // (e2e/focus-visible.spec.ts caught it on a phone).
+  //
+  // :focus-visible inside .tabs and .stage, not :focus-within on the section. A click
   // leaves focus on the button it hit, and the wider rule kept the carousel
   // held after that click until the reader clicked somewhere else: the pause
   // button's second press looked as if it did nothing. A mouse click does
   // not set :focus-visible, so this fires only for the keyboard, and only
-  // for the tabs, so the pause button is never in its own way.
+  // for the tabs and slides, so the pause button is never in its own way.
   //
   // No hover pause: it was here and was removed at the client's request.
-  .stageRoot:has(.tabs :focus-visible) .progress {
+  .stageRoot:has(.tabs :focus-visible, .stage :focus-visible) .progress {
     animation-play-state: paused;
   }
 
@@ -325,6 +332,12 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
     // 70% of brown-950 on brown-100, well clear of 4.5:1.
     opacity: 0.7;
     text-wrap: pretty;
+  }
+
+  // The slide's CTA, under the description and pinned to the foot with the
+  // title and body (the title's auto margin carries all three down).
+  .cta {
+    margin-block-start: $space-8;
   }
 
   .frame {

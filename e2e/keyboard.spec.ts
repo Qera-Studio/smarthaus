@@ -66,12 +66,22 @@ test("the skip link moves the next Tab into the main content", async ({ page }) 
 // in source, so on desktop Tab ran through the centre links, jumped back to
 // the logo at the far left, then on to the CTA (WCAG 2.4.3). NavShell.tsx now
 // puts the brand first; this keeps it there.
-test("the header reads in order: skip, home, every nav link, then the CTA", async ({ page }) => {
+//
+// 2026-10-28: the contact bar sits above the nav, so its links come between
+// the skip link and home, in the order they read on screen. Its arrows are
+// hidden from md up and take no stop here.
+test("the header reads in order: skip, the contact bar, home, every nav link, then the CTA", async ({
+  page,
+}) => {
   await page.goto("/");
   await expectHydrated(page);
   const header = page.locator("header");
+  const bar = page.getByRole("complementary", { name: "Contact Smarthaus" });
   const stops = [
     page.getByRole("link", { name: "Skip to main content" }),
+    bar.getByRole("link", { name: /^call us at/ }),
+    bar.getByRole("link", { name: /^mail us at/ }),
+    bar.getByRole("link", { name: /^whatsapp at/ }),
     header.getByRole("link", { name: "Smarthaus — home" }).last(),
     ...NAV_LINKS.map((link) => header.getByRole("link", { name: link.label, exact: true })),
     header.getByRole("link", { name: "Book a site visit" }),

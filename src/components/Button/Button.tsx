@@ -27,7 +27,8 @@ import styles from "./Button.module.scss";
 /**
  * - `solid` — brown-950 ground, bone text. The default, and every existing
  *   call site.
- * - `inverse` — bone ground, brown-900 text. For sitting on a dark section.
+ * - `inverse` — brown-100 ground, brown-900 text. For sitting on a dark
+ *   section or an image (the hero strip's card CTA).
  * - `outline` — transparent, a 1px border in the inherited ink. For sitting on
  *   a tinted card where a filled band would be too loud.
  * - `soft` — brown-800 ground, bone text. A filled band one step lighter than

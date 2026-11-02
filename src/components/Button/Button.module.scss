@@ -93,10 +93,11 @@
       }
     }
 
-    // Bone on a dark ground. The hover goes *down* to brown-200 rather than up,
-    // because there is nothing lighter than bone in the palette to go to.
+    // Brown-100 on a dark ground or an image (the hero strip's card CTA,
+    // Shivanshu's spec, 2026-10-28; it was bone until then, with no other
+    // caller). The hover goes *down* to brown-200, keeping the light face.
     &[data-variant="inverse"] {
-      background-color: var(--color-bg-surface);
+      background-color: var(--color-bg-canvas);
       color: var(--color-text-primary);
 
       &:hover:not(:disabled) {

@@ -8,6 +8,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 // order statement via _variables.scss, because on a notFound() route the
 // browser sees the page's chunk before this one.
 import "../styles/globals.scss";
+import { AnnouncementBar } from "../components/AnnouncementBar";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
 import { Splash } from "../components/Loader/Splash";
@@ -124,6 +125,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
+        <AnnouncementBar />
         <Nav />
         <main id="main-content">{children}</main>
         {/* Sibling of main, not inside it: contentinfo is only a landmark as a

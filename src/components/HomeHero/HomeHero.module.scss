@@ -1,0 +1,377 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+@layer blocks {
+  .hero {
+    // L2 component tokens.
+    //
+    // One pass of the eight cards: 8s a card (Shivanshu, 2026-10-28: 2s
+    // faster than the 10s it was). Slow on purpose: the strip is texture
+    // while the copy is read, not something to watch.
+    --hero-strip-duration: 64s;
+    // The strip's height: a share of the screen, so it stays the same
+    // proportion on any laptop, and gives way when the copy needs the room.
+    --hero-strip-block: 42svh;
+    // The hover shade, pure black at the foot of the card (Shivanshu's spec),
+    // and the blur behind it, both rising linearly from nothing at the top.
+    --hero-card-shade: rgb(0 0 0 / 30%);
+    --hero-card-blur: 12px;
+    // What sits above the hero, so it ends exactly at the bottom of the
+    // screen. Below lg the nav floats at the bottom instead, and the strip
+    // ends just above it.
+    --hero-above: var(--announce-block-size);
+    --hero-below: calc(
+      var(--nav-bar-block-size) + var(--nav-float-inset) + env(safe-area-inset-bottom)
+    );
+    // The floor, for a screen too short to share: the strip keeps a usable
+    // height and the page scrolls instead.
+    --hero-min-block: 36rem;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-4;
+    // A definite height, not a minimum: the strip's cards size from it.
+    // svh, never vh or dvh: Footer.module.scss has the long version.
+    block-size: max(var(--hero-min-block), calc(100svh - var(--hero-above) - var(--hero-below)));
+    padding-block-start: clamp(#{$space-6}, 4vh, #{$space-12});
+    text-align: center;
+
+    @include bp-lg {
+      --hero-above: calc(
+        var(--announce-block-size) + var(--nav-rest-inset) + var(--nav-top-block-size)
+      );
+      --hero-below: 0px;
+    }
+
+    // A short phone: Safari on an iPhone 17 leaves about 680px. There the
+    // copy took 383px of the 570 between the contact bar and the nav, the
+    // strip got about 100, and the 36rem floor ran the hero 6px under the
+    // nav. Here the copy sits tighter and the floor gives the 6px back, so the
+    // strip keeps about 130px and ends at the nav (Shivanshu, 2026-11-02).
+    // Taller phones and everything from lg are unchanged.
+    @include bp-max($bp-lg) {
+      @media (max-height: 45rem) {
+        --hero-min-block: 34rem;
+        gap: $space-2;
+        padding-block-start: $space-2;
+      }
+    }
+  }
+
+  // Auto margins centre the copy in whatever the strip leaves, which keeps
+  // the pause button and the strip pinned to the bottom of the screen.
+  .copy {
+    margin-block: auto;
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    padding-inline: $space-4;
+  }
+
+  // Two statements either side of a drawn rule (HomeHero.tsx Pair): the
+  // rating line and the SIRA line, styled alike. From sm the two share one
+  // centred line; on a phone they stack and the rule goes. (The rule sat on
+  // the page's centre line for a day, 2026-10-28, and was reverted.)
+  .pair {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-1;
+    font-size: var(--font-size-sm);
+    line-height: $line-height-normal;
+    // At 70% (2026-10-28), as the contact bar is. The colour, not opacity,
+    // so the drawn rule (currentcolor) goes with it: 6.4:1 on brown-100.
+    color: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
+
+    @include bp-sm {
+      flex-direction: row;
+      gap: $space-3;
+    }
+  }
+
+  .divider {
+    display: none;
+
+    @include bp-sm {
+      display: block;
+      inline-size: 1px;
+      block-size: 1em;
+      background-color: currentcolor;
+    }
+  }
+
+  // The rating line opens the copy; the SIRA line closes it.
+  .copy > .pair:first-child {
+    margin-block-end: $space-4;
+  }
+
+  .copy > .pair:last-child {
+    margin-block-start: $space-4;
+  }
+
+  .title {
+    font-size: var(--type-display);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-tight;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin-block-start: $space-3;
+    max-inline-size: 54rem;
+    font-size: var(--type-body-lg);
+    line-height: $line-height-normal;
+    color: var(--color-text-primary);
+    text-wrap: pretty;
+  }
+
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $space-4;
+    margin-block-start: clamp(#{$space-6}, 3vh, #{$space-8});
+  }
+
+  // --- The pause button ----------------------------------------------------
+
+  // Above the strip, at the end of the content column.
+  .controls {
+    display: flex;
+    flex: none;
+    align-self: stretch;
+    justify-content: flex-end;
+  }
+
+  // The hardware carousel's pause button (Hardware.module.scss .pause), at
+  // 32px rather than 48 (2026-10-28): glass, the glyph at 45% until hover or
+  // pressed, the ground stepping a shade on hover. The tap area stays 44px
+  // through an invisible ::after; glass has the ::before.
+  .control {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: $space-8;
+    block-size: $space-8;
+    flex-shrink: 0;
+    @include glass(0);
+    transition-property: background-color;
+    transition-duration: var(--duration-fast);
+    @include focus-ring($offset: -4px);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: calc((#{$space-8} - var(--size-touch-target)) / 2);
+    }
+
+    svg {
+      opacity: 0.45;
+      transition-property: opacity;
+      transition-duration: var(--duration-fast);
+    }
+
+    &:hover svg,
+    &[aria-pressed="true"] svg {
+      opacity: 1;
+    }
+
+    &:hover {
+      background-color: rgb(var(--glass-tint) / 0.5);
+    }
+  }
+
+  // --- The strip --------------------------------------------------------------
+
+  // Edge to edge, out of body's capped, guttered column: body is centred, so
+  // half its width minus half the viewport lands on the screen edge. html
+  // carries overflow-x: clip (globals.scss), so the track running past it is
+  // never sideways scroll. It takes every pixel the copy leaves, so the
+  // cards end at the bottom of the screen.
+  // A share of the screen, shrinking first when the copy needs the room.
+  // touch-action leaves vertical scroll to the page and gives sideways
+  // movement to StripControls, which drags the strip with it.
+  .strip {
+    position: relative;
+    flex: 0 1 var(--hero-strip-block);
+    min-block-size: 0;
+    touch-action: pan-y pinch-zoom;
+    user-select: none;
+    inline-size: 100vw;
+    margin-inline: calc(50% - 50vw);
+    overflow: hidden;
+  }
+
+  // Two copies of the list side by side. Moving the pair left by half its
+  // width puts the second copy exactly where the first started, so the loop
+  // has no seam. Each list ends in the gap, which keeps that half exact.
+  .track {
+    display: flex;
+    inline-size: max-content;
+    block-size: 100%;
+  }
+
+  .list {
+    display: flex;
+    block-size: 100%;
+    list-style: none;
+    gap: $space-2;
+    padding-inline-end: $space-2;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .track {
+      animation-name: hero-strip;
+      animation-duration: var(--hero-strip-duration);
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
+
+    // Hover stops it (Shivanshu's spec), and so does focus on a card, so one
+    // a keyboard user has reached does not slide away under them. On the
+    // track, not the strip, so focus on a control never holds it.
+    .track:hover,
+    .track:focus-within,
+    .strip[data-paused] .track {
+      animation-play-state: paused;
+    }
+
+    // Held still under a dragging hand, mouse or finger (StripControls).
+    .strip[data-dragging] .track {
+      animation-play-state: paused;
+    }
+  }
+
+  @keyframes hero-strip {
+    to {
+      translate: -50% 0;
+    }
+  }
+
+  // As tall as the strip, 4:3: the height is the space left, the width
+  // follows it.
+  .card {
+    position: relative;
+    flex: none;
+    block-size: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    isolation: isolate;
+
+    // The blur, behind the shade: one full blur, masked from nothing at the
+    // top to all of it at the foot. On the card, not inside .overlay: an
+    // ancestor at opacity below 1 cuts backdrop-filter off from the image, so
+    // inside the fading overlay the blur would only appear once the fade
+    // ended. It animates its own radius instead.
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      backdrop-filter: blur(0);
+      mask-image: linear-gradient(to bottom, transparent, black);
+      transition-property: backdrop-filter;
+      transition-duration: var(--duration-normal);
+      transition-timing-function: var(--ease-out);
+    }
+  }
+
+  .image {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  // Shown on hover and on focus; always shown where there is no hover, since
+  // a touch screen would otherwise never see it.
+  .overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: $space-1;
+    padding: $space-4;
+    text-align: start;
+    color: var(--color-text-inverse);
+    background-image: linear-gradient(to bottom, transparent, var(--hero-card-shade));
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-out);
+
+    // The Button sets no outer spacing; the gap above it does.
+    > :last-child {
+      margin-block-start: $space-4;
+    }
+  }
+
+  // :hover only until StripControls sets data-hand: after that the card it
+  // marks data-hover is the one under the pointer, which :hover stops being
+  // once a swipe moves the cards under a still pointer.
+  :where(.strip:not([data-hand])) .card:hover .overlay,
+  .card[data-hover] .overlay,
+  .card:focus-within .overlay {
+    opacity: 1;
+  }
+
+  :where(.strip:not([data-hand])) .card:hover::before,
+  .card[data-hover]::before,
+  .card:focus-within::before {
+    backdrop-filter: blur(var(--hero-card-blur));
+  }
+
+  @media (hover: none) {
+    .overlay {
+      opacity: 1;
+    }
+
+    .card::before {
+      backdrop-filter: blur(var(--hero-card-blur));
+    }
+  }
+
+  .cardTitle {
+    font-size: var(--font-size-xl);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-tight;
+  }
+
+  .cardLine {
+    max-inline-size: 28rem;
+    font-size: var(--font-size-sm);
+    line-height: $line-height-normal;
+  }
+
+  // After .card and .control, so these win at equal specificity.
+  //
+  // Nothing moves: the strip scrolls sideways under the visitor's own hand,
+  // and the second copy and the pause button have nothing to do.
+  @media (prefers-reduced-motion: reduce) {
+    .strip {
+      overflow-x: auto;
+      scroll-snap-type: x proximity;
+    }
+
+    // Not while a hand drags it: each small step of a drag was snapped
+    // straight back to the card it left. It settles on release.
+    .strip[data-dragging] {
+      scroll-snap-type: none;
+    }
+
+    .card {
+      scroll-snap-align: start;
+    }
+
+    .list[data-copy],
+    .control[data-pause] {
+      display: none;
+    }
+  }
+}

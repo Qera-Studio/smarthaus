@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { CARD_BLUR_OFF_CSS, expect, test, type Page } from "./fixtures";
 import type { Request } from "@playwright/test";
 
 // The e2e server is not the production server: next.config.ts drops two
@@ -217,9 +217,9 @@ test.describe("200% zoom @zoom", () => {
 
 // The hero-canvas default lives in e2e/fixtures.ts. Both halves are pinned
 // here: off unless asked, and on when asked, so the switch cannot rot into
-// "always off". The homepage hero is the fluid canvas; the villa's model and
-// decoder are watched too, because the villa is unmounted, not deleted, and a
-// stray import would fetch them again.
+// "always off". The homepage hero has had no canvas since 2026-10-28; the
+// fluid chunk and the villa's model and decoder are watched because both are
+// unmounted, not deleted, and a stray import would fetch them again.
 test.describe("the hero's canvas in e2e", () => {
   test("is off by default: the page reports Save-Data and no canvas mounts", async ({ page }) => {
     const heavyRequests: string[] = [];
@@ -247,11 +247,50 @@ test.describe("the hero's canvas in e2e", () => {
   test.describe("when a spec opts in", () => {
     test.use({ villa: true });
 
-    test("mounts on every device, touch included", async ({ page }) => {
-      await page.goto("/");
-      await expect(page.locator("[data-hero][data-ready] canvas")).toHaveCount(1, {
-        timeout: 20_000,
+    // 2026-10-28: HomeHero has no canvas, and both canvas heroes are
+    // unmounted. Opting in must therefore still fetch neither; when one comes
+    // back, this is the assertion that flips to "mounts".
+    test("mounts no canvas, because the homepage hero has none", async ({ page }) => {
+      const heavyRequests: string[] = [];
+      page.on("request", (request) => {
+        if (/\/hero\/villa\.glb|\/draco\/|FluidHero_fluid/.test(request.url())) {
+          heavyRequests.push(request.url());
+        }
       });
+      await page.goto("/");
+      await expect(page.locator("html[data-consent-ready]")).toBeAttached();
+      await page.waitForTimeout(2_000);
+      expect(heavyRequests).toEqual([]);
+      await expect(page.locator("[data-hero] canvas")).toHaveCount(0);
+    });
+  });
+});
+
+// The card-blur default lives in e2e/fixtures.ts, pinned both ways.
+test.describe("the hero cards' blur in e2e", () => {
+  const holds = (page: Page) => page.locator("style[data-e2e-card-blur-off]");
+
+  test("is off in WebKit and on in Chromium, and only the cards' is", async ({
+    page,
+    browserName,
+  }) => {
+    await page.goto("/");
+    await expect(holds(page)).toHaveCount(browserName === "webkit" ? 1 : 0);
+    expect(CARD_BLUR_OFF_CSS).toMatch(/^\[data-hero-strip\] \*::before \{[^}]*\}$/);
+    if (browserName === "webkit") {
+      // textContent: a <style> has no innerText, which toHaveText reads.
+      expect(await holds(page).evaluate((el) => el.textContent)).toBe(CARD_BLUR_OFF_CSS);
+    }
+  });
+
+  test.describe("when a spec opts in", () => {
+    test.use({ cardBlur: true });
+
+    test("ships no hold in any browser", async ({ page }) => {
+      // Not loaded: in WebKit on the Linux runner the page would never paint.
+      await page.route("**/*", (route) => route.fulfill({ body: "<html><body></body></html>" }));
+      await page.goto("/");
+      await expect(holds(page)).toHaveCount(0);
     });
   });
 });

@@ -40,14 +40,11 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-rows: 1fr;
+    // 16px between cards at every width (2026-10-28; it was 32 from lg).
     gap: $space-4;
     margin: 0;
     padding: 0;
     list-style: none;
-
-    @include bp-lg {
-      gap: $space-8;
-    }
   }
 
   // One shade darker than the canvas (brown-100), at half strength. Text

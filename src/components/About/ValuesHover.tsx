@@ -17,6 +17,19 @@ import { useRef, type MouseEvent, type PointerEvent, type ReactNode } from "reac
  * a row opened on purpose stays open when the mouse moves on. The next click
  * closes it as usual.
  *
+ * Only a mouse that moved. Opening a row closes the one above it, which
+ * folds and slides the list up under a mouse at rest, and Chrome then fires
+ * pointerout and pointerover for the shift with the pointer where it was.
+ * Taken as a movement, that shut the row the visitor was resting on
+ * (e2e/about.spec.ts, flaky on CI 2026-11-02). So a hover-opened row
+ * remembers where on the page the mouse was when it opened, and a boundary
+ * event at that same spot is the list moving, not the mouse, and is ignored.
+ * Any real move comes with new coordinates. On the page, not the screen: a
+ * hover that scrolls the list first can bring the next row to the very
+ * screen point the last one opened at. Not judged against pointermove: CI's
+ * Chrome fires it before the boundary events and a local one after, so the
+ * last move already held a real hover's coordinates there.
+ *
  * Mouse only, judged per event rather than by media query, so a touchscreen
  * laptop still hovers with its trackpad and never with a finger. Touch, pen
  * and keyboard keep plain `<details>`, and without JavaScript so does
@@ -24,23 +37,36 @@ import { useRef, type MouseEvent, type PointerEvent, type ReactNode } from "reac
  */
 export function ValuesHover({ className, children }: { className?: string; children: ReactNode }) {
   const hoverOpened = useRef<HTMLDetailsElement | null>(null);
+  const openedAt = useRef<{ x: number; y: number } | null>(null);
+
+  const onPage = (event: PointerEvent<HTMLDivElement>) => ({
+    x: event.clientX + window.scrollX,
+    y: event.clientY + window.scrollY,
+  });
+
+  const stillPointer = (event: PointerEvent<HTMLDivElement>) => {
+    const { x, y } = onPage(event);
+    return openedAt.current?.x === x && openedAt.current.y === y;
+  };
 
   function onPointerOver(event: PointerEvent<HTMLDivElement>) {
-    if (event.pointerType !== "mouse") return;
+    if (event.pointerType !== "mouse" || stillPointer(event)) return;
     const row = (event.target as Element).closest("details");
     if (!row || row.open) return;
     row.open = true;
     hoverOpened.current = row;
+    openedAt.current = onPage(event);
   }
 
   function onPointerOut(event: PointerEvent<HTMLDivElement>) {
     const row = hoverOpened.current;
-    if (event.pointerType !== "mouse" || !row) return;
+    if (event.pointerType !== "mouse" || !row || stillPointer(event)) return;
     // pointerout also fires moving between children of the same row.
     if (row.contains(event.relatedTarget as Node | null)) return;
     if (!row.contains(event.target as Node)) return;
     row.open = false;
     hoverOpened.current = null;
+    openedAt.current = null;
   }
 
   function onClick(event: MouseEvent<HTMLDivElement>) {

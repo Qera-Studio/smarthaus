@@ -95,20 +95,28 @@ test.describe("without JavaScript", () => {
 });
 
 test("sits above the cookie banner, the nav and back to top", async ({ page }) => {
+  // Caught at "commit", where the splash is certainly up; by
+  // domcontentloaded a fast load had already taken it down (iPhone 17 on CI,
+  // PR #65).
   await page.goto("/", { waitUntil: "commit" });
   await expect(html(page)).toHaveAttribute("data-splash", "show");
-  // Compared by layer rather than by what is on top at one instant, so the
-  // answer does not depend on catching the splash before it leaves.
-  const layers = await page.evaluate(() => {
-    const z = (el: Element | null) => Number(el ? getComputedStyle(el).zIndex : NaN);
-    const fixed = [...document.querySelectorAll("body *")].filter(
-      (el) => el.id !== "splash" && getComputedStyle(el).position === "fixed",
-    );
-    return {
-      splash: z(document.getElementById("splash")),
-      others: fixed.map(z).filter(Number.isFinite),
-    };
-  });
-  expect(layers.others.length).toBeGreaterThan(0);
-  layers.others.forEach((other) => expect(layers.splash).toBeGreaterThan(other));
+  // Then waited for the fixed layers to arrive: at "commit" the banner and
+  // back to top were not in the document yet on a long page, and there was
+  // nothing to compare (Desktop Chrome on CI, PR #65). Compared by layer
+  // rather than by what is on top at one instant: the splash's z-index does
+  // not depend on its state, so the answer does not depend on catching it.
+  const layers = () =>
+    page.evaluate(() => {
+      const z = (el: Element | null) => Number(el ? getComputedStyle(el).zIndex : NaN);
+      const fixed = [...document.querySelectorAll("body *")].filter(
+        (el) => el.id !== "splash" && getComputedStyle(el).position === "fixed",
+      );
+      return {
+        splash: z(document.getElementById("splash")),
+        others: fixed.map(z).filter(Number.isFinite),
+      };
+    });
+  await expect.poll(async () => (await layers()).others.length).toBeGreaterThan(0);
+  const { splash, others } = await layers();
+  others.forEach((other) => expect(splash).toBeGreaterThan(other));
 });

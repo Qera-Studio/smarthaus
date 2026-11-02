@@ -323,3 +323,60 @@ test.describe("reduced motion", () => {
     await expect(s.locator('[data-state="leaving"]')).toHaveCount(0);
   });
 });
+
+test.describe("each slide's CTA", () => {
+  test("sits under the description, at the foot of the copy, and opens solutions", async ({
+    page,
+  }) => {
+    const s = section(page);
+    await s.getByRole("button", { name: "Pause automatic advance" }).click();
+    const slide = s.getByRole("tabpanel", { name: "Smart lock" });
+    const body = slide.getByText(/^No keys to cut or lose/);
+    const cta = slide.getByRole("link", { name: "View smart locks" });
+    await expect(cta).toBeVisible();
+    // Both read in one frame: the first slide is still sliding up as the page
+    // opens, and two separate reads caught it in two places, putting the CTA
+    // 0.67px into the description (Desktop Chrome on CI, 2026-11-02).
+    const { bodyBottom, ctaTop } = await body.evaluate(
+      (text, link) => ({
+        bodyBottom: text.getBoundingClientRect().bottom,
+        ctaTop: link!.getBoundingClientRect().top,
+      }),
+      await cta.elementHandle(),
+    );
+    expect(ctaTop).toBeGreaterThan(bodyBottom);
+    await cta.click();
+    await expect(page).toHaveURL(/\/solutions$/);
+  });
+
+  test("only the showing slide's CTA can be reached", async ({ page }) => {
+    const s = section(page);
+    await expect(s.getByRole("link", { name: /^View / })).toHaveCount(1);
+  });
+});
+
+test("the timer runs 3s a slide", async ({ page }) => {
+  const s = section(page);
+  const interval = await s.evaluate((el) =>
+    getComputedStyle(el).getPropertyValue("--hardware-interval").trim(),
+  );
+  expect(interval).toBe("3s");
+});
+
+test("keyboard focus on a slide's CTA holds the slide still", async ({ page }) => {
+  // The 3s timer used to move the slide on under the focused link.
+  const s = section(page);
+  const cta = s.getByRole("link", { name: "View smart locks" });
+  await s.getByRole("tab", { name: "Smart lock" }).focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  // Wherever Tab landed, put it on the CTA the keyboard's way.
+  await cta.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(cta).toBeFocused();
+  await page.waitForTimeout(4_000);
+  await expect(cta).toBeFocused();
+  await expect(s.getByRole("tabpanel", { name: "Smart lock" })).toBeVisible();
+});

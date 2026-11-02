@@ -104,3 +104,15 @@ test("is accessible, and fits the screen", async ({ page }) => {
   await expectNoHorizontalOverflow(page);
   await expectNoEmDash(section(page));
 });
+
+test("the cards are 16px apart, across and down", async ({ page }) => {
+  await page.goto("/");
+  const grid = page.locator("[data-stats] ul");
+  await grid.scrollIntoViewIfNeeded();
+  const [row, column] = await grid.evaluate((el) => [
+    getComputedStyle(el).rowGap,
+    getComputedStyle(el).columnGap,
+  ]);
+  expect(row).toBe("16px");
+  expect(column).toBe("16px");
+});

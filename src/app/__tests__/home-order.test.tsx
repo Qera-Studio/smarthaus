@@ -23,7 +23,8 @@ function mockSection(name: string) {
   return Section;
 }
 
-jest.mock("../../components/FluidHero", () => ({ FluidHero: mockSection("hero") }));
+jest.mock("../../components/HomeHero", () => ({ HomeHero: mockSection("hero") }));
+jest.mock("../../components/FluidHero", () => ({ FluidHero: mockSection("fluid") }));
 jest.mock("../../components/Maple", () => ({ Maple: mockSection("maple") }));
 jest.mock("../../components/Partners", () => ({ Partners: mockSection("partners") }));
 jest.mock("../../components/Stats", () => ({ Stats: mockSection("stats") }));
@@ -50,6 +51,13 @@ describe("Home page", () => {
       "pricing",
       "enquiry",
     ]);
+  });
+
+  it("leaves the fluid hero off the page", () => {
+    // Unmounted 2026-10-28 when HomeHero replaced it. The component is kept in
+    // src/components/FluidHero; this fails if it comes back by accident.
+    const { container } = render(<Home />);
+    expect(order(container)).not.toContain("fluid");
   });
 
   it("leaves the Maple banner off the page", () => {

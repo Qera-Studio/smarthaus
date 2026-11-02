@@ -6,7 +6,7 @@ import { test, expect } from "./fixtures";
  * actually return the page to the top when pressed.
  */
 
-const button = "button:has-text('Back to top')";
+const button = "button[aria-label='Back to top']";
 
 test("stays hidden and unreachable at the top of the page", async ({ page }) => {
   await page.goto("/");
@@ -54,4 +54,16 @@ test("keeps brown-600 over light prose and over the dark footer", async ({ page 
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect.poll(paint).toEqual(BROWN_600_ON_BONE);
+});
+
+test("is an arrow, not words, a square the footer reserves", async ({ page }) => {
+  await page.goto("/");
+  const back = page.locator(button);
+  expect(await back.evaluate((el) => el.textContent)).toBe("");
+  await expect(back.locator("svg")).toHaveCount(1);
+  const size = await back.evaluate((el) => [
+    (el as HTMLElement).offsetWidth,
+    (el as HTMLElement).offsetHeight,
+  ]);
+  expect(size[0]).toBe(size[1]);
 });
