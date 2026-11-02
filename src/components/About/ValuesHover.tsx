@@ -17,6 +17,15 @@ import { useRef, type MouseEvent, type PointerEvent, type ReactNode } from "reac
  * a row opened on purpose stays open when the mouse moves on. The next click
  * closes it as usual.
  *
+ * Only a mouse that moved. Opening a row closes the one above it, which
+ * folds and slides the list up under a mouse at rest, and Chrome then fires
+ * pointerout and pointerover for the shift with the pointer where it was.
+ * Taken as a movement, that shut the row the visitor was resting on
+ * (e2e/about.spec.ts, flaky on CI 2026-11-02). A real move always comes
+ * with new coordinates, and the browser fires pointermove after the boundary
+ * events, so a boundary event at the last pointermove's coordinates is the
+ * list moving, not the mouse, and is ignored.
+ *
  * Mouse only, judged per event rather than by media query, so a touchscreen
  * laptop still hovers with its trackpad and never with a finger. Touch, pen
  * and keyboard keep plain `<details>`, and without JavaScript so does
@@ -24,9 +33,18 @@ import { useRef, type MouseEvent, type PointerEvent, type ReactNode } from "reac
  */
 export function ValuesHover({ className, children }: { className?: string; children: ReactNode }) {
   const hoverOpened = useRef<HTMLDetailsElement | null>(null);
+  const lastMove = useRef<{ x: number; y: number } | null>(null);
+
+  const stillPointer = (event: PointerEvent<HTMLDivElement>) =>
+    lastMove.current?.x === event.clientX && lastMove.current.y === event.clientY;
+
+  function onPointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== "mouse") return;
+    lastMove.current = { x: event.clientX, y: event.clientY };
+  }
 
   function onPointerOver(event: PointerEvent<HTMLDivElement>) {
-    if (event.pointerType !== "mouse") return;
+    if (event.pointerType !== "mouse" || stillPointer(event)) return;
     const row = (event.target as Element).closest("details");
     if (!row || row.open) return;
     row.open = true;
@@ -35,7 +53,7 @@ export function ValuesHover({ className, children }: { className?: string; child
 
   function onPointerOut(event: PointerEvent<HTMLDivElement>) {
     const row = hoverOpened.current;
-    if (event.pointerType !== "mouse" || !row) return;
+    if (event.pointerType !== "mouse" || !row || stillPointer(event)) return;
     // pointerout also fires moving between children of the same row.
     if (row.contains(event.relatedTarget as Node | null)) return;
     if (!row.contains(event.target as Node)) return;
@@ -56,6 +74,7 @@ export function ValuesHover({ className, children }: { className?: string; child
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- delegation to native <summary>; see above
     <div
       className={className}
+      onPointerMove={onPointerMove}
       onPointerOver={onPointerOver}
       onPointerOut={onPointerOut}
       onClick={onClick}
