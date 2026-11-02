@@ -44,9 +44,15 @@ function setup() {
   };
 }
 
-const hover = (el: Element, pointerType: string) => fireEvent.pointerOver(el, { pointerType });
+// A moving pointer: each event a little further down, as a real one is. The
+// island ignores a boundary event at the spot a row opened at, which is the
+// list moving under a still mouse (see "the list moving under a still mouse").
+let travel = 0;
+const step = () => ({ clientX: 10, clientY: (travel += 10) });
+const hover = (el: Element, pointerType: string) =>
+  fireEvent.pointerOver(el, { pointerType, ...step() });
 const leave = (el: Element, to: Element, pointerType = "mouse") =>
-  fireEvent.pointerOut(el, { pointerType, relatedTarget: to });
+  fireEvent.pointerOut(el, { pointerType, relatedTarget: to, ...step() });
 
 describe("ValuesHover", () => {
   it("passes its class to the wrapper", () => {
@@ -159,60 +165,79 @@ describe("ValuesHover", () => {
 
   describe("the list moving under a still mouse", () => {
     // Opening a row folds the one above it and slides the list up; Chrome
-    // fires boundary events for that with the pointer where it last moved
-    // to (e2e/about.spec.ts, flaky on CI 2026-11-02).
-    const move = (el: Element, x: number, y: number) =>
-      fireEvent.pointerMove(el, { pointerType: "mouse", clientX: x, clientY: y });
+    // fires boundary events for that with the pointer where it was
+    // (e2e/about.spec.ts, flaky on CI 2026-11-02).
     const at = (x: number, y: number) => ({ pointerType: "mouse", clientX: x, clientY: y });
+    const over = (el: Element, x: number, y: number) => fireEvent.pointerOver(el, at(x, y));
+    const out = (el: Element, to: Element, x: number, y: number) =>
+      fireEvent.pointerOut(el, { ...at(x, y), relatedTarget: to });
 
     it("keeps a row open when it slides out from under a mouse at rest", () => {
       const { one, two } = setup();
-      fireEvent.pointerOver(screen.getByText("One"), at(10, 20));
-      move(screen.getByText("One"), 10, 20);
-      fireEvent.pointerOut(screen.getByText("One"), { ...at(10, 20), relatedTarget: two });
+      over(screen.getByText("One"), 10, 20);
+      out(screen.getByText("One"), two, 10, 20);
       expect(one.open).toBe(true);
     });
 
     it("does not open the row that slides in under it", () => {
       const { two } = setup();
-      fireEvent.pointerOver(screen.getByText("One"), at(10, 20));
-      move(screen.getByText("One"), 10, 20);
-      fireEvent.pointerOver(screen.getByText("Two"), at(10, 20));
+      over(screen.getByText("One"), 10, 20);
+      over(screen.getByText("Two"), 10, 20);
       expect(two.open).toBe(false);
     });
 
     it("still closes the row when the mouse really moves off it", () => {
       const { one, two } = setup();
-      fireEvent.pointerOver(screen.getByText("One"), at(10, 20));
-      move(screen.getByText("One"), 10, 20);
-      fireEvent.pointerOut(screen.getByText("One"), { ...at(10, 60), relatedTarget: two });
+      over(screen.getByText("One"), 10, 20);
+      out(screen.getByText("One"), two, 10, 60);
       expect(one.open).toBe(false);
     });
 
     it("still opens the next row when the mouse really moves onto it", () => {
       const { two } = setup();
-      fireEvent.pointerOver(screen.getByText("One"), at(10, 20));
-      move(screen.getByText("One"), 10, 20);
-      fireEvent.pointerOver(screen.getByText("Two"), at(10, 60));
+      over(screen.getByText("One"), 10, 20);
+      over(screen.getByText("Two"), 10, 60);
       expect(two.open).toBe(true);
     });
 
-    it("compares against the last move only, not the first", () => {
+    it("does not depend on pointermove coming before or after", () => {
+      // CI's Chrome sends the move first, a local one after; either way the
+      // real hover on the second row opens it.
       const { two } = setup();
-      move(screen.getByText("One"), 10, 20);
-      move(screen.getByText("One"), 10, 60);
-      fireEvent.pointerOver(screen.getByText("Two"), at(10, 20));
+      over(screen.getByText("One"), 10, 20);
+      fireEvent.pointerMove(screen.getByText("Two"), at(10, 60));
+      over(screen.getByText("Two"), 10, 60);
       expect(two.open).toBe(true);
     });
 
-    it("ignores a finger's move, which never hovers", () => {
+    it("forgets the spot once the row has closed, so coming back reopens it", () => {
+      const { one, two } = setup();
+      over(screen.getByText("One"), 10, 20);
+      out(screen.getByText("One"), two, 10, 60);
+      over(screen.getByText("One"), 10, 20);
+      expect(one.open).toBe(true);
+    });
+
+    it("judges the spot on the page, so a scroll then a hover at the same screen point opens", () => {
+      // A hover that scrolls the list first can bring the next row to the
+      // screen point the last one opened at (e2e sweep, 2026-11-02).
       const { two } = setup();
-      fireEvent.pointerMove(screen.getByText("Two"), {
-        pointerType: "touch",
-        clientX: 10,
-        clientY: 60,
-      });
-      fireEvent.pointerOver(screen.getByText("Two"), at(10, 60));
+      over(screen.getByText("One"), 10, 20);
+      window.scrollY = 200;
+      try {
+        over(screen.getByText("Two"), 10, 20);
+      } finally {
+        window.scrollY = 0;
+      }
+      expect(two.open).toBe(true);
+    });
+
+    it("re-anchors on each row it opens", () => {
+      const { two, one } = setup();
+      over(screen.getByText("One"), 10, 20);
+      over(screen.getByText("Two"), 10, 60);
+      // The list shifts under the mouse resting on Two.
+      out(screen.getByText("Two"), one, 10, 60);
       expect(two.open).toBe(true);
     });
   });

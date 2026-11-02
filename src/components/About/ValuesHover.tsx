@@ -21,10 +21,14 @@ import { useRef, type MouseEvent, type PointerEvent, type ReactNode } from "reac
  * folds and slides the list up under a mouse at rest, and Chrome then fires
  * pointerout and pointerover for the shift with the pointer where it was.
  * Taken as a movement, that shut the row the visitor was resting on
- * (e2e/about.spec.ts, flaky on CI 2026-11-02). A real move always comes
- * with new coordinates, and the browser fires pointermove after the boundary
- * events, so a boundary event at the last pointermove's coordinates is the
- * list moving, not the mouse, and is ignored.
+ * (e2e/about.spec.ts, flaky on CI 2026-11-02). So a hover-opened row
+ * remembers where on the page the mouse was when it opened, and a boundary
+ * event at that same spot is the list moving, not the mouse, and is ignored.
+ * Any real move comes with new coordinates. On the page, not the screen: a
+ * hover that scrolls the list first can bring the next row to the very
+ * screen point the last one opened at. Not judged against pointermove: CI's
+ * Chrome fires it before the boundary events and a local one after, so the
+ * last move already held a real hover's coordinates there.
  *
  * Mouse only, judged per event rather than by media query, so a touchscreen
  * laptop still hovers with its trackpad and never with a finger. Touch, pen
@@ -33,15 +37,17 @@ import { useRef, type MouseEvent, type PointerEvent, type ReactNode } from "reac
  */
 export function ValuesHover({ className, children }: { className?: string; children: ReactNode }) {
   const hoverOpened = useRef<HTMLDetailsElement | null>(null);
-  const lastMove = useRef<{ x: number; y: number } | null>(null);
+  const openedAt = useRef<{ x: number; y: number } | null>(null);
 
-  const stillPointer = (event: PointerEvent<HTMLDivElement>) =>
-    lastMove.current?.x === event.clientX && lastMove.current.y === event.clientY;
+  const onPage = (event: PointerEvent<HTMLDivElement>) => ({
+    x: event.clientX + window.scrollX,
+    y: event.clientY + window.scrollY,
+  });
 
-  function onPointerMove(event: PointerEvent<HTMLDivElement>) {
-    if (event.pointerType !== "mouse") return;
-    lastMove.current = { x: event.clientX, y: event.clientY };
-  }
+  const stillPointer = (event: PointerEvent<HTMLDivElement>) => {
+    const { x, y } = onPage(event);
+    return openedAt.current?.x === x && openedAt.current.y === y;
+  };
 
   function onPointerOver(event: PointerEvent<HTMLDivElement>) {
     if (event.pointerType !== "mouse" || stillPointer(event)) return;
@@ -49,6 +55,7 @@ export function ValuesHover({ className, children }: { className?: string; child
     if (!row || row.open) return;
     row.open = true;
     hoverOpened.current = row;
+    openedAt.current = onPage(event);
   }
 
   function onPointerOut(event: PointerEvent<HTMLDivElement>) {
@@ -59,6 +66,7 @@ export function ValuesHover({ className, children }: { className?: string; child
     if (!row.contains(event.target as Node)) return;
     row.open = false;
     hoverOpened.current = null;
+    openedAt.current = null;
   }
 
   function onClick(event: MouseEvent<HTMLDivElement>) {
@@ -74,7 +82,6 @@ export function ValuesHover({ className, children }: { className?: string; child
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- delegation to native <summary>; see above
     <div
       className={className}
-      onPointerMove={onPointerMove}
       onPointerOver={onPointerOver}
       onPointerOut={onPointerOut}
       onClick={onClick}
