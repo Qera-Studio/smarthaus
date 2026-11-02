@@ -43,6 +43,20 @@
       );
       --hero-below: 0px;
     }
+
+    // A short phone: Safari on an iPhone 17 leaves about 680px. There the
+    // copy took 383px of the 570 between the contact bar and the nav, the
+    // strip got about 100, and the 36rem floor ran the hero 6px under the
+    // nav. Here the copy sits tighter and the floor gives the 6px back, so the
+    // strip keeps about 130px and ends at the nav (Shivanshu, 2026-11-02).
+    // Taller phones and everything from lg are unchanged.
+    @include bp-max($bp-lg) {
+      @media (max-height: 45rem) {
+        --hero-min-block: 34rem;
+        gap: $space-2;
+        padding-block-start: $space-2;
+      }
+    }
   }
 
   // Auto margins centre the copy in whatever the strip leaves, which keeps
