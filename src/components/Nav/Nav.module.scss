@@ -934,7 +934,7 @@
       // which do not scale with the fold, and its height, which does. Scaling
       // the lot left the glass up to 2px short of the panel as it closed.
       --nav-reach-block: calc(
-        min(1, var(--nav-reach) * 5000) * (2px + var(--nav-reach-gap)) + var(--nav-reach) *
+        min(1, var(--nav-reach) * 1000000) * (2px + var(--nav-reach-gap)) + var(--nav-reach) *
           var(--nav-menu-block, 0px)
       );
       inset-block-end: calc(-1 * var(--nav-reach-block));

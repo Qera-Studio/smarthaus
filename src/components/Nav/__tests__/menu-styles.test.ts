@@ -192,12 +192,12 @@ describe("Nav.module.scss: the Solutions menu", () => {
           /--nav-reach-block:\s*calc\(([^;]*)\);/,
         )?.[1];
         expect(reach?.replace(/\s+/g, " ").trim()).toBe(
-          "min(1, var(--nav-reach) * 5000) * (2px + var(--nav-reach-gap)) + var(--nav-reach) * var(--nav-menu-block, 0px)",
+          "min(1, var(--nav-reach) * 1000000) * (2px + var(--nav-reach-gap)) + var(--nav-reach) * var(--nav-menu-block, 0px)",
         );
         const foot = (r: number, gap: number, block: number) =>
-          Math.min(1, r * 5000) * (2 + gap) + r * block;
+          Math.min(1, r * 1000000) * (2 + gap) + r * block;
         const panel = (r: number, gap: number, block: number) => 2 + gap + r * block;
-        for (const r of [0.001, 0.01, 0.05, 0.25, 0.5, 0.75, 1]) {
+        for (const r of [0.00001, 0.001, 0.01, 0.05, 0.25, 0.5, 0.75, 1]) {
           for (const gap of [0, 4, 8]) expect(foot(r, gap, 360)).toBeCloseTo(panel(r, gap, 360));
         }
         // And nothing at all once it is shut.
