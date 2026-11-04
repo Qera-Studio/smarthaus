@@ -145,16 +145,23 @@ test.describe("keyboard", () => {
 });
 
 test.describe("the tabs", () => {
-  test("mark the selected one with a rule, and only that one", async ({ page }) => {
-    const rules = () =>
+  test("carry no rule under them: the selected one is heavier and darker", async ({ page }) => {
+    // The black rule came off on 2026-11-04, at Shivanshu's call.
+    const styles = () =>
       section(page)
         .getByRole("tab")
-        .evaluateAll((all) => all.map((el) => getComputedStyle(el).borderBottomColor));
-    const [selected, other] = await rules();
-    expect(selected).not.toBe("rgba(0, 0, 0, 0)");
-    expect(other).toBe("rgba(0, 0, 0, 0)");
+        .evaluateAll((all) =>
+          all.map((el) => {
+            const style = getComputedStyle(el);
+            return { rule: style.borderBottomStyle, weight: Number(style.fontWeight) };
+          }),
+        );
+    const [selected, other] = await styles();
+    expect(selected!.rule).toBe("none");
+    expect(other!.rule).toBe("none");
+    expect(selected!.weight).toBeGreaterThan(other!.weight);
     await tab(page, "Fibaro").click();
-    await expect.poll(async () => (await rules())[0]).toBe("rgba(0, 0, 0, 0)");
+    await expect.poll(async () => (await styles())[1]!.weight).toBeGreaterThan(other!.weight);
   });
 
   test("are at least 24px tall, WCAG 2.5.8's floor", async ({ page }) => {
