@@ -76,9 +76,9 @@ describe("/accessibility", () => {
   });
 
   it("gives three ways to report a problem", () => {
-    expect(screen.getByRole("link", { name: "contact@mapletech.ae" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "hello@smarthaus.ae" })).toHaveAttribute(
       "href",
-      "mailto:contact@mapletech.ae",
+      "mailto:hello@smarthaus.ae",
     );
     expect(screen.getByRole("link", { name: "+971 54 375 5150" })).toHaveAttribute(
       "href",

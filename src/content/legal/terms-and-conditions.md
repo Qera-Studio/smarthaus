@@ -87,7 +87,7 @@ This website is operated by Maple Technologies Security Systems LLC, a company l
 | **Trade licence number** | 897839                                                                    |
 | **SIRA licence number**  | SSP202210037219                                                           |
 | **Registered address**   | The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai |
-| **Contact**              | contact@mapletech.ae                                                      |
+| **Contact**              | hello@smarthaus.ae                                                        |
 
 In these terms, "we", "us" and "our" mean that entity. "You" means you, the person using this website.
 
@@ -320,7 +320,7 @@ If you have a question about these terms, contact us.
 
 |           |                                                                           |
 | --------- | ------------------------------------------------------------------------- |
-| **Email** | contact@mapletech.ae                                                      |
+| **Email** | hello@smarthaus.ae                                                        |
 | **Post**  | The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai |
 
 ---

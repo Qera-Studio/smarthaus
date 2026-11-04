@@ -224,7 +224,7 @@ describe("identity: one source for the published contact facts", () => {
   });
 
   it("keeps the published email and phone formats", () => {
-    expect(EMAIL).toBe("contact@mapletech.ae");
+    expect(EMAIL).toBe("hello@smarthaus.ae");
     expect(PHONE_DISPLAY).toBe("+971 54 375 5150");
   });
 });

@@ -101,8 +101,8 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a className={styles.contactItem} href="mailto:contact@mapletech.ae">
-                  <RollingText>contact@mapletech.ae</RollingText>
+                <a className={styles.contactItem} href="mailto:hello@smarthaus.ae">
+                  <RollingText>hello@smarthaus.ae</RollingText>
                 </a>
               </li>
               <li className={styles.contactItem}>Dubai, U.A.E.</li>

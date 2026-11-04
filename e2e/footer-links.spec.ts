@@ -37,7 +37,7 @@ test("the phone link dials the E.164 number and shows the grouped one", async ({
 test("the email link opens a message to the published address", async ({ page }) => {
   const mail = footer(page).locator('a[href^="mailto:"]');
   await expect(mail).toHaveCount(1);
-  await expect(mail).toHaveAttribute("href", "mailto:contact@mapletech.ae");
+  await expect(mail).toHaveAttribute("href", "mailto:hello@smarthaus.ae");
 });
 
 test.describe("social links", () => {

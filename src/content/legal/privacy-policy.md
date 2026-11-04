@@ -96,8 +96,8 @@ Maple Technologies Security Systems LLC is the data controller for the informati
 | **SIRA licence number**  | SSP202210037219                                                           |
 | **Licensing authority**  | Dubai, UAE                                                                |
 | **Registered address**   | The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai |
-| **Privacy contact**      | contact@mapletech.ae                                                      |
-| **General contact**      | contact@mapletech.ae                                                      |
+| **Privacy contact**      | hello@smarthaus.ae                                                        |
+| **General contact**      | hello@smarthaus.ae                                                        |
 
 Smarthaus is a sub-brand of [PLACEHOLDER: confirm the exact corporate relationship — parent company name and whether the parent or the sub-brand is the contracting entity]. Where information is shared within the group, it is covered by section 4.
 
@@ -299,11 +299,11 @@ You have the following rights over your personal information. Exercising them is
 - **Ask for it in a portable form.** Receive the information you gave us in a structured, commonly used, machine-readable format.
 - **Stop marketing.** Opt out of marketing at any time, by the unsubscribe link in any marketing email or by contacting us. We act on this promptly and permanently.
 
-**How to exercise a right:** email contact@mapletech.ae and tell us what you want. We will acknowledge your request and respond within [PLACEHOLDER: proposed 30 days] of receiving it. If a request is complex and needs longer, we will tell you why and when to expect our response.
+**How to exercise a right:** email hello@smarthaus.ae and tell us what you want. We will acknowledge your request and respond within [PLACEHOLDER: proposed 30 days] of receiving it. If a request is complex and needs longer, we will tell you why and when to expect our response.
 
 **We will verify who you are first.** Before we hand over or delete personal information, we need to be reasonably satisfied you are the person the information is about — otherwise a request channel becomes a way to obtain someone else's data. We will ask you to confirm details we already hold, and we will not ask for more identification than the request requires.
 
-**If you are unhappy with how we have handled your information,** tell us first — most problems are faster to fix directly. Contact contact@mapletech.ae, and we will investigate and respond. If you remain dissatisfied, you may complain to the UAE Data Office.
+**If you are unhappy with how we have handled your information,** tell us first — most problems are faster to fix directly. Contact hello@smarthaus.ae, and we will investigate and respond. If you remain dissatisfied, you may complain to the UAE Data Office.
 
 <!-- COUNSEL REVIEW POINT: the 30-day response window is a proposal drawn from
      common practice, NOT from the published federal PDPL executive regulations —
@@ -377,8 +377,8 @@ Where a change materially affects how we handle information we already hold abou
 
 |                                 |                                                                           |
 | ------------------------------- | ------------------------------------------------------------------------- |
-| **Privacy and data protection** | contact@mapletech.ae                                                      |
-| **General enquiries**           | contact@mapletech.ae                                                      |
+| **Privacy and data protection** | hello@smarthaus.ae                                                        |
+| **General enquiries**           | hello@smarthaus.ae                                                        |
 | **Post**                        | The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai |
 
 ---

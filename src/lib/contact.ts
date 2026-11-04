@@ -19,7 +19,7 @@ export const PHONE_E164 = "+971543755150";
 /** Visible copy. Never put this in an href. */
 export const PHONE_DISPLAY = "+971 54 375 5150";
 
-export const EMAIL = "contact@mapletech.ae";
+export const EMAIL = "hello@smarthaus.ae";
 
 /**
  * Registered address, in the wording the legal pages published (confirmed

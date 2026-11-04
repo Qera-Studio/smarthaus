@@ -29,7 +29,7 @@ describe("Footer", () => {
   it("dials the E.164 number and writes to the published address", () => {
     const footer = screen.getByRole("contentinfo");
     expect(footer.querySelector('a[href="tel:+971543755150"]')).not.toBeNull();
-    expect(footer.querySelector('a[href="mailto:contact@mapletech.ae"]')).not.toBeNull();
+    expect(footer.querySelector('a[href="mailto:hello@smarthaus.ae"]')).not.toBeNull();
   });
 
   it("renders every social link with its honest accessible name", () => {
@@ -104,7 +104,7 @@ describe("the footer's hover roll", () => {
 
   it("rolls the phone number and the address by letter too", () => {
     const labels = rolls().map(text);
-    expect(labels).toEqual(expect.arrayContaining(["+971 54 375 5150", "contact@mapletech.ae"]));
+    expect(labels).toEqual(expect.arrayContaining(["+971 54 375 5150", "hello@smarthaus.ae"]));
     const phone = rolls().find((el) => text(el) === "+971 54 375 5150")!;
     expect(phone.children.length).toBeGreaterThan(1);
   });
