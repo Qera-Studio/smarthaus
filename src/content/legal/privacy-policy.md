@@ -1,10 +1,10 @@
 ---
 title: Privacy Policy
 slug: privacy
-version: 0.2.0-draft
+version: 0.2.1-draft
 status: DRAFT — NOT FOR PUBLICATION. Requires review by a UAE-admitted lawyer before launch.
 effectiveDate: null # set on counsel sign-off, not on merge
-lastUpdated: 2026-09-26
+lastUpdated: 2026-11-04
 governingRegime: UAE Federal PDPL (Decree-Law 45/2021) — ASSUMED, see Drafting Notes
 noindex: false
 ---
@@ -51,6 +51,9 @@ INSTALLED AND LIVE: next, react, react-dom, zod, @vercel/analytics,
 @vercel/speed-insights, resend.
 
 STILL PLANNED: Sanity, Turnstile.
+
+0.2.1-draft (2026-11-04) corrected Resend's region to Tokyo, Japan, and named it
+in §5.
 
 0.2.0-draft (2026-09-26) corrected three statements the build contradicted:
 Resend moved from §4.2 to §4.1 (it had delivered every enquiry since the
@@ -204,7 +207,7 @@ We use a small number of service providers who process information on our instru
 | Provider                                | What it does                                  | What it sees                                                                                | Where                                    |
 | --------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------- |
 | Vercel Inc.                             | Hosts and serves this website                 | Server log data in section 3.2                                                              | [PLACEHOLDER: confirm deployment region] |
-| Resend                                  | Delivers each enquiry you send to our mailbox | Everything you submit in an enquiry form                                                    | United States (US East, Virginia)        |
+| Resend                                  | Delivers each enquiry you send to our mailbox | Everything you submit in an enquiry form                                                    | Japan (Asia Pacific, Tokyo)              |
 | Vercel Web Analytics and Speed Insights | Aggregate page performance and visit counts   | Aggregated, non-identifying usage data. No cookies, and no identifier that survives a visit | [PLACEHOLDER: confirm deployment region] |
 
 <!-- ACCURACY GATE — Legal System §5 requires the policy to name every third party
@@ -238,7 +241,7 @@ The following are planned but **not currently operating on this site**. We list 
 
 ## 5. Where your information goes
 
-Smarthaus operates in the UAE. Some of our service providers are established outside the UAE, which means your information may be processed outside the country — for example by our hosting provider.
+Smarthaus operates in the UAE. Some of our service providers are established outside the UAE, which means your information may be processed outside the country — for example by our hosting provider, and by Resend, which delivers enquiries from Tokyo, Japan.
 
 Where information leaves the UAE, we rely on the transfer routes the PDPL permits: transfer to a jurisdiction offering an adequate level of protection, or contractual safeguards binding the recipient to protect the information.
 
@@ -428,9 +431,9 @@ TRANSFERS
   [ ] Vercel deployment region
   [ ] PDPL transfer mechanism for that corridor, documented in writing
   [ ] Vercel sub-processor list reviewed for onward transfers
-  [ ] Resend sending region — reported as US East (Virginia) on 2026-09-26 and
-      entered in §4.1; confirm in the Resend dashboard (Domains, Region column)
-  [ ] PDPL transfer mechanism for the UAE to US corridor, for Resend
+  [ ] Resend sending region — Tokyo, Japan, confirmed by Shivanshu on 2026-11-04
+      (it was first reported as US East, Virginia)
+  [ ] PDPL transfer mechanism for the UAE to Japan corridor, for Resend
   [ ] Resend sub-processor list reviewed for onward transfers
 
 RIGHTS

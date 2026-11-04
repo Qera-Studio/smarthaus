@@ -372,7 +372,7 @@ export default function PrivacyPolicy() {
         <p>
           Smarthaus operates in the UAE. Some of our service providers are established outside the
           UAE, which means your information may be processed outside the country, for example by our
-          hosting provider.
+          hosting provider, and by Resend, which delivers enquiries from Tokyo, Japan.
         </p>
         <p>
           Where information leaves the UAE, we rely on the transfer routes the law permits: transfer

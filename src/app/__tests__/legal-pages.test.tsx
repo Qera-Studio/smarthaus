@@ -61,7 +61,7 @@ describe("/privacy", () => {
 
   it("prints the shared policy version", () => {
     expect(document.body).toHaveTextContent(PRIVACY_POLICY_VERSION);
-    expect(PRIVACY_POLICY_VERSION).toBe("0.2.0-draft");
+    expect(PRIVACY_POLICY_VERSION).toBe("0.2.1-draft");
   });
 
   it("states the registered address from the one shared source", () => {
