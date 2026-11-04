@@ -370,6 +370,118 @@ test.describe("with a mouse", () => {
     test.skip(hasTouch, "hover is a pointer behaviour");
   });
 
+  // The second copy took no pointer while it was inert, which lost the hover
+  // on every card once the loop brought it round, Lighting first, and after any
+  // swipe that landed on it (reported three ways, found 2026-11-04).
+  test.describe("in the loop's second round", () => {
+    // The consent banner sits over the strip's left end, where these hover.
+    test.beforeEach(async ({ page }) => {
+      await withConsentDecided(page);
+      await page.reload();
+      await expectHydrated(page);
+    });
+
+    const seek = (page: Page, fraction: number) =>
+      track(page).evaluate((el, f) => {
+        const [animation] = el.getAnimations();
+        animation!.currentTime = Number(animation!.effect!.getComputedTiming().duration) * f;
+      }, fraction);
+
+    /** Rests the pointer on `x` and reads the card it reached, and what shows. */
+    const hoverAt = async (page: Page, x: number) => {
+      const box = (await strip(page).boundingBox())!;
+      await page.mouse.move(1, 1);
+      await page.mouse.move(x - 3, box.y + 20);
+      await page.mouse.move(x, box.y + 20, { steps: 3 });
+      await expect.poll(() => markedCards(page).count()).toBe(1);
+      const marked = markedCards(page).first();
+      await expect(marked.locator("> div")).toHaveCSS("opacity", "1");
+      return marked;
+    };
+    const markedCards = (page: Page) => strip(page).locator("li[data-hover]");
+    /** Where to rest on each card of the second copy now on screen, in order. */
+    const copyOnScreen = (page: Page) =>
+      strip(page)
+        .locator("ul[data-copy]:not([data-lead]) > li")
+        .evaluateAll((all) =>
+          all
+            .map((el) => el.getBoundingClientRect())
+            .filter((r) => r.right > 40 && r.left < window.innerWidth - 40)
+            .map((r) => {
+              const start = Math.max(r.left, 0);
+              const end = Math.min(r.right, window.innerWidth);
+              return (start + end) / 2;
+            }),
+        );
+    // A little short of the wrap: at the wrap itself the first copy takes over,
+    // the same picture.
+    const NEAR_THE_END = 0.9;
+
+    test("Lighting shows its overlay when it comes round again", async ({ page }) => {
+      await seek(page, NEAR_THE_END);
+      const [x] = await copyOnScreen(page);
+      const card = await hoverAt(page, x!);
+      await expect(card.locator("p").first()).toHaveText("Lighting");
+      await expect(card.locator("xpath=..")).toHaveAttribute("data-copy");
+    });
+
+    test("every card of the second copy on screen shows its overlay", async ({ page }) => {
+      await seek(page, NEAR_THE_END);
+      const count = (await copyOnScreen(page)).length;
+      expect(count).toBeGreaterThan(1);
+      for (let index = 0; index < count; index += 1) {
+        await page.mouse.move(1, 1);
+        await seek(page, NEAR_THE_END);
+        const card = await hoverAt(page, (await copyOnScreen(page))[index]!);
+        await expect(card.locator("p").first()).toHaveText(
+          (await cards(page).nth(index).locator("p").first().textContent())!,
+        );
+        await expect(card.locator("xpath=..")).toHaveAttribute("data-copy");
+      }
+    });
+
+    test("a hover holds the drift there, as it does on the first copy", async ({ page }) => {
+      await seek(page, NEAR_THE_END);
+      await hoverAt(page, (await copyOnScreen(page))[1]!);
+      const [a, b] = await drift(page);
+      expect(a).toBe(b);
+    });
+
+    test("after a drag that lands on it, the next hover still works", async ({ page }) => {
+      // Dragged right, back through the pass, so it stays in the second copy.
+      await seek(page, NEAR_THE_END);
+      const box = (await strip(page).boundingBox())!;
+      const y = box.y + 20;
+      const width = page.viewportSize()!.width;
+      await page.mouse.move(width * 0.3, y);
+      await page.mouse.down();
+      await page.mouse.move(width * 0.5, y, { steps: 10 });
+      await page.mouse.up();
+      const [x] = await copyOnScreen(page);
+      const card = await hoverAt(page, x!);
+      await expect(card.locator("xpath=..")).toHaveAttribute("data-copy");
+    });
+
+    test("after a sideways trackpad swipe, the card under the pointer shows", async ({ page }) => {
+      await seek(page, 0.7);
+      const width = page.viewportSize()!.width;
+      await hoverAt(page, width * 0.5);
+      await page.mouse.wheel(600, 0);
+      await expect.poll(() => markedCards(page).count()).toBe(1);
+      await expect(markedCards(page).first().locator("> div")).toHaveCSS("opacity", "1");
+    });
+
+    test("its link opens, and Tab still never lands on it", async ({ page }) => {
+      await seek(page, NEAR_THE_END);
+      const [x] = await copyOnScreen(page);
+      const card = await hoverAt(page, x!);
+      const link = card.getByRole("link", { includeHidden: true });
+      await expect(link).toHaveAttribute("tabindex", "-1");
+      await link.click({ force: true });
+      await expect(page).toHaveURL(/\/solutions$/);
+    });
+  });
+
   test("hides each overlay until the card is hovered", async ({ page }) => {
     await page.mouse.move(0, 0);
     await expect(overlayOf(page, 2)).toHaveCSS("opacity", "0");

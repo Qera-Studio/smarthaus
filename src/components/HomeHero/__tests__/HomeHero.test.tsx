@@ -114,8 +114,24 @@ describe("HomeHero", () => {
       render(<HomeHero />);
       const [, copy] = lists();
       expect(copy).toHaveAttribute("aria-hidden", "true");
-      expect(copy).toHaveAttribute("inert");
       expect(copy).toHaveAttribute("data-copy");
+      const links = Array.from(copy!.querySelectorAll("a"));
+      expect(links).toHaveLength(HERO_CAROUSEL_ITEMS.length);
+      for (const link of links) expect(link).toHaveAttribute("tabindex", "-1");
+    });
+
+    it("leaves the second copy able to take the pointer: inert took its hover and links", () => {
+      render(<HomeHero />);
+      const [, copy] = lists();
+      expect(copy).not.toHaveAttribute("inert");
+    });
+
+    it("leaves the first copy's links in the tab order", () => {
+      render(<HomeHero />);
+      const [first] = lists();
+      for (const link of Array.from(first!.querySelectorAll("a"))) {
+        expect(link).not.toHaveAttribute("tabindex");
+      }
     });
 
     it("names the first copy as a list", () => {

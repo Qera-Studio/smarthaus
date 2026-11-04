@@ -44,7 +44,7 @@ const WHATSAPP_MESSAGE = "Hi, I'm interested in home automation for my villa.";
  */
 type Load = "first" | "eager" | "late";
 
-function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
+function Card({ item, load, copy }: { item: HeroCarouselItem; load: Load; copy?: boolean }) {
   return (
     <li className={styles.card}>
       <Image
@@ -62,7 +62,12 @@ function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
       <div className={styles.overlay}>
         <p className={styles.cardTitle}>{item.title}</p>
         <p className={styles.cardLine}>{item.line}</p>
-        <Button href={HERO_CAROUSEL_HREF} variant="inverse" size="sm">
+        <Button
+          href={HERO_CAROUSEL_HREF}
+          variant="inverse"
+          size="sm"
+          tabIndex={copy ? -1 : undefined}
+        >
           {item.cta}
         </Button>
       </div>
@@ -82,9 +87,10 @@ export const LEDE =
  * the screen.
  *
  * Server Component. The strip moves on a CSS animation over two copies of the
- * list; the second copy is inert and hidden from AT, so each card is read and
- * focused once, and so are the lead cards off the start of the track, which
- * only the opening ever brings on screen. Hover or focus inside the strip stops it (the stylesheet), and
+ * list; the second copy is hidden from AT and out of the tab order, so each
+ * card is read and focused once, and takes the pointer as the first does. The
+ * lead cards off the start of the track are inert, since only the opening ever
+ * brings them on screen. Hover or focus inside the strip stops it (the stylesheet), and
  * StripControls holds the pause button WCAG 2.2.2 asks for, and lets a mouse
  * drag or a trackpad swipe move the strip.
  * Under reduced motion the strip does not move and scrolls sideways instead.
@@ -139,9 +145,12 @@ export function HomeHero() {
               />
             ))}
           </ul>
-          <ul className={styles.list} aria-hidden="true" inert data-copy>
+          {/* Not inert: an inert element takes no pointer, so every card in this
+              copy lost its hover and its link once the loop brought it round
+              (found 2026-11-04). Hidden from AT, and out of the tab order. */}
+          <ul className={styles.list} aria-hidden="true" data-copy>
             {HERO_CAROUSEL_ITEMS.map((item) => (
-              <Card key={item.id} item={item} load="late" />
+              <Card key={item.id} item={item} load="late" copy />
             ))}
           </ul>
           <ul
