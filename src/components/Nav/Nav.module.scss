@@ -10,6 +10,14 @@
   initial-value: 0;
 }
 
+// The gap between the bar and the panel, as the same layer sees it. Registered
+// for the same reason: it closes on the panel's own clock.
+@property --nav-reach-gap {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
 @layer components {
   // Marks the top of the document. Once it leaves the viewport the nav is
   // "stuck" and picks up the glass. Zero-height so it occupies no space.
@@ -74,6 +82,9 @@
     // the top of a page is a decisive move and the bar should already be there;
     // collapsing happens while reading and should not pull the eye.
     --nav-expand-back-duration: 320ms;
+    // How long the capsule's glass and the open panel's own take to cross as
+    // the bar changes state: whichever way the bar is going.
+    --nav-glass-fade: var(--nav-expand-back-duration);
     // A symmetric in-out curve. Not --ease-in-out (0.45, 0, 0.55, 1), which is
     // gentler than this over the middle and leaves the long shrink feeling
     // slack; this holds a firmer centre while still starting and ending at
@@ -736,6 +747,7 @@
       margin-inline: max(0px, calc((100% - var(--nav-stuck-size)) / 2));
       // The collapse is the slower of the two — see --nav-stuck-duration.
       transition-duration: var(--nav-stuck-duration);
+      --nav-glass-fade: var(--nav-stuck-duration);
       // No inset change here: the sticky inset is --nav-stuck-inset in both
       // states (see the base rule), and the margin that creates the gap is
       // reserved on the unstuck nav too. Adding either on stick would grow the
@@ -809,14 +821,31 @@
       // This is the CLOSED state, so these are the closing values: the
       // panel waits for its items to leave, then folds up, then hides. The
       // gap and the frame move with the bar's own shrink.
-      transition-property: grid-template-rows, translate, border-color, visibility;
+      //
+      // Its own glass, the last two, crosses with the capsule's as the bar
+      // changes state: on the clock of the capsule's fade (--nav-glass-fade).
+      //
+      // Both spellings of backdrop-filter, each with its own entry: the build
+      // adds the prefixed one to this list if it is not here, and every list
+      // after it then runs one short and wraps round to the first value (the
+      // panel's blur took the fold's clock, and cut at once for the keyboard).
+      transition-property:
+        grid-template-rows,
+        translate,
+        border-color,
+        visibility,
+        background-color,
+        -webkit-backdrop-filter,
+        backdrop-filter;
       transition-duration:
-        var(--nav-collapse-duration), var(--nav-stuck-duration), var(--nav-stuck-duration), 0s;
+        var(--nav-collapse-duration), var(--nav-stuck-duration), var(--nav-stuck-duration), 0s,
+        var(--nav-glass-fade), var(--nav-glass-fade), var(--nav-glass-fade);
       transition-delay:
         var(--nav-collapse-hold), 0s, 0s,
-        calc(var(--nav-collapse-hold) + var(--nav-collapse-duration));
+        calc(var(--nav-collapse-hold) + var(--nav-collapse-duration)), 0s, 0s, 0s;
       transition-timing-function:
-        var(--nav-expand-ease), var(--nav-stuck-ease), var(--nav-stuck-ease), linear;
+        var(--nav-expand-ease), var(--nav-stuck-ease), var(--nav-stuck-ease), linear,
+        var(--nav-stuck-ease), var(--nav-stuck-ease), var(--nav-stuck-ease);
 
       // Bridges the gap to the bar, so the pointer crossing it stays inside
       // the Solutions item. Only while the panel shows: hidden, it takes no
@@ -834,14 +863,17 @@
       grid-template-rows: 1fr;
       visibility: visible;
       transition-duration:
-        var(--nav-expand-duration), var(--nav-stuck-duration), var(--nav-stuck-duration), 0s;
+        var(--nav-expand-duration), var(--nav-stuck-duration), var(--nav-stuck-duration), 0s,
+        var(--nav-glass-fade), var(--nav-glass-fade), var(--nav-glass-fade);
       transition-delay: 0s;
     }
 
     // Opened by the keyboard: no expansion and no stagger to wait for. The
     // gap and the frame still move with the bar's shrink.
     .nav[data-menu="focus"] .menu {
-      transition-duration: 0s, var(--nav-stuck-duration), var(--nav-stuck-duration), 0s;
+      transition-duration:
+        0s, var(--nav-stuck-duration), var(--nav-stuck-duration), 0s, var(--nav-glass-fade),
+        var(--nav-glass-fade), var(--nav-glass-fade);
     }
 
     .nav[data-menu="focus"] .menuItem,
@@ -892,16 +924,25 @@
       -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
       backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
       opacity: 0;
-      // How far down over the panel, 0 to 1 (registered below so it
+      // How far down over the panel, 0 to 1 (registered above so it
       // interpolates). The foot and the clip both read it, so they agree on
       // where the bar ends in every frame.
       --nav-reach: 0;
-      inset-block-end: calc(-1 * var(--nav-reach) * (2px + var(--nav-menu-block, 0px)));
+      --nav-reach-gap: var(--nav-menu-gap);
+      // Exactly the panel's foot, every frame of the fold: its frame (2px, a
+      // constant, on from the first moment and off at the last) and the gap,
+      // which do not scale with the fold, and its height, which does. Scaling
+      // the lot left the glass up to 2px short of the panel as it closed.
+      --nav-reach-block: calc(
+        min(1, var(--nav-reach) * 5000) * (2px + var(--nav-reach-gap)) + var(--nav-reach) *
+          var(--nav-menu-block, 0px)
+      );
+      inset-block-end: calc(-1 * var(--nav-reach-block));
       // Below the bar's foot the layer is only the panel's width. Joined,
       // the two are the same width and this is the whole box; but a menu
       // open on the tall bar joins it while the bar is still shrinking, and
       // the reach then hung the bar's full width of glass under it.
-      --nav-reach-foot: calc(100% - var(--nav-reach) * (2px + var(--nav-menu-block, 0px)));
+      --nav-reach-foot: calc(100% - var(--nav-reach-block));
       --nav-reach-start: max(0px, calc(50% - var(--nav-stuck-size) / 2 + 1px));
       --nav-reach-end: min(100%, calc(50% + var(--nav-stuck-size) / 2 - 1px));
       clip-path: polygon(
@@ -916,29 +957,39 @@
       );
       // This is the closed, unstuck state: the glass fades out on the bar's
       // way back, and the reach over the panel folds with the panel.
-      transition-property: opacity, --nav-reach;
-      transition-duration: var(--nav-expand-back-duration), var(--nav-collapse-duration);
-      transition-delay: 0s, var(--nav-collapse-hold);
-      transition-timing-function: var(--nav-stuck-ease), var(--nav-expand-ease);
+      transition-property: opacity, --nav-reach, --nav-reach-gap;
+      transition-duration:
+        var(--nav-glass-fade), var(--nav-collapse-duration), var(--nav-stuck-duration);
+      transition-delay: 0s, var(--nav-collapse-hold), 0s;
+      transition-timing-function:
+        var(--nav-stuck-ease), var(--nav-expand-ease), var(--nav-stuck-ease);
     }
 
     .nav[data-stuck]::after {
       opacity: 1;
-      transition-duration: var(--nav-stuck-duration), var(--nav-collapse-duration);
+      --nav-reach-gap: 0px;
     }
 
     // Down over the panel: its two clear frame rows at the seam and its open
     // height, which NavShell measures (--nav-menu-block). On the panel's own
     // duration, curve and delay, so the glass and the panel's rows move as
     // one: both interpolate a length on the same clock.
-    .nav[data-stuck][data-menu]::after {
+    //
+    // In both states of the bar, faded out on the tall one. Reaching only
+    // once stuck was the curtain (found 2026-11-04): a bar collapsing over an
+    // open menu dropped the panel's glass at once and grew the capsule's down
+    // from nothing on this slow clock, so the panel stood clear for half a
+    // second, the title sharp through it, with the tint's edge sliding down.
+    // This way the state change moves nothing: the two glasses only cross.
+    .nav[data-menu]::after {
       --nav-reach: 1;
-      transition-duration: var(--nav-stuck-duration), var(--nav-expand-duration);
+      transition-duration:
+        var(--nav-glass-fade), var(--nav-expand-duration), var(--nav-stuck-duration);
       transition-delay: 0s;
     }
 
     .nav[data-menu="focus"]::after {
-      transition-duration: var(--nav-stuck-duration), 0s;
+      transition-duration: var(--nav-glass-fade), 0s, var(--nav-stuck-duration);
     }
 
     // Joined, the panel has no glass of its own: the capsule's covers it.

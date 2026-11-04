@@ -163,21 +163,101 @@ describe("Nav.module.scss: the Solutions menu", () => {
 
       test("fades in with the capsule and out on the way back, as the glass did", () => {
         expect(rule(".nav::after", desktop())).toMatch(/opacity:\s*0/);
-        const stuck = rule(".nav[data-stuck]::after", desktop());
-        expect(stuck).toMatch(/opacity:\s*1/);
-        expect(stuck).toMatch(/transition-duration:\s*var\(--nav-stuck-duration\)/);
+        expect(rule(".nav[data-stuck]::after", desktop())).toMatch(/opacity:\s*1/);
+        // Whichever way the bar is going: --nav-glass-fade is the bar's own.
         expect(rule(".nav::after", desktop())).toMatch(
-          /transition-duration:\s*var\(--nav-expand-back-duration\)/,
+          /transition-duration:\s*var\(--nav-glass-fade\)/,
+        );
+        expect(rule(".nav[data-stuck]", desktop())).toMatch(
+          /--nav-glass-fade:\s*var\(--nav-stuck-duration\)/,
+        );
+        expect(css).toMatch(/--nav-glass-fade:\s*var\(--nav-expand-back-duration\)/);
+      });
+
+      test("reaches down over the open panel in BOTH states of the bar", () => {
+        // Only once stuck, it was a curtain (2026-11-04): a bar collapsing over
+        // an open menu dropped the panel's glass at once and grew this down
+        // from nothing, with the panel standing clear until it arrived.
+        expect(rule(".nav[data-menu]::after", desktop())).toMatch(/--nav-reach:\s*1/);
+        expect(() => rule(".nav[data-stuck][data-menu]::after", desktop())).toThrow();
+        const layer = rule(".nav::after", desktop());
+        expect(layer).toMatch(/--nav-reach:\s*0/);
+        expect(layer).toMatch(/inset-block-end:\s*calc\(-1 \* var\(--nav-reach-block\)\)/);
+      });
+
+      test("its foot is the panel's foot in every frame of the fold", () => {
+        // The frame and the gap do not scale with the fold, only the height
+        // does. Scaling all three left the glass up to 2px short (2026-11-04).
+        const reach = rule(".nav::after", desktop()).match(
+          /--nav-reach-block:\s*calc\(([^;]*)\);/,
+        )?.[1];
+        expect(reach?.replace(/\s+/g, " ").trim()).toBe(
+          "min(1, var(--nav-reach) * 5000) * (2px + var(--nav-reach-gap)) + var(--nav-reach) * var(--nav-menu-block, 0px)",
+        );
+        const foot = (r: number, gap: number, block: number) =>
+          Math.min(1, r * 5000) * (2 + gap) + r * block;
+        const panel = (r: number, gap: number, block: number) => 2 + gap + r * block;
+        for (const r of [0.001, 0.01, 0.05, 0.25, 0.5, 0.75, 1]) {
+          for (const gap of [0, 4, 8]) expect(foot(r, gap, 360)).toBeCloseTo(panel(r, gap, 360));
+        }
+        // And nothing at all once it is shut.
+        expect(foot(0, 8, 360)).toBe(0);
+      });
+
+      test("the gap in that sum closes with the panel's own translate", () => {
+        const layer = rule(".nav::after", desktop());
+        expect(layer).toMatch(/--nav-reach-gap:\s*var\(--nav-menu-gap\)/);
+        expect(rule(".nav[data-stuck]::after", desktop())).toMatch(/--nav-reach-gap:\s*0px/);
+        const registered = css.match(/@property --nav-reach-gap \{([^}]*)\}/);
+        expect(registered?.[1]).toMatch(/syntax:\s*"<length>"/);
+        expect(registered?.[1]).toMatch(/inherits:\s*false/);
+        // The third transition: the same duration and curve as .menu's translate.
+        expect(layer).toMatch(/transition-property:\s*opacity, --nav-reach, --nav-reach-gap/);
+        expect(layer).toMatch(
+          /transition-duration:\s*var\(--nav-glass-fade\), var\(--nav-collapse-duration\), var\(--nav-stuck-duration\)/,
         );
       });
 
-      test("reaches down over the open panel, both seam rows included", () => {
-        expect(rule(".nav[data-stuck][data-menu]::after", desktop())).toMatch(/--nav-reach:\s*1/);
-        const layer = rule(".nav::after", desktop());
-        expect(layer).toMatch(/--nav-reach:\s*0/);
-        expect(layer).toMatch(
-          /inset-block-end:\s*calc\(-1 \* var\(--nav-reach\) \* \(2px \+ var\(--nav-menu-block, 0px\)\)\)/,
+      test("the panel's own glass crosses with the capsule's, on the same clock", () => {
+        const panel = rule(".menu", desktop());
+        expect(panel).toMatch(
+          /transition-property:\s*grid-template-rows, translate, border-color, visibility, background-color, -webkit-backdrop-filter, backdrop-filter/,
         );
+        const fade = /var\(--nav-glass-fade\), var\(--nav-glass-fade\), var\(--nav-glass-fade\)/;
+        expect(panel).toMatch(fade);
+        for (const state of [".nav[data-menu] .menu", ".nav[data-menu=focus] .menu"]) {
+          expect(rule(state, desktop())).toMatch(fade);
+        }
+      });
+
+      test("every timing list has one entry per property, or it wraps round", () => {
+        // The build adds a prefixed backdrop-filter if the list lacks one, and
+        // a short list starts again from its first value (2026-11-04).
+        const count = (list?: string) => {
+          let depth = 0;
+          let commas = 0;
+          for (const c of list ?? "") {
+            if (c === "(") depth += 1;
+            if (c === ")") depth -= 1;
+            if (c === "," && depth === 0) commas += 1;
+          }
+          return commas + 1;
+        };
+        const entry = (block: string, name: string) =>
+          block.match(new RegExp(`${name}:\\s*([^;]*);`))?.[1];
+        const panel = rule(".menu", desktop());
+        const properties = count(entry(panel, "transition-property"));
+        expect(properties).toBe(7);
+        for (const name of [
+          "transition-duration",
+          "transition-delay",
+          "transition-timing-function",
+        ]) {
+          expect(count(entry(panel, name))).toBe(properties);
+        }
+        for (const state of [".nav[data-menu] .menu", ".nav[data-menu=focus] .menu"]) {
+          expect(count(entry(rule(state, desktop()), "transition-duration"))).toBe(properties);
+        }
       });
 
       test("the reach is a registered number, so it interpolates", () => {
@@ -193,9 +273,7 @@ describe("Nav.module.scss: the Solutions menu", () => {
         // shrinking; unclipped, the reach hung the bar's full width of glass
         // under it (2026-10-28).
         const layer = rule(".nav::after", desktop());
-        expect(layer).toMatch(
-          /--nav-reach-foot:\s*calc\(100% - var\(--nav-reach\) \* \(2px \+ var\(--nav-menu-block, 0px\)\)\)/,
-        );
+        expect(layer).toMatch(/--nav-reach-foot:\s*calc\(100% - var\(--nav-reach-block\)\)/);
         expect(layer).toMatch(
           /--nav-reach-start:\s*max\(0px, calc\(50% - var\(--nav-stuck-size\) \/ 2 \+ 1px\)\)/,
         );
@@ -210,14 +288,14 @@ describe("Nav.module.scss: the Solutions menu", () => {
       test("on the panel's own clock both ways, so the two move as one", () => {
         const closed = rule(".nav::after", desktop());
         expect(closed).toMatch(/transition-property:\s*opacity, --nav-reach/);
-        expect(closed).toMatch(/transition-delay:\s*0s, var\(--nav-collapse-hold\)/);
+        expect(closed).toMatch(/transition-delay:\s*0s, var\(--nav-collapse-hold\), 0s/);
         expect(closed).toMatch(
-          /transition-timing-function:\s*var\(--nav-stuck-ease\), var\(--nav-expand-ease\)/,
+          /transition-timing-function:\s*var\(--nav-stuck-ease\), var\(--nav-expand-ease\), var\(--nav-stuck-ease\)/,
         );
         expect(closed).toMatch(/var\(--nav-collapse-duration\)/);
-        const open = rule(".nav[data-stuck][data-menu]::after", desktop());
+        const open = rule(".nav[data-menu]::after", desktop());
         expect(open).toMatch(
-          /transition-duration:\s*var\(--nav-stuck-duration\), var\(--nav-expand-duration\)/,
+          /transition-duration:\s*var\(--nav-glass-fade\), var\(--nav-expand-duration\), var\(--nav-stuck-duration\)/,
         );
         expect(open).toMatch(/transition-delay:\s*0s/);
         // The panel's rows: the same values.
@@ -227,7 +305,7 @@ describe("Nav.module.scss: the Solutions menu", () => {
 
       test("and at once when the keyboard opened it, as the panel does", () => {
         expect(rule(".nav[data-menu=focus]::after", desktop())).toMatch(
-          /transition-duration:\s*var\(--nav-stuck-duration\), 0s/,
+          /transition-duration:\s*var\(--nav-glass-fade\), 0s, var\(--nav-stuck-duration\)/,
         );
       });
 

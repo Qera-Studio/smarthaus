@@ -46,6 +46,96 @@ test.describe("from lg", () => {
     await expectHydrated(page);
   });
 
+  /**
+   * Every frame for `ms`: where the capsule's glass ends and the panel ends,
+   * how far the glass reaches, and how much of each glass shows.
+   */
+  const frames = (page: Page, ms: number) =>
+    page.evaluate(async (duration) => {
+      const header = document.querySelector("header")!;
+      const panel = header.querySelector("[data-menu-panel]")!;
+      const out: { glass: number; panel: number; reach: number; opacity: number; own: string }[] =
+        [];
+      const end = performance.now() + duration;
+      while (performance.now() < end) {
+        const after = getComputedStyle(header, "::after");
+        const barFoot = header.getBoundingClientRect().bottom;
+        out.push({
+          glass: barFoot - parseFloat(after.insetBlockEnd),
+          panel: panel.getBoundingClientRect().bottom,
+          reach: Number(after.getPropertyValue("--nav-reach")),
+          opacity: Number(after.opacity),
+          own: getComputedStyle(panel).backdropFilter,
+        });
+        await new Promise(requestAnimationFrame);
+      }
+      return out;
+    }, ms);
+
+  test.describe("a bar collapsing over an open menu", () => {
+    const openThenScroll = async (page: Page) => {
+      await trigger(page).focus();
+      await expectOpen(page);
+      await page.evaluate(() => window.scrollTo({ top: 400, behavior: "instant" }));
+    };
+
+    test("no curtain: the glass already reaches the panel's foot at every frame", async ({
+      page,
+    }) => {
+      await openThenScroll(page);
+      const seen = await frames(page, 700);
+      expect(seen.length).toBeGreaterThan(5);
+      for (const frame of seen) {
+        expect(frame.reach).toBe(1);
+        // Within a frame's rounding of where the panel ends.
+        expect(Math.abs(frame.glass - frame.panel)).toBeLessThan(1.5);
+      }
+    });
+
+    test("the panel is never clear: one glass or the other shows throughout", async ({ page }) => {
+      await openThenScroll(page);
+      const seen = await frames(page, 700);
+      // The capsule's fades in as the panel's own lets go.
+      expect(seen.at(-1)!.opacity).toBe(1);
+      expect(seen.at(-1)!.own).toBe("none");
+      for (const frame of seen) {
+        const blur = Number(frame.own.match(/blur\(([\d.]+)px\)/)?.[1] ?? 0);
+        expect(frame.opacity > 0.2 || blur > 2).toBe(true);
+      }
+    });
+
+    test("and back: the bar expanding under an open menu moves nothing either", async ({
+      page,
+    }) => {
+      await openThenScroll(page);
+      await frames(page, 700);
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+      for (const frame of await frames(page, 600)) {
+        expect(frame.reach).toBe(1);
+        expect(Math.abs(frame.glass - frame.panel)).toBeLessThan(1.5);
+      }
+    });
+  });
+
+  test("closing, the glass and the panel fold as one, with no gap between them", async ({
+    page,
+  }) => {
+    await page.evaluate(() => window.scrollTo({ top: 400, behavior: "instant" }));
+    await expect(header(page)).toHaveAttribute("data-stuck", "true");
+    // By coordinates: hover() can scroll a sticky bar's page back to the top,
+    // and on the tall bar this glass is not showing at all.
+    const link = (await trigger(page).boundingBox())!;
+    await page.mouse.move(link.x + link.width / 2, link.y + link.height / 2);
+    await expectOpen(page);
+    await page.mouse.move(40, 800);
+    await expect(header(page)).not.toHaveAttribute("data-menu");
+    const seen = await frames(page, 1_000);
+    const folding = seen.filter((frame) => frame.reach > 0 && frame.reach < 1);
+    expect(folding.length).toBeGreaterThan(2);
+    await expect(header(page)).toHaveAttribute("data-stuck", "true");
+    for (const frame of folding) expect(Math.abs(frame.glass - frame.panel)).toBeLessThan(1.5);
+  });
+
   test("hovering Solutions opens the eight solutions under the bar", async ({ page }) => {
     await expect(panel(page)).toBeHidden();
     await trigger(page).hover();
