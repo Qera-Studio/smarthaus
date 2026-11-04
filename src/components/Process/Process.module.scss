@@ -1,5 +1,6 @@
 @use "../../styles/variables" as *;
 @use "../../styles/mixins" as *;
+@use "sass:math";
 
 // The "Our Process" stack.
 //
@@ -28,6 +29,10 @@
 // Below this viewport height the copy and a picture no longer share one
 // screen, so the sheets stop pinning.
 $stack-min-block: 32rem;
+
+// How much taller each picture is than its frame, for the parallax: the same
+// depth as the hero strip's photographs.
+$parallax-spare: 35%;
 
 @layer blocks {
   .process {
@@ -93,11 +98,34 @@ $stack-min-block: 32rem;
       // hide each sheet's foot under the URL bar, and dvh reflows as that bar
       // collapses.
       block-size: 100svh;
-      overflow: hidden;
+      // clip, not hidden, here and on the frame: a box with overflow: hidden
+      // is a scroll container, and view() below would watch it, not the page.
+      overflow: clip;
 
       .frame {
         flex: 1 1 0;
         aspect-ratio: auto;
+        overflow: clip;
+      }
+
+      // Each picture moves more slowly than its sheet as the sheet rises,
+      // sliding down through its frame, as the hero strip's do. Scroll-driven,
+      // so no script. Where the timeline is not supported (Firefox), it sits
+      // still at the frame's own size.
+      @supports (animation-timeline: view()) {
+        .image {
+          block-size: calc(100% + #{$parallax-spare});
+          animation-name: process-parallax;
+          animation-timing-function: linear;
+          animation-fill-mode: both;
+          animation-timeline: view();
+          // One screen of scroll, by length: a pinned box's timeline stretches
+          // over all the time it stays pinned, and a plain `entry` left the
+          // picture all but still. Browsers start it part of the way up the
+          // rise, so it runs on while the sheet is pinned, until the next has
+          // covered it.
+          animation-range: entry 0% entry 100svh;
+        }
       }
 
       // Below lg the nav floats over the bottom of the screen, so the copy
@@ -271,6 +299,17 @@ $stack-min-block: 32rem;
         grid-column: 2 / span 3;
         grid-row: 2;
       }
+    }
+  }
+
+  // From the spare showing at the foot to none: as a share of its own height.
+  @keyframes process-parallax {
+    from {
+      translate: 0 math.div($parallax-spare, 100% + $parallax-spare) * -100%;
+    }
+
+    to {
+      translate: 0 0;
     }
   }
 }

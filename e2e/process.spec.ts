@@ -73,6 +73,57 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
+test.describe("the pictures' parallax", () => {
+  test.beforeEach(async ({ page }) => {
+    const supported = await page.evaluate(() => CSS.supports("animation-timeline: view()"));
+    test.skip(!supported, "no scroll timelines in this engine: the pictures sit still");
+  });
+
+  /** A picture's top against its frame's, with its sheet at `rise` of the way on. */
+  const at = async (page: Page, sheet: number, rise: number) =>
+    page.evaluate(
+      async ({ sheet, rise }) => {
+        const li = document.querySelectorAll("[data-process] ol > li")[sheet] as HTMLElement;
+        const list = li.parentElement!;
+        // Sticky boxes report where they are stuck, so measure from the list.
+        const top = list.getBoundingClientRect().top + window.scrollY;
+        const start = top + sheet * li.offsetHeight - innerHeight;
+        window.scrollTo({ top: start + rise * innerHeight, behavior: "instant" });
+        await new Promise(requestAnimationFrame);
+        await new Promise(requestAnimationFrame);
+        const image = li.querySelector("img")!;
+        const frame = image.parentElement!;
+        return {
+          offset: image.getBoundingClientRect().top - frame.getBoundingClientRect().top,
+          spare: image.getBoundingClientRect().height - frame.getBoundingClientRect().height,
+          foot: image.getBoundingClientRect().bottom - frame.getBoundingClientRect().bottom,
+        };
+      },
+      { sheet, rise },
+    );
+
+  test("each picture slides down through its frame as its sheet rises", async ({ page }) => {
+    // Two sheets, one early and one later in the stack, whose timelines differ.
+    for (const sheet of [1, 2]) {
+      const early = await at(page, sheet, 0.9);
+      const later = await at(page, sheet, 1.4);
+      // Visibly, on the last of the rise and while the sheet is pinned.
+      expect(later.offset - early.offset).toBeGreaterThan(15);
+      // At rest in its place by the time the next sheet has covered it.
+      const rest = await at(page, sheet, 2.05);
+      expect(Math.abs(rest.offset)).toBeLessThan(2);
+    }
+  });
+
+  test("no frame ever shows past its picture", async ({ page }) => {
+    for (const rise of [0.2, 0.5, 0.8, 1]) {
+      const { offset, foot } = await at(page, 1, rise);
+      expect(offset).toBeLessThanOrEqual(0.5);
+      expect(foot).toBeGreaterThanOrEqual(-0.5);
+    }
+  });
+});
+
 test("renders six sheets with their headings in order", async ({ page }) => {
   await expect(sheets(page)).toHaveCount(6);
   await expect(section(page).getByRole("heading", { level: 3 })).toHaveText([

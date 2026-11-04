@@ -67,9 +67,54 @@ describe("the stack's mechanism", () => {
   // jsdom applies no CSS; e2e/process.spec.ts measures the stack in a browser.
   const scss = readFileSync(join(dir, "Process.module.scss"), "utf8");
 
-  it("is a sticky sheet per page, with no scroll timeline or animation", () => {
+  it("is a sticky sheet per page: the stack itself needs no timeline", () => {
     expect(scss).toMatch(/position:\s*sticky/);
-    expect(scss).not.toMatch(/animation|view-timeline|timeline-scope|@keyframes/);
+    expect(scss).not.toMatch(/view-timeline|timeline-scope/);
+    // The one animation is the pictures' parallax.
+    expect(scss.match(/animation-name:/g)).toHaveLength(1);
+    expect(scss.match(/@keyframes/g)).toHaveLength(1);
+  });
+
+  describe("the pictures' parallax", () => {
+    const stack = () => {
+      const start = scss.indexOf("@media (prefers-reduced-motion: no-preference)");
+      return scss.slice(start, scss.indexOf("// --- Sheet content"));
+    };
+
+    it("only in the stack, on a browser with scroll timelines", () => {
+      const block = stack();
+      const at = block.indexOf("@supports (animation-timeline: view())");
+      expect(at).toBeGreaterThan(-1);
+      expect(block.slice(at)).toMatch(/animation-name:\s*process-parallax/);
+    });
+
+    it("runs on each frame's own way onto the screen", () => {
+      expect(stack()).toMatch(/animation-timeline:\s*view\(\)/);
+      expect(stack()).toMatch(/animation-range:\s*entry 0% entry 100svh/);
+      expect(stack()).toMatch(/animation-timing-function:\s*linear/);
+    });
+
+    it("has neither sheet nor frame be a scroll container, or view() would watch them", () => {
+      // overflow: hidden is a scroll container. Both clip, in the stack.
+      const rules = stack().replace(/\/\/.*$/gm, "");
+      expect(rules).not.toMatch(/overflow:\s*hidden/);
+      expect(rules.match(/overflow:\s*clip/g)).toHaveLength(2);
+    });
+
+    it("is the hero strip's depth, so the page has one parallax", () => {
+      const hero = readFileSync(join(__dirname, "../../HomeHero/HomeHero.module.scss"), "utf8");
+      const spare = (source: string, name: string) =>
+        source.match(new RegExp(`\\$${name}:\\s*(\\d+)%`))?.[1];
+      expect(spare(scss, "parallax-spare")).toBe("35");
+      expect(spare(scss, "parallax-spare")).toBe(spare(hero, "hero-parallax-spare"));
+    });
+
+    it("travels exactly the spare, so no frame ever shows past its picture", () => {
+      expect(stack()).toMatch(/block-size:\s*calc\(100% \+ #\{\$parallax-spare\}\)/);
+      expect(scss).toMatch(
+        /translate:\s*0 math\.div\(\$parallax-spare, 100% \+ \$parallax-spare\) \* -100%/,
+      );
+    });
   });
 
   it("pins only with motion allowed and a screen tall enough to hold a sheet", () => {
