@@ -89,6 +89,22 @@
         inset-inline-start: 0;
         color: var(--color-text-primary);
       }
+
+      // Motion blur (Shivanshu, 2026-11-04): hazy and soft while the digits run
+      // fast, in focus as they settle. As long as ROLL_MS, on the same fast
+      // start, so the blur falls with their speed.
+      &[data-rolling]::after {
+        animation-name: stats-roll-blur;
+        animation-duration: 1000ms;
+        animation-timing-function: var(--ease-out);
+      }
+    }
+  }
+
+  @keyframes stats-roll-blur {
+    from {
+      opacity: 0.5;
+      filter: blur(#{$space-2});
     }
   }
 

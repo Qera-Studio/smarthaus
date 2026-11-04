@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { act, render, screen } from "@testing-library/react";
 import { StrictMode } from "react";
 
@@ -89,14 +92,29 @@ describe("RollingFigures", () => {
     }
     expect([...seen].sort((a, b) => a - b)).toEqual(seen);
     expect(Math.max(...seen)).toBeLessThanOrEqual(150);
-    // Past half of it inside the first fifth of the time.
-    expect(seen[Math.floor(seen.length / 5)]).toBeGreaterThan(75);
+    // Close on half of it inside the first fifth of the time: 1 - 0.8 cubed.
+    expect(seen[Math.floor(seen.length / 5)]).toBeGreaterThan(60);
   });
 
-  it("ends with the attribute gone, leaving the real figure, in about 1.4s", () => {
+  it("blurs only while it runs: not waiting at zero, and not once it has ended", () => {
+    setup();
+    expect(figure("150+")).not.toHaveAttribute("data-rolling");
+    enter();
+    expect(figure("150+")).toHaveAttribute("data-rolling");
+    expect(figure("90%")).toHaveAttribute("data-rolling");
+    advance(ROLL_MS + ROLL_STEP_MS);
+    expect(figure("150+")).not.toHaveAttribute("data-rolling");
+  });
+
+  it("runs its blur for exactly as long as the roll", () => {
+    const scss = readFileSync(join(__dirname, "../Stats.module.scss"), "utf8");
+    expect(scss).toContain(`animation-duration: ${ROLL_MS}ms`);
+  });
+
+  it("ends with the attribute gone, leaving the real figure, in about a second", () => {
     setup();
     enter();
-    expect(ROLL_MS).toBe(1400);
+    expect(ROLL_MS).toBe(1000);
     advance(ROLL_MS + ROLL_STEP_MS);
     expect(figure("150+")).not.toHaveAttribute("data-roll");
     expect(figure("90%")).not.toHaveAttribute("data-roll");

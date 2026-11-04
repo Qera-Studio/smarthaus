@@ -102,10 +102,9 @@ $hero-lede-words: 24;
     display: flex;
     flex: none;
     flex-direction: column;
-    gap: $space-1;
+    gap: $space-2;
     list-style: none;
-    // 5% over the small step (Shivanshu, 2026-11-04); the marks follow in em.
-    font-size: calc(var(--font-size-sm) * 1.05);
+    font-size: var(--font-size-sm);
     line-height: $line-height-normal;
     // At 70% (2026-10-28), as the contact bar is. The colour, not opacity, so
     // the marks (currentcolor) go with it: 6.4:1 on brown-100.

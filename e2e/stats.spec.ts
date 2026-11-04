@@ -68,6 +68,27 @@ test.describe("the figures' roll", () => {
     expect(style.drawnInk).not.toBe(style.ink);
   });
 
+  test("the running digits are hazy and blurred, and end in focus", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectHydrated(page);
+    await expect.poll(() => roll(page)).toBe("0+");
+    await first(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await expect(first(page)).toHaveAttribute("data-rolling", "");
+    const blur = await first(page).evaluate((el) => {
+      const [animation] = el.getAnimations({ subtree: true });
+      animation!.pause();
+      animation!.currentTime = 0;
+      const s = getComputedStyle(el, "::after");
+      const seen = { filter: s.filter, opacity: s.opacity };
+      animation!.play();
+      return seen;
+    });
+    expect(blur.filter).toBe("blur(8px)");
+    expect(blur.opacity).toBe("0.5");
+    await expect(first(page)).not.toHaveAttribute("data-rolling", "", { timeout: 4_000 });
+  });
+
   test("a print of the page gets the real figures", async ({ page }) => {
     await page.goto("/");
     await page.evaluate(() => window.scrollTo(0, 0));

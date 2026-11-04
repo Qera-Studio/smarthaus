@@ -73,6 +73,14 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
+test("no sheet's shadow reaches the page beside the stack", async ({ page }) => {
+  await page.goto("/");
+  const clip = await page
+    .locator("[data-process] ol")
+    .evaluate((el) => getComputedStyle(el).overflowX);
+  expect(clip).toBe("clip");
+});
+
 test.describe("the pictures' parallax", () => {
   test.beforeEach(async ({ page }) => {
     const supported = await page.evaluate(() => CSS.supports("animation-timeline: view()"));

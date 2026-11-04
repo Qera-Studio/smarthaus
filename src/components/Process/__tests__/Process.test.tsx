@@ -101,6 +101,11 @@ describe("the stack's mechanism", () => {
       expect(rules.match(/overflow:\s*clip/g)).toHaveLength(2);
     });
 
+    it("keeps the sheets' shadows faint, and off the page either side of the stack", () => {
+      expect(scss).toMatch(/box-shadow:\s*0 \(-\$space-2\) \$space-8 rgba\(\$brown-950, 0\.2\)/);
+      expect(scss.match(/\.sheets\s*\{[^}]*\}/)?.[0]).toMatch(/overflow:\s*clip/);
+    });
+
     it("is a tenth shallower than the hero strip's", () => {
       const hero = readFileSync(join(__dirname, "../../HomeHero/HomeHero.module.scss"), "utf8");
       const spare = (source: string, name: string) =>

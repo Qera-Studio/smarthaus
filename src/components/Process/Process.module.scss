@@ -58,6 +58,11 @@ $parallax-spare: 22.5%;
     // gives the gutter back as padding. A token cancelled by name, as the
     // footer does.
     margin-inline: calc(-1 * var(--page-gutter));
+    // Keeps each sheet's shadow on the sheets. On a screen wider than the
+    // content column the page shows either side, and six shadows stacked up on
+    // it, darkest by the last step (found 2026-11-04). clip, not hidden: a
+    // scroll container would take the sheets' sticky and view() with it.
+    overflow: clip;
   }
 
   .sheet {
@@ -69,8 +74,9 @@ $parallax-spare: 22.5%;
     background-color: var(--process-sheet);
     // The top edge is what shows as a sheet slides over the one below it.
     border-block-start: 1px solid $brown-800;
-    // Cast upward, onto the sheet it is covering.
-    box-shadow: 0 (-$space-4) $space-12 rgba($brown-950, 0.6);
+    // Cast upward, onto the sheet it is covering. Faint (Shivanshu, 2026-11-04):
+    // at 60% it blacked out the foot of the picture under it.
+    box-shadow: 0 (-$space-2) $space-8 rgba($brown-950, 0.2);
 
     // Nothing dark under the first one: the shadow would smudge the light
     // section above.

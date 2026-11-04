@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 
-/** How long a figure takes to roll up from nothing, and how often it changes. */
-export const ROLL_MS = 1400;
+/**
+ * How long a figure takes to roll up from nothing, and how often it changes.
+ * The stylesheet's motion blur (.value[data-rolling]) runs the same length.
+ */
+export const ROLL_MS = 1000;
 export const ROLL_STEP_MS = 33;
 
 /**
@@ -12,7 +15,7 @@ export const ROLL_STEP_MS = 33;
  *
  * The figure's real text is never touched. The roll is one attribute,
  * data-roll, which the stylesheet draws over the text while it is there and
- * this takes off at the end. A timer, not requestAnimationFrame, which CLAUDE.md
+ * this takes off at the end; data-rolling blurs it while it runs. A timer, not requestAnimationFrame, which CLAUDE.md
  * keeps to its listed exceptions; the rest of the motion stack cannot count.
  * Never under reduced motion, and without JavaScript the numbers simply stand.
  */
@@ -36,12 +39,17 @@ export function RollingFigures({
         return { figure, target: Number(count), suffix };
       },
     );
-    const finish = () => figures.forEach(({ figure }) => figure.removeAttribute("data-roll"));
+    const finish = () =>
+      figures.forEach(({ figure }) => {
+        figure.removeAttribute("data-roll");
+        figure.removeAttribute("data-rolling");
+      });
 
     let timer = 0;
     const seen = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       seen.disconnect();
+      figures.forEach(({ figure }) => figure.setAttribute("data-rolling", ""));
       const start = performance.now();
       timer = window.setInterval(() => {
         const progress = Math.min((performance.now() - start) / ROLL_MS, 1);

@@ -328,7 +328,8 @@ describe("HomeHero.module.scss", () => {
 
     test("the proofs are set as the old lines were: small, 70%, no weight, no outline", () => {
       const proof = rule(".proof");
-      expect(proof).toMatch(/font-size:\s*calc\(var\(--font-size-sm\) \* 1\.05\)/);
+      expect(proof).toMatch(/font-size:\s*var\(--font-size-sm\)/);
+      expect(proof).toMatch(/(^|[;\s])gap:\s*8px/);
       expect(proof).toMatch(
         /color:\s*color-mix\(in srgb, var\(--color-text-primary\) 70%, transparent\)/,
       );
