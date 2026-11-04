@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import {
   DRAG_MIN_PX,
+  DRIFT_RETURN,
   GLIDE_DECAY,
   GLIDE_STEP_MS,
   REVEAL_GUTTER_PX,
@@ -534,13 +535,30 @@ describe("StripControls", () => {
       expect(lastRate(animation)).toBeCloseTo(1 + extra(100));
     });
 
-    test("a scroll up runs it backwards", () => {
+    test("a scroll up runs it backwards, at the scroll's speed alone", () => {
       const { animation } = setup({ at: 200_000 });
       scrollTo(5000);
       onScreen(true);
-      scrollTo(3000);
-      expect(lastRate(animation)).toBeCloseTo(1 + extra(-2000));
+      scrollTo(4000);
+      expect(lastRate(animation)).toBeCloseTo(extra(-1000));
       expect(lastRate(animation)).toBeLessThan(0);
+    });
+
+    test("no bounce: after a scroll up it comes to rest, then the drift eases back", () => {
+      const { strip, animation } = setup({ at: 200_000 });
+      scrollTo(1000);
+      onScreen(true);
+      scrollTo(800);
+      const rates = runOut(animation);
+      // Only ever rising, with no step up larger than the gentle return once
+      // the scroll's part has run out: it never snaps back to full drift.
+      for (let i = 1; i < rates.length; i += 1) {
+        expect(rates[i]!).toBeGreaterThanOrEqual(rates[i - 1]!);
+        if (rates[i - 1]! >= 0)
+          expect(rates[i]! - rates[i - 1]!).toBeLessThanOrEqual(DRIFT_RETURN + 1e-9);
+      }
+      expect(rates.at(-1)).toBe(1);
+      expect(strip).not.toHaveAttribute("data-gliding");
     });
 
     test("the speed eases away, step by step, and hands back to the drift", () => {
@@ -548,11 +566,22 @@ describe("StripControls", () => {
       onScreen(true);
       scrollTo(100);
       const rates = runOut(animation);
-      for (let i = 1; i < rates.length - 1; i += 1) {
-        expect(rates[i]!).toBeLessThan(rates[i - 1]!);
+      for (let i = 1; i < rates.length; i += 1) {
+        expect(rates[i]!).toBeLessThanOrEqual(rates[i - 1]!);
       }
       expect(rates.at(-1)).toBe(1);
       expect(strip).not.toHaveAttribute("data-gliding");
+    });
+
+    test("has a short tail, so nothing glides on long after the scroll stops", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      onScreen(true);
+      scrollTo(400);
+      act(() => {
+        jest.advanceTimersByTime(1_500);
+      });
+      expect(strip).not.toHaveAttribute("data-gliding");
+      expect(lastRate(animation)).toBe(1);
     });
 
     test("over the whole glide it runs SCROLL_SPEED pixels for every pixel scrolled", () => {
@@ -563,7 +592,11 @@ describe("StripControls", () => {
       const rates = [first, ...runOut(animation)];
       const ms = rates.slice(0, -1).reduce((sum, rate) => sum + (rate - 1) * GLIDE_STEP_MS, 0);
       // Within what GLIDE_END cuts off the tail.
-      expect(ms / MS_PER_PX).toBeCloseTo(300 * SCROLL_SPEED, -1);
+      expect(Math.abs(ms / MS_PER_PX - 300 * SCROLL_SPEED)).toBeLessThan(5);
+    });
+
+    test("is a little faster than the 1 it was", () => {
+      expect(SCROLL_SPEED).toBe(1.5);
     });
 
     test("another scroll while it glides adds to the speed already there", () => {

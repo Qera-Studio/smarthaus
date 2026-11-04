@@ -32,7 +32,7 @@ $stack-min-block: 32rem;
 
 // How much taller each picture is than its frame, for the parallax: the same
 // depth as the hero strip's photographs.
-$parallax-spare: 35%;
+$parallax-spare: 25%;
 
 @layer blocks {
   .process {

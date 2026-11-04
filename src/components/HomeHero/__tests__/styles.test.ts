@@ -494,10 +494,14 @@ describe("HomeHero.module.scss", () => {
   });
 
   describe("the cards from lg", () => {
-    test("the strip's height is a 37.5vw card at 4:3, 1.5x the four-up size", () => {
-      expect(media("(min-width: 1024px)")).toMatch(/--hero-strip-block:\s*28\.125vw/);
-      expect((37.5 * 3) / 4).toBe(28.125);
-      expect(37.5).toBe(25 * 1.5);
+    test("the strip's height is a 30vw card at 4:3, 20% under the last size", () => {
+      expect(media("(min-width: 1024px)")).toMatch(/--hero-strip-block:\s*min\(22\.5vw, 36svh\)/);
+      expect((30 * 3) / 4).toBe(22.5);
+      expect(22.5).toBeCloseTo(28.125 * 0.8);
+    });
+
+    test("keeps its size below lg", () => {
+      expect(rule(".hero")).toMatch(/--hero-strip-block:\s*42svh/);
     });
   });
 
@@ -519,15 +523,15 @@ describe("HomeHero.module.scss", () => {
 
     test("the photographs slide through their cards over the hero's height", () => {
       const image = rule(".image", timeline());
-      expect(image).toMatch(/block-size:\s*calc\(100% \+ 35%\)/);
+      expect(image).toMatch(/block-size:\s*calc\(100% \+ 25%\)/);
       expect(image).toMatch(/animation-name:\s*hero-parallax/);
       expect(image).toMatch(/animation-timeline:\s*scroll\(root\)/);
       expect(image).toMatch(/animation-range:\s*0 var\(--hero-parallax-range\)/);
-      // From the spare showing at the foot to none: 35 of 135.
+      // From the spare showing at the foot to none: 25 of 125.
       const from = css.match(
         /@keyframes hero-parallax\s*\{\s*from\s*\{\s*translate:\s*0 (-[\d.]+)%/,
       )?.[1];
-      expect(Number(from)).toBeCloseTo(-25.926, 2);
+      expect(Number(from)).toBeCloseTo(-20, 2);
     });
 
     test("only for a visitor who allows motion, on a browser with scroll timelines", () => {

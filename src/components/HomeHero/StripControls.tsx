@@ -13,16 +13,17 @@ export const REVEAL_GUTTER_PX = 16;
 
 /**
  * How far the strip runs, in all, for each pixel the page scrolls: on along
- * its drift going down, back going up. Tuned by eye (Shivanshu, 2026-11-04:
- * half the 2 it was).
+ * its drift going down, back going up. Tuned by eye (Shivanshu, 2026-11-04).
  */
-export const SCROLL_SPEED = 1;
+export const SCROLL_SPEED = 1.5;
 
 /** How often the glide's speed is eased, and by how much each time. */
 export const GLIDE_STEP_MS = 33;
-export const GLIDE_DECAY = 0.96;
-/** Below this share of the drift's own speed, the glide is over. */
-const GLIDE_END = 0.05;
+export const GLIDE_DECAY = 0.87;
+/** How much of the drift's speed comes back each step after a scroll up. */
+export const DRIFT_RETURN = 0.03;
+/** Below this share of the drift's own speed, the scroll's part is over. */
+const GLIDE_END = 0.25;
 
 /**
  * The strip's pause button, above it, and the hand on the strip itself.
@@ -46,7 +47,9 @@ const GLIDE_END = 0.05;
  * playbackRate, negative going up), and a timer eases that speed away. The
  * browser still draws every frame of the movement; only the speed is stepped.
  * The sum of those steps is SCROLL_SPEED pixels of strip per pixel of page,
- * whatever the pace of the scroll. Hover and the pause button hold only the
+ * whatever the pace of the scroll. Going up, the drift stands aside and comes
+ * back from nothing once the scroll has run out: left at full speed under it,
+ * the strip ran back, stopped and at once set off forward again, a bounce. Hover and the pause button hold only the
  * drift, not this (data-gliding, in the stylesheet), since the scroll is the
  * visitor's own hand. Not under keyboard focus in the strip, where the
  * browser's scroll to a focused card would carry it away, not under a drag,
@@ -186,6 +189,7 @@ export function StripControls({
     let lastY = window.scrollY;
     let glide: {
       base: number;
+      drift: number;
       perPx: number;
       extra: number;
       timer: number;
@@ -200,15 +204,9 @@ export function StripControls({
       el.firstElementChild?.getAnimations()[0]?.updatePlaybackRate(1);
     };
 
-    const stepGlide = () => {
+    const applyGlide = (animation: Animation) => {
       if (!glide) return;
-      const [animation] = el.firstElementChild?.getAnimations() ?? [];
-      // The pause button pressed mid-glide stops it: a later scroll is a new one.
-      const pausedSince = !glide.paused && el.hasAttribute("data-paused");
-      if (!animation || pausedSince || Math.abs(glide.extra) < GLIDE_END) {
-        endGlide();
-        return;
-      }
+      if (glide.extra < 0) glide.base = 0;
       const rate = glide.base + glide.extra;
       // Running backwards an animation ends at zero, even a looping one. A
       // whole number of passes on is the same picture, so it never gets there.
@@ -216,7 +214,27 @@ export function StripControls({
       const at = Number(animation.currentTime ?? 0);
       if (rate < 0 && at < duration) animation.currentTime = at + duration * 4;
       animation.updatePlaybackRate(rate);
+    };
+
+    const stepGlide = () => {
+      if (!glide) return;
+      const [animation] = el.firstElementChild?.getAnimations() ?? [];
+      // The pause button pressed mid-glide stops it: a later scroll is a new one.
+      const pausedSince = !glide.paused && el.hasAttribute("data-paused");
+      if (!animation || pausedSince) {
+        endGlide();
+        return;
+      }
       glide.extra *= GLIDE_DECAY;
+      if (Math.abs(glide.extra) < GLIDE_END) {
+        glide.extra = 0;
+        glide.base = Math.min(glide.drift, glide.base + DRIFT_RETURN);
+        if (glide.base === glide.drift) {
+          endGlide();
+          return;
+        }
+      }
+      applyGlide(animation);
     };
 
     const onScroll = () => {
@@ -229,9 +247,11 @@ export function StripControls({
       if (!glide) {
         const duration = Number(animation.effect?.getComputedTiming().duration);
         const msPerPx = duration / (track.getBoundingClientRect().width / 2);
+        // Held by hover or the pause button there is no drift to add to.
+        const drift = animation.playState === "paused" ? 0 : 1;
         glide = {
-          // Held by hover or the pause button there is no drift to add to.
-          base: animation.playState === "paused" ? 0 : 1,
+          base: drift,
+          drift,
           // The speed one pixel adds. Eased by GLIDE_DECAY each GLIDE_STEP_MS,
           // that speed runs the animation msPerPx * SCROLL_SPEED in all.
           perPx: (msPerPx * SCROLL_SPEED * (1 - GLIDE_DECAY)) / GLIDE_STEP_MS,
@@ -242,7 +262,7 @@ export function StripControls({
         el.setAttribute("data-gliding", "");
       }
       glide.extra += dy * glide.perPx;
-      stepGlide();
+      applyGlide(animation);
     };
     const visible = new IntersectionObserver((entries) => {
       lastY = window.scrollY;

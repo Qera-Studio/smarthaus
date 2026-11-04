@@ -260,8 +260,8 @@ test.describe("the page's scroll", () => {
     const x = await firstCardX();
     await page.evaluate(() => window.scrollTo({ top: 400, behavior: "instant" }));
     await page.evaluate(() => new Promise(requestAnimationFrame));
-    // A fifth of the scroll's distance at most, one frame in.
-    expect(Math.abs((await firstCardX()) - x)).toBeLessThan(80);
+    // Well short of the 600px it comes to in all, a frame or two in.
+    expect(Math.abs((await firstCardX()) - x)).toBeLessThan(300);
     await expect.poll(async () => (await drift(page)).rate, { timeout: 8_000 }).toBe(1);
   });
 
@@ -312,7 +312,7 @@ test.describe("the page's scroll", () => {
 });
 
 test.describe("the strip's cards", () => {
-  test("from lg, a card is at most 37.5vw wide", async ({ page }) => {
+  test("from lg, a card is at most 30vw wide", async ({ page }) => {
     await page.goto("/");
     const width = await page.evaluate(() => window.innerWidth);
     test.skip(width < 1024, "below lg the cards keep their size");
@@ -321,6 +321,6 @@ test.describe("the strip's cards", () => {
       .first()
       .evaluate((el) => el.getBoundingClientRect().width);
     // It gives way to the copy on a short screen, as it always has.
-    expect(card).toBeLessThanOrEqual(width * 0.375 + 1);
+    expect(card).toBeLessThanOrEqual(width * 0.3 + 1);
   });
 });

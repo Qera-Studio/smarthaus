@@ -3,7 +3,7 @@
 @use "sass:math";
 
 // How much taller each photograph is than its card, for the parallax.
-$hero-parallax-spare: 35%;
+$hero-parallax-spare: 25%;
 
 // How many words of the title and the subtitle have a place in the opening.
 $hero-title-words: 6;
@@ -55,9 +55,11 @@ $hero-lede-words: 24;
     text-align: center;
 
     @include bp-lg {
-      // A card is 37.5vw wide (Shivanshu, 2026-11-04): this is that card's
-      // height at 4:3. It still gives way to the copy on a short screen.
-      --hero-strip-block: 28.125vw;
+      // 20% under the 28.125vw it was (Shivanshu, 2026-11-04), a card 30vw wide
+      // at 4:3. The svh cap is that same 20% on a laptop, where the strip was
+      // already giving way to the copy and 22.5vw alone would barely show. It
+      // still gives way on a shorter screen.
+      --hero-strip-block: min(22.5vw, 36svh);
       --hero-above: calc(
         var(--announce-block-size) + var(--nav-rest-inset) + var(--nav-top-block-size)
       );

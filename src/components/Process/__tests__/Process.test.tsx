@@ -105,7 +105,7 @@ describe("the stack's mechanism", () => {
       const hero = readFileSync(join(__dirname, "../../HomeHero/HomeHero.module.scss"), "utf8");
       const spare = (source: string, name: string) =>
         source.match(new RegExp(`\\$${name}:\\s*(\\d+)%`))?.[1];
-      expect(spare(scss, "parallax-spare")).toBe("35");
+      expect(spare(scss, "parallax-spare")).toBe("25");
       expect(spare(scss, "parallax-spare")).toBe(spare(hero, "hero-parallax-spare"));
     });
 
