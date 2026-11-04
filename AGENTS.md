@@ -239,7 +239,7 @@ On every full load the homepage builds itself in order (Shivanshu, 2026-11-04): 
 
 ## The scroll reveal
 
-Below the hero, the homepage's section headings fade in word by word and sharpen, 1s after arriving and over 1.2s each, so it is still playing once the scroll has stopped (6px of blur, none on a phone, 60ms apart); the paragraph under a heading follows it; and the groups rise 28px and fade (90ms apart, capped at the sixth), once, as each comes on screen (Shivanshu, 2026-11-04). Homepage only for now: `<ScrollReveal />` is mounted in `src/app/page.tsx`, and `data-reveal` does nothing without it, which is why `/pricing` can share the tier cards. The rules are in `globals.scss`.
+Below the hero, the homepage's section headings fade in word by word and sharpen, 400ms after arriving and over 1.2s each, so it is still playing once the scroll has stopped (6px of blur, none on a phone, 60ms apart); the paragraph under a heading follows it; and the groups rise 28px and fade (90ms apart, capped at the sixth), once, as each comes on screen (Shivanshu, 2026-11-04). Homepage only for now: `<ScrollReveal />` is mounted in `src/app/page.tsx`, and `data-reveal` does nothing without it, which is why `/pricing` can share the tier cards. The rules are in `globals.scss`.
 
 - **Hidden late, not early.** Everything is visible in the server HTML. Only once ScrollReveal runs does what is still below the screen get `data-reveal="waiting"`. Nothing on screen waits for JavaScript, a failed script leaves the page standing, and there is no boot-script gate.
 - **Animations, not transitions.** They fill backwards and let go, so a card's own hover keeps its timing.

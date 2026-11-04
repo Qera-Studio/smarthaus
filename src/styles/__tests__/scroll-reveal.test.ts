@@ -56,16 +56,16 @@ describe("the scroll reveal", () => {
     expect(block).not.toMatch(/nth-child\(7\)/);
   });
 
-  test("holds a heading back 1s, then runs each word slowly, 60ms apart", () => {
+  test("holds a heading back 400ms, then runs each word slowly, 60ms apart", () => {
     expect(rule(word)).toMatch(/animation-duration:\s*1200ms/);
-    expect(rule(word)).toMatch(/animation-delay:\s*1000ms/);
-    expect(rule(`${word}:nth-of-type(2)`)).toMatch(/animation-delay:\s*1060ms/);
-    expect(rule(`${word}:nth-of-type(8)`)).toMatch(/animation-delay:\s*1420ms/);
+    expect(rule(word)).toMatch(/animation-delay:\s*400ms/);
+    expect(rule(`${word}:nth-of-type(2)`)).toMatch(/animation-delay:\s*460ms/);
+    expect(rule(`${word}:nth-of-type(8)`)).toMatch(/animation-delay:\s*820ms/);
   });
 
   test("the paragraph under a heading comes after it, and wins over its own stagger", () => {
     const under = "[data-reveal-words] + [data-reveal=in]:not([data-reveal-words])";
-    expect(rule(under)).toMatch(/animation-delay:\s*1300ms/);
+    expect(rule(under)).toMatch(/animation-delay:\s*700ms/);
     expect(block.indexOf(under)).toBeGreaterThan(block.indexOf(`${rise}:nth-child(6)`));
   });
 });

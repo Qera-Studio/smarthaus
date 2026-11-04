@@ -76,7 +76,7 @@ test.describe("on the homepage", () => {
     const delays = await heading
       .locator("> span")
       .evaluateAll((words) => words.map((w) => getComputedStyle(w).animationDelay));
-    expect(delays).toEqual(["1s", "1.06s", "1.12s", "1.18s", "1.24s"]);
+    expect(delays).toEqual(["0.4s", "0.46s", "0.52s", "0.58s", "0.64s"]);
     await expect(heading).toHaveText("Choose your level of intelligence");
   });
 

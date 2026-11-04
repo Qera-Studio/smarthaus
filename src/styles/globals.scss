@@ -210,7 +210,7 @@
 }
 
 // How long a heading waits, once on screen, before its words start.
-$reveal-word-wait: 1000ms;
+$reveal-word-wait: 400ms;
 
 // The homepage's scroll reveal (ScrollReveal.tsx). Each runs once and lets go:
 // fill backwards, never forwards, and an animation rather than a transition, so
