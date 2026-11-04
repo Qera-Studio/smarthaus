@@ -47,7 +47,7 @@ export const CONSENT_COPY = {
      * what `aria-label` points at, so the region announces as something.
      */
     heading: "Cookies",
-    body: "We use cookies that keep this site working, and we would like to use analytics cookies to understand which pages are useful. Analytics stays off unless you turn it on.",
+    body: "We use cookies that keep this site working, and Microsoft Clarity, without cookies, to see how pages are used. Accept to add analytics cookies, or decline to turn Clarity off.",
     accept: "Accept analytics",
     decline: "Decline",
     customise: "Choose what to share",
@@ -63,7 +63,7 @@ export const CONSENT_COPY = {
   prefs: {
     heading: "Cookie preferences",
     intro:
-      "Analytics is off until you turn it on, and you can change this at any time. Declining changes nothing about how the site works for you.",
+      "Analytics cookies are off until you turn them on, and you can change this at any time. Declining changes nothing about how the site works for you.",
 
     essential: {
       label: "Essential",
@@ -95,7 +95,7 @@ export const CONSENT_COPY = {
        * requirement is that it not be buried, not that it carry a rule.
        */
       clarity:
-        "Clarity records how a page is used, including clicks and scrolling. Anything typed into a form is masked and never recorded.",
+        "Clarity records how a page is used, including clicks and scrolling. Until you choose, it runs without cookies; declining turns it off. Anything typed into a form is masked and never recorded.",
       retention: "Stored for up to 14 months. Neither tool is used to advertise to you.",
     },
 

@@ -13,6 +13,7 @@ import {
   serialiseConsentCookie,
   type ConsentState,
 } from "../../lib/consent";
+import { applyClarity } from "../../lib/clarity";
 import { Switch } from "./Switch";
 import styles from "./Consent.module.scss";
 
@@ -195,6 +196,7 @@ export function ConsentShell({
     const sync = (force = false) => {
       const next = readConsentState(readConsentCookie(document.cookie));
       setState(force ? { ...next, ask: true } : next);
+      applyClarity(next);
       if (!touched.current) setAnalyticsOn(next.analytics);
       // React owns the banner from here: the pre-hydration CSS gate stops
       // applying. Also the e2e suite's hydration witness (e2e/checks.ts).
@@ -246,6 +248,7 @@ export function ConsentShell({
         secure: window.location.protocol === "https:",
       });
       setState({ ask: false, analytics: allow });
+      applyClarity({ ask: false, analytics: allow });
       setAnalyticsOn(allow);
       touched.current = false;
       setSaved(true);

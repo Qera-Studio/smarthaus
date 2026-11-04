@@ -126,6 +126,9 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
       action={formAction}
       className={styles.form}
       noValidate
+      // A second layer over Clarity's own masking: what a visitor types is
+      // never recorded (consent-content-deck.md §9).
+      data-clarity-mask="true"
       // The submit button stays focusable while sending (see Submit), so it can
       // be pressed again; this is what stops a second send.
       onSubmit={(event) => {

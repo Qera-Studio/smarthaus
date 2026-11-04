@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
 
     // Content-Security-Policy: defence-in-depth against XSS, data injection, and framing.
     // 'unsafe-inline' is needed for Next.js style injection in dev/prod.
-    // No wildcards. 'unsafe-eval' is dev-server only (see script-src below).
+    // One wildcard, Clarity's, below. 'unsafe-eval' is dev-server only (see script-src below).
     //
     // script-src 'unsafe-inline': Next.js emits inline <script> tags for the
     // bootstrap payload and streaming chunks. A nonce-based CSP would require
@@ -50,6 +50,17 @@ const nextConfig: NextConfig = {
     // The hash is in the STRICT policy only, and must stay out of the enforced
     // one: a policy that lists a hash makes browsers ignore its
     // 'unsafe-inline', which would block every inline script Next emits.
+    // Microsoft Clarity (consent-content-deck.md §8): open only once its id is
+    // set, so the policy stays closed until it can run. Its ingest hosts vary,
+    // so connect-src needs the wildcard; c.bing.com is its cookie sync.
+    const clarity = process.env.NEXT_PUBLIC_CLARITY_ID
+      ? {
+          script: " https://www.clarity.ms https://scripts.clarity.ms",
+          img: " https://c.clarity.ms https://c.bing.com",
+          connect: " https://*.clarity.ms https://c.bing.com",
+        }
+      : { script: "", img: "", connect: "" };
+
     const csp = (strict: boolean) =>
       [
         "default-src 'self'",
@@ -75,7 +86,7 @@ const nextConfig: NextConfig = {
         //
         // React's dev-only debugging (callstack reconstruction) needs
         // full 'unsafe-eval'. Dev server only — never in production.
-        `script-src 'self'${strict ? ` ${CONSENT_BOOT_HASH} ${SPLASH_BOOT_HASH}` : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+        `script-src 'self'${clarity.script}${strict ? ` ${CONSENT_BOOT_HASH} ${SPLASH_BOOT_HASH}` : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
         // DRACOLoader builds its decoder worker from a Blob, so the
         // worker's URL is blob: rather than a file on our origin.
         // Without this directive workers fall back to script-src, which
@@ -87,9 +98,9 @@ const nextConfig: NextConfig = {
         // can influence.
         "worker-src 'self' blob:",
         `style-src 'self'${strict ? "" : " 'unsafe-inline'"}`,
-        "img-src 'self' data:",
+        `img-src 'self' data:${clarity.img}`,
         "font-src 'self'",
-        "connect-src 'self'",
+        `connect-src 'self'${clarity.connect}`,
         "media-src 'self'",
         "object-src 'none'",
         "frame-ancestors 'none'",
