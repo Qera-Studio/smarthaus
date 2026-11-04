@@ -34,11 +34,10 @@ $hero-lede-words: 24;
     // The floor, for a screen too short to share: the strip keeps a usable
     // height and the page scrolls instead.
     --hero-min-block: 36rem;
-    // The strip glides in (Shivanshu, 2026-11-04: the first cut, a train at
-    // one speed and then braking, read as sharp): from the screen's right
-    // edge, easing out over its whole length, so nothing about it arrives.
-    --hero-arrive-duration: 3600ms;
-    --hero-arrive-ease: cubic-bezier(0.22, 0.61, 0.2, 1);
+    // The strip comes in like a metro (Shivanshu, 2026-11-04): very fast, on
+    // past the cards ahead of the first, then braking hard to where it rests.
+    --hero-arrive-duration: 1600ms;
+    --hero-arrive-ease: cubic-bezier(0.16, 1, 0.3, 1);
     // The photographs inside their cards: each is taller than its card by
     // $hero-parallax-spare and slides down through it as the page scrolls,
     // moving more slowly than the page, as the About page's pictures do.
@@ -46,13 +45,11 @@ $hero-lede-words: 24;
 
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: $space-4;
     // A definite height, not a minimum: the strip's cards size from it.
     // svh, never vh or dvh: Footer.module.scss has the long version.
     block-size: max(var(--hero-min-block), calc(100svh - var(--hero-above) - var(--hero-below)));
     padding-block-start: clamp(#{$space-6}, 4vh, #{$space-12});
-    text-align: center;
 
     @include bp-lg {
       // 20% under the 28.125vw it was (Shivanshu, 2026-11-04), a card 30vw wide
@@ -88,49 +85,70 @@ $hero-lede-words: 24;
     display: flex;
     flex: none;
     flex-direction: column;
-    align-items: center;
-    padding-inline: $space-4;
+    gap: $space-4;
+
+    // One row from lg: the message at the start, the proofs at the very end,
+    // their feet level with the CTAs (Shivanshu, 2026-11-04).
+    @include bp-lg {
+      flex-direction: row;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: $space-8;
+    }
   }
 
-  // Two statements either side of a drawn rule (HomeHero.tsx Pair): the
-  // rating line and the SIRA line, styled alike. From sm the two share one
-  // centred line; on a phone they stack and the rule goes. (The rule sat on
-  // the page's centre line for a day, 2026-10-28, and was reverted.)
-  .pair {
+  // The four proofs, one to a line, each mark in the same box.
+  .proof {
     display: flex;
+    flex: none;
     flex-direction: column;
-    align-items: center;
     gap: $space-1;
+    list-style: none;
     font-size: var(--font-size-sm);
     line-height: $line-height-normal;
-    // At 70% (2026-10-28), as the contact bar is. The colour, not opacity,
-    // so the drawn rule (currentcolor) goes with it: 6.4:1 on brown-100.
+    // At 70% (2026-10-28), as the contact bar is. The colour, not opacity, so
+    // the marks (currentcolor) go with it: 6.4:1 on brown-100.
     color: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
 
-    @include bp-sm {
-      flex-direction: row;
-      gap: $space-3;
+    li {
+      display: flex;
+      align-items: center;
+      gap: $space-2;
     }
   }
 
-  .divider {
-    display: none;
+  // Every mark is one silhouette in the text's colour, whatever colours its
+  // file holds: the file is a mask and the box's ground is what shows.
+  .icon {
+    flex: none;
+    inline-size: 1em;
+    block-size: 1em;
+    background-color: currentcolor;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
 
-    @include bp-sm {
-      display: block;
-      inline-size: 1px;
-      block-size: 1em;
-      background-color: currentcolor;
+    // Forced colours would paint this ground away with the page's.
+    @media (forced-colors: active) {
+      forced-color-adjust: none;
+      background-color: CanvasText;
     }
   }
 
-  // The rating line opens the copy; the SIRA line closes it.
-  .copy > .pair:first-child {
-    margin-block-end: $space-4;
+  .star {
+    mask-image: url("/hero/starIcon.svg");
   }
 
-  .copy > .pair:last-child {
-    margin-block-start: $space-4;
+  .projects {
+    mask-image: url("/hero/projectsLogo.svg");
+  }
+
+  .sira {
+    mask-image: url("/hero/siraLogo.svg");
+  }
+
+  .maple {
+    mask-image: url("/hero/mapletechIconMono.svg");
   }
 
   .title {
@@ -154,7 +172,6 @@ $hero-lede-words: 24;
   .ctas {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
     gap: $space-4;
     // Room between the subtitle and the buttons (Shivanshu, 2026-11-02):
     // 32px on a phone, up to 48px on a tall screen. A short phone keeps 24px,
@@ -235,12 +252,15 @@ $hero-lede-words: 24;
     inline-size: 100vw;
     margin-inline: calc(50% - 50vw);
     overflow: hidden;
+    // So a card can size from the height this comes to (.card).
+    container-type: size;
   }
 
   // Two copies of the list side by side. Moving the pair left by half its
   // width puts the second copy exactly where the first started, so the loop
   // has no seam. Each list ends in the gap, which keeps that half exact.
   .track {
+    position: relative;
     display: flex;
     inline-size: max-content;
     block-size: 100%;
@@ -254,6 +274,14 @@ $hero-lede-words: 24;
     padding-inline-end: $space-2;
   }
 
+  // Off the track's start, out of its width, so the half above stays exact.
+  // At rest it lies past the strip's clipped edge; only the opening shows it.
+  .lead {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 100%;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .track {
       animation-name: hero-strip;
@@ -264,11 +292,12 @@ $hero-lede-words: 24;
 
     // Hover stops it (Shivanshu's spec), and so does focus on a card, so one
     // a keyboard user has reached does not slide away under them. On the
-    // track, not the strip, so focus on a control never holds it.
+    // track, not the strip, so focus on a control never holds it. Two values:
+    // the second is the opening's, which nothing here may stop halfway.
     .track:hover,
     .track:focus-within,
     .strip[data-paused] .track {
-      animation-play-state: paused;
+      animation-play-state: paused, running;
     }
 
     // A scroll runs it even while hover, focus or the pause button holds the
@@ -280,38 +309,38 @@ $hero-lede-words: 24;
 
     // Held still under a dragging hand, mouse or finger (StripControls).
     .strip[data-dragging] .track {
-      animation-play-state: paused;
+      animation-play-state: paused, running;
     }
 
     // --- The opening ---------------------------------------------------------
     //
     // Only while <html> carries data-intro: set by the splash boot script on
-    // every full load, and taken off by StripControls when the hero unmounts,
-    // so a soft navigation back here finds the hero at rest. Without
-    // JavaScript nothing is set and nothing waits on an animation.
+    // every full load, and taken off by StripControls when the last of this
+    // has played, so a soft navigation back here finds the hero at rest.
+    // Without JavaScript nothing is set and nothing waits on an animation.
     //
     // The timings live on <html> for that time, so the nav and the contact
     // bar (Nav.module.scss, AnnouncementBar.module.scss) arrive with the CTAs
-    // from the same numbers (Shivanshu, 2026-11-04: half the speed of the last
-    // cut, and the title and subtitle word by word): the title, the subtitle
-    // from 800ms, the CTAs with the strip, the nav and the bar at 1.2s, then
-    // the two lines and the pause button. The last of it lands at 4.9s, and
-    // that is a ceiling: motion that starts by itself and runs past five
-    // seconds would need a pause control (WCAG 2.2.2).
+    // from the same numbers (Shivanshu, 2026-11-04: 1.5x the speed of the cut
+    // before, the title and subtitle word by word): the title, the subtitle
+    // from 533ms, the CTAs with the strip, the nav and the bar at 800ms, then
+    // the proofs and the pause button. The last of it lands at about 3.3s;
+    // five seconds is the ceiling, since motion that starts by itself and runs
+    // past that would need a pause control (WCAG 2.2.2).
     //
     // Fill backwards, never forwards: the start state holds through each
     // delay, and once an animation ends it lets go of opacity and translate.
     // Paused while the splash covers the page, so it begins as the splash
     // fades rather than finishing unseen beneath it.
     :where(:root[data-intro]) {
-      --intro-duration: 3200ms;
+      --intro-duration: 2133ms;
       --intro-shift: #{$space-6};
-      --intro-word-duration: 1600ms;
-      --intro-title-stagger: 300ms;
-      --intro-lede-start: 800ms;
-      --intro-lede-stagger: 90ms;
-      --intro-together: 1200ms;
-      --intro-rest: 1700ms;
+      --intro-word-duration: 1067ms;
+      --intro-title-stagger: 200ms;
+      --intro-lede-start: 533ms;
+      --intro-lede-stagger: 60ms;
+      --intro-together: 800ms;
+      --intro-rest: 1133ms;
 
       // Word by word. Opacity alone, on inline spans: anything that moved a
       // word would need inline-block, and a screen reader can stop at each
@@ -338,7 +367,7 @@ $hero-lede-words: 24;
       }
 
       .ctas,
-      .copy > .pair,
+      .proof,
       .controls {
         animation-name: hero-in;
         animation-duration: var(--intro-duration);
@@ -350,30 +379,31 @@ $hero-lede-words: 24;
         animation-delay: var(--intro-together);
       }
 
-      .copy > .pair,
+      .proof,
       .controls {
         animation-delay: var(--intro-rest);
       }
 
-      .copy > .pair:first-child {
-        --intro-shift: -#{$space-6};
-      }
-
-      .strip {
-        animation-name: hero-arrive;
-        animation-duration: var(--hero-arrive-duration);
-        animation-timing-function: var(--hero-arrive-ease);
-        animation-delay: var(--intro-together);
-        animation-fill-mode: backwards;
+      // Added to the drift, not in place of it, so the drift keeps its clock
+      // and takes over as this slows to nothing. On the track, so the cards
+      // run off the strip's edge rather than being clipped to a moving box.
+      .track {
+        animation-name: hero-strip, hero-arrive;
+        animation-duration: var(--hero-strip-duration), var(--hero-arrive-duration);
+        animation-timing-function: linear, var(--hero-arrive-ease);
+        animation-iteration-count: infinite, 1;
+        animation-delay: 0s, var(--intro-together);
+        animation-fill-mode: none, backwards;
+        animation-composition: replace, add;
       }
     }
 
     :where(:root[data-intro][data-splash="show"]) {
       .word,
       .ctas,
-      .copy > .pair,
+      .proof,
       .controls,
-      .strip {
+      .track {
         animation-play-state: paused;
       }
     }
@@ -404,11 +434,12 @@ $hero-lede-words: 24;
     }
   }
 
-  // In from the screen's right edge. The strip, not the track, so the drift
-  // runs underneath and takes over as this slows to nothing.
+  // The lead cards start at the screen's right edge, so they go by and off the
+  // left one before the first card brakes into its place. 12.5% of the track
+  // is those two cards: each card is one sixteenth of it (LEAD_CARDS).
   @keyframes hero-arrive {
     from {
-      translate: 100vw 0;
+      translate: calc(100vw + 12.5%) 0;
     }
   }
 
@@ -419,12 +450,15 @@ $hero-lede-words: 24;
   }
 
   // As tall as the strip, 4:3: the height is the space left, the width
-  // follows it.
+  // follows it. A width in the strip's own height, not aspect-ratio: where the
+  // strip shrank from its basis, WebKit sized each list for the height before
+  // the shrink and left a blank gap of hundreds of pixels at the loop's seam
+  // (744px on an iPhone 17's height, found 2026-11-04).
   .card {
     position: relative;
     flex: none;
     block-size: 100%;
-    aspect-ratio: 4 / 3;
+    inline-size: calc(100cqb * 4 / 3);
     overflow: hidden;
     isolation: isolate;
 

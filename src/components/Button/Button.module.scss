@@ -67,18 +67,28 @@
 
     // --- Variants -----------------------------------------------------------
 
-    // Hover empties the band to its outline, the mirror of `outline` filling.
-    // It stepped to brown-800 before, which is too close to brown-950 to see
-    // (reported on the Connected tier's CTA, 2026-10-02). Solid only ever sits
-    // on a light ground, where brown-950 text is the strongest pair there is.
+    // Hover is a swipe (Shivanshu, 2026-11-04): the band empties to its outline
+    // at once and its ground runs back in from the start edge to the end, in
+    // 300ms, the ink turning with it. It ends as it began. No transition on
+    // the ground or the ink, or leaving would fade through the emptied band.
+    // Solid only ever sits on a light ground, where the emptied brown-950 ink
+    // holds. Under reduced motion the reset ends it at once, so nothing moves.
     &[data-variant="solid"] {
       background-color: var(--color-bg-inverse-strong);
       color: var(--color-text-inverse);
+      transition-property: opacity;
 
       &:hover:not(:disabled) {
         background-color: transparent;
+        background-image: linear-gradient(
+          var(--color-bg-inverse-strong),
+          var(--color-bg-inverse-strong)
+        );
+        background-repeat: no-repeat;
         border-color: var(--color-bg-inverse-strong);
-        color: var(--color-bg-inverse-strong);
+        animation-name: button-swipe;
+        animation-duration: 300ms;
+        animation-timing-function: var(--ease-in-out);
       }
     }
 
@@ -118,6 +128,18 @@
         border-color: var(--color-bg-inverse-strong);
         color: var(--color-text-inverse);
       }
+    }
+  }
+
+  @keyframes button-swipe {
+    from {
+      background-size: 0% 100%;
+      color: var(--color-bg-inverse-strong);
+    }
+
+    to {
+      background-size: 100% 100%;
+      color: var(--color-text-inverse);
     }
   }
 }

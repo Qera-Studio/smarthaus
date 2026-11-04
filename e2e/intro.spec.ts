@@ -4,7 +4,7 @@ import { expect, test, type Page } from "./fixtures";
 /**
  * The homepage opening (HomeHero.module.scss, "The opening"): the title and
  * subtitle word by word, then the CTAs with the strip, the nav and the contact
- * bar, then the two lines and the pause button, all in within five seconds.
+ * bar, then the proofs and the pause button, all in within five seconds.
  * Then the page's scroll runs the strip on going down and back going up, and
  * the photographs slide through their cards.
  *
@@ -75,11 +75,11 @@ test.describe("the homepage opening", () => {
     for (const words of [title, lede]) {
       expect([...words].sort((a, b) => a - b)).toEqual(words);
     }
-    expect(title.at(-1)! - title[0]!).toBeGreaterThan(500);
-    expect(lede.at(-1)! - lede[0]!).toBeGreaterThan(1_000);
+    expect(title.at(-1)! - title[0]!).toBeGreaterThan(300);
+    expect(lede.at(-1)! - lede[0]!).toBeGreaterThan(600);
   });
 
-  test("plays in order: title, subtitle, CTAs with the strip and nav, then the lines", async ({
+  test("plays in order: title, subtitle, CTAs with the strip and nav, then the proofs", async ({
     page,
   }) => {
     await recordStarts(page);
@@ -90,21 +90,21 @@ test.describe("the homepage opening", () => {
     const title = startOf(list, /word.*\|H1$/);
     const lede = startOf(list, /word.*\|P$/);
     const ctas = startOf(list, /ctas/);
-    const strip = startOf(list, /strip/);
+    const strip = startOf(list, /track/);
     const nav = startOf(list, /^HEADER\./);
     const bar = startOf(list, /^ASIDE\./);
-    const pair = startOf(list, /pair/);
+    const proof = startOf(list, /proof/);
 
     // Starts are recorded after each delay, a frame apart at worst.
     expect(lede).toBeGreaterThan(title);
     expect(ctas).toBeGreaterThan(lede);
     for (const together of [strip, nav, bar]) expect(Math.abs(together - ctas)).toBeLessThan(100);
-    expect(pair).toBeGreaterThan(ctas);
+    expect(proof).toBeGreaterThan(ctas);
   });
 
-  test("everything is in, at full opacity, within about five seconds", async ({ page }) => {
+  test("everything is in, at full opacity, within about four seconds", async ({ page }) => {
     await page.goto("/");
-    await page.waitForTimeout(5_500);
+    await page.waitForTimeout(4_000);
     expect(await running(page)).toBe(0);
     for (const target of [
       page.getByRole("heading", { level: 1 }),
@@ -120,11 +120,53 @@ test.describe("the homepage opening", () => {
     await page.goto("/");
     await expect.poll(() => running(page), { timeout: OPENING_MS }).toBe(0);
     const strip = page.locator("[data-hero-strip]");
-    await expect(strip).toHaveCSS("translate", "none");
+    await expect(page.locator("html")).not.toHaveAttribute("data-intro");
+    // Its first card about at the edge, the drift's few seconds on from it,
+    // and the drift a single, running animation: nothing jumped as the
+    // opening let go of it.
+    const firstCard = await strip.locator("li").first().boundingBox();
+    expect(firstCard!.x).toBeLessThanOrEqual(0);
+    expect(firstCard!.x).toBeGreaterThan(-firstCard!.width);
     const drifting = await strip.evaluate(
       (el) => el.firstElementChild?.getAnimations()[0]?.playState,
     );
     expect(drifting).toBe("running");
+  });
+
+  test("the rail runs past: two cards go off the far edge before the first comes to rest", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const at = (fraction: number) =>
+      page.locator("[data-hero-strip] > div").evaluate((track, f) => {
+        const arrive = track
+          .getAnimations()
+          .find((a) => (a as CSSAnimation).animationName.endsWith("hero-arrive"))!;
+        arrive.pause();
+        arrive.currentTime = 800 + 1600 * f;
+        const card = (selector: string) => track.querySelector(selector)!.getBoundingClientRect().x;
+        return { lead: card("ul[data-lead] > li"), first: card("ul > li") };
+      }, fraction);
+    const width = await page.evaluate(() => document.documentElement.clientWidth);
+    const start = await at(0);
+    const leadCards = start.first - start.lead;
+    // The first lead card sets off from the screen's right edge, give or take
+    // the drift's clock.
+    expect(Math.abs(start.lead - width)).toBeLessThan(width / 2);
+    expect(leadCards).toBeGreaterThan(0);
+    // A fifth of the way through its time, most of the way there: it starts
+    // really fast.
+    const early = await at(0.2);
+    expect(early.first).toBeLessThan(start.first - (start.first - (await at(0.999)).first) * 0.6);
+  });
+
+  test("hovering the strip does not hold the opening up", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "hover is a pointer behaviour");
+    await page.goto("/");
+    const box = (await page.locator("[data-hero-strip]").boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await expect.poll(() => running(page), { timeout: OPENING_MS }).toBe(0);
+    await expect(page.locator("html")).not.toHaveAttribute("data-intro");
   });
 
   test("passes axe once it is in", async ({ page }) => {
@@ -260,8 +302,8 @@ test.describe("the page's scroll", () => {
     const x = await firstCardX();
     await page.evaluate(() => window.scrollTo({ top: 400, behavior: "instant" }));
     await page.evaluate(() => new Promise(requestAnimationFrame));
-    // Well short of the 600px it comes to in all, a frame or two in.
-    expect(Math.abs((await firstCardX()) - x)).toBeLessThan(300);
+    // Well short of the 1,000px it comes to in all, a frame or two in.
+    expect(Math.abs((await firstCardX()) - x)).toBeLessThan(600);
     await expect.poll(async () => (await drift(page)).rate, { timeout: 8_000 }).toBe(1);
   });
 

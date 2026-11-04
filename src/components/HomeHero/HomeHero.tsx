@@ -18,8 +18,19 @@ import styles from "./HomeHero.module.scss";
  */
 export const RATING = "4.8";
 
-/** Verified and approved by Shivanshu, 2026-10-28. */
-export const PROJECTS = "180+ projects completed across Dubai";
+/** Verified and approved by Shivanshu, 2026-10-28; this wording 2026-11-04. */
+export const PROJECTS = "180+ Dubai projects";
+
+/** The hero's four proofs, each with its mark, in the order they are read. */
+const PROOF = [
+  { icon: styles.star, text: `${RATING} on Google reviews` },
+  { icon: styles.projects, text: PROJECTS },
+  { icon: styles.sira, text: "SIRA Licence" },
+  { icon: styles.maple, text: "by Maple Technologies" },
+];
+
+/** The cards the strip runs past on its way in, ahead of the first. */
+export const LEAD_CARDS = 2;
 
 /** Pre-filled per AGENTS.md: the page topic and the project type. */
 const WHATSAPP_MESSAGE = "Hi, I'm interested in home automation for my villa.";
@@ -65,25 +76,6 @@ function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
 }
 
 /**
- * Two short statements either side of a drawn rule, centred as one line
- * (HomeHero.module.scss .pair). The rule is drawn rather than typed, since a
- * screen reader would say "vertical bar"; a hidden comma keeps the two apart
- * when read aloud. The rating line and the SIRA line share it, so they match.
- */
-function Pair({ start, end }: { start: React.ReactNode; end: React.ReactNode }) {
-  return (
-    <p className={styles.pair}>
-      <span>
-        {start}
-        <span className="visually-hidden">,</span>
-      </span>
-      <span className={styles.divider} aria-hidden="true" />
-      <span>{end}</span>
-    </p>
-  );
-}
-
-/**
  * A line of copy, one span to a word, for the opening's word-by-word reveal
  * (HomeHero.module.scss). The spaces stay plain text between inline spans, so
  * it is still one sentence to a screen reader and wraps as it always did.
@@ -103,14 +95,15 @@ export const LEDE =
   "Cameras, entry, audio and home automation for Dubai villas. Installed, connected and looked after by one licensed team.";
 
 /**
- * The homepage hero: the rating and the project count on one line, the
- * title, one line, two CTAs and the SIRA line, then the strip's pause button
- * and a strip of images drifting right to left, pinned to the bottom of the
- * screen.
+ * The homepage hero: the title, one line and two CTAs at the start of the row
+ * and the four proofs at its end (below lg, under them), then the strip's pause
+ * button and a strip of images drifting right to left, pinned to the bottom of
+ * the screen.
  *
  * Server Component. The strip moves on a CSS animation over two copies of the
  * list; the second copy is inert and hidden from AT, so each card is read and
- * focused once. Hover or focus inside the strip stops it (the stylesheet), and
+ * focused once, and so are the lead cards off the start of the track, which
+ * only the opening ever brings on screen. Hover or focus inside the strip stops it (the stylesheet), and
  * StripControls holds the pause button WCAG 2.2.2 asks for, and lets a mouse
  * drag or a trackpad swipe move the strip.
  * Under reduced motion the strip does not move and scrolls sideways instead.
@@ -126,29 +119,30 @@ export function HomeHero() {
   return (
     <section className={styles.hero} aria-labelledby="hero-title" data-hero>
       <div className={styles.copy}>
-        <Pair
-          start={
-            <>
-              <span aria-hidden="true">★</span> {RATING} on Google reviews
-            </>
-          }
-          end={PROJECTS}
-        />
-        <h1 className={styles.title} id="hero-title">
-          <Words text={TITLE} />
-        </h1>
-        <p className={styles.lede}>
-          <Words text={LEDE} />
-        </p>
-        <div className={styles.ctas}>
-          <Button href="/contact" size="sm">
-            Book a site visit
-          </Button>
-          <Button href={whatsappLink(WHATSAPP_MESSAGE)} variant="outline" size="sm">
-            WhatsApp
-          </Button>
+        <div>
+          <h1 className={styles.title} id="hero-title">
+            <Words text={TITLE} />
+          </h1>
+          <p className={styles.lede}>
+            <Words text={LEDE} />
+          </p>
+          <div className={styles.ctas}>
+            <Button href="/contact" size="sm">
+              Book a site visit
+            </Button>
+            <Button href={whatsappLink(WHATSAPP_MESSAGE)} variant="outline" size="sm">
+              WhatsApp
+            </Button>
+          </div>
         </div>
-        <Pair start="SIRA Licence" end="Smarthaus by Maple Technologies." />
+        <ul className={styles.proof}>
+          {PROOF.map(({ icon, text }) => (
+            <li key={text}>
+              <span className={`${styles.icon} ${icon}`} aria-hidden="true" />
+              {text}
+            </li>
+          ))}
+        </ul>
       </div>
 
       <StripControls className={styles.controls} buttonClassName={styles.control} />
@@ -166,6 +160,17 @@ export function HomeHero() {
           </ul>
           <ul className={styles.list} aria-hidden="true" inert data-copy>
             {HERO_CAROUSEL_ITEMS.map((item) => (
+              <Card key={item.id} item={item} load="late" />
+            ))}
+          </ul>
+          <ul
+            className={`${styles.list} ${styles.lead}`}
+            aria-hidden="true"
+            inert
+            data-copy
+            data-lead
+          >
+            {HERO_CAROUSEL_ITEMS.slice(-LEAD_CARDS).map((item) => (
               <Card key={item.id} item={item} load="late" />
             ))}
           </ul>

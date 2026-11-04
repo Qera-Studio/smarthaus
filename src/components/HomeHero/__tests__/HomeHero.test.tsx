@@ -5,7 +5,7 @@ import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { HERO_CAROUSEL_ITEMS } from "../../../content/hero-carousel";
-import { HomeHero, LEDE, PROJECTS, RATING, TITLE } from "../HomeHero";
+import { HomeHero, LEAD_CARDS, LEDE, PROJECTS, RATING, TITLE } from "../HomeHero";
 
 /**
  * The homepage hero's markup. The strip's movement, hover pause and overlay
@@ -14,7 +14,8 @@ import { HomeHero, LEDE, PROJECTS, RATING, TITLE } from "../HomeHero";
  */
 
 const strip = () => document.querySelector("[data-hero-strip]") as HTMLElement;
-const lists = () => Array.from(strip().querySelectorAll("ul"));
+const lists = () => Array.from(strip().querySelectorAll("ul:not([data-lead])"));
+const lead = () => strip().querySelector("ul[data-lead]") as HTMLElement;
 
 // jsdom has no IntersectionObserver, which StripControls watches the strip
 // with; its scroll is tested in StripControls.test.tsx.
@@ -51,7 +52,7 @@ describe("HomeHero", () => {
     expect(LEDE).toBe(
       "Cameras, entry, audio and home automation for Dubai villas. Installed, connected and looked after by one licensed team.",
     );
-    expect(container.querySelector("section p:nth-of-type(2)")?.textContent).toBe(LEDE);
+    expect(container.querySelector("h1 + p")?.textContent).toBe(LEDE);
   });
 
   describe("word by word", () => {
@@ -61,7 +62,7 @@ describe("HomeHero", () => {
     it("gives each word of the title and the lede its own span", () => {
       render(<HomeHero />);
       expect(words("h1")).toEqual(TITLE.split(" "));
-      expect(words("section p:nth-of-type(2)")).toEqual(LEDE.split(" "));
+      expect(words("h1 + p")).toEqual(LEDE.split(" "));
     });
 
     it("is still one sentence to a screen reader: the spaces stay as text", () => {
@@ -148,8 +149,30 @@ describe("HomeHero", () => {
       render(<HomeHero />);
       for (const { cta } of HERO_CAROUSEL_ITEMS) {
         expect(screen.getAllByRole("link", { name: cta })).toHaveLength(1);
-        expect(screen.getAllByRole("link", { name: cta, hidden: true })).toHaveLength(2);
       }
+    });
+
+    describe("the lead cards, which the rail runs past on its way in", () => {
+      it("are the last cards of the list, the ones that come before the first in the loop", () => {
+        render(<HomeHero />);
+        const titles = Array.from(lead().querySelectorAll("li")).map(
+          (li) => li.querySelector("p")?.textContent,
+        );
+        expect(titles).toEqual(HERO_CAROUSEL_ITEMS.slice(-LEAD_CARDS).map((item) => item.title));
+      });
+
+      it("are hidden from AT and the tab order, and go when the second copy does", () => {
+        render(<HomeHero />);
+        expect(lead()).toHaveAttribute("aria-hidden", "true");
+        expect(lead()).toHaveAttribute("inert");
+        expect(lead()).toHaveAttribute("data-copy");
+      });
+
+      it("match the distance in the stylesheet: two cards of the track's sixteen", () => {
+        const scss = readFileSync(join(__dirname, "../HomeHero.module.scss"), "utf8");
+        const share = (100 * LEAD_CARDS) / (2 * HERO_CAROUSEL_ITEMS.length);
+        expect(scss).toContain(`translate: calc(100vw + ${share}%) 0`);
+      });
     });
 
     it("has its pause button above it, outside the moving track, and no arrows", () => {
@@ -166,7 +189,7 @@ describe("HomeHero", () => {
     it("loads no card lazily, the copy included", () => {
       const markup = renderToStaticMarkup(<HomeHero />);
       const imgs = [...markup.matchAll(/<img[^>]*hero_carousel[^>]*>/g)].map((m) => m[0]);
-      expect(imgs).toHaveLength(HERO_CAROUSEL_ITEMS.length * 2);
+      expect(imgs).toHaveLength(HERO_CAROUSEL_ITEMS.length * 2 + LEAD_CARDS);
       expect(imgs.some((img) => /loading="lazy"/.test(img))).toBe(false);
     });
 
@@ -183,7 +206,8 @@ describe("HomeHero", () => {
         (m) => m[0].match(/srcSet="([^"]*)"/i)?.[1],
       );
       const half = HERO_CAROUSEL_ITEMS.length;
-      expect(srcs.slice(half)).toEqual(srcs.slice(0, half));
+      expect(srcs.slice(half, half * 2)).toEqual(srcs.slice(0, half));
+      expect(srcs.slice(half * 2)).toEqual(srcs.slice(half - LEAD_CARDS, half));
     });
 
     it("fetches the first card at high priority, since it is the largest paint", () => {
@@ -210,80 +234,55 @@ describe("HomeHero", () => {
   });
 
   describe("the proof", () => {
-    const proof = () => screen.getByText(/on Google reviews/).closest("p") as HTMLElement;
+    const proof = () => screen.getByText(/on Google reviews/).closest("ul") as HTMLElement;
+    const lines = () => Array.from(proof().querySelectorAll("li")).map((li) => li.textContent);
 
-    it("states the approved project count", () => {
+    it("states the four proofs, in order, in the approved words", () => {
       render(<HomeHero />);
-      expect(PROJECTS).toBe("180+ projects completed across Dubai");
-      expect(screen.getByText(PROJECTS)).toBeInTheDocument();
+      expect(PROJECTS).toBe("180+ Dubai projects");
+      expect(lines()).toEqual([
+        "4.8 on Google reviews",
+        "180+ Dubai projects",
+        "SIRA Licence",
+        "by Maple Technologies",
+      ]);
     });
 
-    it("puts the rating and the project count on one line, rating first", () => {
+    it("gives each its own mark, hidden from AT, so a line reads as its words alone", () => {
       render(<HomeHero />);
-      const count = screen.getByText(PROJECTS);
-      expect(proof()).toContainElement(count);
-      expect(proof().textContent).toMatch(/^★ 4\.8 on Google reviews.*180\+ projects/);
+      const marks = Array.from(proof().querySelectorAll("li > span"));
+      expect(marks).toHaveLength(4);
+      for (const mark of marks) {
+        expect(mark).toHaveAttribute("aria-hidden", "true");
+        expect(mark.textContent).toBe("");
+      }
+      expect(new Set(marks.map((mark) => mark.className)).size).toBe(4);
     });
 
-    it("splits them with a drawn rule that AT does not read", () => {
+    it("names one SIRA licence, not several", () => {
       render(<HomeHero />);
-      const spans = Array.from(proof().children);
-      expect(spans).toHaveLength(3);
-      expect(spans[1]).toHaveAttribute("aria-hidden", "true");
-      expect(spans[1]?.textContent).toBe("");
+      expect(document.body.textContent).not.toMatch(/Licences/);
     });
 
-    it("sits above the title", () => {
+    it("no longer names Smarthaus in the Maple line", () => {
       render(<HomeHero />);
-      const title = screen.getByRole("heading", { level: 1 });
+      expect(proof().textContent).not.toMatch(/Smarthaus/);
+    });
+
+    it("comes after the CTAs in reading order, and before the strip", () => {
+      render(<HomeHero />);
+      const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
       expect(
-        proof().compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
+        whatsapp.compareDocumentPosition(proof()) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        proof().compareDocumentPosition(strip()) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
     });
 
     it("shows no faces any more", () => {
       const markup = renderToStaticMarkup(<HomeHero />);
       expect(markup).not.toMatch(/hero(?:\/|%2F)s[1-5]\.png/);
-    });
-
-    it("names one SIRA licence, not several", () => {
-      render(<HomeHero />);
-      const sira = screen.getByText(/^SIRA Licence/).closest("p") as HTMLElement;
-      // Read aloud with a comma where the rule is drawn.
-      expect(sira.textContent).toBe("SIRA Licence,Smarthaus by Maple Technologies.");
-      expect(document.body.textContent).not.toMatch(/Licences/);
-    });
-
-    it("draws the SIRA line exactly as the rating line: same parts, same classes", () => {
-      render(<HomeHero />);
-      const sira = screen.getByText(/^SIRA Licence/).closest("p") as HTMLElement;
-      expect(sira.className).toBe(proof().className);
-      const shape = (p: HTMLElement) => Array.from(p.children).map((el) => el.className);
-      expect(shape(sira)).toEqual(shape(proof()));
-    });
-
-    it("types no vertical bar anywhere: the rules are drawn", () => {
-      render(<HomeHero />);
-      const hero = document.querySelector("section[data-hero]") as HTMLElement;
-      expect(hero.textContent).not.toContain("|");
-    });
-
-    it("keeps each half apart for a screen reader with a hidden comma", () => {
-      render(<HomeHero />);
-      for (const p of [proof(), screen.getByText(/^SIRA Licence/).closest("p") as HTMLElement]) {
-        const hidden = p.querySelector(".visually-hidden");
-        expect(hidden?.textContent).toBe(",");
-      }
-    });
-
-    it("puts the SIRA line under the two CTAs, above the strip", () => {
-      render(<HomeHero />);
-      const sira = screen.getByText(/^SIRA Licence/);
-      const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
-      expect(
-        whatsapp.compareDocumentPosition(sira) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-      expect(sira.compareDocumentPosition(strip()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it("leaves nothing after the strip", () => {

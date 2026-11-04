@@ -15,13 +15,17 @@ export const REVEAL_GUTTER_PX = 16;
  * How far the strip runs, in all, for each pixel the page scrolls: on along
  * its drift going down, back going up. Tuned by eye (Shivanshu, 2026-11-04).
  */
-export const SCROLL_SPEED = 1.5;
+export const SCROLL_SPEED = 2.5;
 
-/** How often the glide's speed is eased, and by how much each time. */
+/**
+ * How often the glide's speed is eased, and by how much each time: a fast
+ * glide, nine tenths of what a scroll adds spent within a quarter second of
+ * it, so the strip stops with the page rather than running on after it.
+ */
 export const GLIDE_STEP_MS = 33;
-export const GLIDE_DECAY = 0.87;
+export const GLIDE_DECAY = 0.7;
 /** How much of the drift's speed comes back each step after a scroll up. */
-export const DRIFT_RETURN = 0.03;
+export const DRIFT_RETURN = 0.08;
 /** Below this share of the drift's own speed, the scroll's part is over. */
 const GLIDE_END = 0.25;
 
@@ -57,7 +61,7 @@ const GLIDE_END = 0.25;
  *
  * The opening: the splash boot script sets data-intro on <html> on every full
  * load, and the hero's opening plays only while it is there. It is taken off
- * once the strip has arrived, the opening's last step, so a soft navigation
+ * once this row's fade has ended, the opening's last step, so a soft navigation
  * back finds the hero at rest. Not on unmount: in development React mounts,
  * unmounts and mounts again at once, and that took it off before anything
  * but the title had started (found 2026-11-02).
@@ -272,10 +276,11 @@ export function StripControls({
     });
     visible.observe(el);
 
-    // The opening is over once the strip has arrived (the class names are
-    // hashed, so by the end of the name).
-    const onArrived = (event: AnimationEvent) => {
-      if (event.target === el && event.animationName.endsWith("hero-arrive"))
+    // The opening is over once this row, among the last to start and the
+    // longest, has faded in (the keyframes' names are hashed, so by the end).
+    const row = root.current;
+    const onOpened = (event: AnimationEvent) => {
+      if (event.target === row && event.animationName.endsWith("hero-in"))
         document.documentElement.removeAttribute("data-intro");
     };
 
@@ -340,12 +345,12 @@ export function StripControls({
     el.addEventListener("click", onClick, true);
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("dragstart", onDragStart);
-    el.addEventListener("animationend", onArrived);
+    row?.addEventListener("animationend", onOpened);
     return () => {
       visible.disconnect();
       window.removeEventListener("scroll", onScroll);
       endGlide();
-      el.removeEventListener("animationend", onArrived);
+      row?.removeEventListener("animationend", onOpened);
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onHover);
       el.removeEventListener("pointerleave", onLeave);

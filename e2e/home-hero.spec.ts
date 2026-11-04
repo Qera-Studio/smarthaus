@@ -113,14 +113,10 @@ test("each card's CTA leads to the solutions page", async ({ page }) => {
   await expect(page).toHaveURL(/\/solutions$/);
 });
 
-test("the proof line, title, CTAs and SIRA line read top to bottom above the strip", async ({
-  page,
-}) => {
+test("the title, CTAs, pause button and strip read top to bottom", async ({ page }) => {
   const order = [
-    page.getByText("180+ projects completed across Dubai"),
     page.getByRole("heading", { level: 1 }),
     page.getByRole("link", { name: "WhatsApp", exact: true }),
-    page.getByText(/^SIRA Licence/),
     pause(page),
     strip(page),
   ];
@@ -129,17 +125,62 @@ test("the proof line, title, CTAs and SIRA line read top to bottom above the str
   expect(tops).toEqual([...tops].sort((a, b) => a - b));
 });
 
-test("the rating and the project count share one line on a wide screen", async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) < 640, "phones stack the two");
-  const rating = (await page.getByText(/4\.8 on Google reviews/).boundingBox())!;
-  const count = (await page.getByText("180+ projects completed across Dubai").boundingBox())!;
-  expect(Math.abs(rating.y - count.y)).toBeLessThan(2);
-  expect(count.x).toBeGreaterThan(rating.x + rating.width);
-  const fontSize = (text: RegExp | string) =>
-    page.getByText(text).evaluate((el) => getComputedStyle(el).fontSize);
-  expect(await fontSize("180+ projects completed across Dubai")).toBe(
-    await fontSize(/4\.8 on Google reviews/),
+const proofs = (page: Page) => hero(page).locator("ul:not([aria-label]):not([data-copy]) > li");
+
+test("the title, subtitle and CTAs all start on one line", async ({ page }) => {
+  const starts = [];
+  for (const locator of [
+    page.getByRole("heading", { level: 1 }),
+    page.getByRole("heading", { level: 1 }).locator("+ p"),
+    hero(page).getByRole("link", { name: "Book a site visit" }),
+  ]) {
+    starts.push((await locator.boundingBox())!.x);
+  }
+  expect(new Set(starts.map(Math.round)).size).toBe(1);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCSS("text-align", "start");
+});
+
+test("the four proofs line up: same start, same mark, same colour, same size", async ({ page }) => {
+  await expect(proofs(page)).toHaveCount(4);
+  const seen = await proofs(page).evaluateAll((lines) =>
+    lines.map((li) => {
+      const mark = li.firstElementChild as HTMLElement;
+      const box = mark.getBoundingClientRect();
+      const s = getComputedStyle(mark);
+      return {
+        x: Math.round(box.x),
+        size: `${box.width}x${box.height}`,
+        colour: s.backgroundColor,
+        opacity: s.opacity,
+        mask: s.maskImage,
+      };
+    }),
   );
+  for (const key of ["x", "size", "colour", "opacity"] as const) {
+    expect(new Set(seen.map((line) => line[key])).size).toBe(1);
+  }
+  // Four different marks, and every one a file the page can load.
+  const masks = seen.map((line) => line.mask.match(/\/hero\/[^"')]+/)?.[0]);
+  expect(new Set(masks).size).toBe(4);
+  for (const mask of masks) expect((await page.request.get(mask!)).status()).toBe(200);
+});
+
+test("from lg the proofs sit at the row's far end, beside the message", async ({ page }) => {
+  const width = page.viewportSize()?.width ?? 0;
+  const list = (await proofs(page).first().locator("xpath=..").boundingBox())!;
+  const cta = (await page.getByRole("link", { name: "WhatsApp", exact: true }).boundingBox())!;
+  const title = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
+  if (width >= 1024) {
+    // Its end is the pause button's, the content column's end.
+    const button = (await pause(page).boundingBox())!;
+    expect(Math.abs(list.x + list.width - (button.x + button.width))).toBeLessThan(2);
+    expect(list.x).toBeGreaterThan(title.x + title.width);
+    // The feet level with the CTAs.
+    expect(Math.abs(list.y + list.height - (cta.y + cta.height))).toBeLessThan(2);
+  } else {
+    expect(list.x).toBe(title.x);
+    expect(list.y).toBeGreaterThanOrEqual(cta.y + cta.height);
+  }
 });
 
 test("the rating line has no outline", async ({ page }) => {
@@ -317,33 +358,6 @@ test("there are no arrows on the strip any more", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Previous image|Next image/ })).toHaveCount(0);
 });
 
-test("the two ruled lines are each centred as a whole, rule and both halves", async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) < 640, "phones stack the halves, no rule");
-  const centre = await page.evaluate(() => document.documentElement.clientWidth / 2);
-  const rules = hero(page).locator("p > span[aria-hidden='true']:not(:has(*))");
-  await expect(rules).toHaveCount(2);
-  for (const rule of await rules.all()) {
-    const [start, end] = await rule.evaluate((el) => {
-      const first = el.previousElementSibling!.getBoundingClientRect();
-      const last = el.nextElementSibling!.getBoundingClientRect();
-      return [first.left, last.right];
-    });
-    expect(Math.abs((start + end) / 2 - centre)).toBeLessThan(1);
-  }
-});
-
-test("the rating line is set exactly as the SIRA line", async ({ page }) => {
-  const style = (text: RegExp) =>
-    page
-      .getByText(text)
-      .first()
-      .evaluate((el) => {
-        const s = getComputedStyle(el.closest("p")!);
-        return [s.fontSize, s.fontWeight, s.lineHeight, s.color, s.letterSpacing].join(" ");
-      });
-  expect(await style(/on Google reviews/)).toBe(await style(/^SIRA Licence/));
-});
-
 test.describe("with a mouse", () => {
   test.beforeEach(({ hasTouch }) => {
     test.skip(hasTouch, "hover is a pointer behaviour");
@@ -419,7 +433,10 @@ test.describe("under reduced motion", () => {
   });
 
   test("drops the loop's second copy and the pause button", async ({ page }) => {
-    await expect(strip(page).locator("ul[data-copy]")).toBeHidden();
+    // The second copy and the lead cards both.
+    for (const list of await strip(page).locator("ul[data-copy]").all()) {
+      await expect(list).toBeHidden();
+    }
     await expect(pause(page)).toBeHidden();
   });
 
@@ -451,7 +468,8 @@ test.describe("under reduced motion", () => {
     page,
   }) => {
     const images = strip(page).locator("img");
-    await expect(images).toHaveCount(16);
+    // Both copies of the eight, and the two lead cards.
+    await expect(images).toHaveCount(18);
     await expect
       .poll(() =>
         images.evaluateAll(
@@ -565,7 +583,7 @@ test.describe("without JavaScript", () => {
   test("the hero, the strip and the proof are all in the server HTML", async ({ page }) => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Home at your fingertips");
     await expect(cards(page)).toHaveCount(8);
-    await expect(page.getByText("180+ projects completed across Dubai")).toBeVisible();
+    await expect(page.getByText("180+ Dubai projects")).toBeVisible();
   });
 
   test("the strip still drifts, since it is CSS", async ({ page, hasTouch }) => {
@@ -642,7 +660,7 @@ test.describe("the loop", () => {
   /** Where the first card of each copy sits, in viewport pixels. */
   const firsts = (page: Page) =>
     strip(page)
-      .locator("ul")
+      .locator("ul:not([data-lead])")
       .evaluateAll((lists) => lists.map((ul) => ul.firstElementChild!.getBoundingClientRect().x));
 
   test("has no seam: the copy lands exactly where the first copy started", async ({ page }) => {
@@ -651,6 +669,21 @@ test.describe("the loop", () => {
     await seek(page, 1 - 1e-9);
     const [, copyAtEnd] = await firsts(page);
     expect(Math.abs(copyAtEnd! - start!)).toBeLessThan(1);
+  });
+
+  test("the first copy's last card meets the second's first, one gap apart", async ({ page }) => {
+    const lists = strip(page).locator("ul:not([data-lead])");
+    const gap = await lists.evaluateAll(
+      ([first, copy]) =>
+        copy!.firstElementChild!.getBoundingClientRect().left -
+        first!.lastElementChild!.getBoundingClientRect().right,
+    );
+    expect(Math.abs(gap - 8)).toBeLessThan(1);
+  });
+
+  test("a card is 4:3, as the strip's height comes to", async ({ page }) => {
+    const box = (await cards(page).first().boundingBox())!;
+    expect(Math.abs(box.width / box.height - 4 / 3)).toBeLessThan(0.01);
   });
 
   test("the two copies are exactly one copy's width apart", async ({ page }) => {

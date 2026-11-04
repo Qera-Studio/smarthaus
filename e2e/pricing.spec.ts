@@ -94,26 +94,36 @@ test("lines the four buttons up on one row", async ({ page }) => {
 });
 
 /**
- * The Connected card's CTA is the solid band, whose hover used to step from
- * brown-950 to brown-800: too close to see (reported 2026-10-02). It now
- * empties to its outline, so the hover is a change of shape, not of shade.
+ * The Connected card's CTA is the solid band. Its hover swipes: the band
+ * empties and the ground runs back in from the start edge in 300ms
+ * (Shivanshu, 2026-11-04), ending as it began.
  */
-test("empties the Connected card's CTA to an outline on hover", async ({ page, isMobile }) => {
+test("swipes the Connected card's CTA on hover, ending as it began", async ({ page, isMobile }) => {
   test.skip(isMobile, "hover is a mouse concern");
   const cta = pricing(page)
     .locator('[data-tone="image"]')
     .getByRole("link", { name: "Get started" });
   await cta.scrollIntoViewIfNeeded();
-  const paint = () =>
-    cta.evaluate((el) => {
-      const s = getComputedStyle(el);
-      return { bg: s.backgroundColor, ink: s.color, edge: s.borderTopColor };
-    });
   const BROWN_950 = "rgb(10, 8, 7)";
-  expect((await paint()).bg).toBe(BROWN_950);
+  expect(await cta.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(BROWN_950);
+  const ink = await cta.evaluate((el) => getComputedStyle(el).color);
 
   await cta.hover();
-  await expect.poll(paint).toEqual({ bg: "rgba(0, 0, 0, 0)", ink: BROWN_950, edge: BROWN_950 });
+  const swipe = await cta.evaluate((el) => {
+    const [animation] = el.getAnimations();
+    animation!.pause();
+    const name = (animation as CSSAnimation).animationName;
+    const duration = animation!.effect!.getComputedTiming().duration;
+    animation!.currentTime = 0;
+    const from = getComputedStyle(el).backgroundSize;
+    animation!.finish();
+    return { name, duration, from };
+  });
+  expect(swipe.name).toMatch(/button-swipe$/);
+  expect(swipe.duration).toBe(300);
+  expect(swipe.from).toBe("0% 100%");
+
+  await expect.poll(() => cta.evaluate((el) => getComputedStyle(el).color)).toBe(ink);
   await expectAccessible(page);
 });
 

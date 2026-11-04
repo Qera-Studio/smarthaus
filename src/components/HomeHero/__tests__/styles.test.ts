@@ -1,5 +1,5 @@
 import { compile } from "sass";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -54,8 +54,9 @@ describe("HomeHero.module.scss", () => {
       const motion = media("(prefers-reduced-motion: no-preference)");
       expect(motion).toMatch(/animation-name:\s*hero-strip/);
       // Nowhere else: the reset's 0.01ms trick would run it once and stop it
-      // a frame later at a random offset.
-      expect(css.match(/animation-name:\s*hero-strip/g)).toHaveLength(1);
+      // a frame later at a random offset. Once more for the opening's list.
+      expect(css.match(/animation-name:\s*hero-strip/g)).toHaveLength(2);
+      expect(motion.match(/animation-name:\s*hero-strip/g)).toHaveLength(2);
     });
 
     test("loops forever at a steady, slow pace, as longhands", () => {
@@ -83,13 +84,26 @@ describe("HomeHero.module.scss", () => {
 
     test("stops on hover, on focus inside the track, and on the pause button", () => {
       const motion = media("(prefers-reduced-motion: no-preference)");
-      const paused = motion.match(/([^{}]+)\{\s*animation-play-state:\s*paused;?\s*\}/)?.[1];
+      // The second value is the opening's: see "holds neither" below.
+      const paused = motion.match(
+        /([^{}]+)\{\s*animation-play-state:\s*paused, running;?\s*\}/,
+      )?.[1];
       const selectors = paused?.split(",").map((s) => s.trim());
       expect(selectors).toEqual([
         ".track:hover",
         ".track:focus-within",
         ".strip[data-paused] .track",
       ]);
+    });
+
+    test("no hold on the drift stops the opening's own run, which comes second", () => {
+      const motion = media("(prefers-reduced-motion: no-preference)");
+      expect(rule(".strip[data-dragging] .track", motion)).toMatch(
+        /animation-play-state:\s*paused, running/,
+      );
+      expect(rule(":where(:root[data-intro]) .track", motion)).toMatch(
+        /animation-name:\s*hero-strip, hero-arrive/,
+      );
     });
 
     test("holds still under a dragging hand", () => {
@@ -246,6 +260,21 @@ describe("HomeHero.module.scss", () => {
       expect(rule(".controls")).toMatch(/flex:\s*none/);
     });
 
+    test("everything reads from the start edge: nothing is centred any more", () => {
+      expect(rule(".hero")).not.toMatch(/text-align/);
+      expect(rule(".hero")).not.toMatch(/align-items/);
+      expect(rule(".ctas")).not.toMatch(/justify-content/);
+      expect(rule(".copy")).not.toMatch(/padding-inline/);
+    });
+
+    test("from lg the message and the proofs share a row, at its two ends", () => {
+      // From the source's bp-lg block, compiled after the column rule.
+      const copy = css.match(/\.copy\s*\{\s*(flex-direction:\s*row[^}]*)\}/)?.[1] ?? "";
+      expect(copy).toMatch(/flex-direction:\s*row/);
+      expect(copy).toMatch(/justify-content:\s*space-between/);
+      expect(rule(".copy")).toMatch(/flex-direction:\s*column/);
+    });
+
     test("the copy is centred in what is left, so the strip stays at the bottom", () => {
       const copy = rule(".copy");
       expect(copy).toMatch(/margin-block:\s*auto/);
@@ -264,8 +293,9 @@ describe("HomeHero.module.scss", () => {
       for (const selector of [".track", ".list", ".card"]) {
         expect(rule(selector)).toMatch(/block-size:\s*100%/);
       }
-      expect(rule(".card")).toMatch(/aspect-ratio:\s*4\s*\/\s*3/);
-      expect(rule(".card")).not.toMatch(/inline-size:/);
+      // In the strip's height, not aspect-ratio, which left a gap in WebKit.
+      expect(rule(".card")).toMatch(/inline-size:\s*133\.3333333333cqb/);
+      expect(rule(".strip")).toMatch(/container-type:\s*size/);
     });
 
     test("images fill their card without distortion", () => {
@@ -295,25 +325,44 @@ describe("HomeHero.module.scss", () => {
       );
     });
 
-    test("both lines are the same pair: stacked on a phone, one centred line from sm", () => {
-      expect(rule(".pair")).toMatch(/flex-direction:\s*column/);
-      expect(rule(".pair")).toMatch(/align-items:\s*center/);
-      expect(css).toMatch(/\.pair\s*\{\s*flex-direction:\s*row/);
-      expect(css).not.toMatch(/1fr auto 1fr|pairStart|pairEnd/);
-      expect(rule(".divider")).toMatch(/display:\s*none/);
-      expect(css).toMatch(/\.divider\s*\{\s*display:\s*block;\s*inline-size:\s*1px/);
-    });
-
-    test("the pair is set as the SIRA line always was: small, regular, no outline", () => {
-      const pair = rule(".pair");
-      expect(pair).toMatch(/font-size:\s*var\(--font-size-sm\)/);
-      expect(pair).toMatch(
+    test("the proofs are set as the old lines were: small, 70%, no weight, no outline", () => {
+      const proof = rule(".proof");
+      expect(proof).toMatch(/font-size:\s*var\(--font-size-sm\)/);
+      expect(proof).toMatch(
         /color:\s*color-mix\(in srgb, var\(--color-text-primary\) 70%, transparent\)/,
       );
-      expect(pair).not.toMatch(/opacity/);
-      expect(pair).not.toMatch(/font-weight/);
-      expect(pair).not.toMatch(/border/);
-      expect(css).not.toMatch(/\.proof|\.byline|\.rating/);
+      expect(proof).not.toMatch(/opacity|font-weight|border/);
+      expect(proof).toMatch(/list-style:\s*none/);
+      expect(css).not.toMatch(/\.pair|\.divider/);
+    });
+
+    test("every mark is the same box in the text's colour, whatever its file holds", () => {
+      const icon = rule(".icon");
+      expect(icon).toMatch(/inline-size:\s*1em/);
+      expect(icon).toMatch(/block-size:\s*1em/);
+      expect(icon).toMatch(/background-color:\s*currentcolor/);
+      expect(icon).toMatch(/mask-size:\s*contain/);
+      for (const [mark, file] of [
+        ["star", "starIcon"],
+        ["projects", "projectsLogo"],
+        ["sira", "siraLogo"],
+        ["maple", "mapletechIconMono"],
+      ]) {
+        expect(rule(`.${mark}`)).toMatch(
+          new RegExp(`mask-image:\\s*url\\("/hero/${file}\\.svg"\\)`),
+        );
+        expect(existsSync(join(process.cwd(), `public/hero/${file}.svg`))).toBe(true);
+      }
+    });
+
+    test("the Maple silhouette keeps its bulb: nothing white left to fill it in", () => {
+      const svg = readFileSync(join(process.cwd(), "public/hero/mapletechIconMono.svg"), "utf8");
+      expect(svg).toMatch(/<g mask="url\(#bulb\)">/);
+      expect(svg.replace(/<mask[\s\S]*?<\/mask>/, "")).not.toMatch(/fill="white"/);
+    });
+
+    test("a mark survives forced colours, which would paint its ground away", () => {
+      expect(media("(forced-colors: active)")).toMatch(/background-color:\s*CanvasText/);
     });
 
     test("lists draw no bullets", () => {
@@ -350,44 +399,44 @@ describe("HomeHero.module.scss", () => {
     test("plays only for a visitor who has not asked for less motion", () => {
       expect(css.match(/animation-name:\s*hero-in\b/g)).toHaveLength(1);
       expect(css.match(/animation-name:\s*hero-word/g)).toHaveLength(1);
-      expect(css.match(/animation-name:\s*hero-arrive/g)).toHaveLength(1);
       expect(motion()).toMatch(/animation-name:\s*hero-in\b/);
-      expect(motion()).toMatch(/animation-name:\s*hero-arrive/);
+      expect(motion()).toMatch(/animation-name:\s*hero-strip, hero-arrive/);
     });
 
-    const fades = `${gate} .ctas, ${gate} .copy > .pair, ${gate} .controls`;
+    const fades = `${gate} .ctas, ${gate} .proof, ${gate} .controls`;
     const ms = (name: string) =>
       Number(rule(gate, motion()).match(new RegExp(`--${name}:\\s*(\\d+)ms`))?.[1]);
 
     test("plays only while <html> carries data-intro", () => {
       expect(rule(fades, motion())).toMatch(/animation-name:\s*hero-in/);
       expect(rule(`${gate} .word`, motion())).toMatch(/animation-name:\s*hero-word/);
-      expect(rule(`${gate} .strip`, motion())).toMatch(/animation-name:\s*hero-arrive/);
+      expect(rule(`${gate} .track`, motion())).toMatch(/animation-name:\s*hero-strip, hero-arrive/);
     });
 
     test("fills backwards only, so nothing is held once it has played", () => {
       // Both only on the scroll-driven parallax, which holds its place at
       // either end of the scroll by design.
       expect(css).not.toMatch(/animation-fill-mode:\s*forwards/);
-      expect(css.match(/animation-fill-mode:\s*backwards/g)).toHaveLength(3);
+      expect(css.match(/animation-fill-mode:\s*backwards/g)).toHaveLength(2);
+      expect(rule(`${gate} .track`, motion())).toMatch(/animation-fill-mode:\s*none, backwards/);
       expect(css.match(/animation-fill-mode:\s*both/g)).toHaveLength(1);
     });
 
     test("its timings sit on <html>, so the nav and the bar share them", () => {
-      expect(ms("intro-duration")).toBe(3200);
+      expect(ms("intro-duration")).toBe(2133);
       expect(rule(gate, motion())).toMatch(/--intro-shift:\s*24px/);
       expect(rule(fades, motion())).toMatch(/animation-duration:\s*var\(--intro-duration\)/);
     });
 
     test("in order: title, subtitle, then the CTAs with the strip, then the two lines", () => {
       expect(rule(`${gate} .ctas`, motion())).toMatch(/animation-delay:\s*var\(--intro-together\)/);
-      expect(rule(`${gate} .strip`, motion())).toMatch(
-        /animation-delay:\s*var\(--intro-together\)/,
+      expect(rule(`${gate} .track`, motion())).toMatch(
+        /animation-delay:\s*0s, var\(--intro-together\)/,
       );
       // The list that opens right after a closing brace, not the tail of the
       // longer list that sets the keyframes.
       expect(
-        rule(`}\n${gate} .copy > .pair, ${gate} .controls`, motion().replace(/\}\s+/g, "}\n")),
+        rule(`}\n${gate} .proof, ${gate} .controls`, motion().replace(/\}\s+/g, "}\n")),
       ).toMatch(/animation-delay:\s*var\(--intro-rest\)/);
       expect(ms("intro-lede-start")).toBeLessThan(ms("intro-together"));
       expect(ms("intro-together")).toBeLessThan(ms("intro-rest"));
@@ -406,10 +455,30 @@ describe("HomeHero.module.scss", () => {
       }
     });
 
-    test("is half the speed of the last cut", () => {
-      // 1.6s a piece and 1.8s for the strip, until 2026-11-04.
-      expect(ms("intro-duration")).toBe(1600 * 2);
-      expect(Number(rule(".hero").match(/--hero-arrive-duration:\s*(\d+)ms/)?.[1])).toBe(1800 * 2);
+    test("is 1.5x the speed of the last cut, to the millisecond", () => {
+      const last: Record<string, number> = {
+        "intro-duration": 3200,
+        "intro-word-duration": 1600,
+        "intro-title-stagger": 300,
+        "intro-lede-start": 800,
+        "intro-lede-stagger": 90,
+        "intro-together": 1200,
+        "intro-rest": 1700,
+      };
+      for (const [name, was] of Object.entries(last)) {
+        expect(ms(name)).toBe(Math.round(was / 1.5));
+      }
+    });
+
+    test("the opening's last step is the pause row, which StripControls waits for", () => {
+      const end = (delay: string, duration: number) => ms(delay) + duration;
+      const arrive = Number(rule(".hero").match(/--hero-arrive-duration:\s*(\d+)ms/)?.[1]);
+      const row = end("intro-rest", ms("intro-duration"));
+      expect(row).toBeGreaterThan(end("intro-together", arrive));
+      expect(row).toBeGreaterThan(end("intro-together", ms("intro-duration")));
+      expect(row).toBeGreaterThan(
+        ms("intro-lede-start") + 17 * ms("intro-lede-stagger") + ms("intro-word-duration"),
+      );
     });
 
     describe("word by word", () => {
@@ -439,24 +508,25 @@ describe("HomeHero.module.scss", () => {
       });
     });
 
-    test("the rating line above the copy drops into place; the rest rises", () => {
-      expect(rule(`${gate} .copy > .pair:first-child`, motion())).toMatch(/--intro-shift:\s*-24px/);
-    });
-
-    test("the strip glides in from the screen's right edge, easing the whole way", () => {
-      expect(css).toMatch(/@keyframes hero-arrive\s*\{\s*from\s*\{\s*translate:\s*100vw 0;?\s*\}/);
+    test("the rail starts very fast past the screen's edge, then brakes hard", () => {
+      expect(css).toMatch(
+        /@keyframes hero-arrive\s*\{\s*from\s*\{\s*translate:\s*calc\(100vw \+ 12\.5%\) 0;?\s*\}/,
+      );
       const [x1, y1, x2, y2] = rule(".hero")
         .match(/--hero-arrive-ease:\s*cubic-bezier\(([^)]*)\)/)![1]!
         .split(",")
         .map(Number);
-      // A gentle start, far less than the 3 times the mean speed of the train
-      // that read as sharp, and no overshoot at the end.
-      expect(y1! / x1!).toBeLessThan(3);
+      // Over five times its mean speed as it sets off, with no overshoot.
+      expect(y1! / x1!).toBeGreaterThan(5);
       expect(y2).toBe(1);
       expect(x2).toBeGreaterThan(0);
-      expect(rule(`${gate} .strip`, motion())).toMatch(
-        /animation-timing-function:\s*var\(--hero-arrive-ease\)/,
+      expect(rule(`${gate} .track`, motion())).toMatch(
+        /animation-timing-function:\s*linear, var\(--hero-arrive-ease\)/,
       );
+    });
+
+    test("is added to the drift, so the drift keeps its clock under it", () => {
+      expect(rule(`${gate} .track`, motion())).toMatch(/animation-composition:\s*replace, add/);
     });
 
     test("a scroll runs the strip through hover and the pause button, but not a drag", () => {
@@ -470,8 +540,15 @@ describe("HomeHero.module.scss", () => {
       );
     });
 
-    test("the strip, not the track, so the drift runs on underneath", () => {
-      expect(() => rule(`${gate} .track`, motion())).toThrow();
+    test("the track, not the strip, so the cards run off the strip's own edge", () => {
+      expect(() => rule(`${gate} .strip`, motion())).toThrow();
+    });
+
+    test("the lead cards hang off the track's start, out of its width", () => {
+      const lead = rule(".lead");
+      expect(lead).toMatch(/position:\s*absolute/);
+      expect(lead).toMatch(/inset-inline-end:\s*100%/);
+      expect(rule(".track")).toMatch(/position:\s*relative/);
     });
 
     test("the copy rises in from below as it fades", () => {
@@ -482,7 +559,7 @@ describe("HomeHero.module.scss", () => {
 
     test("waits while the splash covers the page", () => {
       const waiting = rule(
-        `${held} .word, ${held} .ctas, ${held} .copy > .pair, ${held} .controls, ${held} .strip`,
+        `${held} .word, ${held} .ctas, ${held} .proof, ${held} .controls, ${held} .track`,
         motion(),
       );
       expect(waiting).toMatch(/animation-play-state:\s*paused/);

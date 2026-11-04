@@ -578,7 +578,7 @@ describe("StripControls", () => {
       onScreen(true);
       scrollTo(400);
       act(() => {
-        jest.advanceTimersByTime(1_500);
+        jest.advanceTimersByTime(1_000);
       });
       expect(strip).not.toHaveAttribute("data-gliding");
       expect(lastRate(animation)).toBe(1);
@@ -595,8 +595,25 @@ describe("StripControls", () => {
       expect(Math.abs(ms / MS_PER_PX - 300 * SCROLL_SPEED)).toBeLessThan(5);
     });
 
-    test("is a little faster than the 1 it was", () => {
-      expect(SCROLL_SPEED).toBe(1.5);
+    test("is faster than the 1.5 it was", () => {
+      expect(SCROLL_SPEED).toBe(2.5);
+    });
+
+    test("stops with the page: nine tenths of a scroll is spent within a quarter second", () => {
+      const steps = Math.floor(250 / GLIDE_STEP_MS);
+      expect(GLIDE_DECAY ** steps).toBeLessThan(0.1);
+    });
+
+    test("after a hard scroll up it is going forward again within a second", () => {
+      const { animation } = setup({ at: 200_000 });
+      scrollTo(3000);
+      onScreen(true);
+      scrollTo(0);
+      animation.updatePlaybackRate.mockClear();
+      act(() => {
+        jest.advanceTimersByTime(1_000);
+      });
+      expect(lastRate(animation)).toBeGreaterThan(0);
     });
 
     test("another scroll while it glides adds to the speed already there", () => {
@@ -763,18 +780,22 @@ describe("StripControls", () => {
       expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
     });
 
-    test("takes it off once the strip has arrived, so a soft navigation back finds the hero at rest", () => {
+    const row = () => screen.getByRole("button", { name: "Pause the images" }).parentElement!;
+
+    test("takes it off once the pause row has faded in, the opening's last step", () => {
       document.documentElement.setAttribute("data-intro", "");
-      const { strip } = setup();
-      ended(strip, "hero-arrive");
+      setup();
+      ended(row(), "hero-in");
       expect(document.documentElement.hasAttribute("data-intro")).toBe(false);
     });
 
-    test("not when another animation ends, or one inside the strip", () => {
+    test("not when the strip lands, which is sooner, or when anything else ends", () => {
       document.documentElement.setAttribute("data-intro", "");
       const { strip, link } = setup();
+      ended(strip, "hero-arrive");
       ended(strip, "hero-in");
-      ended(link, "hero-arrive");
+      ended(link, "hero-in");
+      ended(row(), "hero-arrive");
       expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
     });
 
@@ -793,10 +814,11 @@ describe("StripControls", () => {
 
     test("stops listening on unmount", () => {
       document.documentElement.setAttribute("data-intro", "");
-      const { strip, unmount } = setup();
+      const { unmount } = setup();
+      const button = row();
       unmount();
       expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
-      ended(strip, "hero-arrive");
+      ended(button, "hero-in");
       expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
     });
   });
