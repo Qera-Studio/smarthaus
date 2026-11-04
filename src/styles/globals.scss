@@ -209,6 +209,9 @@
   }
 }
 
+// How long a heading waits, once on screen, before its words start.
+$reveal-word-wait: 1000ms;
+
 // The homepage's scroll reveal (ScrollReveal.tsx). Each runs once and lets go:
 // fill backwards, never forwards, and an animation rather than a transition, so
 // a card's own hover keeps its timing and no stagger is left on it. Screen only,
@@ -235,12 +238,20 @@
       }
     }
 
+    // The paragraph under a heading follows it, never comes ahead of it.
+    [data-reveal-words] + [data-reveal="in"]:not([data-reveal-words]) {
+      animation-delay: #{$reveal-word-wait + 300ms};
+    }
+
     // Word by word: these are inline, so they fade and sharpen but do not rise.
+    // Held back and slow (Shivanshu, 2026-11-04): started on arrival, it was
+    // over by the time the visitor stopped scrolling.
     [data-reveal="in"][data-reveal-words] > span {
       --reveal-blur: 6px;
 
       animation-name: reveal-word;
-      animation-duration: 700ms;
+      animation-duration: 1200ms;
+      animation-delay: $reveal-word-wait;
       animation-timing-function: var(--ease-out);
       animation-fill-mode: backwards;
 
@@ -252,7 +263,7 @@
 
     @for $i from 2 through 8 {
       [data-reveal="in"][data-reveal-words] > span:nth-of-type(#{$i}) {
-        animation-delay: #{($i - 1) * 60ms};
+        animation-delay: #{$reveal-word-wait + ($i - 1) * 60ms};
       }
     }
   }
