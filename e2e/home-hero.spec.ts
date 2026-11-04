@@ -125,6 +125,15 @@ test("the title, CTAs, pause button and strip read top to bottom", async ({ page
   expect(tops).toEqual([...tops].sort((a, b) => a - b));
 });
 
+const messageOf = (page: Page) => page.getByRole("heading", { level: 1 }).locator("xpath=..");
+
+test("the subtitle is 600px wide at most, and no wider than the screen's column", async ({
+  page,
+}) => {
+  const lede = (await page.getByRole("heading", { level: 1 }).locator("+ p").boundingBox())!;
+  expect(lede.width).toBeLessThanOrEqual(600);
+});
+
 const proofs = (page: Page) => hero(page).locator("ul:not([aria-label]):not([data-copy]) > li");
 
 test("the title, subtitle and CTAs all start on one line", async ({ page }) => {
@@ -175,8 +184,9 @@ test("from lg the proofs sit at the row's far end, beside the message", async ({
     const button = (await pause(page).boundingBox())!;
     expect(Math.abs(list.x + list.width - (button.x + button.width))).toBeLessThan(2);
     expect(list.x).toBeGreaterThan(title.x + title.width);
-    // The feet level with the CTAs.
-    expect(Math.abs(list.y + list.height - (cta.y + cta.height))).toBeLessThan(2);
+    // The two sides centred on each other.
+    const message = (await messageOf(page).boundingBox())!;
+    expect(Math.abs(list.y + list.height / 2 - (message.y + message.height / 2))).toBeLessThan(2);
   } else {
     expect(list.x).toBe(title.x);
     expect(list.y).toBeGreaterThanOrEqual(cta.y + cta.height);

@@ -203,7 +203,7 @@ Three things that are load-bearing:
 
 The section no longer overlaps or holds the section before it.
 
-**The pictures' parallax** (2026-11-04). In the stack each picture is 25% taller than its frame and slides down through it on `animation-timeline: view()`, the hero strip's depth (CSS; still in Firefox). Sheet and frame are `overflow: clip`, because `hidden` is a scroll container and `view()` would watch it. A pinned box's timeline stretches while it stays pinned, so the range is a length, one screen of scroll; browsers start it part of the way up the rise.
+**The pictures' parallax** (2026-11-04). In the stack each picture is 22.5% taller than its frame and slides down through it on `animation-timeline: view()`, a tenth shallower than the hero strip's (CSS; still in Firefox). Sheet and frame are `overflow: clip`, because `hidden` is a scroll container and `view()` would watch it. A pinned box's timeline stretches while it stays pinned, so the range is a length, one screen of scroll; browsers start it part of the way up the rise.
 
 ### Accessibility
 

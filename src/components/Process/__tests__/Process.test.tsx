@@ -101,12 +101,14 @@ describe("the stack's mechanism", () => {
       expect(rules.match(/overflow:\s*clip/g)).toHaveLength(2);
     });
 
-    it("is the hero strip's depth, so the page has one parallax", () => {
+    it("is a tenth shallower than the hero strip's", () => {
       const hero = readFileSync(join(__dirname, "../../HomeHero/HomeHero.module.scss"), "utf8");
       const spare = (source: string, name: string) =>
-        source.match(new RegExp(`\\$${name}:\\s*(\\d+)%`))?.[1];
-      expect(spare(scss, "parallax-spare")).toBe("25");
-      expect(spare(scss, "parallax-spare")).toBe(spare(hero, "hero-parallax-spare"));
+        source.match(new RegExp(`\\$${name}:\\s*([\\d.]+)%`))?.[1];
+      expect(spare(scss, "parallax-spare")).toBe("22.5");
+      expect(Number(spare(scss, "parallax-spare"))).toBeCloseTo(
+        Number(spare(hero, "hero-parallax-spare")) * 0.9,
+      );
     });
 
     it("travels exactly the spare, so no frame ever shows past its picture", () => {

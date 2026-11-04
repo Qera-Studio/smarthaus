@@ -1,7 +1,12 @@
 import type { Page } from "@playwright/test";
 
 import { test, expect } from "./fixtures";
-import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
+import {
+  expectAccessible,
+  expectHydrated,
+  expectNoEmDash,
+  expectNoHorizontalOverflow,
+} from "./checks";
 
 /**
  * "By the numbers", under the hardware carousel. What only a browser shows: that
@@ -24,6 +29,64 @@ const boxes = async (page: Page) =>
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await section(page).scrollIntoViewIfNeeded();
+});
+
+test.describe("the figures' roll", () => {
+  const first = (page: Page) => section(page).locator("[data-stat-value]").first();
+  const roll = (page: Page) => first(page).getAttribute("data-roll");
+
+  test("waits at zero off screen, rolls up on arrival, and leaves the real figure", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectHydrated(page);
+    // beforeEach came here once already, on the page before this one.
+    await expect.poll(() => roll(page)).toBe("0+");
+    await expect(first(page)).toHaveText("150+");
+
+    await first(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await expect.poll(() => roll(page).then((v) => v !== "0+")).toBe(true);
+    // The real figure throughout, and the drawn one gone at the end.
+    await expect(first(page)).toHaveText("150+");
+    await expect(first(page)).not.toHaveAttribute("data-roll", /.*/, { timeout: 4_000 });
+    await expect(first(page)).toHaveCSS("color", /rgb\(/);
+  });
+
+  test("while it rolls, only the drawn digits show", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectHydrated(page);
+    await expect.poll(() => roll(page)).toBe("0+");
+    const style = await first(page).evaluate((el) => ({
+      ink: getComputedStyle(el).color,
+      drawn: getComputedStyle(el, "::after").content,
+      drawnInk: getComputedStyle(el, "::after").color,
+    }));
+    expect(style.ink).toBe("rgba(0, 0, 0, 0)");
+    expect(style.drawn).toContain("0+");
+    expect(style.drawnInk).not.toBe(style.ink);
+  });
+
+  test("a print of the page gets the real figures", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectHydrated(page);
+    await expect.poll(() => roll(page)).toBe("0+");
+    await page.emulateMedia({ media: "print" });
+    await expect(first(page)).not.toHaveCSS("color", "rgba(0, 0, 0, 0)");
+  });
+
+  test.describe("under reduced motion", () => {
+    test.use({ reducedMotion: "reduce" });
+
+    test("the figures simply stand", async ({ page }) => {
+      await page.goto("/");
+      await expectHydrated(page);
+      await expect(first(page)).not.toHaveAttribute("data-roll", /.*/);
+      await expect(first(page)).toHaveText("150+");
+    });
+  });
 });
 
 test("sits directly below the hardware carousel", async ({ page }) => {

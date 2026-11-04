@@ -30,9 +30,9 @@
 // screen, so the sheets stop pinning.
 $stack-min-block: 32rem;
 
-// How much taller each picture is than its frame, for the parallax: the same
-// depth as the hero strip's photographs.
-$parallax-spare: 25%;
+// How much taller each picture is than its frame, for the parallax: a tenth
+// shallower than the hero strip's photographs (Shivanshu, 2026-11-04).
+$parallax-spare: 22.5%;
 
 @layer blocks {
   .process {

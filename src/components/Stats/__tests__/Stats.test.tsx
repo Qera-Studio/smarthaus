@@ -12,6 +12,22 @@ import { Stats } from "../Stats";
 
 const items = () => within(screen.getByRole("list")).getAllByRole("listitem");
 
+// jsdom has no IntersectionObserver or matchMedia, which RollingFigures reads;
+// its behaviour is tested in RollingFigures.test.tsx.
+beforeAll(() => {
+  Object.defineProperty(window, "IntersectionObserver", {
+    configurable: true,
+    value: class {
+      observe() {}
+      disconnect() {}
+    },
+  });
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () => ({ matches: false }),
+  });
+});
+
 describe("Stats", () => {
   it("is a region named by its h2", () => {
     render(<Stats />);

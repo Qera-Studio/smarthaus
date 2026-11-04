@@ -595,8 +595,8 @@ describe("StripControls", () => {
       expect(Math.abs(ms / MS_PER_PX - 300 * SCROLL_SPEED)).toBeLessThan(5);
     });
 
-    test("is faster than the 1.5 it was", () => {
-      expect(SCROLL_SPEED).toBe(2.5);
+    test("is 15% under the 2.5 of the cut before", () => {
+      expect(SCROLL_SPEED).toBeCloseTo(2.5 * 0.85);
     });
 
     test("stops with the page: nine tenths of a scroll is spent within a quarter second", () => {

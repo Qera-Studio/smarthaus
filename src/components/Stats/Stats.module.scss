@@ -71,6 +71,27 @@
     color: var(--color-text-primary);
   }
 
+  // The rolling figure (RollingFigures), drawn over the real one, which stays
+  // in the page: a screen reader, a crawler, a search in the page and a print
+  // all only ever get the true number. Empty alt text, for browsers that take
+  // it, keeps the passing digits out of the accessibility tree. Not where a
+  // colour cannot be made transparent, which would draw the two on each other.
+  @media screen and (forced-colors: none) {
+    .value[data-roll] {
+      position: relative;
+      color: transparent;
+
+      &::after {
+        content: attr(data-roll);
+        content: attr(data-roll) / "";
+        position: absolute;
+        inset-block-start: 0;
+        inset-inline-start: 0;
+        color: var(--color-text-primary);
+      }
+    }
+  }
+
   .label {
     font-size: var(--type-body-lg);
     line-height: $line-height-snug;

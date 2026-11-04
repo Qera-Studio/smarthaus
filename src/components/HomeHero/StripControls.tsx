@@ -15,7 +15,7 @@ export const REVEAL_GUTTER_PX = 16;
  * How far the strip runs, in all, for each pixel the page scrolls: on along
  * its drift going down, back going up. Tuned by eye (Shivanshu, 2026-11-04).
  */
-export const SCROLL_SPEED = 2.5;
+export const SCROLL_SPEED = 2.125;
 
 /**
  * How often the glide's speed is eased, and by how much each time: a fast

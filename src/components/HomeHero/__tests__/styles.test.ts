@@ -272,6 +272,7 @@ describe("HomeHero.module.scss", () => {
       const copy = css.match(/\.copy\s*\{\s*(flex-direction:\s*row[^}]*)\}/)?.[1] ?? "";
       expect(copy).toMatch(/flex-direction:\s*row/);
       expect(copy).toMatch(/justify-content:\s*space-between/);
+      expect(copy).toMatch(/align-items:\s*center/);
       expect(rule(".copy")).toMatch(/flex-direction:\s*column/);
     });
 
@@ -327,7 +328,7 @@ describe("HomeHero.module.scss", () => {
 
     test("the proofs are set as the old lines were: small, 70%, no weight, no outline", () => {
       const proof = rule(".proof");
-      expect(proof).toMatch(/font-size:\s*var\(--font-size-sm\)/);
+      expect(proof).toMatch(/font-size:\s*calc\(var\(--font-size-sm\) \* 1\.05\)/);
       expect(proof).toMatch(
         /color:\s*color-mix\(in srgb, var\(--color-text-primary\) 70%, transparent\)/,
       );
@@ -363,6 +364,11 @@ describe("HomeHero.module.scss", () => {
 
     test("a mark survives forced colours, which would paint its ground away", () => {
       expect(media("(forced-colors: active)")).toMatch(/background-color:\s*CanvasText/);
+    });
+
+    test("the subtitle stops at 600px, and the CTAs stand a little further off it", () => {
+      expect(rule(".lede")).toMatch(/max-inline-size:\s*37\.5rem/);
+      expect(rule(".ctas")).toMatch(/margin-block-start:\s*clamp\(40px, 6\.5vh, 64px\)/);
     });
 
     test("lists draw no bullets", () => {

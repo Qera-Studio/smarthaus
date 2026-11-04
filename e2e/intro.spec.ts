@@ -302,7 +302,7 @@ test.describe("the page's scroll", () => {
     const x = await firstCardX();
     await page.evaluate(() => window.scrollTo({ top: 400, behavior: "instant" }));
     await page.evaluate(() => new Promise(requestAnimationFrame));
-    // Well short of the 1,000px it comes to in all, a frame or two in.
+    // Well short of the 850px it comes to in all, a frame or two in.
     expect(Math.abs((await firstCardX()) - x)).toBeLessThan(600);
     await expect.poll(async () => (await drift(page)).rate, { timeout: 8_000 }).toBe(1);
   });
