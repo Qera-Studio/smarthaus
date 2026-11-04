@@ -28,6 +28,37 @@ async function policies() {
   });
 }
 
+describe("the CSP and Google Analytics", () => {
+  const GA_VAR = "NEXT_PUBLIC_GA_ID";
+
+  afterEach(() => {
+    delete process.env[GA_VAR];
+  });
+
+  it("names no Google host while the id is unset", async () => {
+    delete process.env[GA_VAR];
+    for (const policy of await policies()) {
+      expect(JSON.stringify(policy)).not.toMatch(/google/);
+    }
+  });
+
+  it("opens the script, beacon and image hosts once the id is set, and nothing else", async () => {
+    process.env[GA_VAR] = "G-TEST123";
+    for (const policy of await policies()) {
+      expect(policy["script-src"]).toContain("https://www.googletagmanager.com");
+      expect(policy["connect-src"]).toEqual(
+        expect.arrayContaining([
+          "https://*.google-analytics.com",
+          "https://*.analytics.google.com",
+        ]),
+      );
+      expect(policy["img-src"]).toContain("https://*.google-analytics.com");
+      expect(JSON.stringify(policy["font-src"])).not.toMatch(/google/);
+      expect(policy["frame-src"]).toBeUndefined();
+    }
+  });
+});
+
 describe("the CSP and Clarity", () => {
   it("names no Clarity or Bing host while the id is unset", async () => {
     delete process.env[ID_VAR];

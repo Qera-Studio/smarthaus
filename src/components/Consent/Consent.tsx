@@ -26,8 +26,8 @@ type ConsentProps = {
  *
  * ## What this does not do
  *
- * It records a choice and honours it. It loads no Google Analytics, and Microsoft
- * Clarity only through src/lib/clarity.ts, once NEXT_PUBLIC_CLARITY_ID is set.
+ * It records a choice and honours it. Google Analytics and Microsoft Clarity load
+ * only through src/lib/ga4.ts and src/lib/clarity.ts, once their ids are set.
  *
  * That is deliberate, not unfinished. `consent-content-deck.md` §13 lists six
  * items as blocking before the tags may fire, and five are not engineering

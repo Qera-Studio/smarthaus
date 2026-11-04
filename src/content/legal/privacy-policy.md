@@ -1,7 +1,7 @@
 ---
 title: Privacy Policy
 slug: privacy
-version: 0.3.0-draft
+version: 0.4.0-draft
 status: DRAFT — NOT FOR PUBLICATION. Requires review by a UAE-admitted lawyer before launch.
 effectiveDate: null # set on counsel sign-off, not on merge
 lastUpdated: 2026-11-04
@@ -51,6 +51,10 @@ INSTALLED AND LIVE: next, react, react-dom, zod, @vercel/analytics,
 @vercel/speed-insights, resend.
 
 STILL PLANNED: Sanity, Turnstile.
+
+0.4.0-draft (2026-11-04) moved Google Analytics 4 into §4.1: it runs only after an
+accept, and only once NEXT_PUBLIC_GA_ID is set (src/lib/ga4.ts). Counsel has not
+reviewed this.
 
 0.3.0-draft (2026-11-04) moved Microsoft Clarity into §4.1: it runs without
 cookies until a visitor chooses, with cookies on accept, and not at all on a
@@ -164,14 +168,13 @@ We use this for security, fraud and abuse prevention, and to diagnose faults. Th
   it did. Legal System §5: an inaccurate policy is worse than none.
 
   THIS DEVIATES FROM §7.1 and is flagged for the pending counsel review.
-  Google Analytics is not installed, so its sentence is future-tense. Clarity
-  runs without cookies before any choice, by decision (Shivanshu, 2026-11-04),
+  Clarity runs without cookies before any choice, by decision (Shivanshu, 2026-11-04),
   which §7.1 did not contemplate. Keep in step with src/app/privacy/page.tsx.
 -->
 
 **Essential cookies** keep the site working. There is one: it remembers your cookie choice. It is always active.
 
-**Analytics cookies are off until you turn them on.** We are preparing to use Google Analytics, which will not load unless you accept it.
+**Analytics cookies are off until you turn them on.** Google Analytics runs only if you accept analytics. It counts visits and shows which pages are read, and it is not used to advertise to you.
 
 **We do measure how the site performs, without cookies.** Vercel Web Analytics and Speed Insights count page views and record how quickly pages load. They set no cookies, store nothing in your browser, and create no identifier that survives your visit, so there is nothing here for you to switch off. You are counted; you are not followed.
 
@@ -208,6 +211,7 @@ We use a small number of service providers who process information on our instru
 | Vercel Inc.                             | Hosts and serves this website                 | Server log data in section 3.2                                                              | [PLACEHOLDER: confirm deployment region]            |
 | Resend                                  | Delivers each enquiry you send to our mailbox | Everything you submit in an enquiry form                                                    | United States (US East, Virginia)                   |
 | Vercel Web Analytics and Speed Insights | Aggregate page performance and visit counts   | Aggregated, non-identifying usage data. No cookies, and no identifier that survives a visit | [PLACEHOLDER: confirm deployment region]            |
+| Google (Analytics 4)                    | Aggregate usage analytics                     | Pages viewed, approximate location from IP, device type and referrer                        | [PLACEHOLDER: confirm from Google documentation]    |
 | Microsoft (Clarity)                     | Heatmaps and session replay                   | Scrolling, clicks, pointer movement and the pages viewed. Form input masked                 | [PLACEHOLDER: confirm from Microsoft documentation] |
 
 <!-- ACCURACY GATE — Legal System §5 requires the policy to name every third party
@@ -241,7 +245,7 @@ The following are planned but **not currently operating on this site**. We list 
 
 ## 5. Where your information goes
 
-Smarthaus operates in the UAE. Some of our service providers are established outside the UAE, which means your information may be processed outside the country — for example by our hosting provider, and by Microsoft, which runs Clarity.
+Smarthaus operates in the UAE. Some of our service providers are established outside the UAE, which means your information may be processed outside the country — for example by our hosting provider, and by Google and Microsoft, which run our analytics tools.
 
 Where information leaves the UAE, we rely on the transfer routes the PDPL permits: transfer to a jurisdiction offering an adequate level of protection, or contractual safeguards binding the recipient to protect the information.
 
@@ -264,16 +268,16 @@ Where information leaves the UAE, we rely on the transfer routes the PDPL permit
 
 We do not keep personal information indefinitely.
 
-| Information                               | Retention                                                                                  | Why                                                                                                                                                          |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Enquiries that do not become projects     | [PLACEHOLDER: proposed 24 months] from last contact                                        | Enquiries in this sector mature slowly — a villa renovation decision can take a year or more, and we would rather know we have spoken before than start cold |
-| Enquiries that become projects            | For the life of the project and [PLACEHOLDER: proposed 7 years] after completion           | Warranty, as-built records, and statutory record-keeping                                                                                                     |
-| Marketing list subscriptions              | Until you unsubscribe, then a minimal suppression record                                   | The suppression record is how we ensure we do not email you again after you ask us to stop                                                                   |
-| Server logs                               | Per our hosting provider's schedule — [PLACEHOLDER: confirm Vercel's log retention period] | Security and fault diagnosis                                                                                                                                 |
-| Your cookie choice                        | 12 months from the choice                                                                  | Proving what was consented to and when, and not asking you again inside that period                                                                          |
-| Analytics data, once analytics is enabled | Up to 14 months                                                                            | Year-on-year comparison, then deletion                                                                                                                       |
-| Session recordings                        | Microsoft's own retention period — [PLACEHOLDER: confirm from Microsoft documentation]     | Diagnosing where pages fail                                                                                                                                  |
-| Records we must keep by law               | For the period the relevant UAE law requires                                               | Where tax, accounting or other law requires retention, that obligation governs that specific record                                                          |
+| Information                           | Retention                                                                                  | Why                                                                                                                                                          |
+| ------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Enquiries that do not become projects | [PLACEHOLDER: proposed 24 months] from last contact                                        | Enquiries in this sector mature slowly — a villa renovation decision can take a year or more, and we would rather know we have spoken before than start cold |
+| Enquiries that become projects        | For the life of the project and [PLACEHOLDER: proposed 7 years] after completion           | Warranty, as-built records, and statutory record-keeping                                                                                                     |
+| Marketing list subscriptions          | Until you unsubscribe, then a minimal suppression record                                   | The suppression record is how we ensure we do not email you again after you ask us to stop                                                                   |
+| Server logs                           | Per our hosting provider's schedule — [PLACEHOLDER: confirm Vercel's log retention period] | Security and fault diagnosis                                                                                                                                 |
+| Your cookie choice                    | 12 months from the choice                                                                  | Proving what was consented to and when, and not asking you again inside that period                                                                          |
+| Analytics data                        | Up to 14 months                                                                            | Year-on-year comparison, then deletion                                                                                                                       |
+| Session recordings                    | Microsoft's own retention period — [PLACEHOLDER: confirm from Microsoft documentation]     | Diagnosing where pages fail                                                                                                                                  |
+| Records we must keep by law           | For the period the relevant UAE law requires                                               | Where tax, accounting or other law requires retention, that obligation governs that specific record                                                          |
 
 When a retention period ends, we delete the information or anonymise it so it can no longer identify you.
 

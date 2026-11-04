@@ -707,14 +707,12 @@ test.describe("/cookie-preferences", () => {
 });
 
 test.describe("what the banner must not do", () => {
-  test("loads no analytics script while NEXT_PUBLIC_CLARITY_ID is unset, accepted or not", async ({
-    page,
-  }) => {
-    // The id is the switch, and this build has none: consent-content-deck.md
-    // §13 lists the items that must clear before it is set. If a script appears
-    // here, something other than the id can start one, ahead of a DPIA screen,
+  test("loads no analytics script while the ids are unset, accepted or not", async ({ page }) => {
+    // The ids are the switches, and this build has none: consent-content-deck.md
+    // §13 lists the items that must clear before they are set. If a script appears
+    // here, something other than an id can start one, ahead of a DPIA screen,
     // a cross-border transfer basis and counsel review. What each choice does
-    // once it is set is in src/lib/__tests__/clarity.test.ts.
+    // once they are set is in src/lib/__tests__/clarity.test.ts and ga4.test.ts.
     const thirdParty: string[] = [];
     page.on("request", (request) => {
       const url = request.url();

@@ -298,8 +298,8 @@ test.describe("/privacy says what the build does", () => {
     await page.goto("/privacy");
   });
 
-  test("prints version 0.3.0-draft", async ({ page }) => {
-    await expect(page.locator("main")).toContainText("0.3.0-draft");
+  test("prints version 0.4.0-draft", async ({ page }) => {
+    await expect(page.locator("main")).toContainText("0.4.0-draft");
   });
 
   test("lists Resend among the providers in use, and not among the planned ones", async ({

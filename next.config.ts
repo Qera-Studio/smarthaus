@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
 
     // Content-Security-Policy: defence-in-depth against XSS, data injection, and framing.
     // 'unsafe-inline' is needed for Next.js style injection in dev/prod.
-    // One wildcard, Clarity's, below. 'unsafe-eval' is dev-server only (see script-src below).
+    // Wildcards only for Clarity and Google Analytics, below. 'unsafe-eval' is dev-server only (see script-src below).
     //
     // script-src 'unsafe-inline': Next.js emits inline <script> tags for the
     // bootstrap payload and streaming chunks. A nonce-based CSP would require
@@ -58,6 +58,15 @@ const nextConfig: NextConfig = {
           script: " https://www.clarity.ms https://scripts.clarity.ms",
           img: " https://c.clarity.ms https://c.bing.com",
           connect: " https://*.clarity.ms https://c.bing.com",
+        }
+      : { script: "", img: "", connect: "" };
+    // Google Analytics, the same way (Google's own CSP guidance for GA4).
+    const ga4 = process.env.NEXT_PUBLIC_GA_ID
+      ? {
+          script: " https://www.googletagmanager.com",
+          img: " https://*.google-analytics.com https://*.googletagmanager.com",
+          connect:
+            " https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
         }
       : { script: "", img: "", connect: "" };
 
@@ -86,7 +95,7 @@ const nextConfig: NextConfig = {
         //
         // React's dev-only debugging (callstack reconstruction) needs
         // full 'unsafe-eval'. Dev server only — never in production.
-        `script-src 'self'${clarity.script}${strict ? ` ${CONSENT_BOOT_HASH} ${SPLASH_BOOT_HASH}` : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+        `script-src 'self'${clarity.script}${ga4.script}${strict ? ` ${CONSENT_BOOT_HASH} ${SPLASH_BOOT_HASH}` : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
         // DRACOLoader builds its decoder worker from a Blob, so the
         // worker's URL is blob: rather than a file on our origin.
         // Without this directive workers fall back to script-src, which
@@ -98,9 +107,9 @@ const nextConfig: NextConfig = {
         // can influence.
         "worker-src 'self' blob:",
         `style-src 'self'${strict ? "" : " 'unsafe-inline'"}`,
-        `img-src 'self' data:${clarity.img}`,
+        `img-src 'self' data:${clarity.img}${ga4.img}`,
         "font-src 'self'",
-        `connect-src 'self'${clarity.connect}`,
+        `connect-src 'self'${clarity.connect}${ga4.connect}`,
         "media-src 'self'",
         "object-src 'none'",
         "frame-ancestors 'none'",

@@ -219,8 +219,7 @@ export default function PrivacyPolicy() {
           heading itself.
 
           THIS DEVIATES FROM §7.1, deliberately, and is flagged for the counsel
-          review that is already pending on this page: Google Analytics is not
-          installed, so its sentence is future-tense, and Clarity runs without
+          review that is already pending on this page: Clarity runs without
           cookies before any choice, by decision (Shivanshu, 2026-11-04), which
           §7.1 did not contemplate.
         */}
@@ -230,8 +229,9 @@ export default function PrivacyPolicy() {
           cookie choice. It is always active.
         </p>
         <p>
-          <strong>Analytics cookies are off until you turn them on.</strong> We are preparing to use
-          Google Analytics, which will not load unless you accept it.
+          <strong>Analytics cookies are off until you turn them on.</strong> Google Analytics runs
+          only if you accept analytics. It counts visits and shows which pages are read, and it is
+          not used to advertise to you.
         </p>
         <p>
           <strong>We do measure how the site performs, without cookies.</strong> Vercel Web
@@ -305,6 +305,11 @@ export default function PrivacyPolicy() {
               </td>
             </tr>
             <tr>
+              <th scope="row">Google (Analytics 4)</th>
+              <td>Aggregate usage analytics</td>
+              <td>Pages viewed, approximate location from IP, device type and referrer</td>
+            </tr>
+            <tr>
               <th scope="row">Microsoft (Clarity)</th>
               <td>Heatmaps and session replay</td>
               <td>Scrolling, clicks, pointer movement and the pages viewed. Form input masked</td>
@@ -374,7 +379,7 @@ export default function PrivacyPolicy() {
         <p>
           Smarthaus operates in the UAE. Some of our service providers are established outside the
           UAE, which means your information may be processed outside the country, for example by our
-          hosting provider, and by Microsoft, which runs Clarity.
+          hosting provider, and by Google and Microsoft, which run our analytics tools.
         </p>
         <p>
           Where information leaves the UAE, we rely on the transfer routes the law permits: transfer
@@ -449,7 +454,7 @@ export default function PrivacyPolicy() {
               </td>
             </tr>
             <tr>
-              <th scope="row">Analytics data, once analytics is enabled</th>
+              <th scope="row">Analytics data</th>
               <td>Up to 14 months</td>
               <td>Year-on-year comparison, then deletion</td>
             </tr>

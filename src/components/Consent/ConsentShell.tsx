@@ -14,6 +14,7 @@ import {
   type ConsentState,
 } from "../../lib/consent";
 import { applyClarity } from "../../lib/clarity";
+import { applyGa4 } from "../../lib/ga4";
 import { Switch } from "./Switch";
 import styles from "./Consent.module.scss";
 
@@ -197,6 +198,7 @@ export function ConsentShell({
       const next = readConsentState(readConsentCookie(document.cookie));
       setState(force ? { ...next, ask: true } : next);
       applyClarity(next);
+      applyGa4(next);
       if (!touched.current) setAnalyticsOn(next.analytics);
       // React owns the banner from here: the pre-hydration CSS gate stops
       // applying. Also the e2e suite's hydration witness (e2e/checks.ts).
@@ -249,6 +251,7 @@ export function ConsentShell({
       });
       setState({ ask: false, analytics: allow });
       applyClarity({ ask: false, analytics: allow });
+      applyGa4({ ask: false, analytics: allow });
       setAnalyticsOn(allow);
       touched.current = false;
       setSaved(true);
