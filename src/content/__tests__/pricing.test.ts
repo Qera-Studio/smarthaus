@@ -58,13 +58,11 @@ describe("pricing faqs", () => {
     }
   });
 
-  /**
-   * The one figure the FAQs quote also appears on the contact page. If either
-   * changes alone a visitor is told two different prices for the same visit.
-   */
-  it("quotes the site assessment fee the contact page prints", () => {
-    const visit = PRICING_FAQS.find((f) => f.id === "site-visit");
-    expect(visit?.answer.join(" ")).toContain("AED 1,500");
+  /** The site discloses no prices for now (Shivanshu, 2026-11-04). */
+  it("quotes no figure in any answer", () => {
+    for (const faq of PRICING_FAQS) {
+      expect(faq.answer.join(" ")).not.toMatch(/AED|\d,\d{3}/);
+    }
   });
 });
 
