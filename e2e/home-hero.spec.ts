@@ -125,8 +125,6 @@ test("the title, CTAs, pause button and strip read top to bottom", async ({ page
   expect(tops).toEqual([...tops].sort((a, b) => a - b));
 });
 
-const messageOf = (page: Page) => page.getByRole("heading", { level: 1 }).locator("xpath=..");
-
 test("the subtitle is 600px wide at most, and no wider than the screen's column", async ({
   page,
 }) => {
@@ -149,47 +147,46 @@ test("the title, subtitle and CTAs all start on one line", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toHaveCSS("text-align", "start");
 });
 
-test("the four proofs line up: same start, same mark, same colour, same size", async ({ page }) => {
+test("only the rating carries a mark, and every other line is its words alone", async ({
+  page,
+}) => {
   await expect(proofs(page)).toHaveCount(4);
-  const seen = await proofs(page).evaluateAll((lines) =>
-    lines.map((li) => {
-      const mark = li.firstElementChild as HTMLElement;
-      const box = mark.getBoundingClientRect();
-      const s = getComputedStyle(mark);
-      return {
-        x: Math.round(box.x),
-        size: `${box.width}x${box.height}`,
-        colour: s.backgroundColor,
-        opacity: s.opacity,
-        mask: s.maskImage,
-      };
-    }),
+  await expect(proofs(page).first().locator("> span")).toHaveCount(1);
+  await expect(hero(page).locator("ul:not([aria-label]):not([data-copy]) li > span")).toHaveCount(
+    1,
   );
-  for (const key of ["x", "size", "colour", "opacity"] as const) {
-    expect(new Set(seen.map((line) => line[key])).size).toBe(1);
-  }
-  // Four different marks, and every one a file the page can load.
-  const masks = seen.map((line) => line.mask.match(/\/hero\/[^"')]+/)?.[0]);
-  expect(new Set(masks).size).toBe(4);
-  for (const mask of masks) expect((await page.request.get(mask!)).status()).toBe(200);
+  await expect(proofs(page)).toHaveText([
+    "4.8 on Google reviews",
+    "180+ Dubai projects",
+    "SIRA Licence",
+    "by Maple Technologies",
+  ]);
 });
 
-test("from lg the proofs sit at the row's far end, beside the message", async ({ page }) => {
+test("from md the four share one line, with a drawn rule between each", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 768, "a phone wraps them, with no rules");
+  const boxes = await proofs(page).evaluateAll((all) =>
+    all.map((li) => {
+      const r = li.getBoundingClientRect();
+      return { y: r.y, rule: getComputedStyle(li, "::before").width };
+    }),
+  );
+  expect(new Set(boxes.map((box) => Math.round(box.y))).size).toBe(1);
+  expect(boxes.map((box) => box.rule)).toEqual(["auto", "1px", "1px", "1px"]);
+});
+
+test("from lg the line ends at the column's end, and at the buttons' foot", async ({ page }) => {
   const width = page.viewportSize()?.width ?? 0;
   const list = (await proofs(page).first().locator("xpath=..").boundingBox())!;
   const cta = (await page.getByRole("link", { name: "WhatsApp", exact: true }).boundingBox())!;
-  const title = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
   if (width >= 1024) {
-    // Its end is the pause button's, the content column's end.
     const button = (await pause(page).boundingBox())!;
     expect(Math.abs(list.x + list.width - (button.x + button.width))).toBeLessThan(2);
-    expect(list.x).toBeGreaterThan(title.x + title.width);
-    // The two sides centred on each other.
-    const message = (await messageOf(page).boundingBox())!;
-    expect(Math.abs(list.y + list.height / 2 - (message.y + message.height / 2))).toBeLessThan(2);
+    expect(Math.abs(list.y + list.height - (cta.y + cta.height))).toBeLessThan(1);
+    expect(list.x).toBeGreaterThan(cta.x + cta.width);
   } else {
-    expect(list.x).toBe(title.x);
     expect(list.y).toBeGreaterThanOrEqual(cta.y + cta.height);
+    expect(list.x + list.width).toBeLessThanOrEqual(width);
   }
 });
 

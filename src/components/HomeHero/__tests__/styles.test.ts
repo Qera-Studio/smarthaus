@@ -43,6 +43,9 @@ function media(query: string) {
   throw new Error(`unclosed @media ${query}`);
 }
 
+/** .proof's own rule: rule() would stop at .copy .proof, which comes first. */
+const proofRule = () => css.match(/\n\s+\.proof\s*\{([^}]*)\}/)?.[1] ?? "";
+
 describe("HomeHero.module.scss", () => {
   test("everything is in the blocks layer", () => {
     expect(css.trimStart().startsWith("@layer blocks")).toBe(true);
@@ -267,13 +270,21 @@ describe("HomeHero.module.scss", () => {
       expect(rule(".copy")).not.toMatch(/padding-inline/);
     });
 
-    test("from lg the message and the proofs share a row, at its two ends", () => {
-      // From the source's bp-lg block, compiled after the column rule.
-      const copy = css.match(/\.copy\s*\{\s*(flex-direction:\s*row[^}]*)\}/)?.[1] ?? "";
-      expect(copy).toMatch(/flex-direction:\s*row/);
-      expect(copy).toMatch(/justify-content:\s*space-between/);
-      expect(copy).toMatch(/align-items:\s*center/);
+    test("from lg the proofs sit in the message's bottom corner, on the buttons' foot", () => {
+      expect(css).toMatch(/\.copy > \*\s*\{\s*grid-area:\s*1\s*\/\s*1/);
+      const corner = css.match(/\.copy \.proof\s*\{([^}]*)\}/)?.[1] ?? "";
+      expect(corner).toMatch(/justify-self:\s*end/);
+      expect(corner).toMatch(/align-self:\s*end/);
       expect(rule(".copy")).toMatch(/flex-direction:\s*column/);
+    });
+
+    test("one line with drawn rules wherever it fits, wrapping with none on a phone", () => {
+      expect(proofRule()).toMatch(/flex-wrap:\s*wrap/);
+      expect(css).toMatch(/\.proof\s*\{\s*flex-wrap:\s*nowrap/);
+      const drawn = rule(".proof li + li::before");
+      expect(drawn).toMatch(/inline-size:\s*1px/);
+      expect(drawn).toMatch(/background-color:\s*currentcolor/);
+      expect(drawn).toMatch(/content:\s*""/);
     });
 
     test("the copy is centred in what is left, so the strip stays at the bottom", () => {
@@ -327,9 +338,9 @@ describe("HomeHero.module.scss", () => {
     });
 
     test("the proofs are set as the old lines were: small, 70%, no weight, no outline", () => {
-      const proof = rule(".proof");
+      const proof = proofRule();
       expect(proof).toMatch(/font-size:\s*var\(--font-size-sm\)/);
-      expect(proof).toMatch(/(^|[;\s])gap:\s*8px/);
+      expect(proof).toMatch(/(^|[;\s])gap:\s*4px 12px/);
       expect(proof).toMatch(
         /color:\s*color-mix\(in srgb, var\(--color-text-primary\) 70%, transparent\)/,
       );
@@ -338,32 +349,16 @@ describe("HomeHero.module.scss", () => {
       expect(css).not.toMatch(/\.pair|\.divider/);
     });
 
-    test("every mark is the same box in the text's colour, whatever its file holds", () => {
-      const icon = rule(".icon");
-      expect(icon).toMatch(/inline-size:\s*1em/);
-      expect(icon).toMatch(/block-size:\s*1em/);
-      expect(icon).toMatch(/background-color:\s*currentcolor/);
-      expect(icon).toMatch(/mask-size:\s*contain/);
-      for (const [mark, file] of [
-        ["star", "starIcon"],
-        ["projects", "projectsLogo"],
-        ["sira", "siraLogo"],
-        ["maple", "mapletechIconMono"],
-      ]) {
-        expect(rule(`.${mark}`)).toMatch(
-          new RegExp(`mask-image:\\s*url\\("/hero/${file}\\.svg"\\)`),
-        );
-        expect(existsSync(join(process.cwd(), `public/hero/${file}.svg`))).toBe(true);
-      }
+    test("the star is in the text's colour, whatever its file holds", () => {
+      const star = rule(".star");
+      expect(star).toMatch(/inline-size:\s*1em/);
+      expect(star).toMatch(/background-color:\s*currentcolor/);
+      expect(star).toMatch(/mask-image:\s*url\("\/hero\/starIcon\.svg"\)/);
+      expect(existsSync(join(process.cwd(), "public/hero/starIcon.svg"))).toBe(true);
+      expect(css).not.toMatch(/siraLogo|projectsLogo|mapletechIcon/);
     });
 
-    test("the Maple silhouette keeps its bulb: nothing white left to fill it in", () => {
-      const svg = readFileSync(join(process.cwd(), "public/hero/mapletechIconMono.svg"), "utf8");
-      expect(svg).toMatch(/<g mask="url\(#bulb\)">/);
-      expect(svg.replace(/<mask[\s\S]*?<\/mask>/, "")).not.toMatch(/fill="white"/);
-    });
-
-    test("a mark survives forced colours, which would paint its ground away", () => {
+    test("the star survives forced colours, which would paint its ground away", () => {
       expect(media("(forced-colors: active)")).toMatch(/background-color:\s*CanvasText/);
     });
 

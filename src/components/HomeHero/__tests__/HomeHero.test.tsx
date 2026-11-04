@@ -248,15 +248,19 @@ describe("HomeHero", () => {
       ]);
     });
 
-    it("gives each its own mark, hidden from AT, so a line reads as its words alone", () => {
+    it("marks only the rating, with its star, hidden from AT", () => {
       render(<HomeHero />);
       const marks = Array.from(proof().querySelectorAll("li > span"));
-      expect(marks).toHaveLength(4);
-      for (const mark of marks) {
-        expect(mark).toHaveAttribute("aria-hidden", "true");
-        expect(mark.textContent).toBe("");
-      }
-      expect(new Set(marks.map((mark) => mark.className)).size).toBe(4);
+      expect(marks).toHaveLength(1);
+      expect(marks[0]).toHaveAttribute("aria-hidden", "true");
+      expect(marks[0]?.textContent).toBe("");
+      expect(proof().firstElementChild).toContainElement(marks[0] as HTMLElement);
+      expect(renderToStaticMarkup(<HomeHero />)).not.toMatch(/Logo|mapletech/i);
+    });
+
+    it("types no vertical bar: the rules between them are drawn", () => {
+      render(<HomeHero />);
+      expect(proof().textContent).not.toContain("|");
     });
 
     it("names one SIRA licence, not several", () => {

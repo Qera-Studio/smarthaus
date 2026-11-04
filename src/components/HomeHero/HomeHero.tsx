@@ -21,13 +21,8 @@ export const RATING = "4.8";
 /** Verified and approved by Shivanshu, 2026-10-28; this wording 2026-11-04. */
 export const PROJECTS = "180+ Dubai projects";
 
-/** The hero's four proofs, each with its mark, in the order they are read. */
-const PROOF = [
-  { icon: styles.star, text: `${RATING} on Google reviews` },
-  { icon: styles.projects, text: PROJECTS },
-  { icon: styles.sira, text: "SIRA Licence" },
-  { icon: styles.maple, text: "by Maple Technologies" },
-];
+/** The hero's four proofs, in the order they are read. The first has the star. */
+const PROOF = [`${RATING} on Google reviews`, PROJECTS, "SIRA Licence", "by Maple Technologies"];
 
 /** The cards the strip runs past on its way in, ahead of the first. */
 export const LEAD_CARDS = 2;
@@ -81,8 +76,8 @@ export const LEDE =
   "Cameras, entry, audio and home automation for Dubai villas. Installed, connected and looked after by one licensed team.";
 
 /**
- * The homepage hero: the title, one line and two CTAs at the start of the row
- * and the four proofs at its end (below lg, under them), then the strip's pause
+ * The homepage hero: the title, one line and two CTAs, with the four proofs on
+ * one line at the far end of the buttons' foot (below lg, under them), then the strip's pause
  * button and a strip of images drifting right to left, pinned to the bottom of
  * the screen.
  *
@@ -122,9 +117,9 @@ export function HomeHero() {
           </div>
         </div>
         <ul className={styles.proof}>
-          {PROOF.map(({ icon, text }) => (
+          {PROOF.map((text, index) => (
             <li key={text}>
-              <span className={`${styles.icon} ${icon}`} aria-hidden="true" />
+              {index === 0 && <span className={styles.star} aria-hidden="true" />}
               {text}
             </li>
           ))}

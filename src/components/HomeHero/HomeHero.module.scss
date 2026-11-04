@@ -87,27 +87,37 @@ $hero-lede-words: 24;
     flex-direction: column;
     gap: $space-4;
 
-    // One row from lg: the message at the start, the proofs at the very end,
-    // the two centred on each other (Shivanshu, 2026-11-04).
+    // From lg the message and the proofs share one cell, the proofs in its
+    // bottom corner, their foot on the buttons' (Shivanshu, 2026-11-04). One
+    // cell and not a row: the proofs' line would otherwise squeeze the title,
+    // and they only ever sit beside the buttons, where there is room.
     @include bp-lg {
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      gap: $space-8;
+      display: grid;
+
+      > * {
+        grid-area: 1 / 1;
+      }
+
+      .proof {
+        justify-self: end;
+        align-self: end;
+      }
     }
   }
 
-  // The four proofs, one to a line, each mark in the same box.
+  // The four proofs. One line wherever they fit it, with a drawn rule between
+  // them, drawn so a screen reader never says "vertical bar". On a phone they
+  // cannot, so they wrap, and a rule would be left hanging at a line's end.
   .proof {
     display: flex;
     flex: none;
-    flex-direction: column;
-    gap: $space-2;
+    flex-wrap: wrap;
+    gap: $space-1 $space-3;
     list-style: none;
     font-size: var(--font-size-sm);
     line-height: $line-height-normal;
     // At 70% (2026-10-28), as the contact bar is. The colour, not opacity, so
-    // the marks (currentcolor) go with it: 6.4:1 on brown-100.
+    // the star and the rules (currentcolor) go with it: 6.4:1 on brown-100.
     color: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
 
     li {
@@ -115,15 +125,32 @@ $hero-lede-words: 24;
       align-items: center;
       gap: $space-2;
     }
+
+    @include bp-md {
+      flex-wrap: nowrap;
+
+      li {
+        gap: $space-3;
+        white-space: nowrap;
+      }
+
+      li + li::before {
+        content: "";
+        inline-size: 1px;
+        block-size: 1em;
+        background-color: currentcolor;
+      }
+    }
   }
 
-  // Every mark is one silhouette in the text's colour, whatever colours its
-  // file holds: the file is a mask and the box's ground is what shows.
-  .icon {
+  // The file is a mask and the box's ground is what shows, so the star takes
+  // the text's colour.
+  .star {
     flex: none;
     inline-size: 1em;
     block-size: 1em;
     background-color: currentcolor;
+    mask-image: url("/hero/starIcon.svg");
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;
@@ -133,22 +160,6 @@ $hero-lede-words: 24;
       forced-color-adjust: none;
       background-color: CanvasText;
     }
-  }
-
-  .star {
-    mask-image: url("/hero/starIcon.svg");
-  }
-
-  .projects {
-    mask-image: url("/hero/projectsLogo.svg");
-  }
-
-  .sira {
-    mask-image: url("/hero/siraLogo.svg");
-  }
-
-  .maple {
-    mask-image: url("/hero/mapletechIconMono.svg");
   }
 
   .title {
