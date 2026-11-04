@@ -39,6 +39,14 @@ const order = (container: HTMLElement) =>
     el.getAttribute("data-section"),
   );
 
+// ScrollReveal reads these, which jsdom does not have; its own tests cover it.
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () => ({ matches: true }),
+  });
+});
+
 describe("Home page", () => {
   it("renders every section once, in the planned order", () => {
     const { container } = render(<Home />);

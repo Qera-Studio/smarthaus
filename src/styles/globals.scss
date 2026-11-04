@@ -209,6 +209,69 @@
   }
 }
 
+// The homepage's scroll reveal (ScrollReveal.tsx). Each runs once and lets go:
+// fill backwards, never forwards, and an animation rather than a transition, so
+// a card's own hover keeps its timing and no stagger is left on it. Screen only,
+// so a print of the page never comes out with blanks. No motion, and nothing
+// hidden, under reduced motion.
+@layer utilities {
+  @media screen and (prefers-reduced-motion: no-preference) {
+    [data-reveal="waiting"] {
+      opacity: 0;
+    }
+
+    [data-reveal="in"]:not([data-reveal-words]) {
+      animation-name: reveal-rise;
+      animation-duration: 800ms;
+      animation-timing-function: var(--ease-out);
+      animation-fill-mode: backwards;
+    }
+
+    // By its place among its siblings, in the sheet: an inline style would trip
+    // the strict CSP twin. The sixth and on share a delay, so none waits long.
+    @for $i from 2 through 6 {
+      [data-reveal="in"]:not([data-reveal-words]):nth-child(#{$i}) {
+        animation-delay: #{($i - 1) * 90ms};
+      }
+    }
+
+    // Word by word: these are inline, so they fade and sharpen but do not rise.
+    [data-reveal="in"][data-reveal-words] > span {
+      --reveal-blur: 6px;
+
+      animation-name: reveal-word;
+      animation-duration: 700ms;
+      animation-timing-function: var(--ease-out);
+      animation-fill-mode: backwards;
+
+      // Blur is hard work for a low-end phone.
+      @media (max-width: 40rem) {
+        --reveal-blur: 0px;
+      }
+    }
+
+    @for $i from 2 through 8 {
+      [data-reveal="in"][data-reveal-words] > span:nth-of-type(#{$i}) {
+        animation-delay: #{($i - 1) * 60ms};
+      }
+    }
+  }
+
+  @keyframes reveal-rise {
+    from {
+      opacity: 0;
+      translate: 0 28px;
+    }
+  }
+
+  @keyframes reveal-word {
+    from {
+      opacity: 0;
+      filter: blur(var(--reveal-blur));
+    }
+  }
+}
+
 @layer utilities {
   .visually-hidden {
     @include visually-hidden;

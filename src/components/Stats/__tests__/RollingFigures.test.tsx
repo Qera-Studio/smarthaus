@@ -111,10 +111,10 @@ describe("RollingFigures", () => {
     expect(scss).toContain(`animation-duration: ${ROLL_MS}ms`);
   });
 
-  it("ends with the attribute gone, leaving the real figure, in about a second", () => {
+  it("ends with the attribute gone, leaving the real figure, in 1.6s", () => {
     setup();
     enter();
-    expect(ROLL_MS).toBe(1000);
+    expect(ROLL_MS).toBe(1600);
     advance(ROLL_MS + ROLL_STEP_MS);
     expect(figure("150+")).not.toHaveAttribute("data-roll");
     expect(figure("90%")).not.toHaveAttribute("data-roll");

@@ -7,6 +7,7 @@ import { Pricing } from "../components/Pricing";
 import { Process } from "../components/Process";
 import { Stats } from "../components/Stats";
 import { JsonLd, pageGraph } from "../components/Schema";
+import { ScrollReveal } from "../components/ScrollReveal";
 import { pageMetadata } from "../lib/metadata";
 
 // The homepage's own metadata. Without it the page inherited the layout's
@@ -45,6 +46,7 @@ export default function Home() {
       <Pricing />
       {/* Last thing on the page, directly above the footer. */}
       <HomeEnquiry />
+      <ScrollReveal />
     </>
   );
 }

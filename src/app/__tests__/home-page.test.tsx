@@ -20,6 +20,14 @@ jest.mock("../contact/actions", () => ({
 
 const html = () => renderToStaticMarkup(<Home />);
 
+// ScrollReveal reads these, which jsdom does not have; its own tests cover it.
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () => ({ matches: true }),
+  });
+});
+
 describe("the homepage", () => {
   test("renders the hero as the first section, with its data-hero hook", () => {
     const markup = html();

@@ -1,3 +1,4 @@
+import { Words } from "../Words";
 import { HARDWARE_ITEMS } from "../../content/hardware";
 import styles from "./Hardware.module.scss";
 import { HardwareStage } from "./HardwareStage";
@@ -14,10 +15,10 @@ export function Hardware() {
   return (
     <section className={styles.hardware} aria-labelledby="hardware">
       <div className={styles.lead}>
-        <h2 className={styles.leadHeading} id="hardware">
-          One stop, full house
+        <h2 className={styles.leadHeading} id="hardware" data-reveal="" data-reveal-words="">
+          <Words text="One stop, full house" />
         </h2>
-        <p className={styles.leadBody}>
+        <p className={styles.leadBody} data-reveal="">
           Cameras, locks, lighting, climate and sound on one system. The team that installs it is
           the team you call when something needs attention.
         </p>

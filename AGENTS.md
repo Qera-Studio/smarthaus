@@ -237,6 +237,16 @@ On every full load the homepage builds itself in order (Shivanshu, 2026-11-04): 
 - **Never under reduced motion.** Every rule sits inside `prefers-reduced-motion: no-preference`.
 - **e2e holds it off** for every spec but `e2e/intro.spec.ts` (`e2e/fixtures.ts`, `intro`), since axe reads half-faded text as low contrast.
 
+## The scroll reveal
+
+Below the hero, the homepage's section headings fade in word by word and sharpen (6px of blur, none on a phone, 60ms apart), and the groups rise 28px and fade (90ms apart, capped at the sixth), once, as each comes on screen (Shivanshu, 2026-11-04). Homepage only for now: `<ScrollReveal />` is mounted in `src/app/page.tsx`, and `data-reveal` does nothing without it, which is why `/pricing` can share the tier cards. The rules are in `globals.scss`.
+
+- **Hidden late, not early.** Everything is visible in the server HTML. Only once ScrollReveal runs does what is still below the screen get `data-reveal="waiting"`. Nothing on screen waits for JavaScript, a failed script leaves the page standing, and there is no boot-script gate.
+- **Animations, not transitions.** They fill backwards and let go, so a card's own hover keeps its timing.
+- **Inner content only, never the Process sheets, the hero, the nav, the carousels or the form.** `opacity` and `translate` on a parent break the glass and sticky inside it, and a slide off screen sideways would never come into view.
+- **Not in print, and not under reduced motion.** The hidden state is in `@media screen` and `no-preference`.
+- **e2e holds it off** for every spec but `e2e/scroll-reveal.spec.ts` (`e2e/fixtures.ts`, `reveal`).
+
 ## Nav behaviour
 
 | State                           | Desktop                                                 | Mobile                                       |

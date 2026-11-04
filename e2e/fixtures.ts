@@ -43,6 +43,7 @@ type Options = {
   villa: boolean;
   cardBlur: boolean;
   intro: boolean;
+  reveal: boolean;
   splash: boolean;
   clientAddress: string | undefined;
 };
@@ -126,6 +127,26 @@ export async function takeIntroOff(target: Pick<Page, "addInitScript">) {
   });
 }
 
+/**
+ * ## The scroll reveal is off unless a spec asks for it
+ *
+ * For the opening's reason: axe reads half-faded text as low contrast, and any
+ * spec reading a section would be racing its arrival. The attribute is put back
+ * to rest whenever ScrollReveal moves it. e2e/scroll-reveal.spec.ts opts back in
+ * with test.use({ reveal: true }).
+ */
+export async function takeRevealOff(target: Pick<Page, "addInitScript">) {
+  await target.addInitScript(() => {
+    new MutationObserver((records) => {
+      for (const { target: el } of records) {
+        if ((el as Element).getAttribute("data-reveal")) {
+          (el as Element).setAttribute("data-reveal", "");
+        }
+      }
+    }).observe(document, { subtree: true, attributes: true, attributeFilter: ["data-reveal"] });
+  });
+}
+
 /*
  * ## The splash is seen unless a spec asks for it
  *
@@ -164,6 +185,7 @@ export const test = base.extend<
     villaGate: void;
     cardBlurGate: void;
     introGate: void;
+    revealGate: void;
     clientGate: void;
     splashGate: void;
   }
@@ -180,6 +202,14 @@ export const test = base.extend<
   introGate: [
     async ({ page, intro }, use) => {
       if (!intro) await takeIntroOff(page);
+      await use();
+    },
+    { auto: true },
+  ],
+  reveal: [false, { option: true }],
+  revealGate: [
+    async ({ page, reveal }, use) => {
+      if (!reveal) await takeRevealOff(page);
       await use();
     },
     { auto: true },

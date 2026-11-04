@@ -95,7 +95,7 @@
       // start, so the blur falls with their speed.
       &[data-rolling]::after {
         animation-name: stats-roll-blur;
-        animation-duration: 1000ms;
+        animation-duration: 1600ms;
         animation-timing-function: var(--ease-out);
       }
     }

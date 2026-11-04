@@ -1,4 +1,5 @@
 import { STATS } from "../../content/stats";
+import { Words } from "../Words";
 import { RollingFigures } from "./RollingFigures";
 import styles from "./Stats.module.scss";
 
@@ -14,12 +15,12 @@ import styles from "./Stats.module.scss";
 export function Stats() {
   return (
     <section className={styles.stats} aria-labelledby="stats" data-stats="">
-      <h2 className={styles.heading} id="stats">
-        By the numbers
+      <h2 className={styles.heading} id="stats" data-reveal="" data-reveal-words="">
+        <Words text="By the numbers" />
       </h2>
       <RollingFigures className={styles.grid}>
         {STATS.map((stat) => (
-          <li key={stat.label} className={styles.card}>
+          <li key={stat.label} className={styles.card} data-reveal="">
             <span className={styles.value} data-stat-value="">
               {stat.value}
             </span>{" "}

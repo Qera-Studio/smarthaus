@@ -26,6 +26,8 @@ export function PricingTiers({ headingLevel }: { headingLevel: "h2" | "h3" }) {
         <li
           key={tier.id}
           className={styles.tier}
+          // Does nothing on /pricing: only the homepage mounts ScrollReveal.
+          data-reveal=""
           data-tone={tier.tone}
           {...(tier.tone === "dark" ? { "data-ground": "dark" } : {})}
         >

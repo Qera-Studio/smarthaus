@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 
+import { REVEAL_MARGIN } from "../ScrollReveal/ScrollReveal";
+
 /**
  * How long a figure takes to roll up from nothing, and how often it changes.
  * The stylesheet's motion blur (.value[data-rolling]) runs the same length.
  */
-export const ROLL_MS = 1000;
+export const ROLL_MS = 1600;
 export const ROLL_STEP_MS = 33;
 
 /**
@@ -46,24 +48,28 @@ export function RollingFigures({
       });
 
     let timer = 0;
-    const seen = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
-      seen.disconnect();
-      figures.forEach(({ figure }) => figure.setAttribute("data-rolling", ""));
-      const start = performance.now();
-      timer = window.setInterval(() => {
-        const progress = Math.min((performance.now() - start) / ROLL_MS, 1);
-        if (progress === 1) {
-          window.clearInterval(timer);
-          finish();
-          return;
-        }
-        const eased = 1 - (1 - progress) ** 3;
-        for (const { figure, target, suffix } of figures) {
-          figure.setAttribute("data-roll", `${Math.round(target * eased)}${suffix}`);
-        }
-      }, ROLL_STEP_MS);
-    });
+    // On the scroll reveal's line, so the cards and the figures arrive together.
+    const seen = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        seen.disconnect();
+        figures.forEach(({ figure }) => figure.setAttribute("data-rolling", ""));
+        const start = performance.now();
+        timer = window.setInterval(() => {
+          const progress = Math.min((performance.now() - start) / ROLL_MS, 1);
+          if (progress === 1) {
+            window.clearInterval(timer);
+            finish();
+            return;
+          }
+          const eased = 1 - (1 - progress) ** 3;
+          for (const { figure, target, suffix } of figures) {
+            figure.setAttribute("data-roll", `${Math.round(target * eased)}${suffix}`);
+          }
+        }, ROLL_STEP_MS);
+      },
+      { rootMargin: REVEAL_MARGIN },
+    );
     seen.observe(el);
 
     return () => {

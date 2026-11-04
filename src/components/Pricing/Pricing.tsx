@@ -1,5 +1,6 @@
 import { Button } from "../Button";
 import { PricingTiers } from "../PricingTiers";
+import { Words } from "../Words";
 import styles from "./Pricing.module.scss";
 
 /**
@@ -40,10 +41,10 @@ export function Pricing() {
     // on the one card that paints dark.
     <section className={styles.pricing} aria-labelledby="pricing" data-pricing>
       <div className={styles.intro}>
-        <h2 className={styles.heading} id="pricing">
-          Choose your level of intelligence
+        <h2 className={styles.heading} id="pricing" data-reveal="" data-reveal-words="">
+          <Words text="Choose your level of intelligence" />
         </h2>
-        <p className={styles.standfirst}>
+        <p className={styles.standfirst} data-reveal="">
           Four levels, from a single room to a fully engineered residence. Every one is quoted
           against your own drawings after a site visit.
         </p>
@@ -51,7 +52,7 @@ export function Pricing() {
 
       <PricingTiers headingLevel="h3" />
 
-      <div className={styles.compare}>
+      <div className={styles.compare} data-reveal="">
         <Button href="/pricing">Compare every feature</Button>
       </div>
     </section>

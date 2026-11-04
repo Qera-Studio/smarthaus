@@ -1,3 +1,4 @@
+import { Words } from "../Words";
 import styles from "./Care.module.scss";
 
 /**
@@ -41,16 +42,18 @@ export function Care() {
   return (
     <section className={styles.care} aria-labelledby="care">
       <div className={styles.lead}>
-        <h2 className={styles.leadHeading}>Looked after, long after installation.</h2>
-        <p className={styles.leadBody}>
+        <h2 className={styles.leadHeading} data-reveal="" data-reveal-words="">
+          <Words text="Looked after, long after installation." />
+        </h2>
+        <p className={styles.leadBody} data-reveal="">
           With Smarthaus Premium Care you call one number, day or night, and someone who knows your
           installation picks up.
         </p>
       </div>
 
       <div className={styles.row}>
-        <h3 className={styles.title} id="care">
-          Annual maintenance packages
+        <h3 className={styles.title} id="care" data-reveal="" data-reveal-words="">
+          <Words text="Annual maintenance packages" />
         </h3>
 
         <ul className={styles.packages}>
@@ -60,6 +63,7 @@ export function Care() {
             <li
               key={pkg.name}
               className={styles.package}
+              data-reveal=""
               data-tone={pkg.tone}
               {...(pkg.tone === "dark" ? { "data-ground": "dark" } : {})}
             >

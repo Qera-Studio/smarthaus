@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { Fragment } from "react";
 
 import {
   HERO_CAROUSEL_HREF,
@@ -8,6 +7,7 @@ import {
 } from "../../content/hero-carousel";
 import { whatsappLink } from "../../lib/contact";
 import { Button } from "../Button";
+import { Words } from "../Words";
 import { StripControls } from "./StripControls";
 import styles from "./HomeHero.module.scss";
 
@@ -75,20 +75,6 @@ function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
   );
 }
 
-/**
- * A line of copy, one span to a word, for the opening's word-by-word reveal
- * (HomeHero.module.scss). The spaces stay plain text between inline spans, so
- * it is still one sentence to a screen reader and wraps as it always did.
- */
-function Words({ text }: { text: string }) {
-  return text.split(" ").map((word, index) => (
-    <Fragment key={index}>
-      {index > 0 && " "}
-      <span className={styles.word}>{word}</span>
-    </Fragment>
-  ));
-}
-
 /** The hero's two lines: exported so a test holds them to the opening's counts. */
 export const TITLE = "Home at your fingertips";
 export const LEDE =
@@ -121,10 +107,10 @@ export function HomeHero() {
       <div className={styles.copy}>
         <div>
           <h1 className={styles.title} id="hero-title">
-            <Words text={TITLE} />
+            <Words text={TITLE} className={styles.word} />
           </h1>
           <p className={styles.lede}>
-            <Words text={LEDE} />
+            <Words text={LEDE} className={styles.word} />
           </p>
           <div className={styles.ctas}>
             <Button href="/contact" size="sm">
