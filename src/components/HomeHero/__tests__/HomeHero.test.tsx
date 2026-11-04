@@ -1,8 +1,11 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { HERO_CAROUSEL_ITEMS } from "../../../content/hero-carousel";
-import { HomeHero, PROJECTS, RATING } from "../HomeHero";
+import { HomeHero, LEDE, PROJECTS, RATING, TITLE } from "../HomeHero";
 
 /**
  * The homepage hero's markup. The strip's movement, hover pause and overlay
@@ -44,12 +47,40 @@ describe("HomeHero", () => {
   });
 
   it("keeps the published lede word for word", () => {
-    render(<HomeHero />);
-    expect(
-      screen.getByText(
-        "Cameras, entry, audio and home automation for Dubai villas. Installed, connected and looked after by one licensed team.",
-      ),
-    ).toBeInTheDocument();
+    const { container } = render(<HomeHero />);
+    expect(LEDE).toBe(
+      "Cameras, entry, audio and home automation for Dubai villas. Installed, connected and looked after by one licensed team.",
+    );
+    expect(container.querySelector("section p:nth-of-type(2)")?.textContent).toBe(LEDE);
+  });
+
+  describe("word by word", () => {
+    const words = (selector: string) =>
+      Array.from(document.querySelectorAll(`${selector} > span`)).map((el) => el.textContent);
+
+    it("gives each word of the title and the lede its own span", () => {
+      render(<HomeHero />);
+      expect(words("h1")).toEqual(TITLE.split(" "));
+      expect(words("section p:nth-of-type(2)")).toEqual(LEDE.split(" "));
+    });
+
+    it("is still one sentence to a screen reader: the spaces stay as text", () => {
+      render(<HomeHero />);
+      expect(screen.getByRole("heading", { level: 1, name: TITLE })).toBeInTheDocument();
+      expect(document.querySelector("h1")?.textContent).toBe(TITLE);
+    });
+
+    it("stays inside the counts the stylesheet gives a delay", () => {
+      // A word past the last nth-of-type rule would start with no delay, ahead
+      // of the sentence it belongs to.
+      const scss = readFileSync(join(__dirname, "../HomeHero.module.scss"), "utf8");
+      expect(TITLE.split(" ").length).toBeLessThanOrEqual(
+        Number(scss.match(/\$hero-title-words:\s*(\d+)/)?.[1]),
+      );
+      expect(LEDE.split(" ").length).toBeLessThanOrEqual(
+        Number(scss.match(/\$hero-lede-words:\s*(\d+)/)?.[1]),
+      );
+    });
   });
 
   it("offers a site visit and WhatsApp, in that order", () => {

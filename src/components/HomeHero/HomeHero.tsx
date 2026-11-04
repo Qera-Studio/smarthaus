@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Fragment } from "react";
 
 import {
   HERO_CAROUSEL_HREF,
@@ -46,9 +47,9 @@ function Card({ item, load }: { item: HeroCarouselItem; load: Load }) {
         width={item.image.width}
         height={item.image.height}
         alt={item.image.alt}
-        // From lg four cards share the screen; below it a card is as tall as
-        // the space under the copy, at 4:3, about 300px wide on a phone.
-        sizes="(min-width: 64rem) 25vw, 20rem"
+        // From lg a card is 37.5vw wide; below it a card is as tall as the
+        // space under the copy, at 4:3, about 300px wide on a phone.
+        sizes="(min-width: 64rem) 38vw, 20rem"
         loading="eager"
         fetchPriority={load === "first" ? "high" : load === "late" ? "low" : undefined}
       />
@@ -83,6 +84,25 @@ function Pair({ start, end }: { start: React.ReactNode; end: React.ReactNode }) 
 }
 
 /**
+ * A line of copy, one span to a word, for the opening's word-by-word reveal
+ * (HomeHero.module.scss). The spaces stay plain text between inline spans, so
+ * it is still one sentence to a screen reader and wraps as it always did.
+ */
+function Words({ text }: { text: string }) {
+  return text.split(" ").map((word, index) => (
+    <Fragment key={index}>
+      {index > 0 && " "}
+      <span className={styles.word}>{word}</span>
+    </Fragment>
+  ));
+}
+
+/** The hero's two lines: exported so a test holds them to the opening's counts. */
+export const TITLE = "Home at your fingertips";
+export const LEDE =
+  "Cameras, entry, audio and home automation for Dubai villas. Installed, connected and looked after by one licensed team.";
+
+/**
  * The homepage hero: the rating and the project count on one line, the
  * title, one line, two CTAs and the SIRA line, then the strip's pause button
  * and a strip of images drifting right to left, pinned to the bottom of the
@@ -115,11 +135,10 @@ export function HomeHero() {
           end={PROJECTS}
         />
         <h1 className={styles.title} id="hero-title">
-          Home at your fingertips
+          <Words text={TITLE} />
         </h1>
         <p className={styles.lede}>
-          Cameras, entry, audio and home automation for Dubai villas. Installed, connected and
-          looked after by one licensed team.
+          <Words text={LEDE} />
         </p>
         <div className={styles.ctas}>
           <Button href="/contact" size="sm">

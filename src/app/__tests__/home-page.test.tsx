@@ -44,7 +44,9 @@ describe("the homepage", () => {
     const markup = html();
     const h1s = markup.match(/<h1\b/g) ?? [];
     expect(h1s).toHaveLength(1);
-    expect(markup).toMatch(/<h1[^>]*id="hero-title"[^>]*>Home at your fingertips<\/h1>/);
+    // One span to a word, for the opening.
+    const title = markup.match(/<h1[^>]*id="hero-title"[^>]*>(.*?)<\/h1>/)?.[1];
+    expect(title?.replace(/<[^>]+>/g, "")).toBe("Home at your fingertips");
   });
 
   test("keeps the hero CTA and its route, and no longer offers Explore Villa", () => {

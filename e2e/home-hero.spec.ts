@@ -80,6 +80,12 @@ test("the pause button stops it, and a second press starts it again", async ({ p
   await pause(page).click();
   await page.mouse.move(0, 0);
   await expect(pause(page)).toHaveAttribute("aria-pressed", "true");
+  // Reaching the button scrolls a phone's page, and a scroll runs the strip
+  // even under pause (StripControls). Pause holds the drift: that is what is
+  // asked here, once the scroll's own glide has run out.
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await expect(strip(page)).not.toHaveAttribute("data-gliding", "", { timeout: 8_000 });
   const [a, b] = await drift(page);
   expect(a).toBe(b);
   await pause(page).click();

@@ -305,7 +305,7 @@ test.describe("the homepage opening in e2e", () => {
       document
         .getAnimations()
         .map((a) => (a as CSSAnimation).animationName)
-        .filter((name) => /hero-in|hero-arrive|nav-in|bar-in/.test(name ?? "")),
+        .filter((name) => /hero-in|hero-word|hero-arrive|nav-in|bar-in/.test(name ?? "")),
     );
     expect(playing).toEqual([]);
   });

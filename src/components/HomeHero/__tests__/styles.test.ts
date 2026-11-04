@@ -1,4 +1,5 @@
 import { compile } from "sass";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -348,42 +349,37 @@ describe("HomeHero.module.scss", () => {
 
     test("plays only for a visitor who has not asked for less motion", () => {
       expect(css.match(/animation-name:\s*hero-in\b/g)).toHaveLength(1);
+      expect(css.match(/animation-name:\s*hero-word/g)).toHaveLength(1);
       expect(css.match(/animation-name:\s*hero-arrive/g)).toHaveLength(1);
       expect(motion()).toMatch(/animation-name:\s*hero-in\b/);
       expect(motion()).toMatch(/animation-name:\s*hero-arrive/);
     });
 
+    const fades = `${gate} .ctas, ${gate} .copy > .pair, ${gate} .controls`;
+    const ms = (name: string) =>
+      Number(rule(gate, motion()).match(new RegExp(`--${name}:\\s*(\\d+)ms`))?.[1]);
+
     test("plays only while <html> carries data-intro", () => {
-      const fades = rule(
-        `${gate} .title, ${gate} .lede, ${gate} .ctas, ${gate} .copy > .pair, ${gate} .controls`,
-        motion(),
-      );
-      expect(fades).toMatch(/animation-name:\s*hero-in/);
+      expect(rule(fades, motion())).toMatch(/animation-name:\s*hero-in/);
+      expect(rule(`${gate} .word`, motion())).toMatch(/animation-name:\s*hero-word/);
       expect(rule(`${gate} .strip`, motion())).toMatch(/animation-name:\s*hero-arrive/);
     });
 
     test("fills backwards only, so nothing is held once it has played", () => {
-      // Both only on the scroll-driven parallax, which holds its place
-      // at either end of the scroll by design.
+      // Both only on the scroll-driven parallax, which holds its place at
+      // either end of the scroll by design.
       expect(css).not.toMatch(/animation-fill-mode:\s*forwards/);
-      expect(css.match(/animation-fill-mode:\s*backwards/g)).toHaveLength(2);
+      expect(css.match(/animation-fill-mode:\s*backwards/g)).toHaveLength(3);
       expect(css.match(/animation-fill-mode:\s*both/g)).toHaveLength(1);
     });
 
     test("its timings sit on <html>, so the nav and the bar share them", () => {
-      const root = rule(gate, motion());
-      expect(root).toMatch(/--intro-duration:\s*1600ms/);
-      expect(root).toMatch(/--intro-shift:\s*24px/);
-      expect(
-        rule(
-          `${gate} .title, ${gate} .lede, ${gate} .ctas, ${gate} .copy > .pair, ${gate} .controls`,
-          motion(),
-        ),
-      ).toMatch(/animation-duration:\s*var\(--intro-duration\)/);
+      expect(ms("intro-duration")).toBe(3200);
+      expect(rule(gate, motion())).toMatch(/--intro-shift:\s*24px/);
+      expect(rule(fades, motion())).toMatch(/animation-duration:\s*var\(--intro-duration\)/);
     });
 
     test("in order: title, subtitle, then the CTAs with the strip, then the two lines", () => {
-      expect(rule(`${gate} .lede`, motion())).toMatch(/animation-delay:\s*var\(--intro-lede\)/);
       expect(rule(`${gate} .ctas`, motion())).toMatch(/animation-delay:\s*var\(--intro-together\)/);
       expect(rule(`${gate} .strip`, motion())).toMatch(
         /animation-delay:\s*var\(--intro-together\)/,
@@ -393,36 +389,84 @@ describe("HomeHero.module.scss", () => {
       expect(
         rule(`}\n${gate} .copy > .pair, ${gate} .controls`, motion().replace(/\}\s+/g, "}\n")),
       ).toMatch(/animation-delay:\s*var\(--intro-rest\)/);
-      const root = rule(gate, motion());
-      const ms = (name: string) => Number(root.match(new RegExp(`--${name}:\\s*(\\d+)ms`))?.[1]);
-      expect(ms("intro-lede")).toBeLessThan(ms("intro-together"));
+      expect(ms("intro-lede-start")).toBeLessThan(ms("intro-together"));
       expect(ms("intro-together")).toBeLessThan(ms("intro-rest"));
-      // Very slow, but all of it in within three seconds.
+    });
+
+    test("no part of it runs past five seconds, or it would need a pause (WCAG 2.2.2)", () => {
       const arrive = Number(rule(".hero").match(/--hero-arrive-duration:\s*(\d+)ms/)?.[1]);
-      expect(ms("intro-together") + arrive).toBeLessThanOrEqual(3000);
-      expect(ms("intro-rest") + ms("intro-duration")).toBeLessThanOrEqual(3000);
+      const lastLedeWord = ms("intro-lede-start") + 23 * ms("intro-lede-stagger");
+      for (const end of [
+        ms("intro-together") + arrive,
+        ms("intro-rest") + ms("intro-duration"),
+        ms("intro-together") + ms("intro-duration"),
+        lastLedeWord + ms("intro-word-duration"),
+      ]) {
+        expect(end).toBeLessThan(5000);
+      }
+    });
+
+    test("is half the speed of the last cut", () => {
+      // 1.6s a piece and 1.8s for the strip, until 2026-11-04.
+      expect(ms("intro-duration")).toBe(1600 * 2);
+      expect(Number(rule(".hero").match(/--hero-arrive-duration:\s*(\d+)ms/)?.[1])).toBe(1800 * 2);
+    });
+
+    describe("word by word", () => {
+      test("each word only fades: nothing that would make it inline-block", () => {
+        expect(css).toMatch(/@keyframes hero-word\s*\{\s*from\s*\{\s*opacity:\s*0;?\s*\}\s*\}/);
+        expect(css).not.toMatch(/\.word\s*\{[^}]*display/);
+      });
+
+      test("the title's words follow one another by the stagger", () => {
+        expect(rule(`${gate} .title .word:nth-of-type(1)`, motion())).toMatch(
+          /animation-delay:\s*calc\(0 \* var\(--intro-title-stagger\)\)/,
+        );
+        expect(rule(`${gate} .title .word:nth-of-type(4)`, motion())).toMatch(
+          /animation-delay:\s*calc\(3 \* var\(--intro-title-stagger\)\)/,
+        );
+      });
+
+      test("the lede's follow on from its own start", () => {
+        expect(rule(`${gate} .lede .word:nth-of-type(18)`, motion())).toMatch(
+          /animation-delay:\s*calc\(var\(--intro-lede-start\) \+ 17 \* var\(--intro-lede-stagger\)\)/,
+        );
+      });
+
+      test("sets no inline style a strict CSP would report: the delay is in the sheet", () => {
+        const source = readFileSync(join(__dirname, "../HomeHero.tsx"), "utf8");
+        expect(source).not.toMatch(/style=\{/);
+      });
     });
 
     test("the rating line above the copy drops into place; the rest rises", () => {
       expect(rule(`${gate} .copy > .pair:first-child`, motion())).toMatch(/--intro-shift:\s*-24px/);
     });
 
-    test("the strip arrives from the screen's right edge, steady to 70%, then braking", () => {
+    test("the strip glides in from the screen's right edge, easing the whole way", () => {
       expect(css).toMatch(/@keyframes hero-arrive\s*\{\s*from\s*\{\s*translate:\s*100vw 0;?\s*\}/);
-      const ease = rule(".hero").match(/--hero-arrive-ease:\s*linear\(([^;]*)\)/)?.[1];
-      const stops = ease!.split(",").map((stop) => stop.trim().split(/\s+/).map(parseFloat));
-      expect(stops[0]).toEqual([0]);
-      expect(stops.at(-1)).toEqual([1]);
-      // 70% of the way at the end of the steady part, then each stretch
-      // slower than the one before it.
-      expect(stops[1]).toEqual([0.7, 53.8]);
-      const speeds = stops.slice(1, -1).map(([at, time], i) => {
-        const [prevAt, prevTime] = i === 0 ? [0, 0] : stops[i]!;
-        return (at! - prevAt!) / (time! - prevTime!);
-      });
-      for (let i = 1; i < speeds.length; i += 1) expect(speeds[i]).toBeLessThan(speeds[i - 1]!);
+      const [x1, y1, x2, y2] = rule(".hero")
+        .match(/--hero-arrive-ease:\s*cubic-bezier\(([^)]*)\)/)![1]!
+        .split(",")
+        .map(Number);
+      // A gentle start, far less than the 3 times the mean speed of the train
+      // that read as sharp, and no overshoot at the end.
+      expect(y1! / x1!).toBeLessThan(3);
+      expect(y2).toBe(1);
+      expect(x2).toBeGreaterThan(0);
       expect(rule(`${gate} .strip`, motion())).toMatch(
         /animation-timing-function:\s*var\(--hero-arrive-ease\)/,
+      );
+    });
+
+    test("a scroll runs the strip through hover and the pause button, but not a drag", () => {
+      const m = motion();
+      expect(rule(".strip[data-gliding] .track", m)).toMatch(/animation-play-state:\s*running/);
+      expect(m.indexOf(".strip[data-gliding] .track")).toBeGreaterThan(
+        m.indexOf(".strip[data-paused] .track"),
+      );
+      expect(m.indexOf(".strip[data-dragging] .track")).toBeGreaterThan(
+        m.indexOf(".strip[data-gliding] .track"),
       );
     });
 
@@ -438,7 +482,7 @@ describe("HomeHero.module.scss", () => {
 
     test("waits while the splash covers the page", () => {
       const waiting = rule(
-        `${held} .title, ${held} .lede, ${held} .ctas, ${held} .copy > .pair, ${held} .controls, ${held} .strip`,
+        `${held} .word, ${held} .ctas, ${held} .copy > .pair, ${held} .controls, ${held} .strip`,
         motion(),
       );
       expect(waiting).toMatch(/animation-play-state:\s*paused/);
@@ -449,19 +493,11 @@ describe("HomeHero.module.scss", () => {
     });
   });
 
-  describe("four cards to the screen from lg", () => {
-    test("the strip is as tall as a 4:3 card a quarter of the screen wide", () => {
-      expect(media("(min-width: 1024px)")).toMatch(
-        /--hero-strip-block:\s*calc\(\(100vw - 3 \* 8px\) \* 3 \/ 16\)/,
-      );
-    });
-
-    test("so four cards and their three gaps are exactly the screen", () => {
-      const gap = 8;
-      for (const width of [1024, 1440, 1920]) {
-        const card = (((width - 3 * gap) * 3) / 16) * (4 / 3);
-        expect(4 * card + 3 * gap).toBeCloseTo(width);
-      }
+  describe("the cards from lg", () => {
+    test("the strip's height is a 37.5vw card at 4:3, 1.5x the four-up size", () => {
+      expect(media("(min-width: 1024px)")).toMatch(/--hero-strip-block:\s*28\.125vw/);
+      expect((37.5 * 3) / 4).toBe(28.125);
+      expect(37.5).toBe(25 * 1.5);
     });
   });
 
@@ -483,15 +519,15 @@ describe("HomeHero.module.scss", () => {
 
     test("the photographs slide through their cards over the hero's height", () => {
       const image = rule(".image", timeline());
-      expect(image).toMatch(/block-size:\s*calc\(100% \+ 50%\)/);
+      expect(image).toMatch(/block-size:\s*calc\(100% \+ 35%\)/);
       expect(image).toMatch(/animation-name:\s*hero-parallax/);
       expect(image).toMatch(/animation-timeline:\s*scroll\(root\)/);
       expect(image).toMatch(/animation-range:\s*0 var\(--hero-parallax-range\)/);
-      // From the spare showing at the foot to none: 50 of 150.
+      // From the spare showing at the foot to none: 35 of 135.
       const from = css.match(
         /@keyframes hero-parallax\s*\{\s*from\s*\{\s*translate:\s*0 (-[\d.]+)%/,
       )?.[1];
-      expect(Number(from)).toBeCloseTo(-33.333, 2);
+      expect(Number(from)).toBeCloseTo(-25.926, 2);
     });
 
     test("only for a visitor who allows motion, on a browser with scroll timelines", () => {

@@ -15,10 +15,13 @@ import { test, expect } from "./fixtures";
  * Solutions panel, which put it at 1,080. The phone's copy of the menu
  * mounts on first use and is not counted here.
  *
+ * 2026-11-04: to 1,150 (Shivanshu) for the hero's word-by-word reveal, 22 spans,
+ * and the care packages coming back, which put it at 1,111.
+ *
  * Desktop Chrome only: the markup is the same on every device.
  */
 const BUDGETS = [
-  { path: "/", page: 1100, footer: 540 },
+  { path: "/", page: 1150, footer: 540 },
   { path: "/contact", page: 830, footer: 540 },
   { path: "/pricing", page: 2000, footer: 540 },
 ];

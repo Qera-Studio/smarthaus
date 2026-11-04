@@ -3,7 +3,11 @@
 @use "sass:math";
 
 // How much taller each photograph is than its card, for the parallax.
-$hero-parallax-spare: 50%;
+$hero-parallax-spare: 35%;
+
+// How many words of the title and the subtitle have a place in the opening.
+$hero-title-words: 6;
+$hero-lede-words: 24;
 
 @layer blocks {
   .hero {
@@ -30,22 +34,11 @@ $hero-parallax-spare: 50%;
     // The floor, for a screen too short to share: the strip keeps a usable
     // height and the page scrolls instead.
     --hero-min-block: 36rem;
-    // The strip arrives like a train (Shivanshu, 2026-11-02): from the
-    // screen's right edge at one steady speed for the first 70% of the way,
-    // then braking to nothing as the drift underneath carries on. The curve
-    // is exact: constant speed to 53.8% of the time, then even braking.
-    --hero-arrive-duration: 1800ms;
-    --hero-arrive-ease: linear(
-      0,
-      0.7 53.8%,
-      0.775 60%,
-      0.847 67%,
-      0.905 74%,
-      0.944 80%,
-      0.972 86%,
-      0.991 92%,
-      1
-    );
+    // The strip glides in (Shivanshu, 2026-11-04: the first cut, a train at
+    // one speed and then braking, read as sharp): from the screen's right
+    // edge, easing out over its whole length, so nothing about it arrives.
+    --hero-arrive-duration: 3600ms;
+    --hero-arrive-ease: cubic-bezier(0.22, 0.61, 0.2, 1);
     // The photographs inside their cards: each is taller than its card by
     // $hero-parallax-spare and slides down through it as the page scrolls,
     // moving more slowly than the page, as the About page's pictures do.
@@ -62,10 +55,9 @@ $hero-parallax-spare: 50%;
     text-align: center;
 
     @include bp-lg {
-      // Four cards to the screen (Shivanshu, 2026-11-02): the strip's height
-      // is a 4:3 card a quarter of the screen wide, less its share of the
-      // three gaps. It can still give way to the copy on a short screen.
-      --hero-strip-block: calc((100vw - 3 * #{$space-2}) * 3 / 16);
+      // A card is 37.5vw wide (Shivanshu, 2026-11-04): this is that card's
+      // height at 4:3. It still gives way to the copy on a short screen.
+      --hero-strip-block: 28.125vw;
       --hero-above: calc(
         var(--announce-block-size) + var(--nav-rest-inset) + var(--nav-top-block-size)
       );
@@ -277,6 +269,13 @@ $hero-parallax-spare: 50%;
       animation-play-state: paused;
     }
 
+    // A scroll runs it even while hover, focus or the pause button holds the
+    // drift: the scroll is the visitor's own hand (StripControls). Before
+    // the rule below, so a drag still wins.
+    .strip[data-gliding] .track {
+      animation-play-state: running;
+    }
+
     // Held still under a dragging hand, mouse or finger (StripControls).
     .strip[data-dragging] .track {
       animation-play-state: paused;
@@ -291,24 +290,51 @@ $hero-parallax-spare: 50%;
     //
     // The timings live on <html> for that time, so the nav and the contact
     // bar (Nav.module.scss, AnnouncementBar.module.scss) arrive with the CTAs
-    // from the same numbers (Shivanshu, 2026-11-02: slower and smoother than
-    // the first cut): the title, the subtitle 200ms later, then the CTAs with
-    // the strip, the nav and the bar, then the two lines and the pause
-    // button. The copy rises into place; the rating line above it drops.
+    // from the same numbers (Shivanshu, 2026-11-04: half the speed of the last
+    // cut, and the title and subtitle word by word): the title, the subtitle
+    // from 800ms, the CTAs with the strip, the nav and the bar at 1.2s, then
+    // the two lines and the pause button. The last of it lands at 4.9s, and
+    // that is a ceiling: motion that starts by itself and runs past five
+    // seconds would need a pause control (WCAG 2.2.2).
     //
     // Fill backwards, never forwards: the start state holds through each
     // delay, and once an animation ends it lets go of opacity and translate.
     // Paused while the splash covers the page, so it begins as the splash
     // fades rather than finishing unseen beneath it.
     :where(:root[data-intro]) {
-      --intro-duration: 1600ms;
+      --intro-duration: 3200ms;
       --intro-shift: #{$space-6};
-      --intro-lede: 200ms;
-      --intro-together: 600ms;
-      --intro-rest: 1000ms;
+      --intro-word-duration: 1600ms;
+      --intro-title-stagger: 300ms;
+      --intro-lede-start: 800ms;
+      --intro-lede-stagger: 90ms;
+      --intro-together: 1200ms;
+      --intro-rest: 1700ms;
 
-      .title,
-      .lede,
+      // Word by word. Opacity alone, on inline spans: anything that moved a
+      // word would need inline-block, and a screen reader can stop at each
+      // of those instead of reading one sentence.
+      .word {
+        animation-name: hero-word;
+        animation-duration: var(--intro-word-duration);
+        animation-timing-function: var(--ease-in-out);
+        animation-fill-mode: backwards;
+      }
+
+      // The delay by position: no inline style, which the strict CSP twin
+      // would report. HomeHero.test.tsx holds the copy under these counts.
+      @for $i from 1 through $hero-title-words {
+        .title .word:nth-of-type(#{$i}) {
+          animation-delay: calc(#{$i - 1} * var(--intro-title-stagger));
+        }
+      }
+
+      @for $i from 1 through $hero-lede-words {
+        .lede .word:nth-of-type(#{$i}) {
+          animation-delay: calc(var(--intro-lede-start) + #{$i - 1} * var(--intro-lede-stagger));
+        }
+      }
+
       .ctas,
       .copy > .pair,
       .controls {
@@ -316,10 +342,6 @@ $hero-parallax-spare: 50%;
         animation-duration: var(--intro-duration);
         animation-timing-function: var(--ease-out);
         animation-fill-mode: backwards;
-      }
-
-      .lede {
-        animation-delay: var(--intro-lede);
       }
 
       .ctas {
@@ -345,14 +367,19 @@ $hero-parallax-spare: 50%;
     }
 
     :where(:root[data-intro][data-splash="show"]) {
-      .title,
-      .lede,
+      .word,
       .ctas,
       .copy > .pair,
       .controls,
       .strip {
         animation-play-state: paused;
       }
+    }
+  }
+
+  @keyframes hero-word {
+    from {
+      opacity: 0;
     }
   }
 

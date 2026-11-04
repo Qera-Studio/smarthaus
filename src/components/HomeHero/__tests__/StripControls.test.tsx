@@ -2,7 +2,14 @@ import { StrictMode } from "react";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
-import { DRAG_MIN_PX, REVEAL_GUTTER_PX, SCROLL_SPEED, StripControls } from "../StripControls";
+import {
+  DRAG_MIN_PX,
+  GLIDE_DECAY,
+  GLIDE_STEP_MS,
+  REVEAL_GUTTER_PX,
+  SCROLL_SPEED,
+  StripControls,
+} from "../StripControls";
 
 /**
  * The strip's pause button, and the hand on the strip: a mouse or finger
@@ -74,6 +81,8 @@ function setup({ animated = true, at = 0 }: { animated?: boolean; at?: number } 
   const track = screen.getByTestId("track");
   const animation = {
     currentTime: at,
+    playState: "running",
+    updatePlaybackRate: jest.fn(),
     effect: { getComputedTiming: () => ({ duration: DURATION }) },
   };
   track.getAnimations = () => (animated ? [animation as unknown as Animation] : []);
@@ -495,55 +504,104 @@ describe("StripControls", () => {
       Object.defineProperty(window, "scrollY", { configurable: true, value: y });
       fireEvent.scroll(window);
     };
-    const ahead = (px: number) => px * SCROLL_SPEED * MS_PER_PX;
+    /** The speed a scroll of dy adds at once, on top of the drift's 1. */
+    const extra = (dy: number) =>
+      (dy * MS_PER_PX * SCROLL_SPEED * (1 - GLIDE_DECAY)) / GLIDE_STEP_MS;
+    const lastRate = (animation: { updatePlaybackRate: jest.Mock }) =>
+      animation.updatePlaybackRate.mock.calls.at(-1)?.[0] as number;
+    /** Every speed set from here until the glide ends. */
+    const runOut = (animation: { updatePlaybackRate: jest.Mock }) => {
+      animation.updatePlaybackRate.mockClear();
+      act(() => {
+        jest.advanceTimersByTime(GLIDE_STEP_MS * 400);
+      });
+      return animation.updatePlaybackRate.mock.calls.map((call) => call[0] as number);
+    };
 
-    beforeEach(() => scrollTo(0));
+    beforeEach(() => {
+      jest.useFakeTimers();
+      scrollTo(0);
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+    });
 
-    test("runs the strip on by SCROLL_SPEED pixels for every pixel scrolled down", () => {
+    test("never jumps: it changes the drift's speed, and not where it is", () => {
       const { animation } = setup({ at: 10_000 });
       onScreen(true);
       scrollTo(100);
-      expect(animation.currentTime).toBeCloseTo(10_000 + ahead(100));
+      expect(animation.currentTime).toBe(10_000);
+      expect(lastRate(animation)).toBeCloseTo(1 + extra(100));
     });
 
-    test("runs it back as the page scrolls up", () => {
-      const { animation } = setup({ at: 30_000 });
-      scrollTo(500);
+    test("a scroll up runs it backwards", () => {
+      const { animation } = setup({ at: 200_000 });
+      scrollTo(5000);
       onScreen(true);
-      scrollTo(300);
-      expect(animation.currentTime).toBeCloseTo(30_000 - ahead(200));
+      scrollTo(3000);
+      expect(lastRate(animation)).toBeCloseTo(1 + extra(-2000));
+      expect(lastRate(animation)).toBeLessThan(0);
     });
 
-    test("down and back up again leaves it where it was", () => {
+    test("the speed eases away, step by step, and hands back to the drift", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      onScreen(true);
+      scrollTo(100);
+      const rates = runOut(animation);
+      for (let i = 1; i < rates.length - 1; i += 1) {
+        expect(rates[i]!).toBeLessThan(rates[i - 1]!);
+      }
+      expect(rates.at(-1)).toBe(1);
+      expect(strip).not.toHaveAttribute("data-gliding");
+    });
+
+    test("over the whole glide it runs SCROLL_SPEED pixels for every pixel scrolled", () => {
       const { animation } = setup({ at: 10_000 });
       onScreen(true);
-      scrollTo(40);
-      scrollTo(250);
-      scrollTo(0);
-      expect(animation.currentTime).toBeCloseTo(10_000);
+      scrollTo(300);
+      const first = lastRate(animation);
+      const rates = [first, ...runOut(animation)];
+      const ms = rates.slice(0, -1).reduce((sum, rate) => sum + (rate - 1) * GLIDE_STEP_MS, 0);
+      // Within what GLIDE_END cuts off the tail.
+      expect(ms / MS_PER_PX).toBeCloseTo(300 * SCROLL_SPEED, -1);
     });
 
-    test("has no limit either way: the pass wraps, like a drag", () => {
-      const { animation } = setup({ at: DURATION - 10 });
+    test("another scroll while it glides adds to the speed already there", () => {
+      const { animation } = setup({ at: 10_000 });
       onScreen(true);
-      scrollTo(10);
-      expect(animation.currentTime).toBeCloseTo(ahead(10) - 10);
+      scrollTo(100);
+      const once = lastRate(animation);
+      scrollTo(200);
+      expect(lastRate(animation)).toBeGreaterThan(once);
+    });
+
+    test("going backwards never reaches zero, where an animation would end", () => {
+      const { animation } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(5000);
+      runOut(animation);
+      Object.defineProperty(window, "scrollY", { configurable: true, value: 5000 });
+      animation.currentTime = 1000;
       scrollTo(0);
-      expect(animation.currentTime).toBeCloseTo(DURATION - 10);
-      // Many passes down: still within one.
-      scrollTo(50_000);
-      expect(animation.currentTime).toBeGreaterThanOrEqual(0);
-      expect(animation.currentTime).toBeLessThan(DURATION);
+      // Whole passes on: the same picture.
+      expect(animation.currentTime).toBe(1000 + DURATION * 4);
+    });
+
+    test("forwards, it leaves the clock alone however near the start", () => {
+      const { animation } = setup({ at: 5 });
+      onScreen(true);
+      scrollTo(100);
+      expect(animation.currentTime).toBe(5);
     });
 
     test("does nothing until any of the strip is on screen, and nothing once it has left", () => {
       const { animation } = setup({ at: 1000 });
       scrollTo(100);
-      expect(animation.currentTime).toBe(1000);
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
       onScreen(true);
       onScreen(false);
       scrollTo(300);
-      expect(animation.currentTime).toBe(1000);
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
     });
 
     test("counts from where the page was when the strip came on screen", () => {
@@ -551,26 +609,60 @@ describe("StripControls", () => {
       scrollTo(900);
       onScreen(true);
       scrollTo(910);
-      expect(animation.currentTime).toBeCloseTo(1000 + ahead(10));
+      expect(lastRate(animation)).toBeCloseTo(1 + extra(10));
     });
 
-    test("still runs while hover or the pause button holds the drift", () => {
-      const { strip, animation, pause } = setup({ at: 1000 });
-      fireEvent.click(pause);
-      expect(strip).toHaveAttribute("data-paused");
+    test("runs a strip that hover or the pause button holds, with no drift to add to", () => {
+      const { strip, animation } = setup({ at: 1000 });
+      animation.playState = "paused";
       onScreen(true);
       scrollTo(50);
-      expect(animation.currentTime).toBeCloseTo(1000 + ahead(50));
+      expect(strip).toHaveAttribute("data-gliding");
+      expect(lastRate(animation)).toBeCloseTo(extra(50));
+    });
+
+    test("the pause button pressed mid-glide stops it", () => {
+      const { strip, animation, pause } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(100);
+      fireEvent.click(pause);
+      act(() => {
+        jest.advanceTimersByTime(GLIDE_STEP_MS);
+      });
+      expect(strip).not.toHaveAttribute("data-gliding");
+      expect(lastRate(animation)).toBe(1);
     });
 
     test("leaves the strip alone while keyboard focus is in it", () => {
       const { animation, link } = setup({ at: 1000 });
-      // Focus brings the card on screen (settle), and then holds it there.
       link.focus();
-      const focused = animation.currentTime;
+      animation.updatePlaybackRate.mockClear();
       onScreen(true);
       scrollTo(100);
-      expect(animation.currentTime).toBe(focused);
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
+    });
+
+    test("a card taking focus ends a glide at once", () => {
+      const { strip, animation, link } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(100);
+      act(() => link.focus());
+      expect(strip).not.toHaveAttribute("data-gliding");
+      expect(lastRate(animation)).toBe(1);
+    });
+
+    test("a press ends a glide at once, and a drag is not disturbed by the scroll", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      onScreen(true);
+      scrollTo(100);
+      fireEvent.pointerDown(strip, { button: 0, clientX: 500, pointerId: 1 });
+      expect(strip).not.toHaveAttribute("data-gliding");
+      expect(lastRate(animation)).toBe(1);
+      fireEvent.pointerMove(window, { clientX: 400, pointerId: 1 });
+      animation.updatePlaybackRate.mockClear();
+      scrollTo(300);
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
+      fireEvent.pointerUp(window, { pointerId: 1 });
     });
 
     test("leaves the strip alone under reduced motion, where it does not drift", () => {
@@ -579,6 +671,7 @@ describe("StripControls", () => {
       onScreen(true);
       scrollTo(100);
       expect(strip.scrollLeft).toBe(50);
+      expect(strip).not.toHaveAttribute("data-gliding");
     });
 
     test("does nothing on a strip that has no track yet", () => {
@@ -592,14 +685,32 @@ describe("StripControls", () => {
       expect(() => scrollTo(100)).not.toThrow();
     });
 
-    test("stops listening and observing on unmount", () => {
+    test("ends if the animation goes away mid-glide", () => {
+      const { strip, animation } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(100);
+      screen.getByTestId("track").getAnimations = () => [];
+      animation.updatePlaybackRate.mockClear();
+      act(() => {
+        jest.advanceTimersByTime(GLIDE_STEP_MS);
+      });
+      expect(strip).not.toHaveAttribute("data-gliding");
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
+    });
+
+    test("stops listening, observing and gliding on unmount", () => {
       const { animation, unmount } = setup({ at: 1000 });
       onScreen(true);
+      scrollTo(100);
       const before = observersDisconnected;
       unmount();
       expect(observersDisconnected).toBe(before + 1);
-      scrollTo(100);
-      expect(animation.currentTime).toBe(1000);
+      animation.updatePlaybackRate.mockClear();
+      scrollTo(300);
+      act(() => {
+        jest.advanceTimersByTime(GLIDE_STEP_MS * 5);
+      });
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
     });
   });
 
