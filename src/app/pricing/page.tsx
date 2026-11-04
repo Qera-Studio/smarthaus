@@ -46,8 +46,7 @@ export default function PricingPage() {
         <h1 className={styles.title}>Pricing</h1>
         <p className={styles.standfirst}>
           Four levels, from a single room to a fully engineered residence. Every one is quoted
-          against your own drawings after a site visit, so the figure is where the conversation
-          starts rather than where it lands.
+          against your own drawings after a site visit.
         </p>
       </header>
 

@@ -188,7 +188,7 @@ test("passes axe with no violations", async ({ page }) => {
 
 test("the homepage's comparison button now lands here", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "View detailed pricing" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Compare every feature" })).toHaveAttribute(
     "href",
     "/pricing",
   );

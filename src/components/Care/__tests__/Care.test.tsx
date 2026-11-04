@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { Care } from "../Care";
 
 /**
- * The care packages carry prices and a support SLA, which makes them claims
+ * The care packages carry a support SLA, which makes them claims
  * under the AGENTS.md capability audit rather than ordinary copy. These are
  * the invariants that fail silently: two cards that say the same thing read as
  * unfinished, and an unconfirmed figure with no pending note is a placeholder
@@ -41,6 +41,15 @@ describe("Care packages", () => {
     expect(screen.getByText(/within 6 hours, seven days a week/)).toBeInTheDocument();
     expect(screen.queryByText(/to be confirmed/i)).toBeNull();
     expect(screen.queryByText(/pending/i)).toBeNull();
+  });
+
+  it("shows no prices, at the client's request", () => {
+    const { container } = render(<Care />);
+    expect(container.textContent).not.toMatch(/AED|\/year|\d,\d{3}/);
+    expect(screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent)).toEqual([
+      "Standard Care",
+      "Premium Care",
+    ]);
   });
 
   it("renders no raw braces to the reader", () => {

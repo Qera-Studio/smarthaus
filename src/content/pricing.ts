@@ -37,7 +37,7 @@ export type PricingTier = {
   /** Stable key, and the anchor the comparison uses. */
   id: string;
   name: string;
-  /** Rendered exactly as written, "+" included. */
+  /** Not rendered: the client does not want prices shown for now (2026-11-04). */
   price: string;
   description: string;
   includes: readonly string[];
@@ -631,13 +631,6 @@ export const PRICING_FAQS: readonly {
   question: string;
   answer: readonly string[];
 }[] = [
-  {
-    id: "why-plus",
-    question: "Why does every price end in a plus?",
-    answer: [
-      "Because the number is where a quote starts, not where it lands. Every system is priced against your own drawings after a site visit, and the figure on the card is the least a home in that tier has cost. A three-bedroom apartment and a six-bedroom villa can both be Connected and will not pay the same.",
-    ],
-  },
   {
     id: "what-moves-the-price",
     question: "What decides where in a tier a home lands?",

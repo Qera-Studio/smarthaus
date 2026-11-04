@@ -14,7 +14,7 @@ import { Pricing } from "../Pricing";
  * typo there fails silently in a way no visual test at this level would catch.
  */
 describe("Pricing", () => {
-  it("renders four tiers, each with its own name, price and description", () => {
+  it("renders four tiers, each with its own name and description, and no price", () => {
     render(<Pricing />);
 
     const cards = screen.getAllByRole("listitem").filter((li) => li.dataset.tone);
@@ -25,8 +25,9 @@ describe("Pricing", () => {
     // Distinct, so a copy-paste in the data is caught rather than shipped.
     expect(new Set(names).size).toBe(4);
 
+    // The client does not want prices shown for now (2026-11-04).
     for (const card of cards) {
-      expect(card.textContent).toMatch(/AED [\d,]+\+/);
+      expect(card.textContent).not.toMatch(/AED|\d,\d{3}/);
     }
   });
 

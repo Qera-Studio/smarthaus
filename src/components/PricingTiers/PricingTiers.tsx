@@ -10,7 +10,9 @@ import styles from "./PricingTiers.module.scss";
  * so that neither surface skips a level in its outline. Two values only; a
  * free string would let a caller do exactly that.
  *
- * Content and the claims status live in src/content/pricing.ts.
+ * Content and the claims status live in src/content/pricing.ts. No prices: the
+ * client does not want them shown for now (2026-11-04), so each tier's `price`
+ * stays in the content and is not rendered.
  */
 export function PricingTiers({ headingLevel }: { headingLevel: "h2" | "h3" }) {
   const Heading = headingLevel;
@@ -29,7 +31,6 @@ export function PricingTiers({ headingLevel }: { headingLevel: "h2" | "h3" }) {
         >
           <Heading className={styles.tierName}>{tier.name}</Heading>
           <p className={styles.tierDescription}>{tier.description}</p>
-          <p className={styles.tierPrice}>{tier.price}</p>
 
           <div className={styles.tierCta}>
             {/* Every tier goes to the same form: the enquiry is the only

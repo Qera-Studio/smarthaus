@@ -45,15 +45,14 @@ export function Pricing() {
         </h2>
         <p className={styles.standfirst}>
           Four levels, from a single room to a fully engineered residence. Every one is quoted
-          against your own drawings after a site visit, so the figure below is where the
-          conversation starts rather than where it lands.
+          against your own drawings after a site visit.
         </p>
       </div>
 
       <PricingTiers headingLevel="h3" />
 
       <div className={styles.compare}>
-        <Button href="/pricing">View detailed pricing</Button>
+        <Button href="/pricing">Compare every feature</Button>
       </div>
     </section>
   );

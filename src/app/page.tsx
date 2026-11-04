@@ -1,3 +1,4 @@
+import { Care } from "../components/Care";
 import { Hardware } from "../components/Hardware";
 import { HomeHero } from "../components/HomeHero";
 import { Partners } from "../components/Partners";
@@ -34,13 +35,13 @@ export default function Home() {
       {/* Who stands behind the systems, before anything asks to be trusted.
           Took the Maple banner's place; src/components/Maple stays unmounted. */}
       <Partners />
-      {/* What Smarthaus has done, what the house is made of, then how it gets
-          installed. */}
-      <Stats />
+      {/* What the house is made of, between the two plain sections so neither
+          runs into the other; what Smarthaus has done; how it gets installed;
+          then keeping it running, and the levels. */}
       <Hardware />
+      <Stats />
       <Process />
-      {/* Care (the maintenance plan) is unmounted, not deleted, until the
-          section is rewritten; src/components/Care stays intact. */}
+      <Care />
       <Pricing />
       {/* Last thing on the page, directly above the footer. */}
       <HomeEnquiry />

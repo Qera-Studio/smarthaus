@@ -45,9 +45,10 @@ describe("Home page", () => {
     expect(order(container)).toEqual([
       "hero",
       "partners",
-      "stats",
       "hardware",
+      "stats",
       "process",
+      "care",
       "pricing",
       "enquiry",
     ]);
@@ -68,11 +69,13 @@ describe("Home page", () => {
     expect(order(container)).not.toContain("maple");
   });
 
-  it("leaves the Care section off the page", () => {
-    // Hidden 2026-10-02 at Shivanshu's request, ahead of its removal. The
-    // component stays in src/components/Care, as Maple does.
+  it("puts the care packages directly above the pricing", () => {
+    // Back on 2026-11-04, at Shivanshu's call, without prices. Off the page
+    // from 2026-10-02.
     const { container } = render(<Home />);
-    expect(order(container)).not.toContain("care");
+    const sections = order(container);
+    expect(sections.indexOf("pricing")).toBe(sections.indexOf("care") + 1);
+    expect(sections.indexOf("care")).toBe(sections.indexOf("process") + 1);
   });
 
   it("puts the partner cards directly after the hero, where Maple was", () => {
@@ -83,18 +86,14 @@ describe("Home page", () => {
     expect(sections.indexOf("partners")).toBe(sections.indexOf("hero") + 1);
   });
 
-  it("puts the figures directly after the partner cards", () => {
+  it("puts the hardware carousel between the partner cards and the figures", () => {
+    // 2026-11-04, at Shivanshu's call: back above the figures, because the two
+    // plain brown sections side by side had no picture between them. The
+    // figures were above it from 2026-10-28.
     const { container } = render(<Home />);
     const sections = order(container);
-    expect(sections.indexOf("stats")).toBe(sections.indexOf("partners") + 1);
-  });
-
-  it("puts the hardware carousel directly under the figures", () => {
-    // 2026-10-28, at Shivanshu's call: the figures moved above the carousel.
-    // They sat below it from 2026-10-07.
-    const { container } = render(<Home />);
-    const sections = order(container);
-    expect(sections.indexOf("hardware")).toBe(sections.indexOf("stats") + 1);
+    expect(sections.indexOf("hardware")).toBe(sections.indexOf("partners") + 1);
+    expect(sections.indexOf("stats")).toBe(sections.indexOf("hardware") + 1);
   });
 
   it("keeps the enquiry last, directly above the footer", () => {

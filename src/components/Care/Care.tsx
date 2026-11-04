@@ -1,7 +1,7 @@
 import styles from "./Care.module.scss";
 
 /**
- * The annual maintenance section, directly below the Process rail.
+ * The annual maintenance section, directly below the Process stack.
  *
  * Laid out as the contact page's Location block: a title on the left, two equal
  * panels on the right, the row sizing both so neither can outgrow the other.
@@ -18,11 +18,8 @@ import styles from "./Care.module.scss";
  * 2026-09-28 and printed plainly. faq.ts "support-response" states the same
  * figure; change both together or they will drift.
  *
- * The two PRICES are printed plainly and are NOT independently sourced in this
- * repo. They came from the design reference, not from a package sheet. If they
- * turn out to be provisional they need the brace-and-note treatment faq.ts
- * uses, and this section emits no structured data until every figure in it is
- * confirmed.
+ * No prices, at the client's request (2026-11-04): the two packages and what
+ * each promises, nothing more. The section emits no structured data.
  */
 
 const PACKAGES = [
@@ -30,14 +27,12 @@ const PACKAGES = [
     name: "Standard Care",
     description:
       "Two planned visits a year, remote monitoring between them, and software kept current. When something needs attention, we respond the next business day.",
-    price: "AED 5,000/year",
     tone: "light",
   },
   {
     name: "Premium Care",
     description:
       "Everything in Standard Care, plus priority response within 6 hours, seven days a week, including evenings and weekends. One number, a named engineer who knows your installation, and no triage queue.",
-    price: "AED 8,000/year",
     tone: "dark",
   },
 ] as const;
@@ -70,7 +65,6 @@ export function Care() {
             >
               <h4 className={styles.packageName}>{pkg.name}</h4>
               <p className={styles.packageDescription}>{pkg.description}</p>
-              <p className={styles.packagePrice}>{pkg.price}</p>
             </li>
           ))}
         </ul>

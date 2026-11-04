@@ -15,7 +15,7 @@
   //
   // Four columns wait for xl (1280px), not lg: at 1024px four cards of this
   // content are too narrow for the feature lines to sit on one line each.
-  // Six rows, one per child of a card: name, description, price, button, list
+  // Five rows, one per child of a card: name, description, button, list
   // label, list. The cards subgrid onto these, so each of those parts lands on
   // one line across all four however long a description runs.
   //
@@ -74,12 +74,12 @@
     border-width: 1px;
     border-color: transparent;
 
-    // Side by side: adopt the parent's six rows so the price and the button
+    // Side by side: adopt the parent's five rows so the buttons
     // line up across every card. The span must match the child count in
     // Pricing.tsx — too few and the card's last children share one row.
     @include bp-md {
       display: grid;
-      grid-row: span 6;
+      grid-row: span 5;
       grid-template-rows: subgrid;
     }
 
@@ -164,27 +164,6 @@
     color: inherit;
     opacity: 0.7;
     text-wrap: pretty;
-  }
-
-  // The largest element on the card. Aligned to the bottom of its row so the
-  // four prices sit on one baseline even where a description above ran short.
-  //
-  // h4 rather than h3 on the fluid scale: at roughly 300px of column the h3
-  // set "AED 99,999+" close enough to the card edge to look cramped.
-  .tierPrice {
-    margin-block-start: $space-3;
-    // Bottom of its subgrid row, so the four prices share a baseline however
-    // long the description above each one runs. Scoped to the grid: below md
-    // the card is a flex column, where `align-self: end` means the inline end
-    // and pushed the price to the right edge of the card.
-    @include bp-md {
-      align-self: end;
-    }
-    font-size: var(--type-h4);
-    font-weight: $font-weight-semibold;
-    line-height: $line-height-snug;
-    letter-spacing: -0.01em;
-    color: inherit;
   }
 
   // A block rather than the button itself, so the band stretches the card's

@@ -39,15 +39,12 @@ test("shows four tiers, each reaching the enquiry form", async ({ page }) => {
 });
 
 /**
- * The prices are the reason anyone scrolls this far, so an empty card is worse
- * than a broken one: it looks intentional.
+ * The client does not want prices shown for now (2026-11-04). The section's own
+ * standfirst must not point at a figure that is not there either.
  */
-test("prints a price on every tier", async ({ page }) => {
-  const cards = pricing(page).locator("[data-tone]");
-
-  for (const card of await cards.all()) {
-    await expect(card).toContainText(/AED [\d,]+\+/);
-  }
+test("prints no price anywhere in the section", async ({ page }) => {
+  await expect(pricing(page)).not.toContainText(/AED|\d,\d{3}/);
+  await expect(pricing(page)).not.toContainText(/figure/);
 });
 
 /**
