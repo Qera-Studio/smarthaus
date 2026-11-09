@@ -26,6 +26,13 @@ describe("FAQ content", () => {
     }
   });
 
+  it("quotes no price in any answer", () => {
+    // The site discloses no prices for now (Shivanshu, 2026-11-04).
+    for (const entry of allEntries) {
+      expect(entry.answer.join(" ")).not.toMatch(/AED|\d,\d{3}/);
+    }
+  });
+
   it("strips placeholder braces from the schema text", () => {
     // The braces are a render-time marker, not content. If one reaches the
     // JSON-LD, an answer engine quotes "AED {18,000}" back at a reader.

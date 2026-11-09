@@ -37,7 +37,7 @@ export const metadata: Metadata = pageMetadata(PAGE);
 const FAQS = [
   {
     q: "Is the visit an obligation?",
-    a: "No. The site assessment is a paid visit, AED 1,500, credited in full against any installation you go ahead with. If you decide not to, you keep the report and owe us nothing further.",
+    a: "No. The site assessment is a paid visit, credited in full against any installation you go ahead with. If you decide not to, you keep the report and owe us nothing further.",
   },
   {
     q: "What happens during the visit?",
@@ -74,8 +74,8 @@ const CONTACT_ROWS = [
 /**
  * No FAQPage JSON-LD on this page, deliberately.
  *
- * The assessment fee above is the same figure src/content/faq.ts carries as
- * `pending: "Fee pending Sunil's approval."`. Showing an unconfirmed price to a
+ * The paid visit above is the term src/content/faq.ts carries as
+ * `pending: "Fee pending Sunil's approval."`. Showing an unconfirmed term to a
  * reader who can ask about it is one thing; publishing it as structured data is
  * another, because that is what an answer engine quotes back with no way to
  * check whether it still holds. /faq withholds its schema for exactly this

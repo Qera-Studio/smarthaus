@@ -172,13 +172,13 @@ test("every FAQ opens by keyboard", async ({ page }) => {
 });
 
 test("no FAQ structured data while the assessment fee is unconfirmed", async ({ page }) => {
-  // The AED 1,500 figure is `pending` in src/content/faq.ts. Structured data is
-  // what an answer engine quotes verbatim, so it must not carry a price nobody
-  // has signed off. /faq withholds its schema for the same reason.
+  // That there is a fee at all is `pending` in src/content/faq.ts. Structured
+  // data is what an answer engine quotes verbatim, so it must not carry a term
+  // nobody has signed off. /faq withholds its schema for the same reason.
   //
   // When the fee is confirmed, this assertion inverts rather than gets deleted.
   // The site and page schema are here (business, website, page); what must
-  // not be is a FAQPage, or any node carrying the fee.
+  // not be is a FAQPage, or any node carrying a figure.
   const blocks = await page
     .locator('script[type="application/ld+json"]')
     .evaluateAll((els) => els.map((el) => el.textContent ?? ""));
@@ -186,9 +186,11 @@ test("no FAQ structured data while the assessment fee is unconfirmed", async ({ 
   expect(blocks.join("")).not.toMatch(/1,?500/);
 });
 
-test("the fee is stated once, and only where a reader can question it", async ({ page }) => {
+test("the page quotes no price", async ({ page }) => {
+  // The site discloses no prices for now (Shivanshu, 2026-11-04).
+  await expect(page.locator("main")).not.toContainText(/AED|\d,\d{3}/);
   const answers = (await page.locator("details p").allTextContents()).join(" ");
-  expect(answers).toContain("AED 1,500");
+  expect(answers).not.toMatch(/AED|\d,\d{3}/);
 });
 
 test("the FAQ does not claim a founding year", async ({ page }) => {

@@ -642,7 +642,7 @@ export const PRICING_FAQS: readonly {
     id: "site-visit",
     question: "Is the site visit included?",
     answer: [
-      "The assessment is a paid visit, AED 1,500, credited in full against any installation you go ahead with. You get a fixed, itemised proposal within 48 hours of it. If you decide not to proceed you keep the report and owe nothing further.",
+      "The assessment is a paid visit, credited in full against any installation you go ahead with. You get a fixed, itemised proposal within 48 hours of it. If you decide not to proceed you keep the report and owe nothing further.",
     ],
   },
   {

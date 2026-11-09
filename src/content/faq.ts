@@ -110,7 +110,7 @@ export const FAQ_CATEGORIES: readonly FaqCategory[] = [
         id: "paid-visit",
         question: "Why is the visit paid?",
         answer: [
-          "AED 1,500, credited in full against any installation. A proper assessment takes two people and half a day including the write-up. Charging for it means you get a real technical survey rather than a salesperson's guess, and it's free the moment you go ahead.",
+          "The fee is credited in full against any installation. A proper assessment takes two people and half a day including the write-up. Charging for it means you get a real technical survey rather than a salesperson's guess, and it's free the moment you go ahead.",
         ],
         pending: "Fee pending Sunil's approval.",
       },
@@ -147,15 +147,14 @@ export const FAQ_CATEGORIES: readonly FaqCategory[] = [
         id: "system-cost",
         question: "What does a system cost?",
         answer: [
-          "Most villas land between AED {18,000} and AED {60,000} depending on how much of the house is covered. The packages page sets out what sits in each range.",
+          "It depends on how much of the house is covered and what is already in the walls. We do not quote without a visit: after it, you get a fixed, itemised price.",
         ],
-        pending: "Price range unconfirmed, awaiting final package pricing.",
       },
       {
         id: "price-range",
-        question: "Why the wide range?",
+        question: "Why can you not give a price before the visit?",
         answer: [
-          "A four-bedroom villa with existing cabling costs far less than a larger home needing new runs. The assessment is what turns the range into a number.",
+          "A four-bedroom villa with existing cabling costs far less than a larger home needing new runs. The assessment is what turns that into a number.",
         ],
       },
       {

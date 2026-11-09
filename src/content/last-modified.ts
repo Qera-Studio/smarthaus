@@ -18,8 +18,8 @@ import { ACCESSIBILITY_ASSESSED } from "./legal/versions";
  * is a contradictory signal.
  */
 export const LAST_MODIFIED: Readonly<Record<string, string>> = {
-  "/": "2026-09-27",
-  "/contact": "2026-09-27",
+  "/": "2026-11-04",
+  "/contact": "2026-11-04",
   "/about": "2026-10-07",
   "/accessibility": ACCESSIBILITY_ASSESSED,
 };
