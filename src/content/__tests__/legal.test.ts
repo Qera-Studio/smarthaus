@@ -65,9 +65,9 @@ describe("versions", () => {
     expect(frontmatter(termsMd, "version")).toBe(TERMS_VERSION);
   });
 
-  it("bumped the privacy policy for the 2026-09-26 corrections", () => {
-    expect(PRIVACY_POLICY_VERSION).toBe("0.2.0-draft");
-    expect(frontmatter(privacyMd, "lastUpdated")).toBe("2026-09-26");
+  it("bumped the privacy policy for the Resend region on 2026-11-04", () => {
+    expect(PRIVACY_POLICY_VERSION).toBe("0.2.1-draft");
+    expect(frontmatter(privacyMd, "lastUpdated")).toBe("2026-11-04");
   });
 
   it.each([
@@ -132,9 +132,10 @@ describe("processors: the policy names what the build sends data to", () => {
     const row = section(privacyMd, "### 4.1")
       .split("\n")
       .find((line) => line.startsWith("| Resend"))!;
-    expect(row).toContain("United States (US East, Virginia)");
+    expect(row).toContain("Japan (Asia Pacific, Tokyo)");
+    expect(privacyMd).not.toMatch(/^\| Resend.*Virginia/m);
     expect(privacyMd).not.toContain("confirm Resend sending region");
-    expect(privacyMd).toMatch(/\[ \] Resend sending region — reported as US East \(Virginia\)/);
+    expect(privacyMd).toMatch(/\[ \] Resend sending region — Tokyo, Japan/);
   });
 
   it("no longer carries the drafting note that Resend was misfiled", () => {
