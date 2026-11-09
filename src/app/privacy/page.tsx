@@ -218,16 +218,10 @@ export default function PrivacyPolicy() {
           on the heading rather than a wrapper so the anchor lands on the
           heading itself.
 
-          TWO SENTENCES DEVIATE FROM §7.1, deliberately, and are flagged for the
-          counsel review that is already pending on this page:
-
-          §7.1 is written for the state where the tags are live, and says "we
-          use Google Analytics and Microsoft Clarity". They are not installed:
-          the consent gate ships first because the deck's own §13 lists six
-          items as blocking before the tags may fire, five of them outside
-          engineering. Shipping §7.1 verbatim would swap one false claim for
-          another in the opposite direction, so the two sentences that assert
-          present use are future-tense here. Everything else is §7.1 as written.
+          THIS DEVIATES FROM §7.1, deliberately, and is flagged for the counsel
+          review that is already pending on this page: Clarity runs without
+          cookies before any choice, by decision (Shivanshu, 2026-11-04), which
+          §7.1 did not contemplate.
         */}
         <h3 id="cookies">Cookies and analytics</h3>
         <p>
@@ -235,9 +229,9 @@ export default function PrivacyPolicy() {
           cookie choice. It is always active.
         </p>
         <p>
-          <strong>Analytics cookies are off until you turn them on.</strong> We are preparing to use
-          Google Analytics and Microsoft Clarity to understand which pages are read and where people
-          get stuck. Neither is installed yet, and neither will load unless you accept it.
+          <strong>Analytics cookies are off until you turn them on.</strong> Google Analytics runs
+          only if you accept analytics. It counts visits and shows which pages are read, and it is
+          not used to advertise to you.
         </p>
         <p>
           <strong>We do measure how the site performs, without cookies.</strong> Vercel Web
@@ -247,10 +241,13 @@ export default function PrivacyPolicy() {
           followed.
         </p>
         <p>
-          Microsoft Clarity records how pages are used, including scrolling, clicks and pointer
-          movement, and can replay a session.{" "}
-          <strong>Anything you type into a form will be masked and never recorded.</strong> We will
-          verify that before it processes anything.
+          <strong>Microsoft Clarity runs without cookies until you choose.</strong> It records how
+          pages are used, including scrolling, clicks and pointer movement, and can replay a
+          session, so we can see where people get stuck. Without cookies it gives each page view its
+          own identifier and does not connect one to the next. If you accept analytics, it uses
+          cookies to follow a visit across pages. If you decline, or your browser sends a Do Not
+          Track or Global Privacy Control signal, it does not run.{" "}
+          <strong>Anything you type into a form is masked and never recorded.</strong>
         </p>
         <p>
           We do not use advertising or remarketing cookies. There is no Meta Pixel, no ad-network
@@ -306,6 +303,16 @@ export default function PrivacyPolicy() {
                 Aggregated, non-identifying usage data. No cookies, and no identifier that survives
                 your visit
               </td>
+            </tr>
+            <tr>
+              <th scope="row">Google (Analytics 4)</th>
+              <td>Aggregate usage analytics</td>
+              <td>Pages viewed, approximate location from IP, device type and referrer</td>
+            </tr>
+            <tr>
+              <th scope="row">Microsoft (Clarity)</th>
+              <td>Heatmaps and session replay</td>
+              <td>Scrolling, clicks, pointer movement and the pages viewed. Form input masked</td>
             </tr>
           </tbody>
         </LegalTable>
@@ -372,7 +379,8 @@ export default function PrivacyPolicy() {
         <p>
           Smarthaus operates in the UAE. Some of our service providers are established outside the
           UAE, which means your information may be processed outside the country, for example by our
-          hosting provider, and by Resend, which delivers enquiries from Tokyo, Japan.
+          hosting provider, by Resend, which delivers enquiries from Tokyo, Japan, and by Google and
+          Microsoft, which run our analytics tools.
         </p>
         <p>
           Where information leaves the UAE, we rely on the transfer routes the law permits: transfer
@@ -447,12 +455,12 @@ export default function PrivacyPolicy() {
               </td>
             </tr>
             <tr>
-              <th scope="row">Analytics data, once analytics is enabled</th>
+              <th scope="row">Analytics data</th>
               <td>Up to 14 months</td>
               <td>Year-on-year comparison, then deletion</td>
             </tr>
             <tr>
-              <th scope="row">Session recordings, once analytics is enabled</th>
+              <th scope="row">Session recordings</th>
               <td>
                 Microsoft’s own retention period: <Placeholder>confirm period</Placeholder>
               </td>

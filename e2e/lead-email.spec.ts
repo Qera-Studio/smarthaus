@@ -57,7 +57,7 @@ test.describe("the full contact form's email", () => {
     const before = Date.now();
     await sendFullForm(page, name);
     const mail = await sentMail(name);
-    expect(line(mail, "Privacy policy shown")).toBe("0.2.1-draft");
+    expect(line(mail, "Privacy policy shown")).toBe("0.4.1-draft");
     const sentAt = Date.parse(line(mail, "Sent at")!);
     expect(sentAt).toBeGreaterThanOrEqual(before - 1000);
     expect(sentAt).toBeLessThanOrEqual(Date.now() + 1000);

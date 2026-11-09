@@ -8,7 +8,7 @@
  * `version` frontmatter; src/content/__tests__/legal.test.ts fails if the two
  * disagree.
  */
-export const PRIVACY_POLICY_VERSION = "0.2.1-draft";
+export const PRIVACY_POLICY_VERSION = "0.4.1-draft";
 export const TERMS_VERSION = "0.1.0-draft";
 
 /**

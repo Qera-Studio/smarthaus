@@ -37,6 +37,16 @@ describe("field caps", () => {
   });
 });
 
+describe("session recording", () => {
+  it.each([["full"], ["short"]] as const)(
+    "tells Clarity to mask the whole %s form, a second layer over its own setting",
+    (variant) => {
+      render(<ContactForm variant={variant} />);
+      expect(document.querySelector("form")).toHaveAttribute("data-clarity-mask", "true");
+    },
+  );
+});
+
 describe("errors on the optional fields", () => {
   it("shows a message error beside the message field, tied to it", async () => {
     await submitWith({

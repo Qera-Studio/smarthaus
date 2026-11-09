@@ -83,6 +83,20 @@ no exclamation marks, no urgency, no pressure.
 
 ---
 
+> **Changed 2026-11-04 (Shivanshu), not yet reviewed by counsel.** Clarity now
+> runs without cookies before a visitor chooses, using its no-consent mode, and
+> does not run after a decline or an opt-out signal. Where this deck says nothing
+> in the Analytics category loads until consent, that holds for Google Analytics
+> and for Clarity's cookies, not for Clarity itself. Google has no equivalent
+> here. `src/lib/clarity.ts` holds the rule, and `NEXT_PUBLIC_CLARITY_ID` stays
+> unset until §13 clears. The DPIA screen and transfer basis matter more now, not
+> less: a replay without cookies is still a replay.
+
+> **Changed 2026-11-04 (Shivanshu), not yet reviewed by counsel.** Google
+> Analytics loads directly, not through Tag Manager, from `src/lib/ga4.ts`, only
+> after an accept, and `NEXT_PUBLIC_GA_ID` stays unset until §13 clears. Where
+> this deck names Google Tag Manager, read that as superseded.
+
 ## 1. Legal basis — what this is and is not built on
 
 **Do not put this section on the website.** It exists so the reasoning is on the

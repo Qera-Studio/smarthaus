@@ -65,8 +65,8 @@ describe("versions", () => {
     expect(frontmatter(termsMd, "version")).toBe(TERMS_VERSION);
   });
 
-  it("bumped the privacy policy for the Resend region on 2026-11-04", () => {
-    expect(PRIVACY_POLICY_VERSION).toBe("0.2.1-draft");
+  it("bumped the privacy policy for the Resend region, Clarity and Google Analytics on 2026-11-04", () => {
+    expect(PRIVACY_POLICY_VERSION).toBe("0.4.1-draft");
     expect(frontmatter(privacyMd, "lastUpdated")).toBe("2026-11-04");
   });
 
@@ -96,6 +96,26 @@ describe("processors: the policy names what the build sends data to", () => {
   it("lists Resend as currently in use on the page, because the enquiry actions send through it", () => {
     expect(actions).toMatch(/from "resend"/);
     expect(pageSection(privacyPage, "Currently in use")).toContain('<th scope="row">Resend</th>');
+  });
+
+  it("lists Clarity as in use, in both copies of the policy, and promises the masking", () => {
+    expect(pageSection(privacyPage, "Currently in use")).toContain("Microsoft (Clarity)");
+    expect(section(privacyMd, "### 4.1")).toMatch(/^\| Microsoft \(Clarity\)/m);
+    for (const copy of [privacyPage, privacyMd]) {
+      expect(copy).toContain("Microsoft Clarity runs without cookies until you choose.");
+      expect(copy).toContain("Anything you type into a form is masked and never recorded.");
+    }
+  });
+
+  it("lists Google Analytics as in use, in both copies, and only after an accept", () => {
+    expect(pageSection(privacyPage, "Currently in use")).toContain("Google (Analytics 4)");
+    expect(section(privacyMd, "### 4.1")).toMatch(/^\| Google \(Analytics 4\)/m);
+    for (const copy of [privacyPage, privacyMd]) {
+      expect(copy.replace(/\s+/g, " ")).toContain(
+        "Google Analytics runs only if you accept analytics.",
+      );
+      expect(copy).not.toContain("We are preparing to use");
+    }
   });
 
   it("does not also list Resend as not yet active on the page", () => {
