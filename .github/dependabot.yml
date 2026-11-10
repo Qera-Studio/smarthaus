@@ -2,6 +2,11 @@
 # updates arrive as a reviewable batch. Every update PR goes through CI like
 # any other change. Both ecosystems wait three days after a release before
 # proposing it, the same cooldown pnpm-workspace.yaml enforces on installs.
+#
+# Opens no pull requests (Shivanshu, 2026-11-10): the repo keeps three
+# branches, main, latest and version/2.0.0, and every update branch was a
+# fourth. A limit of 0 turns version updates off and keeps the config, so
+# raising it turns them back on. Dependabot alerts stay on and open nothing.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -9,7 +14,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     target-branch: latest
     cooldown:
       default-days: 3
@@ -24,6 +29,7 @@ updates:
         update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
       day: monday

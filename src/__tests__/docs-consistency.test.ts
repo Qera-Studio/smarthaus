@@ -170,8 +170,14 @@ describe("numbers the project docs state", () => {
 });
 
 describe("the branch flow the docs describe", () => {
-  it.each(["CLAUDE.md", "AGENTS.md"])("%s cuts feature branches from latest, not main", (doc) => {
-    expect(read(doc)).not.toMatch(/`feature\/\*`[^.\n]*off `main`/);
-    expect(read(doc)).toMatch(/`feature\/\*`[^.\n]*off `latest`/);
-  });
+  it.each(["CLAUDE.md", "AGENTS.md", "README.md"])(
+    "%s names the three branches and no feature branches",
+    (doc) => {
+      const text = read(doc);
+      for (const branch of ["`main`", "`latest`", "`version/2.0.0`"]) {
+        expect(text).toContain(branch);
+      }
+      expect(text).not.toContain("feature/*");
+    },
+  );
 });

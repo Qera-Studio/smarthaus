@@ -1,10 +1,10 @@
 # Deploy and roll back
 
-Production is Vercel, deployed from `main`. `latest` is the staging branch: every phase merges there first, and `main` is updated from it.
+Production is Vercel, deployed from `main`. `latest` is the staging branch and `version/2.0.0` holds everything not yet live: it merges into `latest` first, and `main` is updated from `latest`.
 
 ## Deploy
 
-1. Merge the pull request into `latest`. The ruleset requires every CI check green and the branch up to date, so there is nothing to run by hand.
+1. Merge the pull request from `version/2.0.0` into `latest`. The ruleset requires every CI check green and the branch up to date, so there is nothing to run by hand.
 2. Open a pull request from `latest` into `main`, wait for the same checks, and merge it. Vercel builds and promotes the `main` build to production.
 3. Run the Kill List (`qera-system/gates/launch-gate.md`) against the production URL.
 4. Watch the runtime logs for ten minutes (Vercel project, then **Logs**). Two lines matter:

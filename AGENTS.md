@@ -521,7 +521,7 @@ The brief suggested building `/en` routing now. **This is deferred.** Rationale:
 
 ## Git workflow
 
-- **Branch:** `feature/*` off `latest`. One concern per branch. `latest` is staging; `main` is production and is updated from `latest`
+- **Branches:** three, and no others (Shivanshu, 2026-11-10). `main` is production, `latest` is staging, and `version/2.0.0` holds everything not yet live on `main`. Work is committed to `version/2.0.0`, which reaches `latest` and then `main` by pull request. Dependabot opens no branches (`.github/dependabot.yml`)
 - **Commits:** imperative mood, lowercase, concise. The diff tells what; the message tells why
 - **No co-author attribution** on commits or PRs
 - **Pre-commit:** Husky runs `lint-staged` — ESLint fix + Prettier + typecheck on staged `.ts`/`.tsx` files

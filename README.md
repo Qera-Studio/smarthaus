@@ -273,12 +273,12 @@ When two rules disagree, the lower number wins. Before writing any threshold int
 ## 🌿 Workflow
 
 ```text
- feature/*  ──PR──▶  latest  ──PR──▶  main  ──▶  Vercel production
-                       ▲                ▲
+ version/2.0.0  ──PR──▶  latest  ──PR──▶  main  ──▶  Vercel production
+                           ▲                ▲
                   all CI checks    all CI checks
 ```
 
-Commits are imperative, lowercase, and explain **why**. One concern per branch, one concern per PR.
+Three branches, no others. Everything not yet live on `main` is committed to `version/2.0.0`. Commits are imperative, lowercase, and explain **why**.
 
 ### Runbooks
 
