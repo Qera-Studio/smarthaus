@@ -348,16 +348,17 @@ One more `../` per directory level below these. Every file named here exists; `s
 
 ## CSP and third-party domains
 
-The CSP in `next.config.ts` is `default-src 'self'` plus the few widenings recorded below, each with its reason (the Draco decoder's `'wasm-unsafe-eval'` and `blob:` worker, and `'unsafe-inline'` for scripts and styles, which is an accepted risk in `docs/launch-gate/accepted-risks.md`). No third-party origin is allowed. As third parties are added, update the CSP **in the same PR that adds the dependency**. Never leave a CSP update for later — it will break in production.
+The CSP in `next.config.ts` is `default-src 'self'` plus the few widenings recorded below, each with its reason (the Draco decoder's `'wasm-unsafe-eval'` and `blob:` worker, and `'unsafe-inline'` for scripts and styles, which is an accepted risk in `docs/launch-gate/accepted-risks.md`). No third-party origin is allowed on the marketing pages; `/studio` has its own policy, below. As third parties are added, update the CSP **in the same PR that adds the dependency**. Never leave a CSP update for later — it will break in production.
 
 The policy is built once, by `csp(strict)` in `next.config.ts`, and sent twice: enforced, and as a `Content-Security-Policy-Report-Only` twin that drops `'unsafe-inline'` from `script-src` and `style-src`, and allows our two inline scripts, the consent boot script (`src/lib/consent-boot.ts`) and the splash boot script (`src/lib/splash-boot.ts`), by their SHA-256 hashes. The hashes are in the strict policy only: a policy that lists a hash makes browsers ignore its `'unsafe-inline'`, which in the enforced policy would block every inline script Next emits. Both report to `/api/csp-report` (`report-uri` for Firefox and Safari, `report-to csp-endpoint` via `Reporting-Endpoints` for Chromium). The endpoint is rate-limited, capped at 16KB, schema-checked, strips query strings, and logs each distinct violation once an hour as one `csp-violation` JSON line. `e2e/headers.spec.ts` asserts the two policies differ only by `'unsafe-inline'` and those hashes, and `e2e/consent-boot.spec.ts` and `e2e/splash.spec.ts` that each hash matches the script the page serves.
 
+**The Studio's policy** (2026-11-11). A second header rule for `/studio/:path*`, after the site-wide one, replaces both CSP headers there with `csp(strict, true)`: `connect-src` adds `https://*.sanity.io wss://*.sanity.io`, `img-src` adds `blob:`, `cdn.sanity.io` and the Google and GitHub avatar hosts, `font-src` adds `design-system-static.sanity.io`, and Clarity and GA4 are left out, so no session recording sees an editor's work. `script-src` gains nothing: the page uses `next-sanity/studio/client-component`, whose Studio does not load Sanity's remote bridge script (`core.sanity-cdn.com`, which only ties the Studio into Sanity's dashboard). `e2e/studio.spec.ts` holds all of it.
+
 ### Planned CSP changes (update when implementing)
 
-| Service          | CSP directive            | Domain(s)                      |
-| ---------------- | ------------------------ | ------------------------------ |
-| Sanity Studio    | `connect-src`, `img-src` | `*.sanity.io`, `cdn.sanity.io` |
-| Sanity image CDN | `img-src`                | `cdn.sanity.io`                |
+| Service          | CSP directive | Domain(s)       |
+| ---------------- | ------------- | --------------- |
+| Sanity image CDN | `img-src`     | `cdn.sanity.io` |
 
 **The hero's Draco decoder is the one CSP widening that has shipped.** It adds
 `'wasm-unsafe-eval'` to `script-src` and `worker-src 'self' blob:`, and adds no
@@ -417,7 +418,11 @@ The prefilled message is built from the page context: "Hi, I'm interested in [pa
 
 ### Studio
 
-Embedded at `/studio` via `next-sanity`. Authenticated route — not public, not indexed (`noindex` in robots meta, excluded from sitemap).
+Embedded at `/studio` via `next-sanity` (`src/app/studio/[[...tool]]/page.tsx`, config in `src/sanity/config.ts`), on project `nqc5m5ls`, dataset `production`. Editors sign in with their Sanity accounts; the site holds no token for it. Not indexed (next-sanity's `noindex`), not in the sitemap, and drawn without the site's chrome: `data-studio` on its wrapper and one rule in `globals.scss` hide every child of `<body>` but `<main>`, so the nav, footer, splash and banner are out of the accessibility tree too. A second root layout would do this more cleanly but means moving every route into a group; not worth it for one editor's page.
+
+- **CORS origins** are set by hand in sanity.io/manage, with credentials: `http://localhost:3000` (the scheme counts) and the production hosts. A new host the Studio must run on needs adding there.
+- **Env:** `NEXT_PUBLIC_SANITY_PROJECT_ID` and `NEXT_PUBLIC_SANITY_DATASET`, public because the Studio runs in the browser. `SANITY_API_TOKEN`, server-only, only once something needs drafts; a Viewer token, never write access.
+- **Jest cannot load `sanity` or `next-sanity`** (ESM). Unit tests mock them; the page-walking metadata and sitemap sweeps skip `/studio`, and `e2e/studio.spec.ts` covers the real page.
 
 ### Content rules
 

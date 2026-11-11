@@ -1,10 +1,10 @@
 ---
 title: Privacy Policy
 slug: privacy
-version: 0.4.1-draft
+version: 0.5.0-draft
 status: DRAFT — NOT FOR PUBLICATION. Requires review by a UAE-admitted lawyer before launch.
 effectiveDate: null # set on counsel sign-off, not on merge
-lastUpdated: 2026-11-04
+lastUpdated: 2026-11-11
 governingRegime: UAE Federal PDPL (Decree-Law 45/2021) — ASSUMED, see Drafting Notes
 noindex: false
 ---
@@ -48,9 +48,14 @@ unactivated entry left in the live table is an inaccurate policy, and so is an
 installed one left in the planned table.
 
 INSTALLED AND LIVE: next, react, react-dom, zod, @vercel/analytics,
-@vercel/speed-insights, resend.
+@vercel/speed-insights, resend, sanity, next-sanity.
 
-STILL PLANNED: Sanity, Turnstile.
+STILL PLANNED: Turnstile.
+
+0.5.0-draft (2026-11-11) moved Sanity into §4.1: the content studio is installed
+and runs at /studio for our own editors. It receives nothing about visitors; it
+holds the site's content and the sign-in details of the staff who edit it. Its
+data region is open in the register. Counsel has not reviewed this.
 
 0.4.1-draft (2026-11-04) brought the two drafts below together: the Resend region
 from 0.2.1 and the analytics tools from 0.4.0. Nothing else changed.
@@ -219,11 +224,12 @@ We use a small number of service providers who process information on our instru
 | Vercel Web Analytics and Speed Insights | Aggregate page performance and visit counts   | Aggregated, non-identifying usage data. No cookies, and no identifier that survives a visit | [PLACEHOLDER: confirm deployment region]            |
 | Google (Analytics 4)                    | Aggregate usage analytics                     | Pages viewed, approximate location from IP, device type and referrer                        | [PLACEHOLDER: confirm from Google documentation]    |
 | Microsoft (Clarity)                     | Heatmaps and session replay                   | Scrolling, clicks, pointer movement and the pages viewed. Form input masked                 | [PLACEHOLDER: confirm from Microsoft documentation] |
+| Sanity                                  | Stores and manages the website's content      | Nothing about you. The site's content, and the sign-in details of our own staff who edit it | [PLACEHOLDER: confirm Sanity data region]           |
 
 <!-- ACCURACY GATE — Legal System §5 requires the policy to name every third party
      that receives data, and to describe only what the build actually does. The
      table above reflects package.json as of this draft: next, react, react-dom,
-     zod, the two Vercel packages, and resend. Nothing else that receives data
+     zod, the two Vercel packages, resend, sanity and next-sanity. Nothing else that receives data
      is installed.
 
      MOVE A ROW FROM 4.2 TO 4.1 IN THE SAME PR THAT ADDS ITS DEPENDENCY.
@@ -234,10 +240,9 @@ We use a small number of service providers who process information on our instru
 
 The following are planned but **not currently operating on this site**. We list them for transparency about our direction. Each will move into the table above, and this policy will be updated and re-dated, before it begins processing anything.
 
-| Provider             | Planned purpose                                                 | What it would see                                  |
-| -------------------- | --------------------------------------------------------------- | -------------------------------------------------- |
-| Sanity               | Managing website content                                        | Nothing you submit — content only, no enquiry data |
-| Cloudflare Turnstile | Spam protection on the enquiry form, if spam volume requires it | Technical signals about your browser session       |
+| Provider             | Planned purpose                                                 | What it would see                            |
+| -------------------- | --------------------------------------------------------------- | -------------------------------------------- |
+| Cloudflare Turnstile | Spam protection on the enquiry form, if spam volume requires it | Technical signals about your browser session |
 
 ### 4.3 Others who may receive information
 
@@ -445,6 +450,8 @@ TRANSFERS
       (it was first reported as US East, Virginia)
   [ ] PDPL transfer mechanism for the UAE to Japan corridor, for Resend
   [ ] Resend sub-processor list reviewed for onward transfers
+  [ ] Sanity data region — confirm from the project's settings in sanity.io/manage
+  [ ] Sanity sub-processor list reviewed for onward transfers
 
 RIGHTS
   [ ] Statutory response window (proposed 30 days — verify, do not assume)

@@ -314,6 +314,14 @@ export default function PrivacyPolicy() {
               <td>Heatmaps and session replay</td>
               <td>Scrolling, clicks, pointer movement and the pages viewed. Form input masked</td>
             </tr>
+            <tr>
+              <th scope="row">Sanity</th>
+              <td>Stores and manages the website’s content</td>
+              <td>
+                Nothing about you. The site’s content, and the sign-in details of our own staff who
+                edit it
+              </td>
+            </tr>
           </tbody>
         </LegalTable>
 
@@ -332,11 +340,6 @@ export default function PrivacyPolicy() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <th scope="row">Sanity</th>
-              <td>Managing website content</td>
-              <td>Nothing you submit: content only, no enquiry data</td>
-            </tr>
             <tr>
               <th scope="row">Cloudflare Turnstile</th>
               <td>Spam protection on the enquiry form, if spam volume requires it</td>

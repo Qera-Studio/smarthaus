@@ -70,7 +70,18 @@ const nextConfig: NextConfig = {
         }
       : { script: "", img: "", connect: "" };
 
-    const csp = (strict: boolean) =>
+    // The Studio at /studio talks to Sanity's API over https and wss (project
+    // hosts and api.sanity.io itself), shows images from its CDN, avatars from
+    // the sign-in providers, and blob: previews of uploads. That route only:
+    // the marketing pages stay closed. Clarity and GA4 are left out there, so
+    // no session recording ever sees an editor's work.
+    const sanity = {
+      img: " blob: https://cdn.sanity.io https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
+      connect: " https://*.sanity.io wss://*.sanity.io",
+      font: " https://design-system-static.sanity.io",
+    };
+
+    const csp = (strict: boolean, studio = false) =>
       [
         "default-src 'self'",
         // React's dev-only debugging (callstack reconstruction) requires
@@ -95,7 +106,7 @@ const nextConfig: NextConfig = {
         //
         // React's dev-only debugging (callstack reconstruction) needs
         // full 'unsafe-eval'. Dev server only — never in production.
-        `script-src 'self'${clarity.script}${ga4.script}${strict ? ` ${CONSENT_BOOT_HASH} ${SPLASH_BOOT_HASH}` : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+        `script-src 'self'${studio ? "" : clarity.script + ga4.script}${strict ? ` ${CONSENT_BOOT_HASH} ${SPLASH_BOOT_HASH}` : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
         // DRACOLoader builds its decoder worker from a Blob, so the
         // worker's URL is blob: rather than a file on our origin.
         // Without this directive workers fall back to script-src, which
@@ -107,9 +118,9 @@ const nextConfig: NextConfig = {
         // can influence.
         "worker-src 'self' blob:",
         `style-src 'self'${strict ? "" : " 'unsafe-inline'"}`,
-        `img-src 'self' data:${clarity.img}${ga4.img}`,
-        "font-src 'self'",
-        `connect-src 'self'${clarity.connect}${ga4.connect}`,
+        `img-src 'self' data:${studio ? sanity.img : clarity.img + ga4.img}`,
+        `font-src 'self'${studio ? sanity.font : ""}`,
+        `connect-src 'self'${studio ? sanity.connect : clarity.connect + ga4.connect}`,
         "media-src 'self'",
         "object-src 'none'",
         "frame-ancestors 'none'",
@@ -254,6 +265,15 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy-Report-Only",
             value: csp(true),
           },
+        ],
+      },
+      // After the site-wide rule, so these two keys replace its (the last
+      // match wins). `:path*` matches /studio itself too.
+      {
+        source: "/studio/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: csp(false, true) },
+          { key: "Content-Security-Policy-Report-Only", value: csp(true, true) },
         ],
       },
       { source: "/hero/:path*", headers: [publicAssetCache] },

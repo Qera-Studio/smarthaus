@@ -15,7 +15,11 @@ function pages(): [string, string][] {
     for (const name of readdirSync(dir)) {
       const full = join(dir, name);
       if (statSync(full).isDirectory()) {
-        if (!["__tests__", "api", "e2e-error", "loader-preview"].includes(name)) walk(full);
+        // studio: next-sanity is ESM that Jest cannot load. Its noindex and its
+        // absence from the sitemap are asserted in e2e/studio.spec.ts instead.
+        if (!["__tests__", "api", "e2e-error", "loader-preview", "studio"].includes(name)) {
+          walk(full);
+        }
       } else if (name === "page.tsx") {
         const rel = relative(app, dir).split(sep).join("/");
         out.push([rel ? `/${rel}` : "/", full]);

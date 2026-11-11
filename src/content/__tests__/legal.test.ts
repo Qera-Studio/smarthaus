@@ -65,9 +65,9 @@ describe("versions", () => {
     expect(frontmatter(termsMd, "version")).toBe(TERMS_VERSION);
   });
 
-  it("bumped the privacy policy for the Resend region, Clarity and Google Analytics on 2026-11-04", () => {
-    expect(PRIVACY_POLICY_VERSION).toBe("0.4.1-draft");
-    expect(frontmatter(privacyMd, "lastUpdated")).toBe("2026-11-04");
+  it("bumped the privacy policy for Sanity on 2026-11-11", () => {
+    expect(PRIVACY_POLICY_VERSION).toBe("0.5.0-draft");
+    expect(frontmatter(privacyMd, "lastUpdated")).toBe("2026-11-11");
   });
 
   it.each([
@@ -131,12 +131,26 @@ describe("processors: the policy names what the build sends data to", () => {
     ["resend", "Resend"],
     ["@vercel/analytics", "Vercel Web Analytics"],
     ["@vercel/speed-insights", "Speed Insights"],
+    ["sanity", "Sanity"],
   ])("names %s in the page's current table because it is installed", (dependency, name) => {
     expect(pkg.dependencies).toHaveProperty(dependency);
     expect(pageSection(privacyPage, "Currently in use")).toContain(name);
   });
 
-  it.each(["Sanity", "Cloudflare Turnstile"])(
+  it("lists Sanity in §4.1 of both the markdown and the page, and in neither §4.2", () => {
+    expect(section(privacyMd, "### 4.1")).toMatch(/^\| Sanity\s+\|/m);
+    expect(section(privacyMd, "### 4.2 Not yet active")).not.toContain("Sanity");
+    expect(pageSection(privacyPage, "Not yet active")).not.toContain("Sanity");
+  });
+
+  it("says Sanity sees nothing about visitors, and leaves its region open in the register", () => {
+    expect(pageSection(privacyPage, "Currently in use")).toContain("Nothing about you.");
+    expect(privacyMd).toContain("[PLACEHOLDER: confirm Sanity data region]");
+    expect(privacyMd).toMatch(/\[ \] Sanity data region/);
+    expect(privacyMd).toMatch(/\[ \] Sanity sub-processor list reviewed/);
+  });
+
+  it.each(["Cloudflare Turnstile"])(
     "keeps %s as not yet active while it is not a dependency",
     (name) => {
       const installed = Object.keys(pkg.dependencies).some((dep) =>

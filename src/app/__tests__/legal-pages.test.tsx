@@ -61,7 +61,7 @@ describe("/privacy", () => {
 
   it("prints the shared policy version", () => {
     expect(document.body).toHaveTextContent(PRIVACY_POLICY_VERSION);
-    expect(PRIVACY_POLICY_VERSION).toBe("0.4.1-draft");
+    expect(PRIVACY_POLICY_VERSION).toBe("0.5.0-draft");
   });
 
   it("states the registered address from the one shared source", () => {
@@ -93,7 +93,18 @@ describe("/privacy", () => {
   it("no longer lists Resend as planned", () => {
     const planned = screen.getByRole("table", { name: /planned but not yet/i });
     expect(within(planned).queryByRole("rowheader", { name: "Resend" })).toBeNull();
-    expect(within(planned).getByRole("rowheader", { name: "Sanity" })).toBeInTheDocument();
+    expect(
+      within(planned).getByRole("rowheader", { name: "Cloudflare Turnstile" }),
+    ).toBeInTheDocument();
+  });
+
+  it("lists Sanity as processing now, seeing nothing about the visitor", () => {
+    const current = screen.getByRole("table", { name: /currently processing/i });
+    const row = within(current).getByRole("rowheader", { name: "Sanity" }).closest("tr")!;
+    expect(row).toHaveTextContent("Stores and manages the website’s content");
+    expect(row).toHaveTextContent("Nothing about you.");
+    const planned = screen.getByRole("table", { name: /planned but not yet/i });
+    expect(within(planned).queryByRole("rowheader", { name: "Sanity" })).toBeNull();
   });
 
   it("says the one essential cookie remembers the cookie choice, and nothing about spam", () => {

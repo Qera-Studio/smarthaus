@@ -124,7 +124,9 @@ function pages(): [string, string][] {
 
 // Routes that are not pages a visitor browses: a dev preview and the e2e
 // error fixture. Both are noindex or 404 in production on their own terms.
-const NOT_BROWSED = new Set(["/loader-preview", "/e2e-error"]);
+// The Studio is the editors' app, not a page: next-sanity's own noindex
+// metadata, checked in src/app/studio/__tests__/page.test.tsx.
+const NOT_BROWSED = new Set(["/loader-preview", "/e2e-error", "/studio/[[...tool]]"]);
 
 describe("every page's metadata", () => {
   const all = pages();

@@ -212,6 +212,18 @@
 // How long a heading waits, once on screen, before its words start.
 $reveal-word-wait: 400ms;
 
+// The Studio (/studio) fills the screen on its own: the nav, the bars, the
+// footer, the splash and the banner are not drawn and not in the a11y tree.
+@layer utilities {
+  body:has([data-studio]) > :not(main) {
+    display: none;
+  }
+
+  main:has([data-studio]) {
+    padding-block-end: 0;
+  }
+}
+
 // The homepage's scroll reveal (ScrollReveal.tsx). Each runs once and lets go:
 // fill backwards, never forwards, and an animation rather than a transition, so
 // a card's own hover keeps its timing and no stagger is left on it. Screen only,
