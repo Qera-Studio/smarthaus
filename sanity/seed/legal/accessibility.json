@@ -1,0 +1,362 @@
+{
+  "seo": {
+    "title": "Accessibility statement",
+    "description": "How accessible the Smarthaus website is today, what we know does not work yet, how we checked, and how to tell us about a problem.",
+    "index": true
+  },
+  "title": "Accessibility statement",
+  "standfirst": "We want everyone to be able to use this site. This page says honestly how close it is, what we know still gets in the way, and how to reach us if something does.",
+  "status": "draft",
+  "updatedLabel": "Assessed",
+  "updated": "2026-09-27",
+  "sections": [
+    {
+      "id": "commitment",
+      "title": "What we aim for",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k1",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k0",
+              "text": "We aim for the Web Content Accessibility Guidelines (WCAG) 2.2 at Level AA. Where the design already meets a stricter Level AAA criterion at little cost, we hold ourselves to that too: text that stays readable when you change its spacing, headings that describe what follows, your location marked in the navigation, and no time limits.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "status",
+      "title": "Where the site stands today",
+      "short": "Where the site stands",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k4",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k2",
+              "text": "Partially conformant.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k3",
+              "text": " Most of the site meets WCAG 2.2 AA as far as we have been able to test it. The exceptions we know about are listed below. We would rather tell you than claim more than we have checked.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "limitations",
+      "title": "What we know does not work yet",
+      "short": "Does not work yet",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k7",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5",
+              "text": "The “Our process” section on the home page",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k6",
+              "text": " moves sideways as you scroll. At very high zoom (400%, or a screen 320 pixels wide) reading it means scrolling in two directions, which WCAG 1.4.10 asks us to avoid. Its six steps are headings in an ordered list, so a screen reader reads them in order without any sideways movement, and if your device is set to reduce motion the section becomes a plain list you scroll through.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "ka",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k8",
+              "text": "Screen readers.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k9",
+              "text": " We have not yet tested the site with VoiceOver, NVDA or TalkBack. The structure is built for them, and automated checks pass, but automated checks find only part of what a person using one would meet.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kd",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kb",
+              "text": "Keyboards on iPhone.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "kc",
+              "text": " We check that the element you have moved to with the Tab key is never hidden behind the navigation bar or the cookie notice. We have confirmed this in Chrome on a computer and on Android, but not yet with a keyboard connected to an iPhone.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kg",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "ke",
+              "text": "Pages marked “Coming soon”",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "kf",
+              "text": " are placeholders and will be checked in full when they are written.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "method",
+      "title": "How we checked",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "ki",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kh",
+              "text": "Every change to the site runs these checks automatically before it can go live:",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kk",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kj",
+              "text": "an automated accessibility scan (axe) of every page, on a computer, an iPhone-sized screen and a narrow Android screen",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "km",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kl",
+              "text": "keyboard-only use of the menu, forms, tabs and cookie choices",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "ko",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kn",
+              "text": "Windows high-contrast mode, and the page at 200% zoom",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kq",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kp",
+              "text": "the setting that reduces motion, and the site with JavaScript switched off",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "ks",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kr",
+              "text": "colour contrast, calculated from the site’s own colour palette",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kw",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kt",
+              "text": "It has not had an independent audit, or testing by people who use assistive technology. Last assessed ",
+              "marks": []
+            },
+            {
+              "_type": "updatedDate",
+              "_key": "ku",
+              "show": true
+            },
+            {
+              "_type": "span",
+              "_key": "kv",
+              "text": ".",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "feedback",
+      "title": "Tell us about a problem",
+      "short": "Tell us",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k1a",
+          "style": "normal",
+          "markDefs": [
+            {
+              "_type": "link",
+              "_key": "k17",
+              "href": "/contact"
+            }
+          ],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kx",
+              "text": "If something on this site is hard to use, or you need information in another form, tell us which page and what happened, and we will help. Email ",
+              "marks": []
+            },
+            {
+              "_type": "contactValue",
+              "_key": "kz",
+              "field": "email"
+            },
+            {
+              "_type": "span",
+              "_key": "k10",
+              "text": ", call ",
+              "marks": []
+            },
+            {
+              "_type": "contactValue",
+              "_key": "k12",
+              "field": "phone"
+            },
+            {
+              "_type": "span",
+              "_key": "k13",
+              "text": ", or ",
+              "marks": []
+            },
+            {
+              "_type": "contactValue",
+              "_key": "k15",
+              "field": "whatsapp",
+              "label": "message us on WhatsApp",
+              "message": "Hi, I had trouble using your website."
+            },
+            {
+              "_type": "span",
+              "_key": "k16",
+              "text": ". You can also reach us through the ",
+              "marks": []
+            },
+            {
+              "_type": "span",
+              "_key": "k18",
+              "text": "contact page",
+              "marks": ["k17"]
+            },
+            {
+              "_type": "span",
+              "_key": "k19",
+              "text": ".",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "changelog": [
+    {
+      "version": "2026-09-27",
+      "date": "2026-09-27",
+      "note": "Assessed. Moved into Sanity from the repository. Wording unchanged."
+    }
+  ]
+}

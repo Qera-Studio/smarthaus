@@ -2,9 +2,13 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { render } from "@testing-library/react";
 import { JsonLd, serializeJsonLd } from "../JsonLd";
-import { pageGraph, siteGraph, SITE_URL, STREET_ADDRESS } from "../schema";
-import { ADDRESS, EMAIL, PHONE_E164 } from "../../../lib/contact";
-import { LAST_MODIFIED } from "../../../content/last-modified";
+import { pageGraph, siteGraph, SITE_URL, streetAddress } from "../schema";
+import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
+
+const { email: EMAIL, phoneE164: PHONE_E164 } = SITE_SETTINGS.contact;
+const ADDRESS = SITE_SETTINGS.contact.addressLines.join(" ");
+const STREET_ADDRESS = streetAddress(SITE_SETTINGS.contact.addressLines);
+const EDITED = "2026-11-11T09:00:00Z";
 
 type Node = Record<string, unknown>;
 const nodes = (graph: { "@graph": Node[] }) => graph["@graph"];
@@ -21,7 +25,7 @@ const contact = {
 };
 
 describe("siteGraph", () => {
-  const graph = siteGraph();
+  const graph = siteGraph(SITE_SETTINGS);
   const business = byType(graph, "LocalBusiness");
   const website = byType(graph, "WebSite");
 
@@ -46,6 +50,13 @@ describe("siteGraph", () => {
       addressCountry: "AE",
     });
     expect(business.contactPoint).toMatchObject({ telephone: PHONE_E164, email: EMAIL });
+  });
+
+  it("takes the street from every address line but the city, without its trailing comma", () => {
+    expect(STREET_ADDRESS).toBe(
+      "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First",
+    );
+    expect(streetAddress(["One St,", "Dubai"])).toBe("One St");
   });
 
   it("names the legal entity and both licences the legal pages publish", () => {
@@ -80,14 +91,14 @@ describe("siteGraph", () => {
 });
 
 describe("pageGraph", () => {
-  it("names the page, its URL and when it last changed, from the same table as the sitemap", () => {
-    const page = byType(pageGraph(contact), "WebPage");
+  it("names the page, its URL and when its document was last edited, as the sitemap does", () => {
+    const page = byType(pageGraph(contact, EDITED), "WebPage");
     expect(page).toMatchObject({
       "@id": `${SITE_URL}/contact#webpage`,
       url: `${SITE_URL}/contact`,
       name: contact.title,
       description: contact.description,
-      dateModified: LAST_MODIFIED["/contact"],
+      dateModified: EDITED,
       isPartOf: { "@id": `${SITE_URL}/#website` },
       about: { "@id": `${SITE_URL}/#organization` },
       breadcrumb: { "@id": `${SITE_URL}/contact#breadcrumb` },
@@ -127,12 +138,14 @@ describe("pageGraph", () => {
     expect(() => pageGraph({ ...contact, index: false })).toThrow("noindex");
   });
 
-  it("refuses a page with no date, rather than inventing one", () => {
-    expect(() => pageGraph({ ...contact, path: "/nowhere" })).toThrow("LAST_MODIFIED");
+  it("leaves dateModified out when the edit date is unknown, rather than inventing one", () => {
+    expect(byType(pageGraph(contact), "WebPage")).not.toHaveProperty("dateModified");
   });
 
   it("keeps the site and page blocks together under 4KB, SEO System §9", () => {
-    const bytes = serializeJsonLd(siteGraph()).length + serializeJsonLd(pageGraph(contact)).length;
+    const bytes =
+      serializeJsonLd(siteGraph(SITE_SETTINGS)).length +
+      serializeJsonLd(pageGraph(contact, EDITED)).length;
     expect(bytes).toBeLessThan(4096);
   });
 });

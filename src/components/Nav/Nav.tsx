@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NAV_LINKS } from "../../lib/nav-links";
+import { getSettings } from "../../sanity/content";
 import { Logo } from "../Logo";
 import { RollingText } from "../RollingText";
 import { NavLink } from "./NavLink";
@@ -15,7 +16,8 @@ const MENU_HREF = "/solutions";
  * which adds only the open/stuck state — so Link, Logo and RollingText stay
  * out of the client bundle.
  */
-export function Nav() {
+export async function Nav() {
+  const { solutionsMenu } = await getSettings();
   return (
     <NavShell
       brandMark={
@@ -48,6 +50,7 @@ export function Nav() {
                 <div className={styles.menu} data-menu-panel>
                   <div className={styles.menuInner}>
                     <SolutionsMenu
+                      menu={solutionsMenu}
                       classes={{
                         root: styles.menuBody,
                         list: styles.menuList,
@@ -72,6 +75,7 @@ export function Nav() {
       }
       solutions={
         <SolutionsMenu
+          menu={solutionsMenu}
           classes={{
             root: styles.subBody,
             list: styles.subList,

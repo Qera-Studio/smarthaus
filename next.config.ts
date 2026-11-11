@@ -21,6 +21,17 @@ const nextConfig: NextConfig = {
     // too. e2e/infra.spec.ts asserts it, so bringing AVIF back is deliberate.
     formats: ["image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    // Pictures from Sanity, fetched by the optimiser on the server and served
+    // from our own domain. The visitor's browser never asks Sanity for them,
+    // so the marketing CSP stays closed and the privacy policy's "Sanity sees
+    // nothing about you" stays true. Only this project's images.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn.sanity.io",
+        pathname: `/images/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID ?? "nqc5m5ls"}/**`,
+      },
+    ],
   },
 
   async headers() {
@@ -81,7 +92,10 @@ const nextConfig: NextConfig = {
       font: " https://design-system-static.sanity.io",
     };
 
-    const csp = (strict: boolean, studio = false) =>
+    // `studio` is the Studio's own policy (Sanity's origins in, analytics out).
+    // `preview` is a page the Studio frames for an editor's draft preview: the
+    // same, and framable by our own origin only.
+    const csp = (strict: boolean, studio = false, preview = false) =>
       [
         "default-src 'self'",
         // React's dev-only debugging (callstack reconstruction) requires
@@ -123,7 +137,7 @@ const nextConfig: NextConfig = {
         `connect-src 'self'${studio ? sanity.connect : clarity.connect + ga4.connect}`,
         "media-src 'self'",
         "object-src 'none'",
-        "frame-ancestors 'none'",
+        preview ? "frame-ancestors 'self'" : "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
         // Omitted when PLAYWRIGHT is set, and only then. That server is plain
@@ -274,6 +288,21 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Content-Security-Policy", value: csp(false, true) },
           { key: "Content-Security-Policy-Report-Only", value: csp(true, true) },
+        ],
+      },
+      // Draft preview, and only that: the Studio's Presentation tool frames the
+      // page beside the form, so it may be framed by our own origin, and runs
+      // under the Studio's policy, so no analytics records an editor's drafts.
+      // Draft mode is a cookie only the enable route sets, after Sanity has
+      // checked the editor's secret; a visitor never carries it. Setting it by
+      // hand gains nothing but this policy on your own browser.
+      {
+        source: "/:path*",
+        has: [{ type: "cookie", key: "__prerender_bypass" }],
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: csp(false, true, true) },
+          { key: "Content-Security-Policy-Report-Only", value: csp(true, true, true) },
         ],
       },
       { source: "/hero/:path*", headers: [publicAssetCache] },

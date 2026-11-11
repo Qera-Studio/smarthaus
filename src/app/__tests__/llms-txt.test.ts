@@ -1,44 +1,70 @@
-import { readFileSync } from "node:fs";
+/**
+ * @jest-environment node
+ */
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { SITE_URL } from "../../components/Schema/schema";
-import { LAST_MODIFIED } from "../../content/last-modified";
-import { EMAIL, PHONE_E164 } from "../../lib/contact";
+import { getDoc } from "../../sanity/fetch";
+import { ROUTES } from "../../sanity/content";
+import { SITE_SETTINGS } from "../../../sanity/seed/site-settings";
+import { GET, buildLlmsTxt } from "../llms.txt/route";
 
 /**
- * public/llms.txt is a summary for answer engines (llmstxt.org). It is a
- * static file, so nothing keeps it in step with the site but this suite: it
- * may only point at indexable pages (a noindex page is one the site has said
- * is not ready to be quoted), and every fact in it has a source elsewhere in
- * the code that it must agree with (AGENTS.md, claims audit).
+ * /llms.txt is a summary for answer engines (llmstxt.org), built from the
+ * same content as the site: the brand summary and facts from the site
+ * settings, and one line per page that is in search. It may only point at
+ * indexable pages (a noindex page is one the site has said is not ready to be
+ * quoted), and every fact in it comes from the settings the rest of the site
+ * prints (AGENTS.md, claims audit). The seed stands in for the dataset.
  */
 
-const text = readFileSync(join(process.cwd(), "public", "llms.txt"), "utf8");
-const links = Array.from(text.matchAll(/\]\((https?:\/\/[^)]+)\)/g), (m) => m[1]!);
+let text: string;
+let links: string[];
+
+beforeAll(async () => {
+  text = await buildLlmsTxt();
+  links = Array.from(text.matchAll(/\]\((https?:\/\/[^)]+)\)/g), (m) => m[1]!);
+});
+
+const indexable = async () => {
+  const docs = await Promise.all(ROUTES.map(async (r) => ({ path: r.path, doc: await r.load() })));
+  return docs.filter(({ doc }) => doc.seo.index).map(({ path }) => path);
+};
 
 describe("llms.txt", () => {
-  it("opens with the brand as its one H1 and a summary blockquote", () => {
+  it("opens with the brand as its one H1 and the summary from the settings", () => {
     const lines = text.split("\n");
     expect(lines[0]).toBe("# Smarthaus");
     expect(lines.filter((l) => /^# /.test(l))).toHaveLength(1);
-    expect(lines.find((l) => l.startsWith(">"))).toMatch(/Dubai/);
+    expect(lines.find((l) => l.startsWith(">"))).toBe(`> ${SITE_SETTINGS.seo.llmsSummary}`);
   });
 
-  it("links only to indexable pages", () => {
-    expect(links.length).toBeGreaterThan(0);
-    for (const link of links) {
-      const path = new URL(link).pathname;
-      expect(Object.keys(LAST_MODIFIED)).toContain(path);
-    }
-  });
-
-  it("links to every indexable page, so a newly published one is not missed", () => {
-    // The other half of the rule above: when a page drops its noindex and
-    // joins the sitemap, it joins this file in the same change.
+  it("links to every indexable page and to nothing else", async () => {
     const linked = links.map((link) => new URL(link).pathname);
-    for (const path of Object.keys(LAST_MODIFIED)) {
-      expect(linked).toContain(path);
+    expect(linked.sort()).toEqual((await indexable()).sort());
+    expect(linked.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("drops a page the moment it leaves search", async () => {
+    const seed = jest.requireActual("../../../sanity/seed") as {
+      seedDoc: (id: string) => { seo: object };
+    };
+    jest.mocked(getDoc).mockImplementation(async (id: string) => {
+      const doc = seed.seedDoc(id);
+      return id === "aboutPage" ? { ...doc, seo: { ...doc.seo, index: false } } : doc;
+    });
+    try {
+      expect(await buildLlmsTxt()).not.toContain(`${SITE_URL}/about`);
+    } finally {
+      jest.mocked(getDoc).mockImplementation(async (id: string) => seed.seedDoc(id));
     }
+  });
+
+  it("names each page by its own search title and description", () => {
+    expect(text).toContain(
+      `- [${SITE_SETTINGS.seo.defaultTitle}](${SITE_URL}): ${SITE_SETTINGS.seo.defaultDescription}`,
+    );
   });
 
   it("links on the same origin as the sitemap and the structured data", () => {
@@ -46,27 +72,33 @@ describe("llms.txt", () => {
   });
 
   it("states the phone and email the rest of the site uses", () => {
-    expect(text).toContain(PHONE_E164);
-    expect(text).toContain(EMAIL);
+    expect(text).toContain(SITE_SETTINGS.contact.phoneE164);
+    expect(text).toContain(SITE_SETTINGS.contact.email);
   });
 
-  it("states both licence numbers exactly as the schema does", () => {
-    const schema = readFileSync(
-      join(process.cwd(), "src", "components", "Schema", "schema.ts"),
-      "utf8",
+  it("states both licence numbers from the settings", () => {
+    expect(text).toContain(`Dubai trade licence: ${SITE_SETTINGS.identity.tradeLicence}`);
+    expect(text).toContain(
+      `(Security Industry Regulatory Agency): ${SITE_SETTINGS.identity.siraLicence}`,
     );
-    for (const licence of ["897839", "SSP202210037219"]) {
-      expect(schema).toContain(licence);
-      expect(text).toContain(licence);
-    }
   });
 
   it("makes no claim the claims audit forbids", () => {
-    // No invented heritage, no unconfirmed partners, no superlatives.
-    expect(text).not.toMatch(/years of experience|since \d{4}|trusted by|TIS|Fibaro|leading|best/i);
+    // No invented heritage, no superlatives.
+    expect(text).not.toMatch(/years of experience|since \d{4}|trusted by|leading|best/i);
   });
 
   it("contains no em dashes", () => {
     expect(text).not.toContain("—");
+  });
+
+  it("is served as plain UTF-8 text", async () => {
+    const response = await GET();
+    expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(await response.text()).toBe(text);
+  });
+
+  it("replaced the static file, so the two cannot disagree", () => {
+    expect(existsSync(join(process.cwd(), "public", "llms.txt"))).toBe(false);
   });
 });

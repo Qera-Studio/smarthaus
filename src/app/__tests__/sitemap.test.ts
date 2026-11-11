@@ -5,7 +5,8 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { Metadata } from "next";
 import sitemap from "../sitemap";
-import { LAST_MODIFIED } from "../../content/last-modified";
+import { getDoc } from "../../sanity/fetch";
+import { ROUTES } from "../../sanity/content";
 
 /** Every browsable page under src/app, as [route, file]. */
 function pages(): [string, string][] {
@@ -33,42 +34,67 @@ function pages(): [string, string][] {
 async function indexableRoutes(): Promise<string[]> {
   const routes: string[] = [];
   for (const [route, file] of pages()) {
-    const { metadata } = (await import(file)) as { metadata: Metadata };
+    const page = (await import(file)) as {
+      metadata?: Metadata;
+      generateMetadata?: () => Promise<Metadata>;
+    };
+    const metadata = page.metadata ?? (await page.generateMetadata!());
     const robots = metadata.robots as { index?: boolean } | undefined;
     if (robots?.index === true) routes.push(route);
   }
   return routes.sort();
 }
 
+const urls = async () => (await sitemap()).map((entry) => entry.url);
+const route = (url: string) => new URL(url).pathname.replace(/^$/, "/");
+
 describe("the sitemap", () => {
   it("lists exactly the pages whose metadata is indexable", async () => {
+    // Each page's "Show in search" in the Studio decides both: the page's
+    // robots line and its place here. The seed stands in for the dataset.
     const indexable = await indexableRoutes();
     expect(indexable.length).toBeGreaterThanOrEqual(3);
-    expect(Object.keys(LAST_MODIFIED).sort()).toEqual(indexable);
+    expect((await urls()).map(route).sort()).toEqual(indexable);
   });
 
-  it("uses absolute URLs on the canonical host, with no trailing slash on the root", () => {
-    expect(sitemap().map((entry) => entry.url)).toEqual(
+  it("knows every routed page, so a new route is not silently left out", async () => {
+    const routed = ROUTES.map((r) => r.path).sort();
+    expect(
+      pages()
+        .map(([path]) => path)
+        .sort(),
+    ).toEqual(routed);
+  });
+
+  it("uses absolute URLs on the canonical host, with no trailing slash on the root", async () => {
+    expect(await urls()).toEqual(
       expect.arrayContaining(["https://smarthaus.ae", "https://smarthaus.ae/contact"]),
     );
-    for (const { url } of sitemap()) expect(url).toMatch(/^https:\/\/smarthaus\.ae(\/[a-z-]+)*$/);
+    for (const url of await urls()) expect(url).toMatch(/^https:\/\/smarthaus\.ae(\/[a-z-]+)*$/);
   });
 
-  it("gives every entry a real calendar date, not the build time", () => {
-    for (const { lastModified } of sitemap()) {
-      expect(lastModified).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      const date = new Date(`${lastModified as string}T00:00:00Z`);
-      expect(date.toISOString().slice(0, 10)).toBe(lastModified);
-    }
+  it("dates an entry by its document's last edit in Sanity", async () => {
+    const edited = "2026-11-11T08:00:00Z";
+    const seed = jest.requireActual("../../../sanity/seed") as { seedDoc: (id: string) => object };
+    jest
+      .mocked(getDoc)
+      .mockImplementation(async (id: string) =>
+        id === "contactPage" ? { ...seed.seedDoc(id), updatedAt: edited } : seed.seedDoc(id),
+      );
+    const entries = await sitemap();
+    expect(entries.find((e) => e.url === "https://smarthaus.ae/contact")?.lastModified).toBe(
+      edited,
+    );
+    jest.mocked(getDoc).mockImplementation(async (id: string) => seed.seedDoc(id));
   });
 
-  it("never dates a page in the future", () => {
-    const today = new Date().toISOString().slice(0, 10);
-    for (const { lastModified } of sitemap()) expect(lastModified! <= today).toBe(true);
+  it("invents no date for a document that has none", async () => {
+    // The seed carries no edit times; Sanity always does.
+    for (const entry of await sitemap()) expect(entry).not.toHaveProperty("lastModified");
   });
 
-  it("carries no changefreq or priority, which Google ignores", () => {
-    for (const entry of sitemap()) {
+  it("carries no changefreq or priority, which Google ignores", async () => {
+    for (const entry of await sitemap()) {
       expect(entry).not.toHaveProperty("changeFrequency");
       expect(entry).not.toHaveProperty("priority");
     }

@@ -7,17 +7,25 @@ const good = {
   RESEND_API_KEY: "re_AbC123_xyz7890",
   LEAD_EMAIL: "contact@mapletech.ae",
   LEAD_FROM_EMAIL: "leads@smarthaus.ae",
-  NEXT_PUBLIC_WHATSAPP_NUMBER: "971543755150",
+  NEXT_PUBLIC_SANITY_PROJECT_ID: "nqc5m5ls",
+  NEXT_PUBLIC_SANITY_DATASET: "production",
+  SANITY_REVALIDATE_SECRET: "x".repeat(32),
 };
 
 describe("checkConfig", () => {
-  it("checks exactly the four variables production needs", () => {
+  it("checks exactly the six variables production needs", () => {
     expect(REQUIRED_VARIABLES).toEqual([
       "RESEND_API_KEY",
       "LEAD_EMAIL",
       "LEAD_FROM_EMAIL",
-      "NEXT_PUBLIC_WHATSAPP_NUMBER",
+      "NEXT_PUBLIC_SANITY_PROJECT_ID",
+      "NEXT_PUBLIC_SANITY_DATASET",
+      "SANITY_REVALIDATE_SECRET",
     ]);
+  });
+
+  it("no longer asks for the WhatsApp number: it is content in Sanity now", () => {
+    expect(REQUIRED_VARIABLES).not.toContain("NEXT_PUBLIC_WHATSAPP_NUMBER");
   });
 
   it("finds nothing wrong with a complete configuration", () => {
@@ -45,21 +53,10 @@ describe("checkConfig", () => {
       "Smarthaus <leads@smarthaus.ae>",
       "must be an address on the domain verified in Resend",
     ],
-    [
-      "NEXT_PUBLIC_WHATSAPP_NUMBER",
-      "+971543755150",
-      "must be the WhatsApp number as digits only, country code first, no +",
-    ],
-    [
-      "NEXT_PUBLIC_WHATSAPP_NUMBER",
-      "0543755150",
-      "must be the WhatsApp number as digits only, country code first, no +",
-    ],
-    [
-      "NEXT_PUBLIC_WHATSAPP_NUMBER",
-      "97154 375 5150",
-      "must be the WhatsApp number as digits only, country code first, no +",
-    ],
+    ["NEXT_PUBLIC_SANITY_PROJECT_ID", "NQC5M5LS", "must be the Sanity project id"],
+    ["NEXT_PUBLIC_SANITY_PROJECT_ID", "nqc5m5", "must be the Sanity project id"],
+    ["NEXT_PUBLIC_SANITY_DATASET", "ci", "must be production: the ci dataset is test content"],
+    ["SANITY_REVALIDATE_SECRET", "short", "must be the webhook's secret, at least 32 characters"],
   ])("explains a malformed %s (%j)", (variable, value, problem) => {
     expect(checkConfig({ ...good, [variable]: value })).toEqual([{ variable, problem }]);
   });

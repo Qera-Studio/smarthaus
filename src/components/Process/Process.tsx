@@ -1,4 +1,4 @@
-import { PROCESS_PAGES } from "../../content/process";
+import { getHomePage } from "../../sanity/content";
 import { ProcessPage } from "./ProcessPage";
 import styles from "./Process.module.scss";
 
@@ -17,7 +17,8 @@ import styles from "./Process.module.scss";
  * The section's h2 is the first sheet's label, where each step's sheet
  * carries "Step 01": one slot, so every sheet reads the same way.
  */
-export function Process() {
+export async function Process() {
+  const { process } = await getHomePage();
   return (
     <section
       className={styles.process}
@@ -27,14 +28,15 @@ export function Process() {
       aria-labelledby="our-process"
     >
       <ol className={styles.sheets}>
-        {PROCESS_PAGES.map((page, index) => (
+        {process.pages.map((page, index) => (
           <ProcessPage
             key={page.id}
             page={page}
+            stepLabel={process.stepLabel}
             label={
               index === 0 ? (
                 <h2 className={styles.step} id="our-process">
-                  Our Process
+                  {process.heading}
                 </h2>
               ) : undefined
             }

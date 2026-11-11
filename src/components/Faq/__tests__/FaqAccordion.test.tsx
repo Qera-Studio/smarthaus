@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react";
 
-import type { FaqEntry } from "../../../content/faq";
-import { FAQ_CATEGORIES } from "../../../content/faq";
+import type { FaqEntry } from "../../../sanity/types";
+import { FAQ_PAGE } from "../../../../sanity/seed/faq-page";
 import { FaqAccordion, plainAnswer } from "../FaqAccordion";
+
+const FAQ_CATEGORIES = FAQ_PAGE.categories;
 
 /**
  * One FAQ entry: a native <details>, so the behaviour under test is the

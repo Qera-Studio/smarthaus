@@ -1,6 +1,5 @@
-import { render } from "@testing-library/react";
-
 import Home from "../page";
+import { renderServer } from "../../__tests__/helpers/server";
 
 /**
  * The homepage is an ordered list of sections, and the order is the argument:
@@ -40,7 +39,7 @@ const order = (container: HTMLElement) =>
   );
 
 // ScrollReveal reads these, which jsdom does not have; its own tests cover it.
-beforeAll(() => {
+beforeAll(async () => {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: () => ({ matches: true }),
@@ -48,8 +47,8 @@ beforeAll(() => {
 });
 
 describe("Home page", () => {
-  it("renders every section once, in the planned order", () => {
-    const { container } = render(<Home />);
+  it("renders every section once, in the planned order", async () => {
+    const { container } = await renderServer(<Home />);
     expect(order(container)).toEqual([
       "hero",
       "partners",
@@ -62,58 +61,58 @@ describe("Home page", () => {
     ]);
   });
 
-  it("leaves the fluid hero off the page", () => {
+  it("leaves the fluid hero off the page", async () => {
     // Unmounted 2026-10-28 when HomeHero replaced it. The component is kept in
     // src/components/FluidHero; this fails if it comes back by accident.
-    const { container } = render(<Home />);
+    const { container } = await renderServer(<Home />);
     expect(order(container)).not.toContain("fluid");
   });
 
-  it("leaves the Maple banner off the page", () => {
+  it("leaves the Maple banner off the page", async () => {
     // Unmounted 2026-10-02 at Shivanshu's request. The component is kept in
     // src/components/Maple so it can come back; this fails if it does by
     // accident rather than by decision.
-    const { container } = render(<Home />);
+    const { container } = await renderServer(<Home />);
     expect(order(container)).not.toContain("maple");
   });
 
-  it("puts the care packages directly above the pricing", () => {
+  it("puts the care packages directly above the pricing", async () => {
     // Back on 2026-11-04, at Shivanshu's call, without prices. Off the page
     // from 2026-10-02.
-    const { container } = render(<Home />);
+    const { container } = await renderServer(<Home />);
     const sections = order(container);
     expect(sections.indexOf("pricing")).toBe(sections.indexOf("care") + 1);
     expect(sections.indexOf("care")).toBe(sections.indexOf("process") + 1);
   });
 
-  it("puts the partner cards directly after the hero, where Maple was", () => {
+  it("puts the partner cards directly after the hero, where Maple was", async () => {
     // 2026-10-06, at Shivanshu's call: the TIS and Fibaro partnerships are the
     // stronger trust signal, and take the Maple banner's place.
-    const { container } = render(<Home />);
+    const { container } = await renderServer(<Home />);
     const sections = order(container);
     expect(sections.indexOf("partners")).toBe(sections.indexOf("hero") + 1);
   });
 
-  it("puts the hardware carousel between the partner cards and the figures", () => {
+  it("puts the hardware carousel between the partner cards and the figures", async () => {
     // 2026-11-04, at Shivanshu's call: back above the figures, because the two
     // plain brown sections side by side had no picture between them. The
     // figures were above it from 2026-10-28.
-    const { container } = render(<Home />);
+    const { container } = await renderServer(<Home />);
     const sections = order(container);
     expect(sections.indexOf("hardware")).toBe(sections.indexOf("partners") + 1);
     expect(sections.indexOf("stats")).toBe(sections.indexOf("hardware") + 1);
   });
 
-  it("keeps the enquiry last, directly above the footer", () => {
-    const { container } = render(<Home />);
+  it("keeps the enquiry last, directly above the footer", async () => {
+    const { container } = await renderServer(<Home />);
     expect(order(container).at(-1)).toBe("enquiry");
   });
 
-  it("adds no wrapper of its own around the sections", () => {
+  it("adds no wrapper of its own around the sections", async () => {
     // The layout's <main> is the parent every section styles against
     // (Process's overlay pulls up over its previous sibling), so a wrapper
     // here would break that without failing anything else.
-    const { container } = render(<Home />);
+    const { container } = await renderServer(<Home />);
     const markers = container.querySelectorAll("[data-section]");
     markers.forEach((el) => expect(el.parentElement).toBe(container));
   });

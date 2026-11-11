@@ -129,6 +129,8 @@ Build order. Higher priority ships first.
 
 **Sanity Studio** lives at `/studio` — authenticated, not public. Structured fields, not freeform rich text. English at launch; Arabic (V2) via field-level translation, not page duplication.
 
+**Every page's content is in Sanity** (2026-11-11): copy, pictures, search metadata, contact details, the footer, the legal pages and the consent wording. Editors change the site in the Studio and publishing updates it within seconds; a draft can be previewed in place first. Layout, behaviour, the primary nav and what must work without Sanity stay in code. How it fits together, and the rules the schema enforces (the claims audit among them), are in AGENTS.md under "CMS — Sanity".
+
 ---
 
 ## Arabic and RTL — V2, not V1
@@ -248,7 +250,7 @@ Server Components first. `'use client'` limited to:
 - Hero service tabs (`Hero/ServiceTabs.tsx` — ARIA tablist, selection state). Unmounted with the villa
 - About page values (`About/ValuesHover.tsx` — delegated pointer listeners that open a value while a mouse rests on it and close it when the mouse leaves, unless it was clicked; the rows are native `<details name="values">`, so one-at-a-time, click, keyboard and no-JS are the browser's)
 - Hardware carousel (`Hardware/HardwareStage.tsx` — ARIA tablist, active slide, one IntersectionObserver; the timer is a CSS animation whose `animationend` advances the slide, and it never starts under reduced motion)
-- Partner cards (`Partners/PartnerCarousel.tsx` — ARIA tablist over the TIS and Fibaro cards, one IntersectionObserver; the hardware carousel's pattern sideways: a CSS-animation timer whose `animationend` advances the card, a pause button, held under keyboard focus, never started under reduced motion)
+- Partner cards (`Partners/PartnerCarousel.tsx` — ARIA tablist over the partner cards from Sanity, one IntersectionObserver; the hardware carousel's pattern sideways: a CSS-animation timer whose `animationend` advances the card, a pause button, held under keyboard focus, never started under reduced motion)
 - Wireframe/scene reveal (Web Animations API)
 - Contact form (form state, Turnstile widget)
 - Mobile navigation (toggle state, and the Solutions menu: open state from lg, the solutions in place of the links below it), `Nav/SolutionsMenu.tsx` (the solution in hand, and the swipe on its picture), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)

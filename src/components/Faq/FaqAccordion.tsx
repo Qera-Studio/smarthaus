@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { Placeholder } from "../LegalPage";
-import type { FaqEntry } from "../../content/faq";
+import type { FaqEntry } from "../../sanity/types";
 import styles from "./Faq.module.scss";
 
 /**

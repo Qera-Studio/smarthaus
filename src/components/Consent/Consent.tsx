@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CONSENT_COPY } from "../../content/consent";
+import { getConsentCopy } from "../../sanity/content";
 import { ConsentShell } from "./ConsentShell";
 import styles from "./Consent.module.scss";
 
@@ -45,7 +45,8 @@ type ConsentProps = {
  * §7.2 provider-table move, per AGENTS.md's rule that a CSP update ships with
  * the dependency that needs it.
  */
-export function Consent({ standalone = false }: ConsentProps) {
+export async function Consent({ standalone = false }: ConsentProps) {
+  const copy = await getConsentCopy();
   // Heading level for the category labels.
   //
   // Standalone, the page supplies an <h1> and the panel adds no heading of its
@@ -72,14 +73,15 @@ export function Consent({ standalone = false }: ConsentProps) {
 
   return (
     <ConsentShell
+      copy={copy}
       standalone={standalone}
       idPrefix={idPrefix}
       intro={
         <>
-          <h2 className={styles.heading}>{CONSENT_COPY.banner.heading}</h2>
-          <p className={styles.body}>{CONSENT_COPY.banner.body}</p>
-          <Link className={styles.link} href={CONSENT_COPY.banner.linkHref}>
-            {CONSENT_COPY.banner.link}
+          <h2 className={styles.heading}>{copy.banner.heading}</h2>
+          <p className={styles.body}>{copy.banner.body}</p>
+          <Link className={styles.link} href={copy.banner.linkHref}>
+            {copy.banner.link}
           </Link>
         </>
       }
@@ -94,24 +96,24 @@ export function Consent({ standalone = false }: ConsentProps) {
             Inside the banner it needs one, because the banner opened at h2 with
             "Cookies" and this panel is a subsection of it.
           */}
-          {!standalone && <h3 className={styles.panelHeading}>{CONSENT_COPY.prefs.heading}</h3>}
-          <p className={styles.body}>{CONSENT_COPY.prefs.intro}</p>
+          {!standalone && <h3 className={styles.panelHeading}>{copy.prefs.heading}</h3>}
+          <p className={styles.body}>{copy.prefs.intro}</p>
         </>
       }
       essential={
         <>
           <RowHeading id={ids.essentialLabel} className={styles.rowLabel}>
-            {CONSENT_COPY.prefs.essential.label}
+            {copy.prefs.essential.label}
           </RowHeading>
           <p id={ids.essentialBody} className={styles.rowText}>
-            {CONSENT_COPY.prefs.essential.body}
+            {copy.prefs.essential.body}
           </p>
         </>
       }
       analytics={
         <>
           <RowHeading id={ids.analyticsLabel} className={styles.rowLabel}>
-            {CONSENT_COPY.prefs.analytics.label}
+            {copy.prefs.analytics.label}
           </RowHeading>
           {/*
             Three paragraphs, and they stay three. The brief is explicit that a
@@ -121,13 +123,13 @@ export function Consent({ standalone = false }: ConsentProps) {
             treatment rather than being folded into the body.
           */}
           <p id={ids.analyticsBody} className={styles.rowText}>
-            {CONSENT_COPY.prefs.analytics.body}
+            {copy.prefs.analytics.body}
           </p>
-          <p className={styles.disclosure}>{CONSENT_COPY.prefs.analytics.clarity}</p>
-          <p className={styles.rowMeta}>{CONSENT_COPY.prefs.analytics.retention}</p>
+          <p className={styles.disclosure}>{copy.prefs.analytics.clarity}</p>
+          <p className={styles.rowMeta}>{copy.prefs.analytics.retention}</p>
         </>
       }
-      withdraw={<p className={styles.withdraw}>{CONSENT_COPY.prefs.withdraw}</p>}
+      withdraw={<p className={styles.withdraw}>{copy.prefs.withdraw}</p>}
     />
   );
 }

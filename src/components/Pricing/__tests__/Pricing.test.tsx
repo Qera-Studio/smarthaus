@@ -1,6 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 
 import { Pricing } from "../Pricing";
+import { renderServer } from "../../../__tests__/helpers/server";
 
 /**
  * Every price and feature line in this section is an unconfirmed claim printed
@@ -14,8 +15,8 @@ import { Pricing } from "../Pricing";
  * typo there fails silently in a way no visual test at this level would catch.
  */
 describe("Pricing", () => {
-  it("renders four tiers, each with its own name and description, and no price", () => {
-    render(<Pricing />);
+  it("renders four tiers, each with its own name and description, and no price", async () => {
+    await renderServer(<Pricing />);
 
     const cards = screen.getAllByRole("listitem").filter((li) => li.dataset.tone);
     expect(cards).toHaveLength(4);
@@ -31,8 +32,8 @@ describe("Pricing", () => {
     }
   });
 
-  it("gives every tier a non-empty feature list and a route to the form", () => {
-    render(<Pricing />);
+  it("gives every tier a non-empty feature list and a route to the form", async () => {
+    await renderServer(<Pricing />);
 
     const cards = screen.getAllByRole("listitem").filter((li) => li.dataset.tone);
 
@@ -59,13 +60,13 @@ describe("Pricing", () => {
    * schema for exactly this reason. Adding Offer or Product markup means
    * deliberately deleting this test, which is the point of it.
    */
-  it("emits no structured data while the prices are unconfirmed", () => {
-    const { container } = render(<Pricing />);
+  it("emits no structured data while the prices are unconfirmed", async () => {
+    const { container } = await renderServer(<Pricing />);
     expect(container.querySelector('script[type="application/ld+json"]')).toBeNull();
   });
 
-  it("marks each card with the tone its stylesheet keys on", () => {
-    render(<Pricing />);
+  it("marks each card with the tone its stylesheet keys on", async () => {
+    await renderServer(<Pricing />);
 
     const tones = screen
       .getAllByRole("listitem")
@@ -83,8 +84,8 @@ describe("Pricing", () => {
    * The section sits on the page's own light ground: only the Signature card
    * paints dark.
    */
-  it("claims dark ground only on the one card that paints dark", () => {
-    const { container } = render(<Pricing />);
+  it("claims dark ground only on the one card that paints dark", async () => {
+    const { container } = await renderServer(<Pricing />);
 
     expect(container.querySelector("section")).not.toHaveAttribute("data-ground");
 
@@ -93,13 +94,13 @@ describe("Pricing", () => {
     expect(dark[0]).toHaveAttribute("data-tone", "dark");
   });
 
-  it("renders no raw braces to the reader", () => {
-    const { container } = render(<Pricing />);
+  it("renders no raw braces to the reader", async () => {
+    const { container } = await renderServer(<Pricing />);
     expect(container.textContent).not.toMatch(/[{}]/);
   });
 
-  it("uses no em dashes in the copy", () => {
-    const { container } = render(<Pricing />);
+  it("uses no em dashes in the copy", async () => {
+    const { container } = await renderServer(<Pricing />);
     expect(container.textContent).not.toMatch(/—/);
   });
 });

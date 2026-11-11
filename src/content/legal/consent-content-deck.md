@@ -395,10 +395,10 @@ inaccurate policy is a misrepresentation — worse than none.
 **Two files carry the same text and both must change together** — the markdown
 is the review trail, the `.tsx` is what actually ships:
 
-| File                                  | Line (at time of writing)                |
-| ------------------------------------- | ---------------------------------------- |
-| `src/content/legal/privacy-policy.md` | §3.3, from line 140                      |
-| `src/app/privacy/page.tsx`            | §3 "Cookies and tracking", from line 204 |
+| File                                               | Line (at time of writing)                |
+| -------------------------------------------------- | ---------------------------------------- |
+| `docs/legal/privacy-policy-drafting.md` (archived) | §3.3                                     |
+| `src/app/privacy/page.tsx`                         | §3 "Cookies and tracking", from line 204 |
 
 Editing only the markdown leaves the false claim live on the site. Editing only
 the `.tsx` breaks the counsel-review trail.

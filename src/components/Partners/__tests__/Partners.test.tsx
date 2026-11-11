@@ -1,10 +1,13 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { installEnv } from "./helpers/env";
 
-import { PARTNERS } from "../../../content/partners";
+import { HOME_PAGE } from "../../../../sanity/seed/home-page";
 import { Partners } from "../Partners";
+import { renderServer } from "../../../__tests__/helpers/server";
+
+const PARTNERS = HOME_PAGE.partners.items;
 
 beforeEach(installEnv);
 
@@ -24,8 +27,8 @@ const panelFor = (name: string) =>
 
 describe("Partners", () => {
   describe("structure", () => {
-    it("is a region named by its h2, with one h3 per partner", () => {
-      render(<Partners />);
+    it("is a region named by its h2, with one h3 per partner", async () => {
+      await renderServer(<Partners />);
       const region = screen.getByRole("region", { name: "Our partners" });
       expect(region.tagName).toBe("SECTION");
       expect(within(region).getByRole("heading", { level: 2 })).toHaveClass("visually-hidden");
@@ -35,13 +38,13 @@ describe("Partners", () => {
       expect(titles).toEqual(PARTNERS.map((partner) => partner.title));
     });
 
-    it("renders every card's copy in the HTML, the inactive one included", () => {
-      const { container } = render(<Partners />);
+    it("renders every card's copy in the HTML, the inactive one included", async () => {
+      const { container } = await renderServer(<Partners />);
       for (const partner of PARTNERS) expect(container).toHaveTextContent(partner.body);
     });
 
-    it("ties each tab to its card both ways", () => {
-      render(<Partners />);
+    it("ties each tab to its card both ways", async () => {
+      await renderServer(<Partners />);
       tabs().forEach((tab, index) => {
         const id = PARTNERS[index]!.id;
         expect(tab).toHaveAttribute("id", `partner-tab-${id}`);
@@ -51,8 +54,8 @@ describe("Partners", () => {
       });
     });
 
-    it("names every logo after its maker", () => {
-      render(<Partners />);
+    it("names every logo after its maker", async () => {
+      await renderServer(<Partners />);
       for (const partner of PARTNERS) {
         expect(screen.getByRole("img", { name: partner.name, hidden: true })).toBeInTheDocument();
       }
@@ -60,16 +63,16 @@ describe("Partners", () => {
   });
 
   describe("the toggle", () => {
-    it("starts on the first partner, with one tab stop", () => {
-      render(<Partners />);
+    it("starts on the first partner, with one tab stop", async () => {
+      await renderServer(<Partners />);
       expect(tabs().map((tab) => tab.getAttribute("aria-selected"))).toEqual(["true", "false"]);
       expect(tabs().map((tab) => tab.tabIndex)).toEqual([0, -1]);
       expect(panelFor("TIS")).toHaveAttribute("data-state", "active");
       expect(panelFor("Fibaro")).not.toHaveAttribute("data-state", "active");
     });
 
-    it("switches the card on a click", () => {
-      render(<Partners />);
+    it("switches the card on a click", async () => {
+      await renderServer(<Partners />);
       fireEvent.click(tabs()[1]!);
       expect(tabs()[1]).toHaveAttribute("aria-selected", "true");
       expect(panelFor("Fibaro")).toHaveAttribute("data-state", "active");
@@ -81,16 +84,16 @@ describe("Partners", () => {
       ["ArrowDown", 0, 1],
       ["ArrowLeft", 1, 0],
       ["ArrowUp", 1, 0],
-    ])("%s moves to the next card and its tab", (key, from, to) => {
-      render(<Partners />);
+    ])("%s moves to the next card and its tab", async (key, from, to) => {
+      await renderServer(<Partners />);
       if (from !== 0) fireEvent.click(tabs()[from]!);
       fireEvent.keyDown(tabs()[from]!, { key });
       expect(tabs()[to]).toHaveFocus();
       expect(tabs()[to]).toHaveAttribute("aria-selected", "true");
     });
 
-    it("wraps past either end, and jumps with Home and End", () => {
-      render(<Partners />);
+    it("wraps past either end, and jumps with Home and End", async () => {
+      await renderServer(<Partners />);
       fireEvent.keyDown(tabs()[0]!, { key: "ArrowLeft" });
       expect(tabs()[1]).toHaveFocus();
       fireEvent.keyDown(tabs()[1]!, { key: "ArrowRight" });
@@ -101,8 +104,8 @@ describe("Partners", () => {
       expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
     });
 
-    it("leaves every other key to the browser", () => {
-      render(<Partners />);
+    it("leaves every other key to the browser", async () => {
+      await renderServer(<Partners />);
       const event = new KeyboardEvent("keydown", { key: "a", bubbles: true, cancelable: true });
       tabs()[0]!.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(false);
@@ -113,8 +116,8 @@ describe("Partners", () => {
   describe("the links out", () => {
     it.each(PARTNERS.map((partner) => [partner.name, partner.href]))(
       "sends %s's button to its own site, in a new tab without the opener",
-      (name, href) => {
-        render(<Partners />);
+      async (name, href) => {
+        await renderServer(<Partners />);
         const link = screen.getByRole("link", {
           name: `Visit ${name} (opens in a new tab)`,
           hidden: true,
@@ -128,14 +131,14 @@ describe("Partners", () => {
 });
 
 describe("partner content", () => {
-  it("lists TIS and Fibaro, at the links Shivanshu gave", () => {
+  it("lists TIS and Fibaro, at the links Shivanshu gave", async () => {
     expect(PARTNERS.map((partner) => [partner.name, partner.href])).toEqual([
       ["TIS", "https://www.tiscontrol.com/"],
       ["Fibaro", "https://www.fibaro.com/en/"],
     ]);
   });
 
-  it("claims a partnership and nothing more: no tier, no figure, no superlative", () => {
+  it("claims a partnership and nothing more: no tier, no figure, no superlative", async () => {
     for (const partner of PARTNERS) {
       const copy = `${partner.title} ${partner.body}`;
       expect(copy).not.toMatch(/certified|authori[sz]ed|official|exclusive|platinum|gold|premier/i);
@@ -145,7 +148,7 @@ describe("partner content", () => {
     }
   });
 
-  it("points every logo at a file that ships", () => {
+  it("points every logo at a file that ships", async () => {
     for (const partner of PARTNERS) {
       expect(existsSync(join(process.cwd(), "public", partner.logo.src))).toBe(true);
     }
@@ -179,7 +182,7 @@ describe("partner logos", () => {
     },
   );
 
-  it("gives every partner a unique id, a secure link, and copy that names them", () => {
+  it("gives every partner a unique id, a secure link, and copy that names them", async () => {
     expect(new Set(PARTNERS.map((partner) => partner.id)).size).toBe(PARTNERS.length);
     for (const partner of PARTNERS) {
       expect(partner.href).toMatch(/^https:\/\//);

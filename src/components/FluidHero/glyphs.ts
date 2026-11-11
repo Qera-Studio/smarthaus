@@ -1,4 +1,4 @@
-import { HARDWARE_ITEMS } from "@/content/hardware";
+import { HARDWARE_ICONS } from "@/sanity/schema/home-page";
 
 /**
  * The layer the liquid reveals: the whole field as a grid of the hardware
@@ -44,7 +44,7 @@ export const ICON = 18;
 /** How often every cell flips, in ms. Nothing stays put longer than this. */
 export const TICK_MS = 100;
 
-export const ICON_URLS = HARDWARE_ITEMS.map((item) => `/hero/hardware/icons/${item.icon}`);
+export const ICON_URLS = HARDWARE_ICONS.map((icon) => `/hero/hardware/icons/${icon}`);
 
 /** A small deterministic generator, so a layout is stable for a given size. */
 export function seeded(seed: number): () => number {

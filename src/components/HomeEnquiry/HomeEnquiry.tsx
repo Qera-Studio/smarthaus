@@ -1,4 +1,5 @@
 import { ContactForm } from "../../app/contact/ContactForm";
+import { getConsentCopy, getContactPage, getSettings } from "../../sanity/content";
 import { Words } from "../Words";
 import styles from "./HomeEnquiry.module.scss";
 
@@ -25,20 +26,25 @@ import styles from "./HomeEnquiry.module.scss";
  *
  * The title and standfirst reveal on scroll; the form never waits to appear.
  */
-export function HomeEnquiry() {
+export async function HomeEnquiry({ title, standfirst }: { title: string; standfirst: string }) {
+  const [{ form }, { contact }, { form: consent }] = await Promise.all([
+    getContactPage(),
+    getSettings(),
+    getConsentCopy(),
+  ]);
   return (
     <section className={styles.enquiry} aria-labelledby="home-enquiry">
       <div className={styles.intro}>
         <h2 className={styles.heading} id="home-enquiry" data-reveal="" data-reveal-words="">
-          <Words text="Book a site visit" />
+          <Words text={title} />
         </h2>
         <p className={styles.standfirst} data-reveal="">
-          Tell us a little about your home and we&rsquo;ll call you back during business hours.
+          {standfirst}
         </p>
       </div>
 
       <div className={styles.formScope}>
-        <ContactForm variant="short" />
+        <ContactForm variant="short" copy={form} consent={consent} whatsapp={contact.whatsapp} />
       </div>
     </section>
   );

@@ -6,7 +6,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { ConsentShell } from "../ConsentShell";
 import { applyClarity } from "../../../lib/clarity";
 import { applyGa4 } from "../../../lib/ga4";
-import { CONSENT_COPY } from "../../../content/consent";
+import { CONSENT_COPY } from "../../../../sanity/seed/consent-copy";
 import { buildConsentRecord, serialiseConsentCookie } from "../../../lib/consent";
 
 jest.mock("next/navigation", () => ({ usePathname: () => "/" }));
@@ -33,6 +33,7 @@ function store(analytics: boolean) {
 function renderShell(standalone = false) {
   render(
     <ConsentShell
+      copy={CONSENT_COPY}
       intro={<p>intro</p>}
       panelIntro={<p>panel</p>}
       essential={<p>essential</p>}

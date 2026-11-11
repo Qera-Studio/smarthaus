@@ -1,11 +1,13 @@
 import Link from "next/link";
 
 import { PREFERENCES_ROUTE } from "../../lib/consent";
-import { INSTALL_LINKS, LEGAL_LINKS, PAGE_LINKS, type NavLink } from "../../lib/nav-links";
+import { whatsappLink } from "../../lib/contact";
+import type { NavLink } from "../../lib/nav-links";
+import { getSettings } from "../../sanity/content";
 import { PreferencesLink } from "../Consent";
 import { RollingText } from "../RollingText";
 import { BrandArt } from "./BrandArt";
-import { SOCIALS } from "./socials";
+import { SOCIAL_ICONS } from "./socials";
 import styles from "./Footer.module.scss";
 
 /**
@@ -19,7 +21,15 @@ import styles from "./Footer.module.scss";
  * A Server Component with no client island — the newsletter field ships
  * disabled (see below), so the whole footer costs zero client JS.
  */
-export function Footer() {
+export async function Footer() {
+  const {
+    contact,
+    footer: text,
+    pageLinks,
+    installLinks,
+    legalLinks,
+    socials,
+  } = await getSettings();
   return (
     // data-ground: the footer paints brown-950, where the default brown-900
     // cursor dot is 1.06:1 and invisible. See globals.scss.
@@ -34,11 +44,11 @@ export function Footer() {
                   `svg { block-size: auto }` would override a height attribute. */}
               <BrandArt part="mark" className={styles.brandMark} />
             </Link>
-            <p className={styles.tagline}>Smarter living for a brighter tomorrow</p>
+            <p className={styles.tagline}>{text.tagline}</p>
             <p className={styles.brandParent}>
               <a
                 className={styles.brandParentLink}
-                href="https://www.mapletech.ae"
+                href={text.parentHref}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -47,14 +57,14 @@ export function Footer() {
                   row, so this 47-character line ran 333px wide and overflowed
                   a 320px viewport. It is the only footer link long enough to
                   need two lines, and it keeps the colour hover instead. */}
-                Brand by Maple Technologies Security Systems LLC
+                {text.parent}
               </a>
             </p>
           </div>
 
           <div className={styles.newsletter}>
-            <p className={styles.newsletterTitle}>Stay up to date</p>
-            <p className={styles.newsletterSubtitle}>Subscribe to our newsletters</p>
+            <p className={styles.newsletterTitle}>{text.newsletterTitle}</p>
+            <p className={styles.newsletterSubtitle}>{text.newsletterSubtitle}</p>
 
             {/*
               Disabled deliberately. Resend delivers enquiries, but there is no
@@ -79,63 +89,66 @@ export function Footer() {
                 type="email"
                 name="email"
                 autoComplete="email"
-                placeholder="Enter email"
+                placeholder={text.newsletterPlaceholder}
                 aria-describedby="footer-email-note"
                 disabled
               />
               <button type="button" className={styles.submit} disabled>
-                Submit
+                {text.newsletterSubmit}
               </button>
             </div>
             <p id="footer-email-note" className={styles.newsletterNote}>
-              Newsletter opens soon.
+              {text.newsletterNote}
             </p>
           </div>
 
           <div className={styles.contact}>
-            <h2 className={styles.contactTitle}>Talk To Us</h2>
+            <h2 className={styles.contactTitle}>{text.contactTitle}</h2>
             <ul className={styles.contactList}>
               <li>
-                <a className={styles.contactItem} href="tel:+971543755150">
-                  <RollingText>+971 54 375 5150</RollingText>
+                <a className={styles.contactItem} href={`tel:${contact.phoneE164}`}>
+                  <RollingText>{contact.phoneDisplay}</RollingText>
                 </a>
               </li>
               <li>
-                <a className={styles.contactItem} href="mailto:hello@smarthaus.ae">
-                  <RollingText>hello@smarthaus.ae</RollingText>
+                <a className={styles.contactItem} href={`mailto:${contact.email}`}>
+                  <RollingText>{contact.email}</RollingText>
                 </a>
               </li>
-              <li className={styles.contactItem}>Dubai, U.A.E.</li>
+              <li className={styles.contactItem}>{contact.locality}</li>
             </ul>
 
             <ul className={styles.socials}>
-              {SOCIALS.map(({ id, label, href, path, src }) => (
-                <li key={id}>
-                  <a
-                    className={styles.chip}
-                    href={href}
-                    aria-label={label}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {src ? (
-                      // A full-colour logo: drawn as it is, so a file, not a
-                      // currentColor path. next/image would only wrap an SVG.
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img className={styles.chipIcon} src={src} alt="" />
-                    ) : (
-                      <svg
-                        className={styles.chipIcon}
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                        focusable="false"
-                      >
-                        <path d={path} />
-                      </svg>
-                    )}
-                  </a>
-                </li>
-              ))}
+              {socials.map(({ id, label, href }) => {
+                const icon = SOCIAL_ICONS[id];
+                return (
+                  <li key={id}>
+                    <a
+                      className={styles.chip}
+                      href={id === "whatsapp" ? whatsappLink(contact.whatsapp) : href}
+                      aria-label={label}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {"src" in icon ? (
+                        // A full-colour logo: drawn as it is, so a file, not a
+                        // currentColor path. next/image would only wrap an SVG.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img className={styles.chipIcon} src={icon.src} alt="" />
+                      ) : (
+                        <svg
+                          className={styles.chipIcon}
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <path d={icon.path} />
+                        </svg>
+                      )}
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
@@ -143,8 +156,8 @@ export function Footer() {
         {/* One nav landmark with two labelled lists, rather than two sibling
             navs — fewer landmarks in the rotor for the same information. */}
         <nav className={styles.right} aria-label="Footer">
-          <LinkColumn id="footer-pages" title="Pages" links={PAGE_LINKS} />
-          <LinkColumn id="footer-install" title="What we install" links={INSTALL_LINKS} />
+          <LinkColumn id="footer-pages" title={text.pagesTitle} links={pageLinks} />
+          <LinkColumn id="footer-install" title={text.installTitle} links={installLinks} />
         </nav>
       </div>
 
@@ -154,16 +167,14 @@ export function Footer() {
 
       <div className={styles.bottom}>
         <div className={styles.legal}>
-          {/* A literal year, not new Date().getFullYear(): that pins to build
-              time and goes stale silently on a site that is not rebuilt, which
-              is worse than a literal someone can grep for. */}
-          <p className={styles.copyright}>
-            © 2026. Maple Technologies Security Systems LLC. All rights reserved
-          </p>
+          {/* The year is written in the Studio, not new Date().getFullYear():
+              that pins to build time and goes stale silently on a site that is
+              not rebuilt. */}
+          <p className={styles.copyright}>{text.copyright}</p>
 
           <nav aria-label="Legal">
             <ul className={styles.legalLinks}>
-              {LEGAL_LINKS.map(({ href, label }) => (
+              {legalLinks.map(({ href, label }) => (
                 <li key={href}>
                   {/* Cookie preferences opens the panel in place; the href is
                       its no-JS fallback. Every other legal link is a page. */}
@@ -184,11 +195,11 @@ export function Footer() {
           <p className={styles.credit}>
             <a
               className={styles.creditLink}
-              href="https://www.qera.studio"
+              href={text.creditHref}
               target="_blank"
               rel="noopener noreferrer"
             >
-              <RollingText>Built by Qera Studio</RollingText>
+              <RollingText>{text.credit}</RollingText>
             </a>
           </p>
         </div>

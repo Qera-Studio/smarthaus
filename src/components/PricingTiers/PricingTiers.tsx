@@ -1,5 +1,5 @@
 import { Button } from "../Button";
-import { PRICING_TIERS } from "../../content/pricing";
+import { getPricingPage } from "../../sanity/content";
 import styles from "./PricingTiers.module.scss";
 
 /**
@@ -10,16 +10,17 @@ import styles from "./PricingTiers.module.scss";
  * so that neither surface skips a level in its outline. Two values only; a
  * free string would let a caller do exactly that.
  *
- * Content and the claims status live in src/content/pricing.ts. No prices: the
+ * Content is the pricing document in Sanity. No prices: the
  * client does not want them shown for now (2026-11-04), so each tier's `price`
  * stays in the content and is not rendered.
  */
-export function PricingTiers({ headingLevel }: { headingLevel: "h2" | "h3" }) {
+export async function PricingTiers({ headingLevel }: { headingLevel: "h2" | "h3" }) {
+  const { tiers, tierCta, includes } = await getPricingPage();
   const Heading = headingLevel;
 
   return (
     <ul className={styles.tiers}>
-      {PRICING_TIERS.map((tier) => (
+      {tiers.map((tier) => (
         // data-ground on the dark card only: it paints brown-950, where the
         // default brown-900 cursor dot is invisible. See globals.scss. It
         // inherits, so it cannot go on the list.
@@ -38,11 +39,13 @@ export function PricingTiers({ headingLevel }: { headingLevel: "h2" | "h3" }) {
             {/* Every tier goes to the same form: the enquiry is the only
                 conversion event on the site, and a tier is not a checkout. */}
             <Button href="/contact" variant={tier.ctaVariant}>
-              Get started
+              {tierCta}
             </Button>
           </div>
 
-          <p className={styles.includesLabel}>{tier.name} includes:</p>
+          <p className={styles.includesLabel}>
+            {tier.name} {includes}
+          </p>
           <ul className={styles.includes}>
             {tier.includes.map((item) => (
               <li key={item}>{item}</li>

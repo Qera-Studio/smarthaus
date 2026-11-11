@@ -3,15 +3,16 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-import type { HardwareItem } from "../../content/hardware";
+import type { HardwareItem } from "../../sanity/types";
 import { Button } from "../Button";
 import styles from "./Hardware.module.scss";
 import { latestEntry } from "@/lib/observer";
 
-type Props = { items: readonly HardwareItem[] };
-
-/** Where each slide's CTA goes, as the hero strip's cards do. */
-export const SOLUTIONS_HREF = "/solutions";
+type Props = {
+  items: readonly HardwareItem[];
+  /** Where each slide's CTA goes, as the hero strip's cards do. */
+  href: string;
+};
 
 /**
  * How far a finger has to travel sideways before a swipe counts. Below this,
@@ -88,7 +89,7 @@ export const WHEEL_RISE_PX = 8;
  * imported (that file lives in the Hero's chunk). Unlike the Hero, arrowing
  * switches the slide immediately: switching is cheap here.
  */
-export function HardwareStage({ items }: Props) {
+export function HardwareStage({ items, href }: Props) {
   const [active, setActive] = useState(0);
   const [leaving, setLeaving] = useState<number | null>(null);
   const [direction, setDirection] = useState<"next" | "prev">("next");
@@ -391,14 +392,14 @@ export function HardwareStage({ items }: Props) {
                   hidden slide is visibility: hidden, so its link is out of
                   the tab order with the rest of it. */}
               <div className={styles.cta}>
-                <Button href={SOLUTIONS_HREF} size="sm">
+                <Button href={href} size="sm">
                   {item.cta}
                 </Button>
               </div>
             </div>
             <div className={styles.frame}>
               <Image
-                src={`/hero/hardware/${item.image.src}`}
+                src={item.image.src}
                 alt={item.image.alt}
                 width={item.image.width}
                 height={item.image.height}

@@ -1,3 +1,4 @@
+import { getHomePage } from "../../sanity/content";
 import { Button } from "../Button";
 import { PricingTiers } from "../PricingTiers";
 import { Words } from "../Words";
@@ -27,7 +28,8 @@ import styles from "./Pricing.module.scss";
  * reason, and the unit suite asserts the absence.
  */
 
-export function Pricing() {
+export async function Pricing() {
+  const { pricing } = await getHomePage();
   return (
     // data-pricing is the stable hook for e2e: the module's class names are
     // hashed at build time. Same reason Process carries data-process.
@@ -42,18 +44,17 @@ export function Pricing() {
     <section className={styles.pricing} aria-labelledby="pricing" data-pricing>
       <div className={styles.intro}>
         <h2 className={styles.heading} id="pricing" data-reveal="" data-reveal-words="">
-          <Words text="Choose your level of intelligence" />
+          <Words text={pricing.heading} />
         </h2>
         <p className={styles.standfirst} data-reveal="">
-          Four levels, from a single room to a fully engineered residence. Every one is quoted
-          against your own drawings after a site visit.
+          {pricing.standfirst}
         </p>
       </div>
 
       <PricingTiers headingLevel="h3" />
 
       <div className={styles.compare} data-reveal="">
-        <Button href="/pricing">Compare every feature</Button>
+        <Button href="/pricing">{pricing.compareCta}</Button>
       </div>
     </section>
   );

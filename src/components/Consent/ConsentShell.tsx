@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { CONSENT_COPY } from "../../content/consent";
+import type { ConsentCopy } from "../../sanity/types";
 import {
   OPEN_PREFERENCES_EVENT,
   PREFERENCES_ROUTE,
@@ -19,6 +19,9 @@ import { Switch } from "./Switch";
 import styles from "./Consent.module.scss";
 
 type ConsentShellProps = {
+  /** The wording, from the consent document in Sanity. Only the strings this
+   *  client component draws itself; the rest arrive as rendered slots. */
+  copy: Pick<ConsentCopy, "banner" | "prefs" | "state">;
   /** The banner's heading, body and policy link, server-rendered. */
   intro: ReactNode;
   /** The preferences panel's heading and intro. */
@@ -106,6 +109,7 @@ type ConsentShellProps = {
  * costs something the expansion did not.
  */
 export function ConsentShell({
+  copy,
   intro,
   panelIntro,
   essential,
@@ -424,9 +428,9 @@ export function ConsentShell({
 
   const reAsk =
     state?.reason === "expired"
-      ? CONSENT_COPY.state.expired
+      ? copy.state.expired
       : state?.reason === "version"
-        ? CONSENT_COPY.state.changed
+        ? copy.state.changed
         : null;
 
   return (
@@ -440,7 +444,7 @@ export function ConsentShell({
       data-expanded={expanded || undefined}
       // A region, not a dialog. The label is what a screen reader announces
       // when it reaches this landmark.
-      aria-label={CONSENT_COPY.prefs.heading}
+      aria-label={copy.prefs.heading}
       // Polite, so appearing does not interrupt. Only the banner announces;
       // the preferences page is navigated to deliberately.
       aria-live={standalone ? undefined : "polite"}
@@ -514,10 +518,10 @@ export function ConsentShell({
                 visitor who wants to refuse toward a longer path.
               */}
               <button type="button" className={styles.action} onClick={() => commit(true)}>
-                {CONSENT_COPY.banner.accept}
+                {copy.banner.accept}
               </button>
               <button type="button" className={styles.action} onClick={() => commit(false)}>
-                {CONSENT_COPY.banner.decline}
+                {copy.banner.decline}
               </button>
               <button
                 ref={customiseRef}
@@ -527,7 +531,7 @@ export function ConsentShell({
                 aria-controls={panelId}
                 onClick={() => setExpanded(true)}
               >
-                {CONSENT_COPY.banner.customise}
+                {copy.banner.customise}
               </button>
             </div>
           </div>
@@ -590,7 +594,7 @@ export function ConsentShell({
                       checked
                       disabled
                     />
-                    <span className={styles.stateLabel}>{CONSENT_COPY.prefs.essential.state}</span>
+                    <span className={styles.stateLabel}>{copy.prefs.essential.state}</span>
                   </>
                 }
               >
@@ -615,7 +619,7 @@ export function ConsentShell({
             */}
             <div className={styles.panelActions}>
               <button type="button" className={styles.primary} onClick={() => commit(analyticsOn)}>
-                {CONSENT_COPY.prefs.save}
+                {copy.prefs.save}
               </button>
               {/*
                 Back to the banner.
@@ -639,7 +643,7 @@ export function ConsentShell({
               */}
               {!standalone && (
                 <button type="button" className={styles.back} onClick={() => setExpanded(false)}>
-                  {CONSENT_COPY.prefs.back}
+                  {copy.prefs.back}
                 </button>
               )}
             </div>
@@ -650,11 +654,7 @@ export function ConsentShell({
               disappears and nothing else is proclaimed, so there is no toast.
             */}
             <p className={styles.status} role="status">
-              {saved || standalone
-                ? analyticsOn
-                  ? CONSENT_COPY.state.on
-                  : CONSENT_COPY.state.off
-                : ""}
+              {saved || standalone ? (analyticsOn ? copy.state.on : copy.state.off) : ""}
             </p>
 
             {withdraw}

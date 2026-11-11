@@ -1,11 +1,19 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { render, screen, within } from "@testing-library/react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { screen, within } from "@testing-library/react";
 
-import { HERO_CAROUSEL_ITEMS } from "../../../content/hero-carousel";
-import { HomeHero, LEAD_CARDS, LEDE, PROJECTS, RATING, TITLE } from "../HomeHero";
+import { HOME_PAGE } from "../../../../sanity/seed/home-page";
+import { HomeHero, LEAD_CARDS } from "../HomeHero";
+import { HERO_LEDE_WORDS, HERO_TITLE_WORDS } from "../../../sanity/schema/home-page";
+import { renderMarkup, renderServer } from "../../../__tests__/helpers/server";
+
+const HERO_CAROUSEL_ITEMS = HOME_PAGE.hero.cards;
+// The copy is the homepage document in Sanity; the seed is what the ci dataset
+// and the first publication carry, and what these pin.
+const { title: TITLE, lede: LEDE } = HOME_PAGE.hero;
+const RATING = HOME_PAGE.hero.proof[0]!.split(" ")[0];
+const PROJECTS = HOME_PAGE.hero.proof[1];
 
 /**
  * The homepage hero's markup. The strip's movement, hover pause and overlay
@@ -19,7 +27,7 @@ const lead = () => strip().querySelector("ul[data-lead]") as HTMLElement;
 
 // jsdom has no IntersectionObserver, which StripControls watches the strip
 // with; its scroll is tested in StripControls.test.tsx.
-beforeAll(() => {
+beforeAll(async () => {
   Object.defineProperty(window, "IntersectionObserver", {
     configurable: true,
     value: class {
@@ -30,25 +38,25 @@ beforeAll(() => {
 });
 
 describe("HomeHero", () => {
-  it("is a section named by its h1", () => {
-    render(<HomeHero />);
+  it("is a section named by its h1", async () => {
+    await renderServer(<HomeHero />);
     const h1 = screen.getByRole("heading", { level: 1, name: "Home at your fingertips" });
     expect(screen.getByRole("region", { name: "Home at your fingertips" })).toContainElement(h1);
   });
 
-  it("carries the hook other suites find it by", () => {
-    render(<HomeHero />);
+  it("carries the hook other suites find it by", async () => {
+    await renderServer(<HomeHero />);
     expect(document.querySelector("section[data-hero]")).not.toBeNull();
   });
 
-  it("states the verified rating", () => {
-    render(<HomeHero />);
+  it("states the verified rating", async () => {
+    await renderServer(<HomeHero />);
     expect(RATING).toBe("4.8");
     expect(screen.getByText(/4\.8 on Google reviews/)).toBeInTheDocument();
   });
 
-  it("keeps the published lede word for word", () => {
-    const { container } = render(<HomeHero />);
+  it("keeps the published lede word for word", async () => {
+    const { container } = await renderServer(<HomeHero />);
     expect(LEDE).toBe(
       "Cameras, entry, audio and home automation for Dubai villas. Installed, connected and looked after by one licensed team.",
     );
@@ -59,19 +67,19 @@ describe("HomeHero", () => {
     const words = (selector: string) =>
       Array.from(document.querySelectorAll(`${selector} > span`)).map((el) => el.textContent);
 
-    it("gives each word of the title and the lede its own span", () => {
-      render(<HomeHero />);
+    it("gives each word of the title and the lede its own span", async () => {
+      await renderServer(<HomeHero />);
       expect(words("h1")).toEqual(TITLE.split(" "));
       expect(words("h1 + p")).toEqual(LEDE.split(" "));
     });
 
-    it("is still one sentence to a screen reader: the spaces stay as text", () => {
-      render(<HomeHero />);
+    it("is still one sentence to a screen reader: the spaces stay as text", async () => {
+      await renderServer(<HomeHero />);
       expect(screen.getByRole("heading", { level: 1, name: TITLE })).toBeInTheDocument();
       expect(document.querySelector("h1")?.textContent).toBe(TITLE);
     });
 
-    it("stays inside the counts the stylesheet gives a delay", () => {
+    it("stays inside the counts the stylesheet gives a delay", async () => {
       // A word past the last nth-of-type rule would start with no delay, ahead
       // of the sentence it belongs to.
       const scss = readFileSync(join(__dirname, "../HomeHero.module.scss"), "utf8");
@@ -82,10 +90,16 @@ describe("HomeHero", () => {
         Number(scss.match(/\$hero-lede-words:\s*(\d+)/)?.[1]),
       );
     });
+
+    it("is the limit the Studio enforces, so an editor cannot outrun the stylesheet", () => {
+      const scss = readFileSync(join(__dirname, "../HomeHero.module.scss"), "utf8");
+      expect(HERO_TITLE_WORDS).toBe(Number(scss.match(/\$hero-title-words:\s*(\d+)/)?.[1]));
+      expect(HERO_LEDE_WORDS).toBe(Number(scss.match(/\$hero-lede-words:\s*(\d+)/)?.[1]));
+    });
   });
 
-  it("offers a site visit and WhatsApp, in that order", () => {
-    render(<HomeHero />);
+  it("offers a site visit and WhatsApp, in that order", async () => {
+    await renderServer(<HomeHero />);
     const visit = screen.getByRole("link", { name: "Book a site visit" });
     const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
     expect(visit).toHaveAttribute("href", "/contact");
@@ -93,8 +107,8 @@ describe("HomeHero", () => {
     expect(visit.compareDocumentPosition(whatsapp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("pre-fills the WhatsApp message with the topic and the project", () => {
-    render(<HomeHero />);
+  it("pre-fills the WhatsApp message with the topic and the project", async () => {
+    await renderServer(<HomeHero />);
     const href = screen.getByRole("link", { name: "WhatsApp" }).getAttribute("href") ?? "";
     expect(decodeURIComponent(href.split("text=")[1] ?? "")).toBe(
       "Hi, I'm interested in home automation for my villa.",
@@ -102,16 +116,16 @@ describe("HomeHero", () => {
   });
 
   describe("the strip", () => {
-    it("renders the list twice, for a seamless loop", () => {
-      render(<HomeHero />);
+    it("renders the list twice, for a seamless loop", async () => {
+      await renderServer(<HomeHero />);
       expect(lists()).toHaveLength(2);
       for (const list of lists()) {
         expect(list.querySelectorAll("li")).toHaveLength(HERO_CAROUSEL_ITEMS.length);
       }
     });
 
-    it("hides the second copy from AT and from the tab order", () => {
-      render(<HomeHero />);
+    it("hides the second copy from AT and from the tab order", async () => {
+      await renderServer(<HomeHero />);
       const [, copy] = lists();
       expect(copy).toHaveAttribute("aria-hidden", "true");
       expect(copy).toHaveAttribute("data-copy");
@@ -120,28 +134,28 @@ describe("HomeHero", () => {
       for (const link of links) expect(link).toHaveAttribute("tabindex", "-1");
     });
 
-    it("leaves the second copy able to take the pointer: inert took its hover and links", () => {
-      render(<HomeHero />);
+    it("leaves the second copy able to take the pointer: inert took its hover and links", async () => {
+      await renderServer(<HomeHero />);
       const [, copy] = lists();
       expect(copy).not.toHaveAttribute("inert");
     });
 
-    it("leaves the first copy's links in the tab order", () => {
-      render(<HomeHero />);
+    it("leaves the first copy's links in the tab order", async () => {
+      await renderServer(<HomeHero />);
       const [first] = lists();
       for (const link of Array.from(first!.querySelectorAll("a"))) {
         expect(link).not.toHaveAttribute("tabindex");
       }
     });
 
-    it("names the first copy as a list", () => {
-      render(<HomeHero />);
+    it("names the first copy as a list", async () => {
+      await renderServer(<HomeHero />);
       const list = screen.getByRole("list", { name: "What we install" });
       expect(within(list).getAllByRole("listitem")).toHaveLength(HERO_CAROUSEL_ITEMS.length);
     });
 
-    it("reads each card once: its image, title, line and link", () => {
-      render(<HomeHero />);
+    it("reads each card once: its image, title, line and link", async () => {
+      await renderServer(<HomeHero />);
       const list = screen.getByRole("list", { name: "What we install" });
       for (const item of HERO_CAROUSEL_ITEMS) {
         expect(screen.getAllByRole("img", { name: item.image.alt })).toHaveLength(1);
@@ -152,8 +166,8 @@ describe("HomeHero", () => {
       }
     });
 
-    it("keeps the cards in content order", () => {
-      render(<HomeHero />);
+    it("keeps the cards in content order", async () => {
+      await renderServer(<HomeHero />);
       const list = screen.getByRole("list", { name: "What we install" });
       const titles = within(list)
         .getAllByRole("listitem")
@@ -161,38 +175,38 @@ describe("HomeHero", () => {
       expect(titles).toEqual(HERO_CAROUSEL_ITEMS.map((item) => item.title));
     });
 
-    it("exposes each card link once to AT, though the DOM holds two copies", () => {
-      render(<HomeHero />);
+    it("exposes each card link once to AT, though the DOM holds two copies", async () => {
+      await renderServer(<HomeHero />);
       for (const { cta } of HERO_CAROUSEL_ITEMS) {
         expect(screen.getAllByRole("link", { name: cta })).toHaveLength(1);
       }
     });
 
     describe("the lead cards, which the rail runs past on its way in", () => {
-      it("are the last cards of the list, the ones that come before the first in the loop", () => {
-        render(<HomeHero />);
+      it("are the last cards of the list, the ones that come before the first in the loop", async () => {
+        await renderServer(<HomeHero />);
         const titles = Array.from(lead().querySelectorAll("li")).map(
           (li) => li.querySelector("p")?.textContent,
         );
         expect(titles).toEqual(HERO_CAROUSEL_ITEMS.slice(-LEAD_CARDS).map((item) => item.title));
       });
 
-      it("are hidden from AT and the tab order, and go when the second copy does", () => {
-        render(<HomeHero />);
+      it("are hidden from AT and the tab order, and go when the second copy does", async () => {
+        await renderServer(<HomeHero />);
         expect(lead()).toHaveAttribute("aria-hidden", "true");
         expect(lead()).toHaveAttribute("inert");
         expect(lead()).toHaveAttribute("data-copy");
       });
 
-      it("match the distance in the stylesheet: two cards of the track's sixteen", () => {
+      it("match the distance in the stylesheet: two cards of the track's sixteen", async () => {
         const scss = readFileSync(join(__dirname, "../HomeHero.module.scss"), "utf8");
         const share = (100 * LEAD_CARDS) / (2 * HERO_CAROUSEL_ITEMS.length);
         expect(scss).toContain(`translate: calc(100vw + ${share}%) 0`);
       });
     });
 
-    it("has its pause button above it, outside the moving track, and no arrows", () => {
-      render(<HomeHero />);
+    it("has its pause button above it, outside the moving track, and no arrows", async () => {
+      await renderServer(<HomeHero />);
       const pause = screen.getByRole("button", { name: "Pause the images" });
       expect(strip()).not.toContainElement(pause);
       expect(
@@ -202,22 +216,22 @@ describe("HomeHero", () => {
     });
 
     // Lazy cards stayed blank once the GPU carried them on screen (2026-10-28).
-    it("loads no card lazily, the copy included", () => {
-      const markup = renderToStaticMarkup(<HomeHero />);
+    it("loads no card lazily, the copy included", async () => {
+      const markup = await renderMarkup(<HomeHero />);
       const imgs = [...markup.matchAll(/<img[^>]*hero_carousel[^>]*>/g)].map((m) => m[0]);
       expect(imgs).toHaveLength(HERO_CAROUSEL_ITEMS.length * 2 + LEAD_CARDS);
       expect(imgs.some((img) => /loading="lazy"/.test(img))).toBe(false);
     });
 
-    it("fetches the cards past the fourth, and the copy, behind the rest", () => {
-      const markup = renderToStaticMarkup(<HomeHero />);
+    it("fetches the cards past the fourth, and the copy, behind the rest", async () => {
+      const markup = await renderMarkup(<HomeHero />);
       const imgs = [...markup.matchAll(/<img[^>]*hero_carousel[^>]*>/g)].map((m) => m[0]);
       expect(imgs.slice(1, 4).some((img) => /fetchPriority|fetchpriority/i.test(img))).toBe(false);
       expect(imgs.slice(4).every((img) => /fetchpriority="low"/i.test(img))).toBe(true);
     });
 
-    it("the copy asks for exactly the first copy's files, so it costs nothing more", () => {
-      const markup = renderToStaticMarkup(<HomeHero />);
+    it("the copy asks for exactly the first copy's files, so it costs nothing more", async () => {
+      const markup = await renderMarkup(<HomeHero />);
       const srcs = [...markup.matchAll(/<img[^>]*hero_carousel[^>]*>/g)].map(
         (m) => m[0].match(/srcSet="([^"]*)"/i)?.[1],
       );
@@ -226,8 +240,8 @@ describe("HomeHero", () => {
       expect(srcs.slice(half * 2)).toEqual(srcs.slice(half - LEAD_CARDS, half));
     });
 
-    it("fetches the first card at high priority, since it is the largest paint", () => {
-      const markup = renderToStaticMarkup(<HomeHero />);
+    it("fetches the first card at high priority, since it is the largest paint", async () => {
+      const markup = await renderMarkup(<HomeHero />);
       const imgs = [...markup.matchAll(/<img[^>]*hero_carousel[^>]*>/g)].map((m) => m[0]);
       expect(imgs[0]).toMatch(/fetchpriority="high"/i);
       for (const img of imgs.slice(1, HERO_CAROUSEL_ITEMS.length)) {
@@ -239,8 +253,8 @@ describe("HomeHero", () => {
       }
     });
 
-    it("reserves every image's box with its width and height", () => {
-      const markup = renderToStaticMarkup(<HomeHero />);
+    it("reserves every image's box with its width and height", async () => {
+      const markup = await renderMarkup(<HomeHero />);
       for (const { image } of HERO_CAROUSEL_ITEMS) {
         expect(markup).toMatch(
           new RegExp(`<img[^>]*width="${image.width}"[^>]*height="${image.height}"`),
@@ -253,8 +267,8 @@ describe("HomeHero", () => {
     const proof = () => screen.getByText(/on Google reviews/).closest("ul") as HTMLElement;
     const lines = () => Array.from(proof().querySelectorAll("li")).map((li) => li.textContent);
 
-    it("states the four proofs, in order, in the approved words", () => {
-      render(<HomeHero />);
+    it("states the four proofs, in order, in the approved words", async () => {
+      await renderServer(<HomeHero />);
       expect(PROJECTS).toBe("180+ Dubai projects");
       expect(lines()).toEqual([
         "4.8 on Google reviews",
@@ -264,33 +278,33 @@ describe("HomeHero", () => {
       ]);
     });
 
-    it("marks only the rating, with its star, hidden from AT", () => {
-      render(<HomeHero />);
+    it("marks only the rating, with its star, hidden from AT", async () => {
+      await renderServer(<HomeHero />);
       const marks = Array.from(proof().querySelectorAll("li > span"));
       expect(marks).toHaveLength(1);
       expect(marks[0]).toHaveAttribute("aria-hidden", "true");
       expect(marks[0]?.textContent).toBe("");
       expect(proof().firstElementChild).toContainElement(marks[0] as HTMLElement);
-      expect(renderToStaticMarkup(<HomeHero />)).not.toMatch(/Logo|mapletech/i);
+      expect(await renderMarkup(<HomeHero />)).not.toMatch(/Logo|mapletech/i);
     });
 
-    it("types no vertical bar: the rules between them are drawn", () => {
-      render(<HomeHero />);
+    it("types no vertical bar: the rules between them are drawn", async () => {
+      await renderServer(<HomeHero />);
       expect(proof().textContent).not.toContain("|");
     });
 
-    it("names one SIRA licence, not several", () => {
-      render(<HomeHero />);
+    it("names one SIRA licence, not several", async () => {
+      await renderServer(<HomeHero />);
       expect(document.body.textContent).not.toMatch(/Licences/);
     });
 
-    it("no longer names Smarthaus in the Maple line", () => {
-      render(<HomeHero />);
+    it("no longer names Smarthaus in the Maple line", async () => {
+      await renderServer(<HomeHero />);
       expect(proof().textContent).not.toMatch(/Smarthaus/);
     });
 
-    it("comes after the CTAs in reading order, and before the strip", () => {
-      render(<HomeHero />);
+    it("comes after the CTAs in reading order, and before the strip", async () => {
+      await renderServer(<HomeHero />);
       const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
       expect(
         whatsapp.compareDocumentPosition(proof()) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -300,19 +314,19 @@ describe("HomeHero", () => {
       ).toBeTruthy();
     });
 
-    it("shows no faces any more", () => {
-      const markup = renderToStaticMarkup(<HomeHero />);
+    it("shows no faces any more", async () => {
+      const markup = await renderMarkup(<HomeHero />);
       expect(markup).not.toMatch(/hero(?:\/|%2F)s[1-5]\.png/);
     });
 
-    it("leaves nothing after the strip", () => {
-      render(<HomeHero />);
+    it("leaves nothing after the strip", async () => {
+      await renderServer(<HomeHero />);
       const hero = document.querySelector("section[data-hero]") as HTMLElement;
       expect(hero.lastElementChild).toBe(strip());
     });
   });
 
-  it("contains no em dash", () => {
-    expect(renderToStaticMarkup(<HomeHero />)).not.toContain("—");
+  it("contains no em dash", async () => {
+    expect(await renderMarkup(<HomeHero />)).not.toContain("—");
   });
 });

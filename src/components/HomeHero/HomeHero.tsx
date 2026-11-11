@@ -1,34 +1,21 @@
 import Image from "next/image";
 
-import {
-  HERO_CAROUSEL_HREF,
-  HERO_CAROUSEL_ITEMS,
-  type HeroCarouselItem,
-} from "../../content/hero-carousel";
 import { whatsappLink } from "../../lib/contact";
+import { getHomePage, getSettings } from "../../sanity/content";
+import type { HeroCard } from "../../sanity/types";
 import { Button } from "../Button";
 import { Words } from "../Words";
 import { StripControls } from "./StripControls";
 import styles from "./HomeHero.module.scss";
 
-/**
- * The Google rating in the pill above the title. Verified by Shivanshu on
- * 2026-09-28. It is a claim (AGENTS.md, claims and capability audit): if the
- * profile's rating moves, this moves with it.
- */
-export const RATING = "4.8";
-
-/** Verified and approved by Shivanshu, 2026-10-28; this wording 2026-11-04. */
-export const PROJECTS = "180+ Dubai projects";
-
-/** The hero's four proofs, in the order they are read. The first has the star. */
-const PROOF = [`${RATING} on Google reviews`, PROJECTS, "SIRA Licence", "by Maple Technologies"];
+// The copy, the proof line and the cards are the homepage document in Sanity.
+// The proof line states claims (the rating, "180+ Dubai projects"): each was
+// confirmed before it was published, and a new one is asked first
+// (AGENTS.md, claims audit). The title and lede word limits are the schema's,
+// matched to the counts this stylesheet times.
 
 /** The cards the strip runs past on its way in, ahead of the first. */
 export const LEAD_CARDS = 2;
-
-/** Pre-filled per AGENTS.md: the page topic and the project type. */
-const WHATSAPP_MESSAGE = "Hi, I'm interested in home automation for my villa.";
 
 /**
  * How the card loads. "first" is the page's largest paint: fetched at high
@@ -44,12 +31,22 @@ const WHATSAPP_MESSAGE = "Hi, I'm interested in home automation for my villa.";
  */
 type Load = "first" | "eager" | "late";
 
-function Card({ item, load, copy }: { item: HeroCarouselItem; load: Load; copy?: boolean }) {
+function Card({
+  item,
+  href,
+  load,
+  copy,
+}: {
+  item: HeroCard;
+  href: string;
+  load: Load;
+  copy?: boolean;
+}) {
   return (
     <li className={styles.card}>
       <Image
         className={styles.image}
-        src={`/hero/hero_carousel/${item.image.src}`}
+        src={item.image.src}
         width={item.image.width}
         height={item.image.height}
         alt={item.image.alt}
@@ -62,23 +59,13 @@ function Card({ item, load, copy }: { item: HeroCarouselItem; load: Load; copy?:
       <div className={styles.overlay}>
         <p className={styles.cardTitle}>{item.title}</p>
         <p className={styles.cardLine}>{item.line}</p>
-        <Button
-          href={HERO_CAROUSEL_HREF}
-          variant="inverse"
-          size="sm"
-          tabIndex={copy ? -1 : undefined}
-        >
+        <Button href={href} variant="inverse" size="sm" tabIndex={copy ? -1 : undefined}>
           {item.cta}
         </Button>
       </div>
     </li>
   );
 }
-
-/** The hero's two lines: exported so a test holds them to the opening's counts. */
-export const TITLE = "Home at your fingertips";
-export const LEDE =
-  "Cameras, entry, audio and home automation for Dubai villas. Installed, connected and looked after by one licensed team.";
 
 /**
  * The homepage hero: the title, one line and two CTAs, with the four proofs on
@@ -102,28 +89,34 @@ export const LEDE =
  * fetched at high priority, the next three at the default, and the rest at
  * low (see Load).
  */
-export function HomeHero() {
+export async function HomeHero() {
+  const [{ hero }, { contact }] = await Promise.all([getHomePage(), getSettings()]);
+  const cards = hero.cards;
   return (
     <section className={styles.hero} aria-labelledby="hero-title" data-hero>
       <div className={styles.copy}>
         <div>
           <h1 className={styles.title} id="hero-title">
-            <Words text={TITLE} className={styles.word} />
+            <Words text={hero.title} className={styles.word} />
           </h1>
           <p className={styles.lede}>
-            <Words text={LEDE} className={styles.word} />
+            <Words text={hero.lede} className={styles.word} />
           </p>
           <div className={styles.ctas}>
             <Button href="/contact" size="sm">
-              Book a site visit
+              {hero.visitCta}
             </Button>
-            <Button href={whatsappLink(WHATSAPP_MESSAGE)} variant="outline" size="sm">
-              WhatsApp
+            <Button
+              href={whatsappLink(contact.whatsapp, hero.whatsappMessage)}
+              variant="outline"
+              size="sm"
+            >
+              {hero.whatsappCta}
             </Button>
           </div>
         </div>
         <ul className={styles.proof}>
-          {PROOF.map((text, index) => (
+          {hero.proof.map((text, index) => (
             <li key={text}>
               {index === 0 && <span className={styles.star} aria-hidden="true" />}
               {text}
@@ -136,11 +129,12 @@ export function HomeHero() {
 
       <div className={styles.strip} data-hero-strip>
         <div className={styles.track}>
-          <ul className={styles.list} aria-label="What we install">
-            {HERO_CAROUSEL_ITEMS.map((item, index) => (
+          <ul className={styles.list} aria-label={hero.stripLabel}>
+            {cards.map((item, index) => (
               <Card
                 key={item.id}
                 item={item}
+                href={hero.cardsHref}
                 load={index === 0 ? "first" : index < 4 ? "eager" : "late"}
               />
             ))}
@@ -149,8 +143,8 @@ export function HomeHero() {
               copy lost its hover and its link once the loop brought it round
               (found 2026-11-04). Hidden from AT, and out of the tab order. */}
           <ul className={styles.list} aria-hidden="true" data-copy>
-            {HERO_CAROUSEL_ITEMS.map((item) => (
-              <Card key={item.id} item={item} load="late" copy />
+            {cards.map((item) => (
+              <Card key={item.id} item={item} href={hero.cardsHref} load="late" copy />
             ))}
           </ul>
           <ul
@@ -160,8 +154,8 @@ export function HomeHero() {
             data-copy
             data-lead
           >
-            {HERO_CAROUSEL_ITEMS.slice(-LEAD_CARDS).map((item) => (
-              <Card key={item.id} item={item} load="late" />
+            {cards.slice(-LEAD_CARDS).map((item) => (
+              <Card key={item.id} item={item} href={hero.cardsHref} load="late" />
             ))}
           </ul>
         </div>

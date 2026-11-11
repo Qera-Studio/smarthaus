@@ -1,7 +1,10 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 
-import { SOLUTIONS_MENU_HREF, SOLUTIONS_MENU_ITEMS } from "../../../content/solutions-menu";
+import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
 import { SWIPE_MIN_PX, SolutionsMenu } from "../SolutionsMenu";
+
+const SOLUTIONS_MENU_HREF = SITE_SETTINGS.solutionsMenu.href;
+const SOLUTIONS_MENU_ITEMS = SITE_SETTINGS.solutionsMenu.items;
 
 /**
  * The eight solutions and the picture of the one in hand. jsdom runs no CSS,
@@ -35,7 +38,14 @@ const CLASSES = {
 };
 
 function setup({ swipe = false } = {}) {
-  const utils = render(<SolutionsMenu classes={CLASSES} sizes="21rem" swipe={swipe} />);
+  const utils = render(
+    <SolutionsMenu
+      menu={SITE_SETTINGS.solutionsMenu}
+      classes={CLASSES}
+      sizes="21rem"
+      swipe={swipe}
+    />,
+  );
   const root = utils.container.firstElementChild as HTMLElement;
   const media = root.querySelector<HTMLElement>("[data-solutions-media]")!;
   return {
@@ -151,7 +161,7 @@ describe("SolutionsMenu", () => {
       const { images } = setup();
       images.forEach((image, index) =>
         expect(decodeURIComponent(image.getAttribute("src")!)).toContain(
-          `/hero/navBar/${SOLUTIONS_MENU_ITEMS[index]!.image}`,
+          SOLUTIONS_MENU_ITEMS[index]!.image.src,
         ),
       );
     });

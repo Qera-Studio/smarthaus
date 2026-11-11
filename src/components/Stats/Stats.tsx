@@ -1,4 +1,4 @@
-import { STATS } from "../../content/stats";
+import { getHomePage } from "../../sanity/content";
 import { Words } from "../Words";
 import { RollingFigures } from "./RollingFigures";
 import styles from "./Stats.module.scss";
@@ -12,14 +12,15 @@ import styles from "./Stats.module.scss";
  * Residential clients served"), number first, as it is drawn. The figures roll
  * up as they come on screen (RollingFigures), over the real text.
  */
-export function Stats() {
+export async function Stats() {
+  const { stats } = await getHomePage();
   return (
     <section className={styles.stats} aria-labelledby="stats" data-stats="">
       <h2 className={styles.heading} id="stats" data-reveal="" data-reveal-words="">
-        <Words text="By the numbers" />
+        <Words text={stats.heading} />
       </h2>
       <RollingFigures className={styles.grid}>
-        {STATS.map((stat) => (
+        {stats.items.map((stat) => (
           <li key={stat.label} className={styles.card} data-reveal="">
             <span className={styles.value} data-stat-value="">
               {stat.value}

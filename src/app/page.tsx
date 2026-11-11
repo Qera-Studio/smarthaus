@@ -8,28 +8,28 @@ import { Process } from "../components/Process";
 import { Stats } from "../components/Stats";
 import { JsonLd, pageGraph } from "../components/Schema";
 import { ScrollReveal } from "../components/ScrollReveal";
-import { pageMetadata } from "../lib/metadata";
+import type { Metadata } from "next";
+import { pageMetadata, seoInput } from "../lib/metadata";
+import { getHomePage } from "../sanity/content";
 
 // The homepage's own metadata. Without it the page inherited the layout's
 // defaults, which is how every other page ended up with og:url "/" too.
 // The description is the hero's published sentence, so it claims nothing the
 // page does not (AGENTS.md, claims audit).
-const PAGE = {
-  path: "/",
-  title: "Smarthaus | Home Automation and Security in Dubai",
-  absolute: true,
-  description:
-    "Cameras, entry, audio and home automation for Dubai villas, installed, connected and looked after by one licensed team. Book a site visit.",
-  index: true,
-} as const;
+const PATH = "/";
 
-export const metadata = pageMetadata(PAGE);
+export async function generateMetadata(): Promise<Metadata> {
+  const { seo } = await getHomePage();
+  return pageMetadata(seoInput(PATH, seo));
+}
 
-export default function Home() {
+export default async function Home() {
+  const { seo, enquiry, updatedAt } = await getHomePage();
+  const meta = seoInput(PATH, seo);
   // The hero carries the page's h1.
   return (
     <>
-      <JsonLd data={pageGraph(PAGE)} />
+      {meta.index ? <JsonLd data={pageGraph(meta, updatedAt)} /> : null}
       {/* FluidHero is unmounted, not deleted (2026-10-28), like the villa;
           src/components/FluidHero stays intact. */}
       <HomeHero />
@@ -45,7 +45,7 @@ export default function Home() {
       <Care />
       <Pricing />
       {/* Last thing on the page, directly above the footer. */}
-      <HomeEnquiry />
+      <HomeEnquiry title={enquiry.title} standfirst={enquiry.standfirst} />
       <ScrollReveal />
     </>
   );

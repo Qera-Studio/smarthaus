@@ -1,7 +1,17 @@
-import { render, screen } from "@testing-library/react";
+import type { Metadata } from "next";
+import { screen } from "@testing-library/react";
 
-import { FAQ_CATEGORIES } from "../../../content/faq";
-import FaqPage, { metadata } from "../page";
+import { FAQ_PAGE } from "../../../../sanity/seed/faq-page";
+import FaqPage, { generateMetadata } from "../page";
+import { renderServer } from "../../../__tests__/helpers/server";
+
+// The page's metadata is built from its document in Sanity; the seed stands in.
+let metadata: Metadata;
+beforeAll(async () => {
+  metadata = await generateMetadata();
+});
+
+const FAQ_CATEGORIES = FAQ_PAGE.categories;
 
 /**
  * /faq is a launch-gate page: answers still hold unconfirmed figures, so it
@@ -21,7 +31,7 @@ jest.mock("../../../components/Faq", () => {
 // The ToC rail tracks the active section with an IntersectionObserver, which
 // jsdom lacks. The rail's behaviour is LegalToc's own suite; it only has to
 // mount here.
-beforeAll(() => {
+beforeAll(async () => {
   window.IntersectionObserver = class {
     observe() {}
     unobserve() {}
@@ -35,42 +45,42 @@ beforeAll(() => {
 describe("/faq", () => {
   beforeEach(() => mockSchema.mockClear());
 
-  it("stays out of search while answers are unconfirmed", () => {
+  it("stays out of search while answers are unconfirmed", async () => {
     expect(metadata.robots).toMatchObject({ index: false });
   });
 
-  it("emits no FAQPage schema while the page is noindex", () => {
+  it("emits no FAQPage schema while the page is noindex", async () => {
     // Structured data on a noindex page is a contradictory signal, and these
     // are exactly the figures an answer engine must not quote.
-    render(<FaqPage />);
+    await renderServer(<FaqPage />);
     expect(mockSchema).not.toHaveBeenCalled();
     expect(screen.queryByTestId("faq-schema")).toBeNull();
   });
 
-  it("has one h1, the page title", () => {
-    render(<FaqPage />);
+  it("has one h1, the page title", async () => {
+    await renderServer(<FaqPage />);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Frequently Asked Questions",
     );
   });
 
-  it("titles a section for every category, from the same array as the rail", () => {
-    render(<FaqPage />);
+  it("titles a section for every category, from the same array as the rail", async () => {
+    await renderServer(<FaqPage />);
     for (const category of FAQ_CATEGORIES) {
       expect(screen.getAllByText(category.title).length).toBeGreaterThan(0);
       expect(document.getElementById(category.id)).not.toBeNull();
     }
   });
 
-  it("renders every question in the content", () => {
-    render(<FaqPage />);
+  it("renders every question in the content", async () => {
+    await renderServer(<FaqPage />);
     const questions = FAQ_CATEGORIES.flatMap((c) => c.entries);
     expect(document.querySelectorAll("details")).toHaveLength(questions.length);
   });
 
-  it("sends anyone whose question is missing to the contact page, twice", () => {
-    render(<FaqPage />);
+  it("sends anyone whose question is missing to the contact page, twice", async () => {
+    await renderServer(<FaqPage />);
     expect(screen.getByRole("link", { name: "ask it directly" })).toHaveAttribute(
       "href",
       "/contact",

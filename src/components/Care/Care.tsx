@@ -1,3 +1,4 @@
+import { getHomePage } from "../../sanity/content";
 import { Words } from "../Words";
 import styles from "./Care.module.scss";
 
@@ -23,41 +24,26 @@ import styles from "./Care.module.scss";
  * each promises, nothing more. The section emits no structured data.
  */
 
-const PACKAGES = [
-  {
-    name: "Standard Care",
-    description:
-      "Two planned visits a year, remote monitoring between them, and software kept current. When something needs attention, we respond the next business day.",
-    tone: "light",
-  },
-  {
-    name: "Premium Care",
-    description:
-      "Everything in Standard Care, plus priority response within 6 hours, seven days a week, including evenings and weekends. One number, a named engineer who knows your installation, and no triage queue.",
-    tone: "dark",
-  },
-] as const;
-
-export function Care() {
+export async function Care() {
+  const { care } = await getHomePage();
   return (
     <section className={styles.care} aria-labelledby="care">
       <div className={styles.lead}>
         <h2 className={styles.leadHeading} data-reveal="" data-reveal-words="">
-          <Words text="Looked after, long after installation." />
+          <Words text={care.heading} />
         </h2>
         <p className={styles.leadBody} data-reveal="">
-          With Smarthaus Premium Care you call one number, day or night, and someone who knows your
-          installation picks up.
+          {care.lead}
         </p>
       </div>
 
       <div className={styles.row}>
         <h3 className={styles.title} id="care" data-reveal="" data-reveal-words="">
-          <Words text="Annual maintenance packages" />
+          <Words text={care.packagesHeading} />
         </h3>
 
         <ul className={styles.packages}>
-          {PACKAGES.map((pkg) => (
+          {care.packages.map((pkg) => (
             // data-ground on the dark card: it paints brown-950, where the
             // default brown-900 cursor dot is invisible. See globals.scss.
             <li

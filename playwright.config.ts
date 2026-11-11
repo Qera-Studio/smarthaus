@@ -117,7 +117,9 @@ export default defineConfig({
     // — see next.config.ts. Both are correct in production and unchanged there;
     // on plain-HTTP loopback they make WebKit abort every asset, leaving a page
     // that renders but never hydrates.
-    command: `rm -rf ${MAIL_SINK} && PLAYWRIGHT=1 pnpm build && PLAYWRIGHT=1 ${SINK_ENV}pnpm start --port ${PORT}`,
+    // NEXT_PUBLIC_SANITY_DATASET=ci: the suite pins wording, so it reads the
+    // seeded ci dataset, never production, which editors change.
+    command: `rm -rf ${MAIL_SINK} && export NEXT_PUBLIC_SANITY_DATASET=ci && PLAYWRIGHT=1 pnpm build && PLAYWRIGHT=1 ${SINK_ENV}pnpm start --port ${PORT}`,
     port: PORT,
     reuseExistingServer: false,
     // A cold `next build` takes well over Playwright's 60s default.

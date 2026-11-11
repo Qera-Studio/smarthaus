@@ -14,7 +14,10 @@ import {
   TICK_MS,
   type Rect,
 } from "../glyphs";
-import { HARDWARE_ITEMS } from "@/content/hardware";
+import { HOME_PAGE } from "../../../../sanity/seed/home-page";
+import { HARDWARE_ICONS } from "../../../sanity/schema/home-page";
+
+const HARDWARE_ITEMS = HOME_PAGE.hardware.items;
 
 /**
  * The icon field without an image decoder or a GPU. The scramble, the quiet
@@ -236,11 +239,11 @@ describe("scramble, uneven counts", () => {
 });
 
 describe("ICON_URLS and the carousel content", () => {
-  test("follow HARDWARE_ITEMS in order, one url per item", () => {
-    expect(ICON_URLS).toHaveLength(HARDWARE_ITEMS.length);
-    HARDWARE_ITEMS.forEach((item, i) => {
-      expect(ICON_URLS[i]).toBe(`/hero/hardware/icons/${item.icon}`);
-    });
+  test("are every icon the Studio offers, so every item's icon is among them", () => {
+    expect(ICON_URLS).toHaveLength(HARDWARE_ICONS.length);
+    for (const item of HARDWARE_ITEMS) {
+      expect(ICON_URLS).toContain(`/hero/hardware/icons/${item.icon}`);
+    }
   });
 
   test("every item's icon name is a plain svg filename", () => {

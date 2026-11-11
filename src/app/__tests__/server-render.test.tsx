@@ -9,6 +9,8 @@
  * things in a real browser; this pins them where a regression shows in seconds.
  */
 import { renderToStaticMarkup } from "react-dom/server";
+import { FAQ_PAGE } from "../../../sanity/seed/faq-page";
+import { renderMarkup } from "../../__tests__/helpers/server";
 
 jest.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -31,7 +33,7 @@ const nodes = (html: string): Node[] =>
 describe("the homepage", () => {
   it("carries its own WebPage node at the bare host, and one h1", async () => {
     const { default: Home } = await import("../page");
-    const html = renderToStaticMarkup(<Home />);
+    const html = await renderMarkup(<Home />);
     const pages = nodes(html).filter((node) => node["@type"] === "WebPage");
     expect(pages).toEqual([expect.objectContaining({ url: "https://smarthaus.ae" })]);
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
@@ -47,7 +49,7 @@ describe("the homepage", () => {
 describe("the contact page", () => {
   it("leads with what the visitor came to do, and names itself in its schema", async () => {
     const { default: ContactPage } = await import("../contact/page");
-    const html = renderToStaticMarkup(<ContactPage />);
+    const html = await renderMarkup(<ContactPage />);
     expect(html).toMatch(/<h1[^>]*>Book a site visit<\/h1>/);
     const page = nodes(html).find((node) => node["@type"] === "WebPage");
     expect(page).toMatchObject({ url: "https://smarthaus.ae/contact" });
@@ -57,7 +59,7 @@ describe("the contact page", () => {
 
   it("carries no FAQPage while the assessment fee is unconfirmed", async () => {
     const { default: ContactPage } = await import("../contact/page");
-    const html = renderToStaticMarkup(<ContactPage />);
+    const html = await renderMarkup(<ContactPage />);
     expect(nodes(html).map((node) => node["@type"])).not.toContain("FAQPage");
   });
 });
@@ -78,11 +80,16 @@ describe("the root layout", () => {
     // The renderer from the same fresh registry as the layout, or the two hold
     // different copies of React and every hook sees no dispatcher.
     const { renderToStaticMarkup: render } = await import("react-dom/server");
+    const { resolve } = await import("../../__tests__/helpers/resolve");
     const { default: RootLayout } = await import("../layout");
     return render(
-      <RootLayout params={Promise.resolve({})}>
-        <p>page</p>
-      </RootLayout>,
+      <>
+        {await resolve(
+          <RootLayout params={Promise.resolve({})}>
+            <p>page</p>
+          </RootLayout>,
+        )}
+      </>,
     );
   }
 
@@ -149,7 +156,7 @@ describe("the root layout", () => {
 describe("FaqSchema", () => {
   it("renders the FAQPage through the shared, escaped JSON-LD block", async () => {
     const { FaqSchema } = await import("../../components/Faq/FaqSchema");
-    const html = renderToStaticMarkup(<FaqSchema />);
+    const html = renderToStaticMarkup(<FaqSchema categories={FAQ_PAGE.categories} />);
     const [schema] = jsonLd(html) as { "@type": string; mainEntity: unknown[] }[];
     expect(schema!["@type"]).toBe("FAQPage");
     expect(schema!.mainEntity.length).toBeGreaterThan(0);

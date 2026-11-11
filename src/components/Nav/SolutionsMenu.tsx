@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-import { SOLUTIONS_MENU_HREF, SOLUTIONS_MENU_ITEMS as items } from "../../content/solutions-menu";
+import type { SolutionsMenu as SolutionsMenuData } from "../../sanity/types";
 
 /** How far a finger has to travel across the picture to count as a swipe. */
 export const SWIPE_MIN_PX = 40;
@@ -36,10 +36,13 @@ export type SolutionsMenuClasses = {
  * AT and out of the tab order, since the text link beside it is the real one.
  */
 export function SolutionsMenu({
+  menu: { href, items },
   classes,
   sizes,
   swipe = false,
 }: {
+  /** The solutions and where they go, from the site settings in Sanity. */
+  menu: SolutionsMenuData;
   classes: SolutionsMenuClasses;
   sizes: string;
   swipe?: boolean;
@@ -87,7 +90,7 @@ export function SolutionsMenu({
             style={{ "--link-index": index } as React.CSSProperties}
           >
             <Link
-              href={SOLUTIONS_MENU_HREF}
+              href={href}
               className={classes.link}
               data-shown={index === active || undefined}
               // A finger has no hover: on a phone a tap lands where the next
@@ -101,7 +104,7 @@ export function SolutionsMenu({
         ))}
       </ul>
       <Link
-        href={SOLUTIONS_MENU_HREF}
+        href={href}
         className={classes.media}
         tabIndex={-1}
         aria-hidden="true"
@@ -111,7 +114,7 @@ export function SolutionsMenu({
         {items.map((item, index) => (
           <Image
             key={item.id}
-            src={`/hero/navBar/${item.image}`}
+            src={item.image.src}
             alt=""
             fill
             sizes={sizes}

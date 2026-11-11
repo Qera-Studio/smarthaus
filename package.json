@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/legal-accuracy.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -17,7 +17,8 @@
     "test:coverage": "jest --ci --coverage",
     "test:ratio": "node scripts/test-ratio.mjs",
     "coverage:gate": "node scripts/coverage-gate.mjs",
-    "coverage:raise": "node scripts/coverage-gate.mjs --update"
+    "coverage:raise": "node scripts/coverage-gate.mjs --update",
+    "sanity:seed": "jest --rootDir . --testRegex 'sanity/seed/export\\.run\\.ts$' --coverage=false"
   },
   "lint-staged": {
     "*.{ts,tsx,mjs}": [

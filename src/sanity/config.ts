@@ -2,12 +2,17 @@
 
 // The Studio at /studio. A client module: the config carries functions, and
 // "use client" is what lets the Server Component page hand it to NextStudio.
-// No schema types yet; each arrives with the page that reads it.
 import { defineConfig } from "sanity";
+import { presentationTool } from "sanity/presentation";
 import { structureTool } from "sanity/structure";
+import { dataset, projectId } from "./env";
+import { schemaTypes } from "./schema";
+import { structure } from "./structure";
 
-export const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID ?? "";
-export const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET ?? "production";
+export { dataset, projectId };
+
+/** Types whose documents are all fixed: no create, duplicate or delete. */
+const FIXED = new Set(schemaTypes.filter((t) => t.type === "document").map((t) => t.name));
 
 export default defineConfig({
   name: "smarthaus",
@@ -15,6 +20,25 @@ export default defineConfig({
   basePath: "/studio",
   projectId,
   dataset,
-  plugins: [structureTool()],
-  schema: { types: [] },
+  plugins: [
+    structureTool({ structure }),
+    // The live preview: the site in a frame beside the form, showing drafts.
+    // Same origin, so the frame is /, and draft mode is turned on by the route
+    // below with the server's Viewer token.
+    presentationTool({
+      previewUrl: { origin: "same-origin", previewMode: { enable: "/api/draft-mode/enable" } },
+    }),
+  ],
+  schema: {
+    types: schemaTypes as never,
+    // Nothing to create from the "+" menu: every page already exists.
+    templates: (templates) => templates.filter((t) => !FIXED.has(t.schemaType)),
+  },
+  document: {
+    actions: (actions, { schemaType }) =>
+      FIXED.has(schemaType)
+        ? actions.filter(({ action }) => action !== "delete" && action !== "duplicate")
+        : actions,
+    newDocumentOptions: (items) => items.filter((item) => !FIXED.has(item.templateId)),
+  },
 });

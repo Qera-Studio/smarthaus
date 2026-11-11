@@ -1,4 +1,4 @@
-import { FAQ_CATEGORIES } from "../../content/faq";
+import type { FaqCategory } from "../../sanity/types";
 import { plainAnswer } from "./FaqAccordion";
 import { JsonLd } from "../Schema";
 
@@ -19,11 +19,11 @@ import { JsonLd } from "../Schema";
  * unconfirmed figures are exactly the facts that must not be handed to an
  * answer engine to repeat.
  */
-export function FaqSchema() {
+export function FaqSchema({ categories }: { categories: readonly FaqCategory[] }) {
   const schema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: FAQ_CATEGORIES.flatMap((category) =>
+    mainEntity: categories.flatMap((category) =>
       category.entries.map((entry) => ({
         "@type": "Question",
         name: entry.question,

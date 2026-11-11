@@ -22,7 +22,11 @@ const tracked = (...globs: string[]) =>
     .split("\n")
     .filter((file) => file && !file.startsWith("qera-system/") && existsSync(join(ROOT, file)));
 
-const DOCS = tracked("README.md", "AGENTS.md", "CLAUDE.md", "docs/*.md", "docs/**/*.md");
+// docs/legal/ holds the legal drafting records as counsel left them: their
+// links point at site routes (/privacy), not at files, and they are not edited.
+const DOCS = tracked("README.md", "AGENTS.md", "CLAUDE.md", "docs/*.md", "docs/**/*.md").filter(
+  (doc) => !doc.startsWith("docs/legal/"),
+);
 
 const SYSTEMS: Record<string, string> = {
   Legal: "qera-system/systems/1-legal-system.md",

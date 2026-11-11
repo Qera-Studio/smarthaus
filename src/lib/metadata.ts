@@ -112,3 +112,17 @@ export function pageMetadata(input: PageMetadataInput): Metadata {
     },
   };
 }
+
+/** A page's metadata input from its Sanity seo field and its own route. */
+export function seoInput(
+  path: string,
+  seo: { title: string; absolute?: boolean; description: string; index?: boolean },
+): PageMetadataInput {
+  return {
+    path,
+    title: seo.title,
+    absolute: seo.absolute ?? false,
+    description: seo.description,
+    index: seo.index ?? false,
+  };
+}

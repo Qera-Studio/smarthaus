@@ -140,7 +140,13 @@ describe("every page's metadata", () => {
   it.each(all.filter(([route]) => !NOT_BROWSED.has(route)))(
     "%s names itself as canonical and og:url, with a robots line",
     async (route, file) => {
-      const { metadata } = (await import(file)) as { metadata: Metadata };
+      // A page whose content is in Sanity builds its metadata from it
+      // (generateMetadata); the seed stands in for the dataset here.
+      const page = (await import(file)) as {
+        metadata?: Metadata;
+        generateMetadata?: () => Promise<Metadata>;
+      };
+      const metadata = page.metadata ?? (await page.generateMetadata!());
       expect(metadata.alternates).toEqual({ canonical: route });
       expect(metadata.openGraph).toMatchObject({ url: route, images: OG_IMAGES });
       expect([INDEXABLE_ROBOTS, NOINDEX_ROBOTS]).toContainEqual(metadata.robots);

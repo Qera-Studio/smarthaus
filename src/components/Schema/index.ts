@@ -1,2 +1,2 @@
 export { JsonLd, serializeJsonLd } from "./JsonLd";
-export { pageGraph, siteGraph, SITE_URL, STREET_ADDRESS } from "./schema";
+export { pageGraph, siteGraph, SITE_URL, streetAddress } from "./schema";

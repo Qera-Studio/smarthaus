@@ -1,4 +1,5 @@
-import { COMPARISON, PRICING_TIERS, type CellValue } from "../../content/pricing";
+import { getPricingPage } from "../../sanity/content";
+import type { Cell as CellValue } from "../../sanity/types";
 import styles from "./PricingComparison.module.scss";
 
 /**
@@ -22,16 +23,17 @@ import styles from "./PricingComparison.module.scss";
  * scrolls sideways with the feature column pinned; the page never does. The
  * region is focusable and named, which axe requires of any scroll stop.
  *
- * Content and the claims status are in src/content/pricing.ts. This emits no
+ * Content is the pricing document in Sanity. This emits no
  * structured data, and the unit suite asserts the absence.
  */
-export function PricingComparison() {
+export async function PricingComparison() {
+  const { tiers, comparison, compareHeading } = await getPricingPage();
   return (
     // data-pricing-comparison is the stable hook for e2e: the module's class
     // names are hashed at build time.
     <section className={styles.comparison} aria-labelledby="compare" data-pricing-comparison>
       <h2 className={styles.heading} id="compare">
-        Compare all features
+        {compareHeading}
       </h2>
 
       <div
@@ -45,14 +47,14 @@ export function PricingComparison() {
             this row as well would read the four names twice. */}
         <div className={styles.head} aria-hidden="true">
           <div className={styles.headFeature}>Feature</div>
-          {PRICING_TIERS.map((tier) => (
+          {tiers.map((tier) => (
             <div key={tier.id} className={styles.headTier}>
               {tier.name}
             </div>
           ))}
         </div>
 
-        {COMPARISON.map((section) => (
+        {comparison.map((section) => (
           // Open by default: the page is the comparison, and a visitor should
           // not have to click eleven times to see it. Closing is for skipping
           // a system they do not care about.
@@ -81,11 +83,7 @@ export function PricingComparison() {
                   </div>
 
                   {row.values.map((value, i) => (
-                    <Cell
-                      key={PRICING_TIERS[i]?.id ?? i}
-                      tier={PRICING_TIERS[i]?.name}
-                      value={value}
-                    />
+                    <Cell key={tiers[i]?.id ?? i} tier={tiers[i]?.name} value={value} />
                   ))}
                 </div>
               ))}
@@ -109,14 +107,14 @@ export function PricingComparison() {
  * thread was over budget on a mid-range phone (CI Lighthouse, 2026-09-28).
  */
 function Cell({ tier, value }: { tier: string | undefined; value: CellValue }) {
-  const mark = value === true ? "yes" : value === false ? "no" : undefined;
-  const words = value === true ? "Included" : value === false ? "Not included" : "";
+  const mark = value.note ? undefined : value.included ? "yes" : "no";
+  const words = value.note ? "" : value.included ? "Included" : "Not included";
   return (
     <div className={styles.cell} data-value={mark}>
       <span className="visually-hidden">
         {tier}: {words}
       </span>
-      {typeof value === "string" ? value : null}
+      {value.note ?? null}
     </div>
   );
 }

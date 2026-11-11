@@ -1,9 +1,12 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { PROCESS_PAGES } from "../../../content/process";
+import { HOME_PAGE } from "../../../../sanity/seed/home-page";
 import { Process } from "../Process";
+import { renderServer } from "../../../__tests__/helpers/server";
+
+const PROCESS_PAGES = HOME_PAGE.process.pages;
 
 const dir = join(__dirname, "..");
 
@@ -12,23 +15,23 @@ function sheets() {
 }
 
 describe("Process", () => {
-  it("is a region named by its own heading", () => {
-    render(<Process />);
+  it("is a region named by its own heading", async () => {
+    await renderServer(<Process />);
     const heading = screen.getByRole("heading", { level: 2, name: "Our Process" });
     expect(heading).toHaveAttribute("id", "our-process");
     expect(heading.closest("section")).toHaveAttribute("aria-labelledby", "our-process");
     expect(heading.closest("section")).toHaveAttribute("data-process", "");
   });
 
-  it("renders one sheet per page, in order", () => {
-    render(<Process />);
+  it("renders one sheet per page, in order", async () => {
+    await renderServer(<Process />);
     expect(sheets()).toHaveLength(PROCESS_PAGES.length);
     const titles = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(titles).toEqual(PROCESS_PAGES.map((page) => page.title));
   });
 
-  it("puts the section's title on the first sheet, in the slot the steps use", () => {
-    render(<Process />);
+  it("puts the section's title on the first sheet, in the slot the steps use", async () => {
+    await renderServer(<Process />);
     const [intro, ...steps] = sheets();
     expect(within(intro!).getByRole("heading", { level: 2 })).toHaveTextContent("Our Process");
     expect(within(intro!).queryByText(/^Step /)).toBeNull();
@@ -38,13 +41,13 @@ describe("Process", () => {
     });
   });
 
-  it("marks every sheet as a dark ground, for the light cursor dot", () => {
-    render(<Process />);
+  it("marks every sheet as a dark ground, for the light cursor dot", async () => {
+    await renderServer(<Process />);
     sheets().forEach((sheet) => expect(sheet).toHaveAttribute("data-ground", "dark"));
   });
 
-  it("renders every paragraph, duration and image of every page", () => {
-    render(<Process />);
+  it("renders every paragraph, duration and image of every page", async () => {
+    await renderServer(<Process />);
     const items = sheets();
     PROCESS_PAGES.forEach((page, index) => {
       const sheet = within(items[index]!);
@@ -56,8 +59,8 @@ describe("Process", () => {
     });
   });
 
-  it("no longer offers a scroll region: nothing scrolls sideways", () => {
-    const { container } = render(<Process />);
+  it("no longer offers a scroll region: nothing scrolls sideways", async () => {
+    const { container } = await renderServer(<Process />);
     expect(screen.queryByRole("group")).toBeNull();
     expect(container.querySelector("[tabindex]")).toBeNull();
   });
@@ -67,7 +70,7 @@ describe("the stack's mechanism", () => {
   // jsdom applies no CSS; e2e/process.spec.ts measures the stack in a browser.
   const scss = readFileSync(join(dir, "Process.module.scss"), "utf8");
 
-  it("is a sticky sheet per page: the stack itself needs no timeline", () => {
+  it("is a sticky sheet per page: the stack itself needs no timeline", async () => {
     expect(scss).toMatch(/position:\s*sticky/);
     expect(scss).not.toMatch(/view-timeline|timeline-scope/);
     // The one animation is the pictures' parallax.
@@ -81,32 +84,32 @@ describe("the stack's mechanism", () => {
       return scss.slice(start, scss.indexOf("// --- Sheet content"));
     };
 
-    it("only in the stack, on a browser with scroll timelines", () => {
+    it("only in the stack, on a browser with scroll timelines", async () => {
       const block = stack();
       const at = block.indexOf("@supports (animation-timeline: view())");
       expect(at).toBeGreaterThan(-1);
       expect(block.slice(at)).toMatch(/animation-name:\s*process-parallax/);
     });
 
-    it("runs on each frame's own way onto the screen", () => {
+    it("runs on each frame's own way onto the screen", async () => {
       expect(stack()).toMatch(/animation-timeline:\s*view\(\)/);
       expect(stack()).toMatch(/animation-range:\s*entry 0% entry 100svh/);
       expect(stack()).toMatch(/animation-timing-function:\s*linear/);
     });
 
-    it("has neither sheet nor frame be a scroll container, or view() would watch them", () => {
+    it("has neither sheet nor frame be a scroll container, or view() would watch them", async () => {
       // overflow: hidden is a scroll container. Both clip, in the stack.
       const rules = stack().replace(/\/\/.*$/gm, "");
       expect(rules).not.toMatch(/overflow:\s*hidden/);
       expect(rules.match(/overflow:\s*clip/g)).toHaveLength(2);
     });
 
-    it("keeps the sheets' shadows faint, and off the page either side of the stack", () => {
+    it("keeps the sheets' shadows faint, and off the page either side of the stack", async () => {
       expect(scss).toMatch(/box-shadow:\s*0 \(-\$space-2\) \$space-8 rgba\(\$brown-950, 0\.2\)/);
       expect(scss.match(/\.sheets\s*\{[^}]*\}/)?.[0]).toMatch(/overflow:\s*clip/);
     });
 
-    it("is a tenth shallower than the hero strip's", () => {
+    it("is a tenth shallower than the hero strip's", async () => {
       const hero = readFileSync(join(__dirname, "../../HomeHero/HomeHero.module.scss"), "utf8");
       const spare = (source: string, name: string) =>
         source.match(new RegExp(`\\$${name}:\\s*([\\d.]+)%`))?.[1];
@@ -116,7 +119,7 @@ describe("the stack's mechanism", () => {
       );
     });
 
-    it("travels exactly the spare, so no frame ever shows past its picture", () => {
+    it("travels exactly the spare, so no frame ever shows past its picture", async () => {
       expect(stack()).toMatch(/block-size:\s*calc\(100% \+ #\{\$parallax-spare\}\)/);
       expect(scss).toMatch(
         /translate:\s*0 math\.div\(\$parallax-spare, 100% \+ \$parallax-spare\) \* -100%/,
@@ -124,18 +127,18 @@ describe("the stack's mechanism", () => {
     });
   });
 
-  it("pins only with motion allowed and a screen tall enough to hold a sheet", () => {
+  it("pins only with motion allowed and a screen tall enough to hold a sheet", async () => {
     expect(scss).toMatch(
       /@media \(prefers-reduced-motion: no-preference\) and \(min-height: \$stack-min-block\)/,
     );
   });
 
-  it("no longer reaches into the section before it", () => {
+  it("no longer reaches into the section before it", async () => {
     expect(scss).not.toMatch(/:has\(\+/);
     expect(scss).not.toMatch(/margin-block-start:\s*calc\(-1/);
   });
 
-  it("ships no client code", () => {
+  it("ships no client code", async () => {
     for (const file of readdirSync(dir).filter((name) => /\.tsx?$/.test(name))) {
       expect(readFileSync(join(dir, file), "utf8")).not.toMatch(/["']use client["']/);
     }

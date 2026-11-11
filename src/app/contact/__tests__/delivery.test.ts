@@ -32,10 +32,13 @@ jest.mock("resend", () => ({
 
 // Imported after the mock is registered, since the action pulls in Resend.
 import { submitEnquiry, submitShortEnquiry } from "../actions";
-import { PRIVACY_POLICY_VERSION } from "../../../content/legal/versions";
+import { LEGAL } from "../../../../sanity/seed/legal";
+import { getDoc } from "../../../sanity/fetch";
 import { HONEYPOT_FIELD, INTERESTS } from "../../../lib/contact-schema";
 import type { ContactState } from "../state";
 import { enquiryDedupe } from "../../../lib/dedupe";
+
+const PRIVACY_POLICY_VERSION = LEGAL.privacy.version!;
 
 // These tests send the same enquiry over and over, which the duplicate guard
 // would rightly swallow after the first. Each starts with it empty; the guard's
@@ -228,6 +231,50 @@ describe("the consent record in the lead email", () => {
   it("names the privacy policy version the visitor was shown", async () => {
     await submitEnquiry(initial, validForm());
     expect(field(sentText(), "Privacy policy shown")).toBe(PRIVACY_POLICY_VERSION);
+  });
+
+  it("reads that version from the published policy in Sanity", async () => {
+    const seed = jest.requireActual("../../../../sanity/seed") as {
+      seedDoc: (id: string) => object;
+    };
+    jest
+      .mocked(getDoc)
+      .mockImplementation(async (id: string) =>
+        id === "legal-privacy" ? { ...seed.seedDoc(id), version: "0.6.0" } : seed.seedDoc(id),
+      );
+    try {
+      await submitEnquiry(initial, validForm());
+      expect(field(sentText(), "Privacy policy shown")).toBe("0.6.0");
+    } finally {
+      jest.mocked(getDoc).mockImplementation(async (id: string) => seed.seedDoc(id));
+    }
+  });
+
+  it("says the policy has no version rather than inventing one", async () => {
+    const seed = jest.requireActual("../../../../sanity/seed") as {
+      seedDoc: (id: string) => Record<string, unknown>;
+    };
+    jest.mocked(getDoc).mockImplementation(async (id: string) => {
+      if (id !== "legal-privacy") return seed.seedDoc(id);
+      const { version: _version, ...rest } = seed.seedDoc(id);
+      void _version;
+      return rest;
+    });
+    try {
+      await submitEnquiry(initial, validForm());
+      expect(field(sentText(), "Privacy policy shown")).toBe("unversioned");
+    } finally {
+      jest.mocked(getDoc).mockImplementation(async (id: string) => seed.seedDoc(id));
+    }
+  });
+
+  it("still sends the lead when the policy cannot be read, and says why the version is missing", async () => {
+    jest.mocked(getDoc).mockRejectedValueOnce(new Error("Sanity is down"));
+    const result = await submitEnquiry(initial, validForm());
+    expect(result.status).toBe("ok");
+    expect(field(sentText(), "Privacy policy shown")).toBe(
+      "unknown (content unavailable when sent)",
+    );
   });
 
   it("stamps the send time in UTC ISO form", async () => {

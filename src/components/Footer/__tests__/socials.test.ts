@@ -4,7 +4,16 @@ import { join } from "node:path";
 // The footer's social links. Four of five point at a platform's home page
 // until the real profiles exist. These keep the label honest about that, and
 // make going live a deliberate change rather than a silent one.
-import { SOCIALS } from "../socials";
+import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
+import { socialRule } from "../../../../src/sanity/schema/site-settings";
+import { SOCIAL_ICONS } from "../socials";
+
+// The profiles are content (siteSettings.socials); the glyphs are code. Joined
+// here, as the footer joins them. The seed is what the ci dataset holds.
+const SOCIALS = SITE_SETTINGS.socials.map((social) => ({
+  ...social,
+  ...(SOCIAL_ICONS[social.id] as { path?: string; src?: string }),
+}));
 
 const SUFFIX = " (profile coming soon)";
 
@@ -49,7 +58,7 @@ describe("footer socials", () => {
 
   it("keeps WhatsApp live: it is the one real channel", () => {
     const whatsapp = SOCIALS.find((social) => social.id === "whatsapp")!;
-    expect(whatsapp.pending).toBeUndefined();
+    expect(whatsapp.pending).toBeFalsy();
     expect(whatsapp.href).toMatch(/^https:\/\/wa\.me\/\d+$/);
     expect(whatsapp.label).toBe("Smarthaus on WhatsApp");
   });
@@ -102,5 +111,36 @@ describe("footer socials", () => {
     it("does not claim to be coming soon", () => {
       expect(social.label).not.toContain("coming soon");
     });
+  });
+});
+
+describe("the Studio's rule for a profile", () => {
+  const label = (en: string) => ({ en });
+
+  it("accepts a pending profile that says so, and a live one that does not", () => {
+    expect(socialRule({ label: label(`Smarthaus on X${SUFFIX}`), pending: true })).toBe(true);
+    expect(socialRule({ label: label("Smarthaus on X") })).toBe(true);
+  });
+
+  it("refuses a pending profile whose name does not say it is coming soon", () => {
+    expect(socialRule({ label: label("Smarthaus on X"), pending: true })).toMatch(
+      /must end its name/,
+    );
+  });
+
+  it("refuses a live profile still named as coming soon", () => {
+    expect(socialRule({ label: label(`Smarthaus on X${SUFFIX}`), pending: false })).toMatch(
+      /Remove/,
+    );
+  });
+
+  it("treats an empty profile as live, with nothing to say", () => {
+    expect(socialRule(undefined)).toBe(true);
+  });
+
+  it("holds every seeded profile", () => {
+    for (const social of SITE_SETTINGS.socials) {
+      expect(socialRule({ label: label(social.label), pending: social.pending })).toBe(true);
+    }
   });
 });

@@ -1,6 +1,5 @@
-import { renderToStaticMarkup } from "react-dom/server";
-
 import Home from "../page";
+import { renderMarkup } from "../../__tests__/helpers/server";
 
 /**
  * The homepage rendered to the HTML the server sends. The hero swap of
@@ -18,10 +17,10 @@ jest.mock("../contact/actions", () => ({
   submitShortEnquiry: jest.fn(),
 }));
 
-const html = () => renderToStaticMarkup(<Home />);
+const html = () => renderMarkup(<Home />);
 
 // ScrollReveal reads these, which jsdom does not have; its own tests cover it.
-beforeAll(() => {
+beforeAll(async () => {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: () => ({ matches: true }),
@@ -29,8 +28,8 @@ beforeAll(() => {
 });
 
 describe("the homepage", () => {
-  test("renders the hero as the first section, with its data-hero hook", () => {
-    const markup = html();
+  test("renders the hero as the first section, with its data-hero hook", async () => {
+    const markup = await html();
     const heroAt = markup.indexOf("data-hero");
     expect(heroAt).toBeGreaterThan(-1);
     // Preload links may precede it; no content does.
@@ -38,8 +37,8 @@ describe("the homepage", () => {
     expect(before).not.toMatch(/<section|<h[1-6]|<p\b/);
   });
 
-  test("mounts HomeHero, not the fluid canvas or the villa", () => {
-    const markup = html();
+  test("mounts HomeHero, not the fluid canvas or the villa", async () => {
+    const markup = await html();
     expect(markup).toContain("data-hero-strip");
     expect(markup).not.toContain("<canvas");
     expect(markup).not.toContain("data-hero-quiet");
@@ -48,8 +47,8 @@ describe("the homepage", () => {
     expect(markup).not.toContain("Explore the villa");
   });
 
-  test("has exactly one h1, the hero's", () => {
-    const markup = html();
+  test("has exactly one h1, the hero's", async () => {
+    const markup = await html();
     const h1s = markup.match(/<h1\b/g) ?? [];
     expect(h1s).toHaveLength(1);
     // One span to a word, for the opening.
@@ -57,38 +56,38 @@ describe("the homepage", () => {
     expect(title?.replace(/<[^>]+>/g, "")).toBe("Home at your fingertips");
   });
 
-  test("keeps the hero CTA and its route, and no longer offers Explore Villa", () => {
-    const markup = html();
+  test("keeps the hero CTA and its route, and no longer offers Explore Villa", async () => {
+    const markup = await html();
     expect(markup).toMatch(/href="\/contact"[^>]*>Book a site visit</);
     expect(markup).not.toMatch(/Explore Villa/);
   });
 
-  test("still composes every other section in order", () => {
-    const markup = html();
+  test("still composes every other section in order", async () => {
+    const markup = await html();
     const order = ["data-hero", "data-process"].map((hook) => markup.indexOf(hook));
     expect(order.every((at) => at > -1)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
-  test("the hero is a labelled section, once", () => {
-    const markup = html();
+  test("the hero is a labelled section, once", async () => {
+    const markup = await html();
     expect(markup.match(/aria-labelledby="hero-title"/g)).toHaveLength(1);
   });
 
-  test("contains no em dash", () => {
-    expect(html()).not.toContain("—");
+  test("contains no em dash", async () => {
+    expect(await html()).not.toContain("—");
   });
 });
 
 describe("the partner cards, as the server sends them", () => {
-  const section = () => {
-    const markup = html();
+  const section = async () => {
+    const markup = await html();
     const start = markup.indexOf("<section", markup.indexOf('aria-labelledby="partners"') - 200);
     return markup.slice(start, markup.indexOf("</section>", start));
   };
 
-  test("come straight after the hero, before the hardware carousel", () => {
-    const markup = html();
+  test("come straight after the hero, before the hardware carousel", async () => {
+    const markup = await html();
     const order = [
       'aria-labelledby="hero-title"',
       "data-partners",
@@ -98,12 +97,12 @@ describe("the partner cards, as the server sends them", () => {
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
-  test("leave the Maple banner off the page", () => {
-    expect(html()).not.toContain("A brand by Maple Technologies");
+  test("leave the Maple banner off the page", async () => {
+    expect(await html()).not.toContain("A brand by Maple Technologies");
   });
 
-  test("serve both cards' copy and links in the HTML, before any script runs", () => {
-    const markup = section();
+  test("serve both cards' copy and links in the HTML, before any script runs", async () => {
+    const markup = await section();
     for (const text of [
       "A TIS partner",
       "A Fibaro partner",
@@ -114,17 +113,19 @@ describe("the partner cards, as the server sends them", () => {
     }
   });
 
-  test("mark exactly one card active on first paint", () => {
-    expect(section().match(/role="tabpanel"/g)).toHaveLength(2);
-    expect(section().match(/data-state="active"/g)).toHaveLength(1);
+  test("mark exactly one card active on first paint", async () => {
+    expect((await section()).match(/role="tabpanel"/g)).toHaveLength(2);
+    expect((await section()).match(/data-state="active"/g)).toHaveLength(1);
   });
 
-  test("send the timer line in the HTML, so hydration adds nothing above the fold", () => {
-    expect(section()).toMatch(/<span[^>]*data-running="false"[^>]*aria-hidden="true"/);
+  test("send the timer line in the HTML, so hydration adds nothing above the fold", async () => {
+    expect(await section()).toMatch(/<span[^>]*data-running="false"[^>]*aria-hidden="true"/);
   });
 
-  test("reserve each logo's box with its width and height, so nothing shifts", () => {
-    const logos = [...section().matchAll(/<img[^>]*alt="(TIS|Fibaro)"[^>]*>/g)].map((m) => m[0]);
+  test("reserve each logo's box with its width and height, so nothing shifts", async () => {
+    const logos = [...(await section()).matchAll(/<img[^>]*alt="(TIS|Fibaro)"[^>]*>/g)].map(
+      (m) => m[0],
+    );
     expect(logos).toHaveLength(2);
     for (const img of logos) {
       expect(img).toMatch(/width="1152"/);
