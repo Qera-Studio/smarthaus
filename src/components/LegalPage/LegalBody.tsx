@@ -44,6 +44,7 @@ function contactText(field: string, ctx: Context): string {
 
 function renderInline(node: PtInline, ctx: Context): ReactNode {
   if (node._type === "updatedDate") return ctx.date;
+  if (node._type === "anchor") return null;
   const { contact } = ctx;
   switch (node.field) {
     case "email":
@@ -86,6 +87,9 @@ function renderSpan(span: PtSpan, block: PtBlock): ReactNode {
   return out;
 }
 
+/** The id a block's link target gives it, if it has one. */
+const anchorOf = (block: PtBlock) => block.children.find((c) => c._type === "anchor")?.id;
+
 function renderChildren(block: PtBlock, ctx: Context): ReactNode[] {
   return block.children.map((child) => (
     <ChildKey key={child._key}>
@@ -113,7 +117,7 @@ function renderList(items: ListItem[], ctx: Context, level = 1): ReactNode {
   return (
     <Tag key={items[0]!._key}>
       {groups.map(({ item, nested }) => (
-        <li key={item._key}>
+        <li key={item._key} id={anchorOf(item)}>
           {renderChildren(item, ctx)}
           {nested.length > 0 ? renderList(nested, ctx, level + 1) : null}
         </li>
@@ -124,12 +128,23 @@ function renderList(items: ListItem[], ctx: Context, level = 1): ReactNode {
 
 function renderNode(node: PtNode, ctx: Context): ReactNode {
   switch (node._type) {
-    case "block":
-      if (node.style === "h3") return <h3 key={node._key}>{renderChildren(node, ctx)}</h3>;
+    case "block": {
+      const id = anchorOf(node);
+      if (node.style === "h3")
+        return (
+          <h3 key={node._key} id={id}>
+            {renderChildren(node, ctx)}
+          </h3>
+        );
       if (node.style && node.style !== "normal") {
         throw new Error(`LegalBody: unknown block style "${node.style}"`);
       }
-      return <p key={node._key}>{renderChildren(node, ctx)}</p>;
+      return (
+        <p key={node._key} id={id}>
+          {renderChildren(node, ctx)}
+        </p>
+      );
+    }
     case "legalTable": {
       const [first, ...rest] = node.columns;
       return (

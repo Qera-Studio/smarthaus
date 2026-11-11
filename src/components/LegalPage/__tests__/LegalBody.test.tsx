@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { SEED, seedDoc } from "../../../../sanity/seed";
 import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
 import type { PtBlock, PtNode } from "../../../sanity/types";
 import { LegalBody, withPlaceholders } from "../LegalBody";
@@ -35,6 +36,37 @@ describe("LegalBody", () => {
   it("draws paragraphs and subheadings", () => {
     const root = draw([block([span("Heading")], { style: "h3" }), block([span("Body.")])]);
     expect(root.innerHTML).toBe("<h3>Heading</h3><p>Body.</p>");
+  });
+
+  it("puts a link target on its subheading or paragraph, and prints nothing for it", () => {
+    const anchor = (id: string) => ({ _type: "anchor" as const, _key: k(), id });
+    const root = draw([
+      block([anchor("cookies"), span("Cookies and analytics")], { style: "h3" }),
+      block([span("Body."), anchor("body")]),
+    ]);
+    expect(root.innerHTML).toBe(
+      '<h3 id="cookies">Cookies and analytics</h3><p id="body">Body.</p>',
+    );
+  });
+
+  it("puts a link target in a list item on that item", () => {
+    const root = draw([
+      block([{ _type: "anchor", _key: k(), id: "erasure" }, span("Erase it.")], {
+        listItem: "bullet",
+        level: 1,
+      }),
+      item("Correct it.", "bullet"),
+    ]);
+    expect(root.innerHTML).toBe('<ul><li id="erasure">Erase it.</li><li>Correct it.</li></ul>');
+  });
+
+  it("finds every /privacy# link in the seed a target in the privacy policy", () => {
+    const all = JSON.stringify(SEED);
+    const wanted = [...all.matchAll(/\/privacy#([a-z0-9-]+)/g)].map((m) => m[1]);
+    expect(wanted).toContain("cookies");
+    const privacy = JSON.stringify(seedDoc("legal-privacy"));
+    // A section id or an anchor: both render as an element id.
+    for (const id of wanted) expect(privacy).toContain(`"id":"${id}"`);
   });
 
   it("treats a block with no style as a paragraph", () => {

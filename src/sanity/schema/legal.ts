@@ -43,6 +43,27 @@ const updatedDate: SchemaField = {
   fields: [{ name: "show", title: "Show the date", type: "boolean", initialValue: true }],
 };
 
+/**
+ * A fixed link target on a paragraph or subheading, such as the cookie banner's
+ * /privacy#cookies. Renaming the heading never moves it.
+ */
+/** What a link target may be called: what follows the # in a URL, plainly. */
+export const ANCHOR_ID = /^[a-z][a-z0-9-]*$/;
+
+export const anchor: SchemaField = {
+  name: "anchor",
+  title: "Link target",
+  type: "object",
+  fields: [
+    plain("id", "Name after the #", {
+      description: "Other pages link here by it: change it only with them.",
+      validation: (rule: { required: () => { regex: (r: RegExp) => unknown } }) =>
+        rule.required().regex(ANCHOR_ID),
+    }),
+  ],
+  preview: { select: { title: "id" } },
+};
+
 /** A table whose first column names each row. A {braced} cell is a placeholder. */
 const legalTable: SchemaField = {
   name: "legalTable",
@@ -62,7 +83,7 @@ const legalTable: SchemaField = {
       "rows",
       "Rows",
       obj("row", "Row", [
-        list("cells", "Cells, the first names the row", { name: "string", type: "text" }),
+        list("cells", "Cells, the first names the row", { name: "cell", type: "text" }),
       ]),
     ),
   ],
@@ -124,7 +145,7 @@ const block: SchemaField = {
       },
     ],
   },
-  of: [contactValue, updatedDate],
+  of: [contactValue, updatedDate, anchor],
 } as SchemaField;
 
 /** Rich text, per language: the legal bodies. */

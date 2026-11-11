@@ -9,7 +9,7 @@ import {
   IMAGES_PER_LAYOUT,
   processRule,
 } from "../schema/home-page";
-import { hasPlaceholder, legalRule } from "../schema/legal";
+import { ANCHOR_ID, anchor, hasPlaceholder, legalRule } from "../schema/legal";
 import { ABOUT_ICONS, pricingPage } from "../schema/pages";
 import {
   link,
@@ -24,6 +24,7 @@ import {
   type SchemaField,
 } from "../schema/primitives";
 import { seoRule } from "../schema/seo";
+import { schemaTypes } from "../schema";
 import { siteSettings } from "../schema/site-settings";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -53,6 +54,54 @@ function validate(field: SchemaField, value: unknown, document?: unknown): true 
 }
 
 const field = (parent: SchemaField, name: string) => parent.fields!.find((f) => f.name === name)!;
+
+describe("every type, as the Studio's own validator reads it", () => {
+  // Sanity refuses an array member named after a built-in type unless it is
+  // that type: { name: "string", type: "text" } broke the whole Studio, and
+  // Jest cannot load Sanity's validator to catch it, so this holds the rule.
+  const BUILT_IN = [
+    "string",
+    "text",
+    "number",
+    "boolean",
+    "array",
+    "object",
+    "block",
+    "image",
+    "file",
+    "date",
+    "datetime",
+    "url",
+    "slug",
+    "reference",
+    "span",
+    "email",
+    "geopoint",
+  ];
+
+  function members(node: unknown, path: string, out: string[]) {
+    if (Array.isArray(node)) node.forEach((n, i) => members(n, `${path}[${i}]`, out));
+    else if (node && typeof node === "object") {
+      const n = node as { name?: string; type?: string; of?: unknown[] };
+      for (const m of (n.of ?? []) as { name?: string; type?: string }[]) {
+        if (m.name && BUILT_IN.includes(m.name) && m.name !== m.type) out.push(`${path}.${m.name}`);
+      }
+      for (const [k, v] of Object.entries(node)) members(v, `${path}.${n.name ?? k}`, out);
+    }
+  }
+
+  it("names no array member after a built-in type it is not", () => {
+    const bad: string[] = [];
+    members(schemaTypes, "schema", bad);
+    expect(bad).toEqual([]);
+  });
+
+  it("would catch the member that broke the Studio", () => {
+    const bad: string[] = [];
+    members([{ name: "t", type: "array", of: [{ name: "string", type: "text" }] }], "x", bad);
+    expect(bad).toHaveLength(1);
+  });
+});
 
 describe("the field helpers", () => {
   it("makes copy and plain values required, and optional() lifts it", () => {
@@ -154,6 +203,26 @@ describe("faqRule", () => {
     expect(faqRule({ answer: [{ en: "Across Dubai." }] })).toBe(true);
     expect(faqRule({ answer: [{}] })).toBe(true);
     expect(faqRule(undefined)).toBe(true);
+  });
+});
+
+describe("a link target in a legal document", () => {
+  it("is required, and held to a plain name after the #", () => {
+    const calls: unknown[] = [];
+    const rule = {
+      required: () => (calls.push("required"), rule),
+      regex: (r: RegExp) => (calls.push(r), rule),
+    };
+    field(anchor, "id").validation?.(rule as never);
+    expect(calls).toEqual(["required", ANCHOR_ID]);
+  });
+
+  it.each(["cookies", "what-we-collect", "a1"])("takes %s", (id) => {
+    expect(ANCHOR_ID.test(id)).toBe(true);
+  });
+
+  it.each(["Cookies", "#cookies", "1st", "two words", ""])("refuses %j", (id) => {
+    expect(ANCHOR_ID.test(id)).toBe(false);
   });
 });
 

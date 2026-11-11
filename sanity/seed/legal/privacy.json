@@ -519,6 +519,11 @@
           "markDefs": [],
           "children": [
             {
+              "_type": "anchor",
+              "_key": "kcookies",
+              "id": "cookies"
+            },
+            {
               "_type": "span",
               "_key": "k1v",
               "text": "Cookies and analytics",

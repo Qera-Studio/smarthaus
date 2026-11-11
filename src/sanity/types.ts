@@ -270,7 +270,8 @@ export type PtSpan = { _type: "span"; _key: string; text: string; marks?: string
 
 export type PtInline =
   | { _type: "contactValue"; _key: string; field: ContactField; label?: string; message?: string }
-  | { _type: "updatedDate"; _key: string; show?: boolean };
+  | { _type: "updatedDate"; _key: string; show?: boolean }
+  | { _type: "anchor"; _key: string; id: string };
 
 export type PtBlock = {
   _type: "block";

@@ -884,6 +884,7 @@ test("the largest paint is the hero's copy or an eager strip image, never a lazy
         loading: string | null;
         src: string;
         inCopy: boolean;
+        inStrip: boolean;
       }>((resolve) => {
         new PerformanceObserver((list) => {
           const entries = list.getEntries() as (PerformanceEntry & { element: Element | null })[];
@@ -894,6 +895,7 @@ test("the largest paint is the hero's copy or an eager strip image, never a lazy
             loading: el?.getAttribute("loading") ?? null,
             src: el?.getAttribute("src") ?? "",
             inCopy: Boolean(el?.closest("[data-hero]") && !el.closest("[data-hero-strip]")),
+            inStrip: Boolean(el?.closest("[data-hero-strip]")),
           });
         }).observe({ type: "largest-contentful-paint", buffered: true });
       }),
@@ -904,7 +906,9 @@ test("the largest paint is the hero's copy or an eager strip image, never a lazy
     expect(lcp.inCopy).toBe(true);
   } else {
     expect(lcp.tag).toBe("IMG");
-    expect(lcp.src).toContain("hero_carousel");
+    // A strip picture, through our own optimiser since the move to Sanity.
+    expect(lcp.inStrip).toBe(true);
+    expect(lcp.src).toMatch(/^\/_next\/image\?url=https%3A%2F%2Fcdn\.sanity\.io%2F/);
     expect(lcp.loading).not.toBe("lazy");
   }
 });

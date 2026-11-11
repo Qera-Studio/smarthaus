@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "./fixtures";
+import { LEGAL } from "../sanity/seed/legal";
 import { line, mailFor, sentMail, uniqueName } from "./mail";
 
 /**
@@ -57,7 +58,7 @@ test.describe("the full contact form's email", () => {
     const before = Date.now();
     await sendFullForm(page, name);
     const mail = await sentMail(name);
-    expect(line(mail, "Privacy policy shown")).toBe("0.4.1-draft");
+    expect(line(mail, "Privacy policy shown")).toBe(LEGAL.privacy.version);
     const sentAt = Date.parse(line(mail, "Sent at")!);
     expect(sentAt).toBeGreaterThanOrEqual(before - 1000);
     expect(sentAt).toBeLessThanOrEqual(Date.now() + 1000);

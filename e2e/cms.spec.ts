@@ -43,7 +43,14 @@ test.describe("a visitor's browser", () => {
         }
       });
       await page.goto(path);
-      await page.mouse.wheel(0, 20_000);
+      // Down the whole page, so every lazy picture asks for its file. Script,
+      // not the wheel: mobile WebKit has none.
+      await page.evaluate(async () => {
+        for (let y = 0; y < document.body.scrollHeight; y += innerHeight / 2) {
+          scrollTo(0, y);
+          await new Promise((r) => setTimeout(r, 50));
+        }
+      });
       await page.waitForLoadState("networkidle");
       expect(sanity).toEqual([]);
     });
