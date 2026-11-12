@@ -605,6 +605,9 @@ test.describe("under reduced motion", () => {
 
 test.describe("keyboard", () => {
   test("Tab runs CTAs, the three controls, then each card's link once", async ({ page }) => {
+    // A Tab walk through links: WebKit, like Safari on a Mac, skips links on
+    // Tab unless the reader turns that on (keyboard.spec.ts).
+    test.skip(test.info().project.name === "iPhone 17", "Tab reaches links only in Chromium");
     await page.getByRole("link", { name: "WhatsApp", exact: true }).focus();
     const expected = [
       "Pause the images",
@@ -658,9 +661,11 @@ test.describe("keyboard", () => {
 
   test("a focused card's link draws a visible ring", async ({ page }) => {
     const link = cards(page).first().getByRole("link");
+    // Keyboard focus without a Tab walk, which WebKit would take past links:
+    // a key press, then focus, is :focus-visible in every engine.
+    await page.keyboard.press("Shift");
     await link.focus();
-    await page.keyboard.press("Shift+Tab");
-    await page.keyboard.press("Tab");
+    expect(await link.evaluate((el) => el.matches(":focus-visible"))).toBe(true);
     const outline = await link.evaluate((el) => getComputedStyle(el).outlineStyle);
     expect(outline).not.toBe("none");
   });
@@ -876,6 +881,18 @@ test("the largest paint is the hero's copy or an eager strip image, never a lazy
 }) => {
   await withConsentDecided(page);
   await page.goto("/", { waitUntil: "load" });
+  // The largest paint is decided only once the strip's eager pictures have
+  // painted. Read before that and the answer is whatever was largest so far:
+  // since the pictures come through the optimiser (Sanity, 2026-11-11), the
+  // header sometimes, on a reload with warm assets.
+  await page.waitForFunction(() =>
+    [
+      ...document.querySelectorAll<HTMLImageElement>('[data-hero-strip] img:not([loading="lazy"])'),
+    ].every((img) => img.complete && img.naturalWidth > 0),
+  );
+  await page.evaluate(
+    () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
   const lcp = await page.evaluate(
     () =>
       new Promise<{
