@@ -191,3 +191,124 @@ test.describe("what an article tells crawlers", () => {
     expect(xml).not.toContain("installation-day");
   });
 });
+
+// 2026-11-14, Shivanshu's review of the first build.
+test.describe("the review's fixes", () => {
+  test("Back starts where the nav's logo does, from lg", async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 0) < 1024, "below lg the nav is the bottom bar");
+    await page.goto(ARTICLE);
+    // The wordmark the bar shows; the header also holds the dome alone,
+    // hidden at rest, at the same place.
+    const logo = (await page
+      .getByRole("banner")
+      .getByRole("link", { name: "Smarthaus — home" })
+      .boundingBox())!;
+    const back = (await page.getByRole("link", { name: "Back" }).boundingBox())!;
+    expect(Math.abs(back.x - logo.x)).toBeLessThanOrEqual(2);
+  });
+
+  test("Back stays inside the screen, at the page's gutter, on a phone", async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 0) >= 1024, "a phone's gutter");
+    await page.goto(ARTICLE);
+    const back = (await page.getByRole("link", { name: "Back" }).boundingBox())!;
+    const title = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
+    expect(back.x).toBeGreaterThan(0);
+    expect(Math.abs(back.x - title.x)).toBeLessThanOrEqual(1);
+  });
+
+  test("sets the details 4px under the design: 12px labels and tags, 16px values", async ({
+    page,
+  }) => {
+    await page.goto(ARTICLE);
+    const size = (selector: string) =>
+      page
+        .locator(`article dl ${selector}`)
+        .first()
+        .evaluate((el) => getComputedStyle(el).fontSize);
+    expect(await size("dt")).toBe("12px");
+    expect(await size("dd")).toBe("16px");
+    expect(await size("time")).toBe("16px");
+    expect(await size("li")).toBe("12px");
+  });
+
+  test("the search is a line under its words, with a button on the line", async ({ page }) => {
+    await page.goto("/blog");
+    const search = page.getByRole("searchbox", { name: "Search articles by title or tag" });
+    const line = search.locator("..");
+    await expect(search).toHaveCSS("border-top-style", "none");
+    await expect(line).toHaveCSS("border-bottom-style", "solid");
+    await expect(line).toHaveCSS("border-top-style", "none");
+    await expect(line).toHaveCSS("border-left-style", "none");
+    await expect(line).toHaveCSS("border-right-style", "none");
+    const button = page.getByRole("search").getByRole("button", { name: "Search" });
+    const field = (await line.boundingBox())!;
+    const box = (await button.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(field.x + field.width + 0.5);
+    expect(Math.round(box.width)).toBeGreaterThanOrEqual(44);
+    expect(Math.round(box.height)).toBeGreaterThanOrEqual(44);
+  });
+
+  test("the search button keeps the matches and puts the field down", async ({ page }) => {
+    await page.goto("/blog");
+    await expectHydrated(page);
+    const search = page.getByRole("searchbox", { name: "Search articles by title or tag" });
+    await search.fill("network");
+    await expect.poll(() => page.locator("[data-blog-index] h2").allInnerTexts()).toEqual([ALL[3]]);
+    await page.getByRole("search").getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL("/blog");
+    await expect(search).not.toBeFocused();
+    await expect(search).toHaveValue("network");
+    expect(await page.locator("[data-blog-index] h2").allInnerTexts()).toEqual([ALL[3]]);
+  });
+
+  test("Enter in the search does not reload the page", async ({ page }) => {
+    await page.goto("/blog");
+    await expectHydrated(page);
+    const search = page.getByRole("searchbox", { name: "Search articles by title or tag" });
+    await search.fill("wall");
+    await search.press("Enter");
+    await expect(page).toHaveURL("/blog");
+    await expect(search).toHaveValue("wall");
+  });
+
+  test("the filter draws its arrow inside its frame, a padding in from the end", async ({
+    page,
+  }) => {
+    await page.goto("/blog");
+    const select = page.getByRole("combobox", { name: "Filter by tag" });
+    await expect(select).toHaveCSS("appearance", "none");
+    await expect(select).toHaveCSS("padding-right", "40px");
+    const frame = (await select.boundingBox())!;
+    const arrow = await select.locator("..").evaluate((box) => {
+      const after = getComputedStyle(box, "::after");
+      return { right: after.right, width: after.width, mask: after.maskImage };
+    });
+    const wrapper = (await select.locator("..").boundingBox())!;
+    expect(Math.abs(wrapper.x + wrapper.width - (frame.x + frame.width))).toBeLessThanOrEqual(0.5);
+    expect(arrow).toMatchObject({ right: "12px", width: "16px" });
+    expect(arrow.mask).toContain("/blog/chevron-down.svg");
+  });
+
+  test("the search's line and the filter's frame end level, side by side", async ({ page }) => {
+    test.skip(
+      (page.viewportSize()?.width ?? 0) < 768,
+      "below md the filter wraps under the search",
+    );
+    await page.goto("/blog");
+    const line = (await page
+      .getByRole("searchbox", { name: "Search articles by title or tag" })
+      .locator("..")
+      .boundingBox())!;
+    const frame = (await page.getByRole("combobox", { name: "Filter by tag" }).boundingBox())!;
+    expect(frame.x).toBeGreaterThan(line.x + line.width);
+    expect(Math.abs(line.y + line.height - (frame.y + frame.height))).toBeLessThanOrEqual(1);
+  });
+
+  test("the featured picture is fetched at once and first", async ({ page }) => {
+    await page.goto("/blog");
+    const img = page.locator("article[data-featured] img");
+    await expect(img).toHaveAttribute("loading", "eager");
+    await expect(img).toHaveAttribute("fetchpriority", "high");
+    await expect(page.locator('[data-blog-index] img[fetchpriority="high"]')).toHaveCount(1);
+  });
+});

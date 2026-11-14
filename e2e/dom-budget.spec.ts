@@ -20,8 +20,8 @@ import { test, expect } from "./fixtures";
  *
  * 2026-11-14: to 1,200 for the hero redesign (the email form, the glass, the
  * makers' marks: three runs of ten, the copies bare images) and the footer's
- * Articles link, which put it at 1,159 with the partner cards gone. Set during
- * the work, pending Shivanshu's confirmation (docs/launch-gate/pre-launch-fixes.md).
+ * Articles link, which put it at 1,159 with the partner cards gone. Confirmed
+ * by Shivanshu the same day.
  *
  * Desktop Chrome only: the markup is the same on every device.
  */

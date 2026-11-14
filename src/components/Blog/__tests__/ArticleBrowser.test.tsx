@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, within } from "@testing-library/react";
 
 import { POSTS } from "../../../../sanity/seed/blog";
 import { ArticleBrowser, matches } from "../ArticleBrowser";
@@ -249,5 +249,79 @@ describe("ArticleBrowser, with nothing to show", () => {
     mount([]);
     expect(screen.queryAllByRole("article")).toHaveLength(0);
     expect(screen.getByText(/No articles match that/)).toBeInTheDocument();
+  });
+});
+
+// 2026-11-14: a button at the end of the search's line (Shivanshu). The list
+// already narrows as you type, so the button sends nothing; it puts the field
+// down, which on a phone closes the keyboard that hides the results.
+describe("ArticleBrowser, the search button", () => {
+  const button = () => screen.getByRole("button", { name: "Search" });
+  const form = () => screen.getByRole("search");
+
+  it("is in the search landmark, which is the form it submits", () => {
+    mount();
+    expect(form().tagName).toBe("FORM");
+    expect(within(form()).getByRole("button", { name: "Search" })).toBe(button());
+    expect(button()).toHaveAttribute("type", "submit");
+  });
+
+  it("sits on the search's line, beside the field, not beside the filter", () => {
+    mount();
+    expect(button().parentElement).toBe(search().parentElement);
+    expect(filter().parentElement).not.toBe(search().parentElement);
+  });
+
+  it("is named in words, and its drawn magnifier is hidden", () => {
+    mount();
+    expect(button()).toHaveAccessibleName("Search");
+    expect(button()).toHaveTextContent("");
+    expect(button().querySelector("span")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("holds the submit: nothing is sent and the page stays", () => {
+    mount();
+    const submit = createEvent.submit(form());
+    fireEvent(form(), submit);
+    expect(submit.defaultPrevented).toBe(true);
+  });
+
+  it("leaves the list exactly as typing chose it", () => {
+    mount();
+    type("network");
+    const before = titles();
+    fireEvent.click(button());
+    expect(titles()).toEqual(before);
+    expect(search()).toHaveValue("network");
+    expect(screen.getByRole("status")).toHaveTextContent("1 article found");
+  });
+
+  it("keeps a chosen tag through a press", () => {
+    mount();
+    pick("Design");
+    fireEvent.click(button());
+    expect(filter()).toHaveValue("Design");
+  });
+
+  it("puts the field down, so a phone's keyboard closes over the results", () => {
+    mount();
+    search().focus();
+    expect(search()).toHaveFocus();
+    fireEvent.submit(form());
+    expect(search()).not.toHaveFocus();
+  });
+
+  it("leaves focus alone when the field did not have it", () => {
+    mount();
+    filter().focus();
+    fireEvent.submit(form());
+    expect(filter()).toHaveFocus();
+  });
+
+  it("keeps each control's name beside it: the filter's label is in its own box", () => {
+    mount();
+    const box = filter().parentElement!;
+    expect(box.querySelector('label[for="blog-tag"]')).not.toBeNull();
+    expect(search().parentElement!.querySelector('label[for="blog-search"]')).not.toBeNull();
   });
 });

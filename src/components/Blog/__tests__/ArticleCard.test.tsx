@@ -113,6 +113,18 @@ describe("ArticleCard, featured", () => {
     expect(screen.getByRole("link")).toHaveAccessibleName(POST.title);
   });
 
+  it("fetches its picture at once and first: it is the articles page's largest paint", () => {
+    const img = card({ featured: true }).querySelector("img")!;
+    expect(img).toHaveAttribute("loading", "eager");
+    expect(img).toHaveAttribute("fetchpriority", "high");
+  });
+
+  it("is the only card that does", () => {
+    const img = card().querySelector("img")!;
+    expect(img).toHaveAttribute("loading", "lazy");
+    expect(img).not.toHaveAttribute("fetchpriority");
+  });
+
   it("asks for a wider picture", () => {
     expect(card({ featured: true }).querySelector("img")).toHaveAttribute(
       "sizes",

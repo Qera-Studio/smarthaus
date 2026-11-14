@@ -50,6 +50,11 @@ export function ArticleCard({
               ? "(min-width: 64rem) 65vw, 100vw"
               : "(min-width: 64rem) 30vw, (min-width: 40rem) 50vw, 100vw"
           }
+          // The featured picture is the articles page's largest paint, so it
+          // is fetched at once and first; lazy, it waited for layout to be
+          // asked for at all (Next's own warning, 2026-11-14).
+          loading={featured ? "eager" : undefined}
+          fetchPriority={featured ? "high" : undefined}
         />
       </div>
       <div className={styles.cardText}>

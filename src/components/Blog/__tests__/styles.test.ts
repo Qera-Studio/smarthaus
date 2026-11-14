@@ -107,6 +107,23 @@ describe("Blog.module.scss", () => {
       expect(rule(".back")).toMatch(/min-block-size:\s*var\(--size-touch-target\)/);
     });
 
+    test("starts the way back at the page's edge, where the nav's logo does", () => {
+      // Out past the blog's inset, by exactly that inset (Shivanshu, 2026-11-14).
+      expect(rule(".back")).toMatch(/margin-inline-start:\s*calc\(-1 \* var\(--blog-inset\)\)/);
+      expect(rule(".page,\n  .index")).toMatch(/padding-inline:\s*var\(--blog-inset\)/);
+    });
+
+    test("sets its details 4px under the design: 12px labels and tags, 16px values", () => {
+      expect(rule(".page,\n  .index")).toMatch(/--blog-meta-less:\s*0\.25rem/);
+      const less = (token: string) =>
+        new RegExp(
+          `font-size:\\s*calc\\(var\\(--font-size-${token}\\) - var\\(--blog-meta-less\\)\\)`,
+        );
+      expect(rule(".meta dt")).toMatch(less("base"));
+      expect(rule(".meta dd")).toMatch(less("lg"));
+      expect(rule(".tags li")).toMatch(less("base"));
+    });
+
     test("draws the back arrow as a mask in the text's colour, turned to point back", () => {
       const icon = rule(".backIcon");
       expect(icon).toMatch(/mask-image:\s*url\("\/blog\/arrow-back\.svg"\)/);
@@ -207,14 +224,83 @@ describe("Blog.module.scss", () => {
   });
 
   describe("the search and the filter", () => {
+    // The filter's own rule, after the one it shares with the search.
+    const own = (selector: string) => rule(selector, css.slice(css.indexOf(".selectField {")));
+
     test("are full-size touch targets at 16px, so a phone does not zoom in", () => {
       const field = rule(".search,\n  .select");
       expect(field).toMatch(/block-size:\s*var\(--size-touch-target\)/);
       expect(field).toMatch(/font-size:\s*var\(--font-size-base\)/);
+      const button = rule(".searchButton");
+      expect(button).toMatch(/inline-size:\s*var\(--size-touch-target\)/);
+      expect(button).toMatch(/block-size:\s*var\(--size-touch-target\)/);
     });
 
-    test("have a border a reader can find: the input border, not the hairline", () => {
-      expect(rule(".search,\n  .select")).toMatch(/border-color:\s*var\(--color-border-input\)/);
+    test("the search is one line under its words and its button (Shivanshu, 2026-11-14)", () => {
+      const field = rule(".searchField");
+      expect(field).toMatch(/border-block-end-style:\s*solid/);
+      expect(field).toMatch(/border-block-end-width:\s*1px/);
+      expect(field).toMatch(/border-block-end-color:\s*var\(--color-border-input\)/);
+      expect(field).not.toMatch(/border-block-start|border-inline|border-style|border-width/);
+      expect(rule(".search")).toMatch(/border-style:\s*none/);
+      expect(rule(".searchButton")).toMatch(/border-style:\s*none/);
+    });
+
+    test("starts the search's words where its line starts", () => {
+      expect(rule(".search")).toMatch(/padding-inline:\s*0/);
+    });
+
+    test("rings the whole search field, button and all, while the words have focus", () => {
+      expect(rule(".search")).toMatch(/outline-style:\s*none/);
+      const ring = rule(".searchField:has(.search:focus-visible)");
+      expect(ring).toMatch(/outline:\s*2px solid var\(--color-border-focus\)/);
+      expect(ring).toMatch(/outline-offset:\s*2px/);
+      expect(rule(".searchButton:focus-visible")).toMatch(
+        /outline:\s*2px solid var\(--color-border-focus\)/,
+      );
+    });
+
+    test("the filter keeps its frame, in the input border, not the hairline", () => {
+      const select = own(".select");
+      expect(select).toMatch(/border-style:\s*solid/);
+      expect(select).toMatch(/border-width:\s*1px/);
+      expect(select).toMatch(/border-color:\s*var\(--color-border-input\)/);
+      expect(rule(".select:focus-visible")).toMatch(
+        /outline:\s*2px solid var\(--color-border-focus\)/,
+      );
+    });
+
+    test("draws the filter's arrow a padding in from its end, clear of the frame", () => {
+      const select = own(".select");
+      expect(select).toMatch(/appearance:\s*none/);
+      // The arrow's 12px in and its 16px take 28 of the 40: the words never
+      // run under it.
+      expect(select).toMatch(/padding-inline-end:\s*40px/);
+      const arrow = rule(".selectField::after");
+      expect(arrow).toMatch(/inset-inline-end:\s*12px/);
+      expect(arrow).toMatch(/inline-size:\s*16px/);
+      expect(arrow).toMatch(/pointer-events:\s*none/);
+      expect(arrow).toMatch(/mask-image:\s*url\("\/blog\/chevron-down\.svg"\)/);
+      expect(arrow).toMatch(/background-color:\s*currentcolor/);
+      expect(rule(".selectField")).toMatch(/position:\s*relative/);
+      expect(existsSync(join(process.cwd(), "public/blog/chevron-down.svg"))).toBe(true);
+    });
+
+    test("draws the magnifier as a mask in the button's colour", () => {
+      const icon = rule(".searchIcon");
+      expect(icon).toMatch(/mask-image:\s*url\("\/blog\/search\.svg"\)/);
+      expect(icon).toMatch(/background-color:\s*currentcolor/);
+      expect(existsSync(join(process.cwd(), "public/blog/search.svg"))).toBe(true);
+    });
+
+    test("keeps both drawn icons under forced colours, in their controls' ink", () => {
+      const forced = media("(forced-colors: active)");
+      expect(rule(".searchIcon", forced)).toMatch(/background-color:\s*ButtonText/);
+      expect(rule(".selectField::after", forced)).toMatch(/background-color:\s*FieldText/);
+    });
+
+    test("stand on one foot: the search's line and the filter's frame end level", () => {
+      expect(rule(".controls")).toMatch(/align-items:\s*flex-end/);
     });
 
     test("sit under the heading on a phone and beside it from md", () => {

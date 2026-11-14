@@ -1493,7 +1493,8 @@
     :where(:root:has([data-hero])) .nav:not([data-stuck]) {
       --nav-ink: var(--color-text-inverse);
       --nav-link-ink: var(--color-text-inverse);
-      --nav-cta-bg: var(--color-bg-canvas);
+      // Brown-100, as the inverse button (Button.module.scss).
+      --nav-cta-bg: var(--color-bg-surface);
       --nav-cta-ink: var(--color-text-primary);
     }
   }

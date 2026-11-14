@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { ArticleCard, type PostSummary } from "./ArticleCard";
 import styles from "./Blog.module.scss";
@@ -42,6 +42,7 @@ export function ArticleBrowser({
 }) {
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState("");
+  const field = useRef<HTMLInputElement>(null);
 
   const narrowing = query.trim() !== "" || tag !== "";
   const shown = posts.filter((post) => matches(post, query, tag));
@@ -52,37 +53,55 @@ export function ArticleBrowser({
     <>
       <header className={styles.indexHead}>
         <h1 className={styles.indexTitle}>{heading}</h1>
-        {/* role, not the <search> element: older Safari and jsdom do not know it. */}
-        <div className={styles.controls} role="search">
-          <label className="visually-hidden" htmlFor="blog-search">
-            Search articles by title or tag
-          </label>
-          <input
-            className={styles.search}
-            id="blog-search"
-            type="search"
-            placeholder="Search articles"
-            autoComplete="off"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <label className="visually-hidden" htmlFor="blog-tag">
-            Filter by tag
-          </label>
-          <select
-            className={styles.select}
-            id="blog-tag"
-            value={tag}
-            onChange={(event) => setTag(event.target.value)}
-          >
-            <option value="">All tags</option>
-            {tags.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* role, not the <search> element: older Safari and jsdom do not know it.
+            The list narrows as you type, so the button sends nothing: it puts
+            the field down, which on a phone closes the keyboard over the
+            results. Without JavaScript it reloads the page, every article on it. */}
+        <form
+          className={styles.controls}
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            field.current?.blur();
+          }}
+        >
+          <div className={styles.searchField}>
+            <label className="visually-hidden" htmlFor="blog-search">
+              Search articles by title or tag
+            </label>
+            <input
+              ref={field}
+              className={styles.search}
+              id="blog-search"
+              type="search"
+              placeholder="Search articles"
+              autoComplete="off"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <button className={styles.searchButton} type="submit" aria-label="Search">
+              <span className={styles.searchIcon} aria-hidden="true" />
+            </button>
+          </div>
+          <div className={styles.selectField}>
+            <label className="visually-hidden" htmlFor="blog-tag">
+              Filter by tag
+            </label>
+            <select
+              className={styles.select}
+              id="blog-tag"
+              value={tag}
+              onChange={(event) => setTag(event.target.value)}
+            >
+              <option value="">All tags</option>
+              {tags.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </form>
       </header>
 
       {/* Said aloud as the list changes; silent until something narrows it. */}

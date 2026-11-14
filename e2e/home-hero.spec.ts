@@ -979,12 +979,12 @@ test.describe("every card, with a mouse", () => {
     }
   });
 
-  test("the CTA is brown-900 on the page's ground, at full opacity", async ({ page }) => {
-    // The inverse button fills with --color-bg-canvas, which moved from
-    // brown-100 to brown-50 with the page on 2026-11-14.
+  test("the CTA is brown-900 on brown-100, at full opacity", async ({ page }) => {
+    // The inverse button fills with the surface, brown-100: the page's ground
+    // went to brown-50 on 2026-11-14 and the button stayed (Shivanshu).
     await hoverCard(page, 0);
     const link = overlayOf(page, 0).getByRole("link");
-    await expect(link).toHaveCSS("background-color", "rgb(248, 245, 240)");
+    await expect(link).toHaveCSS("background-color", "rgb(240, 233, 221)");
     await expect(link).toHaveCSS("color", "rgb(20, 17, 14)");
     await expect(link).toHaveCSS("opacity", "1");
   });
@@ -1081,4 +1081,16 @@ test.describe("under reduced motion, with a mouse", () => {
     await hoverCard(page, 1);
     await expect(overlayOf(page, 1)).toHaveCSS("opacity", "1");
   });
+});
+
+test("from lg the nav's button over the dark hero is the light one, brown-100", async ({
+  page,
+}) => {
+  // The same brown-100 as the strip's light button, not the page's brown-50
+  // ground (Shivanshu, 2026-11-14). Once the bar shrinks it is dark again.
+  test.skip((page.viewportSize()?.width ?? 0) < 1024, "below lg the bar is the floating capsule");
+  await page.evaluate(() => scrollTo(0, 0));
+  const cta = page.locator('header a[href="/contact"]');
+  await expect(cta).toHaveCSS("background-color", "rgb(240, 233, 221)");
+  await expect(cta).toHaveCSS("color", "rgb(20, 17, 14)");
 });

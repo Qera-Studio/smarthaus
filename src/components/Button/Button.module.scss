@@ -106,8 +106,10 @@
     // Brown-100 on a dark ground or an image (the hero strip's card CTA,
     // Shivanshu's spec, 2026-10-28; it was bone until then, with no other
     // caller). The hover goes *down* to brown-200, keeping the light face.
+    // The surface, not the page's ground: the ground went to brown-50 and
+    // the button stays brown-100 (Shivanshu, 2026-11-14).
     &[data-variant="inverse"] {
-      background-color: var(--color-bg-canvas);
+      background-color: var(--color-bg-surface);
       color: var(--color-text-primary);
 
       &:hover:not(:disabled) {

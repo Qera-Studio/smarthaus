@@ -54,3 +54,39 @@ describe("the solid band's hover", () => {
     expect(css.match(/animation-name:/g)).toHaveLength(1);
   });
 });
+
+// The light button is brown-100, the surface, not the page's ground: the
+// ground went to brown-50 on 2026-11-14 and the button went back to brown-100
+// the same day (Shivanshu). Both are light buttons over the dark hero.
+describe("the light button", () => {
+  const nav = compile(join(__dirname, "../../Nav/Nav.module.scss")).css;
+
+  test("fills with the surface, brown-100", () => {
+    expect(block(".button[data-variant=inverse]")).toMatch(
+      /background-color:\s*var\(--color-bg-surface\)/,
+    );
+  });
+
+  test("keeps the dark ink on it", () => {
+    expect(block(".button[data-variant=inverse]")).toMatch(/color:\s*var\(--color-text-primary\)/);
+  });
+
+  test("goes down to brown-200 on hover, keeping the light face", () => {
+    expect(block(".button[data-variant=inverse]:hover:not(:disabled)")).toMatch(
+      /background-color:\s*var\(--color-bg-muted\)/,
+    );
+  });
+
+  test("the nav's button over the dark hero is the same brown-100", () => {
+    const at = nav.indexOf(":where(:root:has([data-hero])) .nav:not([data-stuck]) {");
+    expect(at).toBeGreaterThan(-1);
+    const rule = nav.slice(at, nav.indexOf("}", at));
+    expect(rule).toMatch(/--nav-cta-bg:\s*var\(--color-bg-surface\)/);
+    expect(rule).toMatch(/--nav-cta-ink:\s*var\(--color-text-primary\)/);
+  });
+
+  test("neither fills with the page's ground any more", () => {
+    expect(block(".button[data-variant=inverse]")).not.toMatch(/--color-bg-canvas/);
+    expect(nav).not.toMatch(/--nav-cta-bg:\s*var\(--color-bg-canvas\)/);
+  });
+});

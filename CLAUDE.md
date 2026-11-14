@@ -258,7 +258,7 @@ Server Components first. `'use client'` limited to:
 - Contact form (form state, Turnstile widget)
 - Mobile navigation (toggle state, and the Solutions menu: open state from lg, the solutions in place of the links below it), `Nav/SolutionsMenu.tsx` (the solution in hand, and the swipe on its picture), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
-- The articles page's search and tag filter (`Blog/ArticleBrowser.tsx` — two controlled fields that choose among the articles the server already sent; nothing is fetched as you type, and without JavaScript every article is listed)
+- The articles page's search and tag filter (`Blog/ArticleBrowser.tsx` — two controlled fields that choose among the articles the server already sent; nothing is fetched as you type, the search button only puts the field down, and without JavaScript every article is listed)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
 
 Everything else is a Server Component. If you're reaching for `'use client'`, a Server Component with a small client island probably works instead.
