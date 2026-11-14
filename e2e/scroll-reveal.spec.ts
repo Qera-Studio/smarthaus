@@ -120,7 +120,11 @@ test.describe("on the homepage", () => {
     await onScreen("[data-pricing] ul > li[data-reveal]");
     await page.reload();
     await expectHydrated(page);
-    for (const selector of ["[data-pricing] ul > li[data-reveal]", "#hardware"]) {
+    // The figures' heading, not the hardware's (2026-11-14): the hardware is
+    // held under the Process stack, and on an iPhone WebKit scrolls its
+    // heading "into view" to where the held section has it above the screen.
+    // e2e/process.spec.ts tests the hold.
+    for (const selector of ["[data-pricing] ul > li[data-reveal]", "#stats"]) {
       await onScreen(selector);
       await expect(page.locator(selector).first()).toHaveCSS("opacity", "1");
     }

@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { screen, within } from "@testing-library/react";
 
 import { HOME_PAGE } from "../../../../sanity/seed/home-page";
-import { HomeHero, LEAD_CARDS } from "../HomeHero";
+import { GROUND, HomeHero, LEAD_CARDS } from "../HomeHero";
+import { BRAND_RUNS, BRANDS, BRANDS_LABEL } from "../brands";
 import { HERO_LEDE_WORDS, HERO_TITLE_WORDS } from "../../../sanity/schema/home-page";
 import { renderMarkup, renderServer } from "../../../__tests__/helpers/server";
 
@@ -25,8 +26,21 @@ const strip = () => document.querySelector("[data-hero-strip]") as HTMLElement;
 const lists = () => Array.from(strip().querySelectorAll("ul:not([data-lead])"));
 const lead = () => strip().querySelector("ul[data-lead]") as HTMLElement;
 
+// The email field imports the server action, which imports Resend, which
+// wants a TextEncoder jsdom does not have. HeroLead.test.tsx tests the field.
+jest.mock("../../../app/contact/actions", () => ({ submitHeroLead: jest.fn() }));
+
+// The glass draws on WebGL after an image decodes, neither of which jsdom
+// has. A stand-in with the same element; GlassCanvas.test.tsx tests the real one.
+jest.mock("../GlassCanvas", () => ({
+  GlassCanvas: ({ src }: { src: string }) => (
+    <canvas className="glass" aria-hidden="true" data-src={src} />
+  ),
+}));
+
 // jsdom has no IntersectionObserver, which StripControls watches the strip
-// with; its scroll is tested in StripControls.test.tsx.
+// with, nor matchMedia, which the glass reads (GlassCanvas.test.tsx); its
+// scroll is tested in StripControls.test.tsx.
 beforeAll(async () => {
   Object.defineProperty(window, "IntersectionObserver", {
     configurable: true,
@@ -34,6 +48,10 @@ beforeAll(async () => {
       observe() {}
       disconnect() {}
     },
+  });
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () => ({ matches: false }),
   });
 });
 
@@ -98,21 +116,32 @@ describe("HomeHero", () => {
     });
   });
 
-  it("offers a site visit and WhatsApp, in that order", async () => {
+  it("asks for an email, sent with the site visit button", async () => {
+    // 2026-11-14: one field that sends a lead at once, in place of a link to
+    // /contact and a WhatsApp button.
     await renderServer(<HomeHero />);
-    const visit = screen.getByRole("link", { name: "Book a site visit" });
-    const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
-    expect(visit).toHaveAttribute("href", "/contact");
-    expect(whatsapp.getAttribute("href")).toMatch(/^https:\/\/wa\.me\/\d+\?text=/);
-    expect(visit.compareDocumentPosition(whatsapp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const field = screen.getByRole("textbox", { name: "Email" });
+    expect(field).toHaveAttribute("type", "email");
+    const button = screen.getByRole("button", { name: HOME_PAGE.hero.visitCta });
+    expect(button).toHaveAttribute("type", "submit");
+    expect(field.closest("form")).toBe(button.closest("form"));
   });
 
-  it("pre-fills the WhatsApp message with the topic and the project", async () => {
-    await renderServer(<HomeHero />);
-    const href = screen.getByRole("link", { name: "WhatsApp" }).getAttribute("href") ?? "";
-    expect(decodeURIComponent(href.split("text=")[1] ?? "")).toBe(
-      "Hi, I'm interested in home automation for my villa.",
-    );
+  it("offers no WhatsApp button and no link away from the hero's own field", async () => {
+    // WhatsApp stays in the contact bar and the footer (2026-11-14).
+    const { container } = await renderServer(<HomeHero />);
+    expect(screen.queryByRole("link", { name: "WhatsApp" })).toBeNull();
+    const copy = container.querySelector("section[data-hero] > div")!;
+    expect(within(copy as HTMLElement).queryAllByRole("link")).toEqual([]);
+  });
+
+  it("draws the glass first, behind everything, from the small ground picture", async () => {
+    const { container } = await renderServer(<HomeHero />);
+    const hero = container.querySelector("section[data-hero]")!;
+    const canvas = hero.firstElementChild!;
+    expect(canvas.tagName).toBe("CANVAS");
+    expect(canvas).toHaveAttribute("aria-hidden", "true");
+    expect(canvas).toHaveAttribute("data-src", GROUND);
   });
 
   describe("the strip", () => {
@@ -303,15 +332,15 @@ describe("HomeHero", () => {
       expect(proof().textContent).not.toMatch(/Smarthaus/);
     });
 
-    it("comes after the CTAs in reading order, and before the strip", async () => {
+    it("comes after the email field in reading order, then the marks, then the strip", async () => {
       await renderServer(<HomeHero />);
-      const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
-      expect(
-        whatsapp.compareDocumentPosition(proof()) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-      expect(
-        proof().compareDocumentPosition(strip()) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
+      const form = screen.getByRole("textbox", { name: "Email" }).closest("form")!;
+      const marks = document.querySelector("[data-hero-brands]")!;
+      const following = (a: Node, b: Node) =>
+        Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(following(form, proof())).toBe(true);
+      expect(following(proof(), marks)).toBe(true);
+      expect(following(marks, strip())).toBe(true);
     });
 
     it("shows no faces any more", async () => {
@@ -328,5 +357,70 @@ describe("HomeHero", () => {
 
   it("contains no em dash", async () => {
     expect(await renderMarkup(<HomeHero />)).not.toContain("—");
+  });
+});
+
+describe("HomeHero, the makers' marks", () => {
+  const rail = () => document.querySelector("[data-hero-brands]") as HTMLElement;
+  const runs = () => Array.from(rail().querySelectorAll(".brandList"));
+
+  it("lays the list end to end, enough times for the loop to have no seam", async () => {
+    await renderServer(<HomeHero />);
+    expect(runs()).toHaveLength(BRAND_RUNS);
+    for (const run of runs()) expect(run.querySelectorAll("img")).toHaveLength(BRANDS.length);
+  });
+
+  it("makes only the first run a list; the copies are bare images, for the element budget", async () => {
+    await renderServer(<HomeHero />);
+    const [first, ...copies] = runs();
+    expect(first!.tagName).toBe("UL");
+    for (const copy of copies) {
+      expect(copy.tagName).toBe("DIV");
+      expect(copy.querySelectorAll("li")).toHaveLength(0);
+    }
+  });
+
+  it("names the first run as a list, and reads each maker once", async () => {
+    await renderServer(<HomeHero />);
+    const list = screen.getByRole("list", { name: BRANDS_LABEL });
+    expect(
+      within(list)
+        .getAllByRole("img")
+        .map((img) => img.getAttribute("alt")),
+    ).toEqual(BRANDS.map((b) => b.name));
+    for (const brand of BRANDS)
+      expect(screen.getAllByRole("img", { name: brand.name })).toHaveLength(1);
+  });
+
+  it("hides every other run from AT, with no words on its marks", async () => {
+    await renderServer(<HomeHero />);
+    const [, ...copies] = runs();
+    for (const copy of copies) {
+      expect(copy).toHaveAttribute("aria-hidden", "true");
+      expect(copy).toHaveAttribute("data-copy", "");
+      for (const img of copy.querySelectorAll("img")) expect(img).toHaveAttribute("alt", "");
+    }
+  });
+
+  it("reserves every mark's box at its own size", async () => {
+    await renderServer(<HomeHero />);
+    const [first] = runs();
+    Array.from(first!.querySelectorAll("img")).forEach((img, i) => {
+      expect(img).toHaveAttribute("src", `/hero/brands/${BRANDS[i]!.logo}`);
+      expect(img).toHaveAttribute("width", String(BRANDS[i]!.width));
+      expect(img).toHaveAttribute("height", String(BRANDS[i]!.height));
+    });
+  });
+
+  it("sits between the proofs and the pause button, outside the strip", async () => {
+    await renderServer(<HomeHero />);
+    expect(strip().contains(rail())).toBe(false);
+    const pause = screen.getByRole("button", { name: "Pause the images" });
+    expect(rail().compareDocumentPosition(pause) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("puts no link and nothing focusable in the rail", async () => {
+    await renderServer(<HomeHero />);
+    expect(rail().querySelectorAll("a, button, [tabindex]")).toHaveLength(0);
   });
 });

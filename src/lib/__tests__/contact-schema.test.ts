@@ -1,7 +1,13 @@
 /**
  * @jest-environment node
  */
-import { contactSchema, shortContactSchema, INTERESTS, MAX_LENGTH } from "@/lib/contact-schema";
+import {
+  contactSchema,
+  heroLeadSchema,
+  shortContactSchema,
+  INTERESTS,
+  MAX_LENGTH,
+} from "@/lib/contact-schema";
 
 /**
  * The error strings are asserted verbatim, not by shape. They are the copy the
@@ -327,5 +333,51 @@ describe("length caps", () => {
       expect(result.data.community).toBeUndefined();
       expect(result.data.message).toBeUndefined();
     }
+  });
+});
+
+describe("the hero's email field (heroLeadSchema)", () => {
+  // An address alone, and here it is required, where every other form makes
+  // it optional (2026-11-14).
+  const parse = (email: unknown) => heroLeadSchema.safeParse({ email });
+  const message = (email: unknown) => {
+    const result = parse(email);
+    return result.success ? null : result.error.issues[0]!.message;
+  };
+
+  it("accepts an address, trimmed", () => {
+    expect(parse("  nadia@example.com ")).toEqual({
+      success: true,
+      data: { email: "nadia@example.com" },
+    });
+  });
+
+  it.each(["nadia@example.com", "n.rahman+site@studio.ae", "a@b.co"])("accepts %p", (email) => {
+    expect(parse(email).success).toBe(true);
+  });
+
+  it.each(["", "   "])("asks for one when %p is all there is", (email) => {
+    expect(message(email)).toBe("Add your email so we can reply.");
+  });
+
+  it.each(["nadia", "nadia@", "@example.com", "nadia@example", "nadia example.com"])(
+    "refuses %p",
+    (email) => {
+      expect(message(email)).toBe("Check the email address.");
+    },
+  );
+
+  it("refuses an address longer than the field allows", () => {
+    const long = `${"a".repeat(MAX_LENGTH.email)}@x.ae`;
+    expect(message(long)).toBe("Check the email address.");
+  });
+
+  it.each([undefined, null, 42])("refuses %p, which is not text", (email) => {
+    expect(parse(email).success).toBe(false);
+  });
+
+  it("holds nothing but the address", () => {
+    const result = heroLeadSchema.safeParse({ email: "a@b.co", name: "x", phone: "y" });
+    expect(result.success && Object.keys(result.data)).toEqual(["email"]);
   });
 });

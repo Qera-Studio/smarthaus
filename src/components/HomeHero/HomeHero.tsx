@@ -5,7 +5,7 @@ import { getHomePage } from "../../sanity/content";
 import type { HeroCard } from "../../sanity/types";
 import { Button } from "../Button";
 import { Words } from "../Words";
-import { BRAND_REPEATS, BRANDS, BRANDS_LABEL } from "./brands";
+import { BRAND_RUNS, BRANDS, BRANDS_LABEL } from "./brands";
 import { GlassCanvas } from "./GlassCanvas";
 import { HeroLead } from "./HeroLead";
 import { StripControls } from "./StripControls";
@@ -77,33 +77,42 @@ function Card({
   );
 }
 
-/**
- * One run of the makers' marks. Only the first in the rail is read out; the
- * rest are the loop's filling, hidden from AT.
- */
-function Brands({ copy }: { copy?: boolean }) {
+/** One mark: a small SVG or PNG, which next/image would only wrap in a loader it cannot use. */
+function Mark({ brand, named }: { brand: (typeof BRANDS)[number]; named: boolean }) {
   return (
-    <ul
-      className={styles.brandList}
-      aria-label={copy ? undefined : BRANDS_LABEL}
-      aria-hidden={copy ? "true" : undefined}
-      data-copy={copy ? "" : undefined}
-    >
-      {BRANDS.map((brand) => (
-        <li key={brand.name}>
-          {/* A small SVG or PNG mark: next/image would only wrap it in a
-              loader it cannot use. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            className={styles.brand}
-            src={`/hero/brands/${brand.logo}`}
-            alt={copy ? "" : brand.name}
-            width={brand.width}
-            height={brand.height}
-          />
-        </li>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className={styles.brand}
+      src={`/hero/brands/${brand.logo}`}
+      alt={named ? brand.name : ""}
+      width={brand.width}
+      height={brand.height}
+    />
+  );
+}
+
+/**
+ * The makers' marks: one named list, read once, then the loop's copies, bare
+ * images hidden from AT.
+ */
+function Brands() {
+  return (
+    <>
+      <ul className={styles.brandList} aria-label={BRANDS_LABEL}>
+        {BRANDS.map((brand) => (
+          <li key={brand.name}>
+            <Mark brand={brand} named />
+          </li>
+        ))}
+      </ul>
+      {Array.from({ length: BRAND_RUNS - 1 }, (_, run) => (
+        <div key={run} className={styles.brandList} aria-hidden="true" data-copy="">
+          {BRANDS.map((brand) => (
+            <Mark key={brand.name} brand={brand} named={false} />
+          ))}
+        </div>
       ))}
-    </ul>
+    </>
   );
 }
 
@@ -127,11 +136,12 @@ function Brands({ copy }: { copy?: boolean }) {
  * and the marks stand in a row.
  *
  * Replaced FluidHero on 2026-10-28; src/components/FluidHero stays, unmounted.
- * The h1 is the page's only one, and the LCP element: the ground picture is
- * a few kilobytes stretched over the screen, which the browser does not count,
- * and the strip's first card is now mostly below the fold. That card is still
- * fetched at high priority, the next three at the default, and the rest at
- * low (see Load).
+ * The h1 is the page's only one. The largest paint is usually the section
+ * itself: the ground picture, painted as its background, which is 3KB and
+ * preloaded at high priority so it lands with the first paint (measured
+ * 2026-11-14, e2e/home-hero.spec.ts). The strip's first card is now mostly
+ * below the fold; it is still fetched at high priority, the next three at the
+ * default, and the rest at low (see Load).
  */
 export async function HomeHero() {
   const { hero } = await getHomePage();
@@ -162,9 +172,6 @@ export async function HomeHero() {
       <div className={styles.brands} data-hero-brands>
         <div className={styles.brandTrack}>
           <Brands />
-          {Array.from({ length: 2 * BRAND_REPEATS - 1 }, (_, index) => (
-            <Brands key={index} copy />
-          ))}
         </div>
       </div>
 

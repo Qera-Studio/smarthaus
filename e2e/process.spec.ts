@@ -1,7 +1,13 @@
 import type { Page } from "@playwright/test";
 
 import { test, expect } from "./fixtures";
-import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
+import {
+  expectAccessible,
+  expectHydrated,
+  expectNoEmDash,
+  expectNoHorizontalOverflow,
+  withConsentDecided,
+} from "./checks";
 
 /**
  * The "Our Process" stack: six full-screen sheets, each pinned at the top of
@@ -49,6 +55,12 @@ async function scrollTo(page: Page, y: number) {
   await page.evaluate(
     () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
   );
+  // And the first sheet's snap has finished: a scroll across its line starts
+  // a 600ms grow or shrink (SheetSnap), and a sheet measured part way through
+  // it was up to 3px off (an iPhone 17, 2026-11-14).
+  await sheets(page)
+    .first()
+    .evaluate((sheet) => Promise.all(sheet.getAnimations().map((a) => a.finished)));
 }
 
 /**
@@ -162,8 +174,14 @@ test("no em dashes in the copy", async ({ page }) => {
 test("each sheet is one screen tall, and its copy and pictures fit inside it", async ({ page }) => {
   const viewport = page.viewportSize()!;
   const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+  // The layout, with the first sheet's snap set aside: SheetSnap draws it at
+  // 80% until it has covered four fifths of the screen, a scale over the
+  // layout this pins (2026-11-14). Taken off and put back in one go, so
+  // nothing animates between.
   const sizes = await sheets(page).evaluateAll((all) =>
     all.map((sheet) => {
+      const snap = sheet.getAttribute("data-snap");
+      sheet.removeAttribute("data-snap");
       const box = sheet.getBoundingClientRect();
       const floor = box.bottom - parseFloat(getComputedStyle(sheet).paddingBlockEnd);
       const parts = [...sheet.children].map((child) => child.getBoundingClientRect());
@@ -173,6 +191,7 @@ test("each sheet is one screen tall, and its copy and pictures fit inside it", a
         overflow: Math.max(...parts.map((part) => part.bottom - floor)),
         // The smallest picture, so a frame squeezed to nothing fails.
         frame: Math.min(...parts.slice(1).map((part) => part.height), Infinity),
+        restore: snap === null ? undefined : sheet.setAttribute("data-snap", snap),
       };
     }),
   );
@@ -246,7 +265,9 @@ test("ends on Care, then the stack leaves together", async ({ page }) => {
   expect(await sheetAt(page, width / 2, (height * 3) / 4)).toBe(-1);
 });
 
-test("leaves the section above alone: no overlap and nothing held", async ({ page }) => {
+test("starts where the section above ends: no overlap, and no animation on it", async ({
+  page,
+}) => {
   const above = section(page).locator("xpath=preceding-sibling::*[1]");
   const [aboveBottom, top] = await Promise.all([
     above.evaluate((el) => el.getBoundingClientRect().bottom),
@@ -284,5 +305,105 @@ test.describe("a short screen", () => {
       expect(sheet.position).toBe("static");
       sheet.frames.forEach((frame) => expect(frame).toBeGreaterThan(80));
     }
+  });
+});
+
+// 2026-11-14: the hardware section, handed to the stack, holds still while the
+// first sheet rises over it; the first sheet rises at 80% and grows to fill
+// the screen once it has covered four fifths of it (SheetSnap).
+test.describe("the hold and the snap", () => {
+  const held = (page: Page) => page.locator("[data-process-held]");
+  const first = (page: Page) => sheets(page).first();
+
+  test.beforeEach(async ({ page }) => {
+    await withConsentDecided(page);
+    await page.goto("/");
+    await expectHydrated(page);
+    await expect(page.locator("[data-process-stack]")).toHaveAttribute("style", /--held-block/);
+  });
+
+  test("the hardware holds still once its foot reaches the screen's", async ({ page }) => {
+    const { height } = page.viewportSize()!;
+    const [top] = await naturalTops(page);
+    // The first sheet half way up the screen, then a quarter of a screen on.
+    await scrollTo(page, top! - height / 2);
+    const before = await held(page).evaluate((el) => el.getBoundingClientRect().bottom);
+    await scrollTo(page, top! - height / 4);
+    const after = await held(page).evaluate((el) => el.getBoundingClientRect().bottom);
+    expect(Math.abs(after - before)).toBeLessThanOrEqual(1);
+  });
+
+  test("its foot pins at the screen's foot when nothing is fixed over it", async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 0) < 1024, "below lg the nav floats over the foot");
+    const { height } = page.viewportSize()!;
+    const [top] = await naturalTops(page);
+    await scrollTo(page, top! - height / 4);
+    const bottom = await held(page).evaluate((el) => el.getBoundingClientRect().bottom);
+    expect(Math.abs(bottom - height)).toBeLessThanOrEqual(1);
+  });
+
+  test("the first sheet paints over the held hardware as it rises", async ({ page }) => {
+    const { width, height } = page.viewportSize()!;
+    const [top] = await naturalTops(page);
+    await scrollTo(page, top! - height / 2);
+    expect(await sheetAt(page, width / 2, (height * 3) / 4)).toBe(0);
+  });
+
+  test("the first sheet rises at 80% of its size", async ({ page }) => {
+    const { width, height } = page.viewportSize()!;
+    const [top] = await naturalTops(page);
+    await scrollTo(page, top! - height / 2);
+    await expect(first(page)).toHaveAttribute("data-snap", "waiting");
+    await expect
+      .poll(() => first(page).evaluate((el) => el.getBoundingClientRect().width))
+      .toBeCloseTo(width * 0.8, 0);
+  });
+
+  test("and fills the screen once it has covered four fifths of it", async ({ page }) => {
+    const { width, height } = page.viewportSize()!;
+    const [top] = await naturalTops(page);
+    await scrollTo(page, top! - height * 0.1);
+    await expect(first(page)).toHaveAttribute("data-snap", "in");
+    await expect
+      .poll(() => first(page).evaluate((el) => el.getBoundingClientRect().width))
+      .toBeCloseTo(width, 0);
+  });
+
+  test("and shrinks again on the way back", async ({ page }) => {
+    const { height } = page.viewportSize()!;
+    const [top] = await naturalTops(page);
+    await scrollTo(page, top!);
+    await expect(first(page)).toHaveAttribute("data-snap", "in");
+    await scrollTo(page, top! - height / 2);
+    await expect(first(page)).toHaveAttribute("data-snap", "waiting");
+  });
+
+  test("leaves the hardware's buttons where a keyboard can see them", async ({ page }) => {
+    // Pinned at the very foot, its CTA sat under the cookie banner where no
+    // scroll could bring it out (WCAG 2.4.11, found 2026-11-14).
+    const { height } = page.viewportSize()!;
+    const [top] = await naturalTops(page);
+    // Held still first, so the card on screen is not caught sliding in; and
+    // first, since reaching the button scrolls the page.
+    await held(page).getByRole("button", { name: "Pause automatic advance" }).click();
+    await scrollTo(page, top! - height / 4);
+    const cta = held(page).getByRole("link").last();
+    await expect
+      .poll(async () => {
+        const box = (await cta.boundingBox())!;
+        return box.y + box.height;
+      })
+      .toBeLessThanOrEqual(height);
+  });
+});
+
+test.describe("the hold and the snap, under reduced motion", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  test("nothing holds and nothing snaps", async ({ page }) => {
+    await page.goto("/");
+    await expectHydrated(page);
+    await expect(page.locator("[data-process-held]")).toHaveCSS("position", "static");
+    await expect(sheets(page).first()).not.toHaveAttribute("data-snap", /.*/);
   });
 });

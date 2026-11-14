@@ -136,11 +136,18 @@ describe("HomeHero.module.scss", () => {
       expect(rule(".card", reduce())).toMatch(/scroll-snap-align:\s*start/);
     });
 
-    test("drops the loop's second copy and the pause button", () => {
+    test("drops the loops' second copies and the pause button", () => {
       expect(reduce()).toMatch(
-        /\.list\[data-copy\],\s*\.control\[data-pause\]\s*\{\s*display:\s*none/,
+        /\.list\[data-copy\],\s*\.brandList\[data-copy\],\s*\.control\[data-pause\]\s*\{\s*display:\s*none/,
       );
       expect(reduce()).not.toMatch(/\.control\s*\{/);
+    });
+
+    test("stands the makers' marks still, wrapped and centred", () => {
+      expect(rule(".brandTrack", reduce())).toMatch(/justify-content:\s*center/);
+      const list = rule(".brandList", reduce());
+      expect(list).toMatch(/flex-wrap:\s*wrap/);
+      expect(list).toMatch(/justify-content:\s*center/);
     });
 
     test("comes after .card and .control, so it wins at equal specificity", () => {
@@ -224,26 +231,25 @@ describe("HomeHero.module.scss", () => {
       expect(strip).toMatch(/overflow:\s*hidden/);
     });
 
-    test("the hero is exactly the screen under what sits above it, with a floor", () => {
+    test("the glass fills the screen to the strip's top edge, at 95% of it", () => {
+      // 2026-11-14: the strip shows only its top above the fold, so the page
+      // asks to be scrolled; first at 90%, then 95% the same day.
       const hero = rule(".hero");
+      expect(hero).toMatch(/--hero-peek:\s*5svh/);
       expect(hero).toMatch(
-        // Sass drops the calc() inside max(); the arithmetic is the same.
-        /block-size:\s*max\(var\(--hero-min-block\), (?:calc\()?100svh - var\(--hero-above\) - var\(--hero-below\)\)?\)/,
+        /min-block-size:\s*calc\(100svh - var\(--hero-above\) - var\(--hero-below\) - var\(--hero-peek\) \+ var\(--hero-strip-block\)\)/,
       );
-      expect(hero).not.toMatch(/min-block-size/);
+      // A minimum, so copy that needs more room pushes the strip down rather
+      // than running under it. The old fixed height and its floor are gone.
+      expect(hero).not.toMatch(/(^|[;\s])block-size:/);
+      expect(css).not.toMatch(/--hero-min-block/);
       expect(hero).not.toMatch(/padding-block-end/);
     });
 
-    test("on a short phone the copy sits tighter and the floor gives way", () => {
-      // An iPhone 17 in Safari: the strip was about 100px and ran 6px under
-      // the nav (2026-11-02). Below lg and under 45rem tall only.
+    test("on a short phone the copy sits tighter", () => {
       const short = media("(max-width: 1023px) and (max-height: 45rem)");
-      expect(short).toMatch(/--hero-min-block:\s*34rem/);
       expect(short).toMatch(/(^|[;{\s])gap:\s*8px/);
       expect(short).toMatch(/padding-block-start:\s*8px/);
-      // The floor still sits under the 570px a short phone leaves, and above
-      // what the copy alone needs.
-      expect(rule(".hero")).toMatch(/--hero-min-block:\s*36rem/);
     });
 
     test("below lg it ends above the floating nav; from lg the nav is above", () => {
@@ -255,27 +261,31 @@ describe("HomeHero.module.scss", () => {
       expect(css).toMatch(/--hero-below:\s*0px/);
     });
 
-    test("the strip is a share of the screen, giving way when the copy needs room", () => {
+    test("the strip keeps its own height, a share of the screen, on the dark ground", () => {
+      // It no longer gives way to the copy: the hero grows instead (above).
       const strip = rule(".strip");
       expect(rule(".hero")).toMatch(/--hero-strip-block:\s*42svh/);
-      expect(strip).toMatch(/flex:\s*0 1 var\(--hero-strip-block\)/);
-      expect(strip).toMatch(/min-block-size:\s*0/);
+      expect(strip).toMatch(/flex:\s*none/);
+      expect(strip).toMatch(/block-size:\s*var\(--hero-strip-block\)/);
+      expect(strip).toMatch(/background-color:\s*var\(--brown-950\)/);
       expect(rule(".controls")).toMatch(/flex:\s*none/);
     });
 
-    test("everything reads from the start edge: nothing is centred any more", () => {
-      expect(rule(".hero")).not.toMatch(/text-align/);
-      expect(rule(".hero")).not.toMatch(/align-items/);
-      expect(rule(".ctas")).not.toMatch(/justify-content/);
+    test("the copy is centred, as the design sets it", () => {
+      // 2026-11-14 (Figma 4886:1856): centred on the glass, where until then
+      // everything read from the start edge.
+      const copy = rule(".copy");
+      expect(copy).toMatch(/align-items:\s*center/);
+      expect(copy).toMatch(/text-align:\s*center/);
+      expect(proofRule()).toMatch(/justify-content:\s*center/);
       expect(rule(".copy")).not.toMatch(/padding-inline/);
     });
 
-    test("from lg the proofs sit in the message's bottom corner, on the buttons' foot", () => {
-      expect(css).toMatch(/\.copy > \*\s*\{\s*grid-area:\s*1\s*\/\s*1/);
-      const corner = css.match(/\.copy \.proof\s*\{([^}]*)\}/)?.[1] ?? "";
-      expect(corner).toMatch(/justify-self:\s*end/);
-      expect(corner).toMatch(/align-self:\s*end/);
+    test("the proofs sit under the email field at every width, never in a corner", () => {
       expect(rule(".copy")).toMatch(/flex-direction:\s*column/);
+      expect(css).not.toMatch(/grid-area/);
+      expect(css).not.toMatch(/justify-self:\s*end/);
+      expect(proofRule()).toMatch(/margin-block-start:\s*24px/);
     });
 
     test("one line with drawn rules wherever it fits, wrapping with none on a phone", () => {
@@ -337,13 +347,13 @@ describe("HomeHero.module.scss", () => {
       );
     });
 
-    test("the proofs are set as the old lines were: small, 70%, no weight, no outline", () => {
+    test("the proofs are small, in the light ink at full strength, no weight, no outline", () => {
+      // Full strength on the dark ground: the glass can be as bright as its
+      // cap (glass-shader.ts), where 70% would fall under 4.5:1.
       const proof = proofRule();
       expect(proof).toMatch(/font-size:\s*var\(--font-size-sm\)/);
       expect(proof).toMatch(/(^|[;\s])gap:\s*4px 12px/);
-      expect(proof).toMatch(
-        /color:\s*color-mix\(in srgb, var\(--color-text-primary\) 70%, transparent\)/,
-      );
+      expect(proof).toMatch(/color:\s*var\(--color-text-inverse\)/);
       expect(proof).not.toMatch(/opacity|font-weight|border/);
       expect(proof).toMatch(/list-style:\s*none/);
       expect(css).not.toMatch(/\.pair|\.divider/);
@@ -362,9 +372,26 @@ describe("HomeHero.module.scss", () => {
       expect(media("(forced-colors: active)")).toMatch(/background-color:\s*CanvasText/);
     });
 
-    test("the subtitle stops at 600px, and the CTAs stand a little further off it", () => {
-      expect(rule(".lede")).toMatch(/max-inline-size:\s*37\.5rem/);
-      expect(rule(".ctas")).toMatch(/margin-block-start:\s*clamp\(40px, 6\.5vh, 64px\)/);
+    test("the subtitle runs to two lines on a desktop, and the field stands off it", () => {
+      expect(rule(".lede")).toMatch(/max-inline-size:\s*56rem/);
+      expect(rule(".lede")).toMatch(/font-size:\s*var\(--hero-lede-size\)/);
+      expect(rule(".leadForm")).toMatch(/margin-block-start:\s*clamp\(40px, 6\.5vh, 64px\)/);
+    });
+
+    test("sets the title and the subtitle at the sizes Shivanshu settled on", () => {
+      // The design's frame, then 4px and 2px under it (2026-11-14).
+      const hero = rule(".hero");
+      expect(hero).toMatch(/--hero-title-size:\s*clamp\(2\.5rem, calc\(6\.6vw - 4px\), 6\.25rem\)/);
+      expect(hero).toMatch(
+        /--hero-lede-size:\s*clamp\(1\.125rem, calc\(1\.7vw - 2px\), 1\.375rem\)/,
+      );
+      expect(rule(".title")).toMatch(/font-size:\s*var\(--hero-title-size\)/);
+    });
+
+    test("sets the copy in the light ink, on the dark ground", () => {
+      for (const selector of [".title", ".lede"]) {
+        expect(rule(selector)).toMatch(/color:\s*var\(--color-text-inverse\)/);
+      }
     });
 
     test("lists draw no bullets", () => {
@@ -405,7 +432,9 @@ describe("HomeHero.module.scss", () => {
       expect(motion()).toMatch(/animation-name:\s*hero-strip, hero-arrive/);
     });
 
-    const fades = `${gate} .ctas, ${gate} .proof, ${gate} .controls`;
+    // The email field took the CTAs' place, and the makers' marks join the
+    // last step (2026-11-14).
+    const fades = `${gate} .leadForm, ${gate} .leadDone, ${gate} .proof, ${gate} .brands, ${gate} .controls`;
     const ms = (name: string) =>
       Number(rule(gate, motion()).match(new RegExp(`--${name}:\\s*(\\d+)ms`))?.[1]);
 
@@ -431,14 +460,19 @@ describe("HomeHero.module.scss", () => {
     });
 
     test("in order: title, subtitle, then the CTAs with the strip, then the two lines", () => {
-      expect(rule(`${gate} .ctas`, motion())).toMatch(/animation-delay:\s*var\(--intro-together\)/);
+      expect(rule(`${gate} .leadForm, ${gate} .leadDone`, motion())).toMatch(
+        /animation-delay:\s*var\(--intro-together\)/,
+      );
       expect(rule(`${gate} .track`, motion())).toMatch(
         /animation-delay:\s*0s, var\(--intro-together\)/,
       );
       // The list that opens right after a closing brace, not the tail of the
       // longer list that sets the keyframes.
       expect(
-        rule(`}\n${gate} .proof, ${gate} .controls`, motion().replace(/\}\s+/g, "}\n")),
+        rule(
+          `}\n${gate} .proof, ${gate} .brands, ${gate} .controls`,
+          motion().replace(/\}\s+/g, "}\n"),
+        ),
       ).toMatch(/animation-delay:\s*var\(--intro-rest\)/);
       expect(ms("intro-lede-start")).toBeLessThan(ms("intro-together"));
       expect(ms("intro-together")).toBeLessThan(ms("intro-rest"));
@@ -561,7 +595,7 @@ describe("HomeHero.module.scss", () => {
 
     test("waits while the splash covers the page", () => {
       const waiting = rule(
-        `${held} .word, ${held} .ctas, ${held} .proof, ${held} .controls, ${held} .track`,
+        `${held} .word, ${held} .leadForm, ${held} .leadDone, ${held} .proof, ${held} .brands, ${held} .controls, ${held} .track`,
         motion(),
       );
       expect(waiting).toMatch(/animation-play-state:\s*paused/);
@@ -620,6 +654,174 @@ describe("HomeHero.module.scss", () => {
       expect(css).not.toMatch(/hero-scroll/);
       // Without them the photograph is its card's own size.
       expect(rule(".image")).toMatch(/block-size:\s*100%/);
+    });
+  });
+
+  describe("the glass's ground, drawn by the stylesheet first", () => {
+    const ground = () => rule(".hero::before");
+
+    test("is the small ground picture under a drawn line at each reed's edge", () => {
+      const g = ground();
+      expect(g).toMatch(/background-color:\s*var\(--brown-950\)/);
+      expect(g).toMatch(/url\("\/hero\/glass\/ground\.webp"\)/);
+      expect(g).toMatch(/background-size:\s*var\(--hero-reed\) 100%, cover/);
+      expect(g).toMatch(/background-repeat:\s*repeat-x, no-repeat/);
+      expect(existsSync(join(process.cwd(), "public/hero/glass/ground.webp"))).toBe(true);
+    });
+
+    test("puts a reed edge on the centre line, as the canvas does", () => {
+      expect(ground()).toMatch(
+        /background-position:\s*calc\(50% \+ var\(--hero-reed\) \/ 2\) 0, center/,
+      );
+    });
+
+    test("sizes a reed as glass.ts does: the design's share, held between 40 and 80px", () => {
+      expect(rule(".hero")).toMatch(/--hero-reed:\s*clamp\(40px, calc\(100vw \/ 24\.3\), 80px\)/);
+    });
+
+    test("never zooms the picture past 1.9 screens wide on a tall screen, as cover() does not", () => {
+      const portrait = rule(".hero::before", media("(orientation: portrait)"));
+      expect(portrait).toMatch(/background-size:\s*var\(--hero-reed\) 100%, 190vw auto/);
+      expect(portrait).toMatch(/background-position:[^;]*top/);
+    });
+
+    test("runs edge to edge, up under the nav, and stops at the strip's top", () => {
+      const g = ground();
+      expect(g).toMatch(/inset-inline:\s*calc\(50% - 50vw\)/);
+      expect(g).toMatch(
+        /inset-block:\s*calc\(-1 \* var\(--hero-nav-over\)\) var\(--hero-strip-block\)/,
+      );
+    });
+
+    test("sits under every box of the page, and takes no pointer", () => {
+      const g = ground();
+      expect(g).toMatch(/z-index:\s*var\(--hero-behind\)/);
+      expect(g).toMatch(/pointer-events:\s*none/);
+      expect(rule(".hero")).toMatch(/--hero-behind:\s*-1/);
+      expect(rule(".hero")).toMatch(/position:\s*relative/);
+      // Not isolated: the negative level is the page's, under the nav.
+      expect(rule(".hero")).not.toMatch(/isolation|z-index/);
+    });
+  });
+
+  describe("the glass's canvas", () => {
+    test("covers exactly the ground's box", () => {
+      const glass = rule(".glass");
+      expect(glass).toMatch(/inset-block-start:\s*calc\(-1 \* var\(--hero-nav-over\)\)/);
+      expect(glass).toMatch(/inline-size:\s*100vw/);
+      expect(glass).toMatch(
+        /block-size:\s*calc\(100% \+ var\(--hero-nav-over\) - var\(--hero-strip-block\)\)/,
+      );
+      expect(glass).toMatch(/z-index:\s*var\(--hero-behind\)/);
+      expect(glass).toMatch(/pointer-events:\s*none/);
+    });
+
+    test("is unseen until its first frame is drawn, then fades in", () => {
+      expect(rule(".glass")).toMatch(/opacity:\s*0/);
+      expect(rule(".glass")).toMatch(/transition-property:\s*opacity/);
+      expect(rule(".hero[data-ready] .glass")).toMatch(/opacity:\s*1/);
+    });
+
+    test("reaches under the nav from lg only, where the nav sits on the hero", () => {
+      expect(rule(".hero")).toMatch(/--hero-nav-over:\s*0px/);
+      expect(media("(min-width: 1024px)")).toMatch(
+        /--hero-nav-over:\s*calc\(var\(--nav-rest-inset\) \+ var\(--nav-top-block-size\)\)/,
+      );
+    });
+  });
+
+  describe("the email field", () => {
+    test("is 44px tall and 376px wide, the button filling what the frame leaves", () => {
+      const field = rule(".field");
+      expect(field).toMatch(/block-size:\s*var\(--size-touch-target\)/);
+      expect(field).toMatch(/inline-size:\s*min\(100%, 23\.5rem\)/);
+      expect(rule(".field button")).toMatch(/block-size:\s*100%/);
+    });
+
+    test("lets the glass show through a light wash of the dark ground", () => {
+      expect(rule(".field")).toMatch(
+        /background-color:\s*color-mix\(in srgb, var\(--brown-950\) 40%, transparent\)/,
+      );
+    });
+
+    test("shows focus by its frame going to full strength, in place of a ring", () => {
+      // The ring was removed at Shivanshu's call (2026-11-14); the frame is
+      // the field's focus indicator.
+      expect(rule(".field")).toMatch(
+        /border-color:\s*color-mix\(in srgb, var\(--color-text-inverse\) 60%, transparent\)/,
+      );
+      expect(rule(".field:focus-within")).toMatch(/border-color:\s*var\(--color-text-inverse\)/);
+      expect(rule(".input")).toMatch(/outline-style:\s*none/);
+    });
+
+    test("sets what is typed at 16px, so a phone does not zoom into it", () => {
+      expect(rule(".input")).toMatch(/font-size:\s*var\(--font-size-base\)/);
+    });
+
+    test("keeps an address the browser filled in its own colours, not the browser's blue", () => {
+      const filled =
+        css.match(/\.input:autofill,\s*\.input:-webkit-autofill\s*\{([^}]*)\}/)?.[1] ?? "";
+      expect(filled).toMatch(/-webkit-text-fill-color:\s*var\(--color-text-inverse\)/);
+      expect(filled).toMatch(/transition-delay:\s*99999s/);
+    });
+
+    test("reads its placeholder in the light ink, at full opacity across browsers", () => {
+      const placeholder = rule(".input::placeholder");
+      expect(placeholder).toMatch(/var\(--color-text-inverse\) 70%/);
+      expect(placeholder).toMatch(/opacity:\s*1/);
+    });
+
+    test("underlines the link after a send, ringed on keyboard focus", () => {
+      expect(rule(".leadDone a")).toMatch(/text-decoration-line:\s*underline/);
+      expect(css).toMatch(
+        /\.leadDone a:focus-visible\s*\{\s*outline:\s*2px solid var\(--color-text-inverse\)/,
+      );
+    });
+  });
+
+  describe("the makers' marks", () => {
+    test("loop by one run of three, steadily, and never under reduced motion", () => {
+      const motion = media("(prefers-reduced-motion: no-preference)");
+      const track = rule(".brandTrack", motion);
+      expect(track).toMatch(/animation-name:\s*hero-marks/);
+      // Sass works the third out: -33.333...%.
+      expect(css).toMatch(/@keyframes hero-marks\s*\{\s*to\s*\{\s*translate:\s*-33\.3{6,}% 0/);
+      expect(css.match(/animation-name:\s*hero-marks/g)).toHaveLength(1);
+      expect(track).toMatch(/animation-duration:\s*var\(--hero-brands-duration\)/);
+      expect(track).toMatch(/animation-iteration-count:\s*infinite/);
+      expect(rule(".hero")).toMatch(/--hero-brands-duration:\s*48s/);
+      expect(rule(".brandTrack")).not.toMatch(/animation/);
+    });
+
+    test("stop with the strip's pause button, the stop WCAG 2.2.2 asks for", () => {
+      const motion = media("(prefers-reduced-motion: no-preference)");
+      expect(motion).toMatch(
+        /:where\(\.hero:has\(\.strip\[data-paused\]\)\) \.brandTrack\s*\{\s*animation-play-state:\s*paused/,
+      );
+    });
+
+    test("do not stop under a pointer: they slow, in StripControls", () => {
+      expect(css).not.toMatch(/\.brandTrack:hover/);
+    });
+
+    test("are one tone, light and let down, whatever colours their files carry", () => {
+      const mark = rule(".brand");
+      expect(mark).toMatch(/filter:\s*brightness\(0\) invert\(1\)/);
+      expect(mark).toMatch(/opacity:\s*var\(--hero-brands-ink\)/);
+    });
+
+    test("show their own colours under forced colours, where white could vanish", () => {
+      // Its own forced-colours block, not the star's, which media() finds first.
+      expect(css).toMatch(/@media \(forced-colors: active\)\s*\{\s*\.brand\s*\{\s*filter:\s*none/);
+    });
+
+    test("run edge to edge, 80px apart, each run ending in its gap", () => {
+      const rail = rule(".brands");
+      expect(rail).toMatch(/inline-size:\s*100vw/);
+      expect(rail).toMatch(/overflow:\s*hidden/);
+      const list = rule(".brandList");
+      expect(list).toMatch(/gap:\s*80px/);
+      expect(list).toMatch(/padding-inline-end:\s*80px/);
     });
   });
 });

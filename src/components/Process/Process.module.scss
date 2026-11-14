@@ -110,9 +110,23 @@ $snap-scale: 0.8;
     // The section before the stack holds still once its foot reaches the
     // screen's, and the first sheet rises over it. Its height is SheetSnap's
     // to tell; until it has, the fallback is so tall that this never pins.
+    //
+    // Its foot pins above whatever is fixed over the screen's foot: the cookie
+    // banner while it shows and, below lg, the floating nav. Pinned at the
+    // very foot, a button near it sat under the banner where no scroll could
+    // bring it out, since a pinned box does not move (WCAG 2.4.11, found
+    // 2026-11-14). The same allowance html's scroll-padding makes for focus.
     .held {
+      --held-foot: calc(
+        var(--nav-float-inset) + var(--nav-bar-block-size) + var(--consent-block-size, 0px)
+      );
+
       position: sticky;
-      inset-block-start: min(0px, calc(100svh - var(--held-block, 1000000px)));
+      inset-block-start: min(0px, calc(100svh - var(--held-block, 1000000px) - var(--held-foot)));
+
+      @include bp-lg {
+        --held-foot: var(--consent-block-size, 0px);
+      }
     }
 
     // Nothing of the page between the held section and the first sheet, and

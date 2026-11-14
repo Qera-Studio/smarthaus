@@ -18,10 +18,15 @@ import { test, expect } from "./fixtures";
  * 2026-11-04: to 1,150 (Shivanshu) for the hero's word-by-word reveal, 22 spans,
  * and the care packages coming back, which put it at 1,111.
  *
+ * 2026-11-14: to 1,200 for the hero redesign (the email form, the glass, the
+ * makers' marks: three runs of ten, the copies bare images) and the footer's
+ * Articles link, which put it at 1,159 with the partner cards gone. Set during
+ * the work, pending Shivanshu's confirmation (docs/launch-gate/pre-launch-fixes.md).
+ *
  * Desktop Chrome only: the markup is the same on every device.
  */
 const BUDGETS = [
-  { path: "/", page: 1150, footer: 540 },
+  { path: "/", page: 1200, footer: 540 },
   { path: "/contact", page: 830, footer: 540 },
   { path: "/pricing", page: 2000, footer: 540 },
 ];

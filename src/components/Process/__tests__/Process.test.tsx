@@ -14,6 +14,16 @@ function sheets() {
   return within(screen.getByRole("list")).getAllByRole("listitem");
 }
 
+// SheetSnap, the stack's one island, asks for the stack's own gate. jsdom has
+// no matchMedia; answering "no stack" keeps it out of these tests, which are
+// about the markup. SheetSnap.test.tsx tests it.
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () => ({ matches: false }),
+  });
+});
+
 describe("Process", () => {
   it("is a region named by its own heading", async () => {
     await renderServer(<Process />);
@@ -57,6 +67,24 @@ describe("Process", () => {
         page.images.map((image) => image.alt),
       );
     });
+  });
+
+  it("shares one box with the section it holds, that section first", async () => {
+    // 2026-11-14: the homepage hands it the hardware, which holds still while
+    // the first sheet rises over it.
+    const { container } = await renderServer(<Process held={<p>The held section</p>} />);
+    const stack = container.querySelector("[data-process-stack]")!;
+    const [held, section] = Array.from(stack.children);
+    expect(held).toHaveAttribute("data-process-held", "");
+    expect(held).toHaveTextContent("The held section");
+    expect(section!.tagName).toBe("SECTION");
+    expect(section).toHaveAttribute("data-process", "");
+  });
+
+  it("draws no held box when it holds nothing", async () => {
+    const { container } = await renderServer(<Process />);
+    expect(container.querySelector("[data-process-held]")).toBeNull();
+    expect(container.querySelector("[data-process-stack] > section[data-process]")).not.toBeNull();
   });
 
   it("no longer offers a scroll region: nothing scrolls sideways", async () => {
@@ -138,9 +166,25 @@ describe("the stack's mechanism", () => {
     expect(scss).not.toMatch(/margin-block-start:\s*calc\(-1/);
   });
 
-  it("ships no client code", async () => {
-    for (const file of readdirSync(dir).filter((name) => /\.tsx?$/.test(name))) {
-      expect(readFileSync(join(dir, file), "utf8")).not.toMatch(/["']use client["']/);
-    }
+  it("holds the section before it with its foot above the banner and the floating nav", async () => {
+    // Pinned at the very foot, a button near it sat under the cookie banner
+    // where no scroll could bring it out (WCAG 2.4.11, found 2026-11-14).
+    const held = scss.slice(scss.indexOf(".held {"), scss.indexOf(".stack {"));
+    expect(held).toMatch(/position:\s*sticky/);
+    expect(held).toMatch(/var\(--held-block, 1000000px\) - var\(--held-foot\)/);
+    expect(held).toMatch(
+      /--held-foot:\s*calc\(\s*var\(--nav-float-inset\) \+ var\(--nav-bar-block-size\) \+ var\(--consent-block-size, 0px\)/,
+    );
+    expect(held).toMatch(/@include bp-lg \{\s*--held-foot:\s*var\(--consent-block-size, 0px\);/);
+  });
+
+  it("ships one client island, SheetSnap, which renders nothing", async () => {
+    // No client code until 2026-11-14: the first sheet's snap needs to know
+    // when it has covered four fifths of the screen, which CSS cannot tell.
+    const client = readdirSync(dir)
+      .filter((name) => /\.tsx?$/.test(name) && !/ \d+\./.test(name))
+      .filter((file) => /["']use client["']/.test(readFileSync(join(dir, file), "utf8")));
+    expect(client).toEqual(["SheetSnap.tsx"]);
+    expect(readFileSync(join(dir, "SheetSnap.tsx"), "utf8")).toMatch(/return null;\s*\}\s*$/);
   });
 });

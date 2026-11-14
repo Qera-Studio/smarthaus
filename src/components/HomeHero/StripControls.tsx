@@ -369,9 +369,9 @@ export function StripControls({
       window.removeEventListener("scroll", onScroll);
       endGlide();
       row?.removeEventListener("animationend", onOpened);
+      // No rate to put back: the marks go with the hero.
       marks?.removeEventListener("pointerenter", slowMarks);
       marks?.removeEventListener("pointerleave", freeMarks);
-      freeMarks();
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onHover);
       el.removeEventListener("pointerleave", onLeave);

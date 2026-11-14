@@ -347,8 +347,8 @@ $hero-lede-words: 24;
   // --- The makers' marks -----------------------------------------------------
 
   // Edge to edge at the glass's foot, as the strip is. The list is laid end to
-  // end four times; moving the track left by half its width puts the third
-  // where the first began, so the loop has no seam (hero-strip).
+  // end three times; moving the track left by a third of its width puts the
+  // second where the first began, so the loop has no seam (hero-marks).
   .brands {
     flex: none;
     inline-size: 100vw;
@@ -497,13 +497,14 @@ $hero-lede-words: 24;
     // button, the stop WCAG 2.2.2 asks for. Under a pointer they slow to a
     // crawl instead (StripControls, BRANDS_HOVER_RATE).
     .brandTrack {
-      animation-name: hero-strip;
+      animation-name: hero-marks;
       animation-duration: var(--hero-brands-duration);
       animation-timing-function: linear;
       animation-iteration-count: infinite;
     }
 
-    .hero:has(.strip[data-paused]) .brandTrack {
+    // In :where(), so it adds nothing to .brandTrack's own 0,1,0.
+    :where(.hero:has(.strip[data-paused])) .brandTrack {
       animation-play-state: paused;
     }
 
@@ -669,6 +670,13 @@ $hero-lede-words: 24;
   @keyframes hero-strip {
     to {
       translate: -50% 0;
+    }
+  }
+
+  // One run of the makers' marks: a third of their track (brands.ts, BRAND_RUNS).
+  @keyframes hero-marks {
+    to {
+      translate: calc(-100% / 3) 0;
     }
   }
 

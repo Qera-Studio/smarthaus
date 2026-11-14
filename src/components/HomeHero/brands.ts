@@ -36,7 +36,9 @@ export const BRANDS: readonly Brand[] = [
 export const BRANDS_LABEL = "Brands we work with";
 
 /**
- * How many times the list is laid end to end in each half of the loop, so a
- * half is wider than any screen: ten marks alone are about 1,600px.
+ * How many times the list is laid end to end. The rail moves by one run and
+ * shows what the other two cover, so two runs must be wider than any screen:
+ * one is about 1,700px. Three, not four, for the page's element budget
+ * (e2e/dom-budget.spec.ts); the copies are bare images for the same reason.
  */
-export const BRAND_REPEATS = 2;
+export const BRAND_RUNS = 3;

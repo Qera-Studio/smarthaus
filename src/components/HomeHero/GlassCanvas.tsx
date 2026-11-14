@@ -130,7 +130,9 @@ function attach(
   };
 
   const tick = (now: number) => {
-    const step = (now - previous) / GLOW_FADE_MS;
+    // Never backwards: a frame's timestamp is when the frame began, which can
+    // be a moment before the pointer handler that asked for it read the clock.
+    const step = Math.max(0, now - previous) / GLOW_FADE_MS;
     previous = now;
     level = target > level ? Math.min(target, level + step) : Math.max(target, level - step);
     draw();

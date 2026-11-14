@@ -15,6 +15,7 @@ import { renderMarkup } from "../../__tests__/helpers/server";
 jest.mock("../contact/actions", () => ({
   submitEnquiry: jest.fn(),
   submitShortEnquiry: jest.fn(),
+  submitHeroLead: jest.fn(),
 }));
 
 const html = () => renderMarkup(<Home />);
@@ -40,7 +41,13 @@ describe("the homepage", () => {
   test("mounts HomeHero, not the fluid canvas or the villa", async () => {
     const markup = await html();
     expect(markup).toContain("data-hero-strip");
-    expect(markup).not.toContain("<canvas");
+    // One canvas since 2026-11-14: the hero's glass, hidden from AT. Not the
+    // fluid hero's, which marked the copy data-hero-quiet.
+    expect(markup.match(/<canvas\b[^>]*>/g)).toEqual([
+      expect.stringMatching(
+        /class="glass"[^>]*aria-hidden="true"|aria-hidden="true"[^>]*class="glass"/,
+      ),
+    ]);
     expect(markup).not.toContain("data-hero-quiet");
     expect(markup).not.toContain("/hero/grid/");
     expect(markup).not.toContain("villa.glb");
@@ -56,15 +63,22 @@ describe("the homepage", () => {
     expect(title?.replace(/<[^>]+>/g, "")).toBe("Home at your fingertips");
   });
 
-  test("keeps the hero CTA and its route, and no longer offers Explore Villa", async () => {
+  test("asks for an email in the hero, sent with the site visit button", async () => {
+    // 2026-11-14: the hero's link to /contact became one field that sends a
+    // lead at once (HeroLead).
     const markup = await html();
-    expect(markup).toMatch(/href="\/contact"[^>]*>Book a site visit</);
+    expect(markup).toMatch(/<input[^>]*id="hero-email"[^>]*type="email"/);
+    expect(markup).toMatch(/<button[^>]*type="submit"[^>]*>Book a site visit<\/button>/);
     expect(markup).not.toMatch(/Explore Villa/);
   });
 
   test("still composes every other section in order", async () => {
     const markup = await html();
-    const order = ["data-hero", "data-process"].map((hook) => markup.indexOf(hook));
+    // data-process="", the section itself: the stack around it and the held
+    // hardware (data-process-stack) come first.
+    const order = ["data-hero", "data-stats", 'aria-labelledby="hardware', 'data-process=""'].map(
+      (hook) => markup.indexOf(hook),
+    );
     expect(order.every((at) => at > -1)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
@@ -79,56 +93,41 @@ describe("the homepage", () => {
   });
 });
 
-describe("the partner cards, as the server sends them", () => {
-  const section = async () => {
+describe("the makers' marks, where the partner cards were", () => {
+  // The partner cards were unmounted on 2026-11-14 at Shivanshu's call; TIS
+  // and Fibaro are in the hero's rail with the other makers.
+  test("leave the partner cards off the page", async () => {
     const markup = await html();
-    const start = markup.indexOf("<section", markup.indexOf('aria-labelledby="partners"') - 200);
-    return markup.slice(start, markup.indexOf("</section>", start));
-  };
-
-  test("come straight after the hero, before the hardware carousel", async () => {
-    const markup = await html();
-    const order = [
-      'aria-labelledby="hero-title"',
-      "data-partners",
-      'aria-labelledby="hardware',
-    ].map((hook) => markup.indexOf(hook));
-    expect(order.every((at) => at > -1)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(markup).not.toContain("data-partners");
+    expect(markup).not.toContain('aria-labelledby="partners"');
   });
 
   test("leave the Maple banner off the page", async () => {
     expect(await html()).not.toContain("A brand by Maple Technologies");
   });
 
-  test("serve both cards' copy and links in the HTML, before any script runs", async () => {
-    const markup = await section();
-    for (const text of [
-      "A TIS partner",
-      "A Fibaro partner",
-      "https://www.tiscontrol.com/",
-      "https://www.fibaro.com/en/",
-    ]) {
-      expect(markup).toContain(text);
+  test("name TIS and Fibaro in the hero's rail, once each for a screen reader", async () => {
+    const markup = await html();
+    for (const [name, file] of [
+      ["TIS", "tis.png"],
+      ["Fibaro", "fibaro.png"],
+    ] as const) {
+      const named = markup.match(new RegExp(`<img[^>]*alt="${name}"[^>]*>`, "g")) ?? [];
+      expect(named).toHaveLength(1);
+      expect(named[0]).toContain(`src="/hero/brands/${file}"`);
     }
   });
 
-  test("mark exactly one card active on first paint", async () => {
-    expect((await section()).match(/role="tabpanel"/g)).toHaveLength(2);
-    expect((await section()).match(/data-state="active"/g)).toHaveLength(1);
-  });
-
-  test("send the timer line in the HTML, so hydration adds nothing above the fold", async () => {
-    expect(await section()).toMatch(/<span[^>]*data-running="false"[^>]*aria-hidden="true"/);
-  });
-
-  test("reserve each logo's box with its width and height, so nothing shifts", async () => {
-    const logos = [...(await section()).matchAll(/<img[^>]*alt="(TIS|Fibaro)"[^>]*>/g)].map(
-      (m) => m[0],
+  test("reserve every mark's box with its width and height, so nothing shifts", async () => {
+    const markup = await html();
+    const rail = markup.slice(
+      markup.indexOf("data-hero-brands"),
+      markup.indexOf("data-hero-strip"),
     );
-    expect(logos).toHaveLength(2);
-    for (const img of logos) {
-      expect(img).toMatch(/width="1152"/);
+    const marks = rail.match(/<img[^>]*>/g) ?? [];
+    expect(marks.length).toBeGreaterThan(0);
+    for (const img of marks) {
+      expect(img).toMatch(/width="\d+"/);
       expect(img).toMatch(/height="\d+"/);
     }
   });

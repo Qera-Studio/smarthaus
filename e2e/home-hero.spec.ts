@@ -6,6 +6,7 @@ import {
   expectNoHorizontalOverflow,
   withConsentDecided,
 } from "./checks";
+import { line, mailFor, sentMail } from "./mail";
 
 /**
  * The homepage hero in a browser, on all three devices: the strip drifts,
@@ -22,12 +23,34 @@ const overlayOf = (page: Page, index: number) => cards(page).nth(index).locator(
 const pause = (page: Page) => page.getByRole("button", { name: "Pause the images" });
 
 /**
+ * Bring the whole strip on screen. Since 2026-11-14 only its top shows above
+ * the fold, so a test that hovers or drags a card scrolls to it first. A
+ * scroll glides the strip (StripControls), so this waits for that to settle.
+ */
+async function showStrip(page: Page) {
+  const moved = await page.evaluate(() => {
+    const box = document.querySelector("[data-hero-strip]")!.getBoundingClientRect();
+    if (box.bottom <= innerHeight) return false;
+    scrollTo(0, scrollY + box.bottom - innerHeight);
+    return true;
+  });
+  if (!moved) return;
+  await page.waitForTimeout(700);
+  // The scroll carried the strip on by as much again (SCROLL_SPEED): put its
+  // drift back to the start, where the cards are as a test expects them.
+  await track(page).evaluate((el) => {
+    for (const animation of el.getAnimations()) animation.currentTime = 0;
+  });
+}
+
+/**
  * Hover a card by coordinates: hover() waits for a still element, and this
  * one moves. Near the card's top, clear of the consent banner in the bottom
  * corner, and kept on screen: the cards are wide enough that the third
  * one's centre can sit past the right edge.
  */
 async function hoverCard(page: Page, index: number) {
+  await showStrip(page);
   const box = (await cards(page).nth(index).boundingBox())!;
   const width = page.viewportSize()!.width;
   const x = Math.min(box.x + box.width / 2, width - 8);
@@ -113,10 +136,16 @@ test("each card's CTA leads to the solutions page", async ({ page }) => {
   await expect(page).toHaveURL(/\/solutions$/);
 });
 
-test("the title, CTAs, pause button and strip read top to bottom", async ({ page }) => {
+test("the title, email field, proofs, marks, pause button and strip read top to bottom", async ({
+  page,
+}) => {
+  // 2026-11-14: the email field took the two CTAs' place, and the makers'
+  // marks run between the proofs and the strip.
   const order = [
     page.getByRole("heading", { level: 1 }),
-    page.getByRole("link", { name: "WhatsApp", exact: true }),
+    hero(page).getByRole("textbox", { name: "Email" }),
+    proofs(page).first(),
+    page.getByRole("list", { name: "Brands we work with" }),
     pause(page),
     strip(page),
   ];
@@ -125,26 +154,30 @@ test("the title, CTAs, pause button and strip read top to bottom", async ({ page
   expect(tops).toEqual([...tops].sort((a, b) => a - b));
 });
 
-test("the subtitle is 600px wide at most, and no wider than the screen's column", async ({
-  page,
-}) => {
+test("the subtitle is 896px wide at most, two lines on a desktop", async ({ page }) => {
+  // 56rem since 2026-11-14 (the design), where it was 600px.
   const lede = (await page.getByRole("heading", { level: 1 }).locator("+ p").boundingBox())!;
-  expect(lede.width).toBeLessThanOrEqual(600);
+  expect(lede.width).toBeLessThanOrEqual(896);
 });
 
 const proofs = (page: Page) => hero(page).locator("ul:not([aria-label]):not([data-copy]) > li");
 
-test("the title, subtitle and CTAs all start on one line", async ({ page }) => {
-  const starts = [];
+test("the title, subtitle, email field and proofs are centred on one axis", async ({ page }) => {
+  // Centred since 2026-11-14 (Figma 4886:1856), where all of it read from
+  // the start edge.
+  const centres = [];
   for (const locator of [
     page.getByRole("heading", { level: 1 }),
     page.getByRole("heading", { level: 1 }).locator("+ p"),
-    hero(page).getByRole("link", { name: "Book a site visit" }),
+    hero(page).locator("form > div").first(),
+    proofs(page).first().locator("xpath=.."),
   ]) {
-    starts.push((await locator.boundingBox())!.x);
+    const box = (await locator.boundingBox())!;
+    centres.push(box.x + box.width / 2);
   }
-  expect(new Set(starts.map(Math.round)).size).toBe(1);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveCSS("text-align", "start");
+  const middle = page.viewportSize()!.width / 2;
+  for (const centre of centres) expect(Math.abs(centre - middle)).toBeLessThan(2);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCSS("text-align", "center");
 });
 
 test("only the rating carries a mark, and every other line is its words alone", async ({
@@ -175,19 +208,95 @@ test("from md the four share one line, with a drawn rule between each", async ({
   expect(boxes.map((box) => box.rule)).toEqual(["auto", "1px", "1px", "1px"]);
 });
 
-test("from lg the line ends at the column's end, and at the buttons' foot", async ({ page }) => {
+test("the proofs sit under the email field at every width, inside the screen", async ({ page }) => {
   const width = page.viewportSize()?.width ?? 0;
   const list = (await proofs(page).first().locator("xpath=..").boundingBox())!;
-  const cta = (await page.getByRole("link", { name: "WhatsApp", exact: true }).boundingBox())!;
-  if (width >= 1024) {
-    const button = (await pause(page).boundingBox())!;
-    expect(Math.abs(list.x + list.width - (button.x + button.width))).toBeLessThan(2);
-    expect(Math.abs(list.y + list.height - (cta.y + cta.height))).toBeLessThan(1);
-    expect(list.x).toBeGreaterThan(cta.x + cta.width);
-  } else {
-    expect(list.y).toBeGreaterThanOrEqual(cta.y + cta.height);
-    expect(list.x + list.width).toBeLessThanOrEqual(width);
-  }
+  const field = (await hero(page).locator("form > div").first().boundingBox())!;
+  expect(list.y).toBeGreaterThanOrEqual(field.y + field.height);
+  expect(list.x).toBeGreaterThanOrEqual(0);
+  expect(list.x + list.width).toBeLessThanOrEqual(width);
+});
+
+test("the email field is 44px tall, and 376px wide where there is room", async ({ page }) => {
+  const field = (await hero(page).locator("form > div").first().boundingBox())!;
+  expect(Math.round(field.height)).toBe(44);
+  const width = page.viewportSize()!.width;
+  expect(Math.round(field.width)).toBe(Math.min(376, Math.round(width - 48)));
+});
+
+test.describe("the email field", () => {
+  test.beforeEach(async ({ page }) => {
+    await withConsentDecided(page);
+    await page.goto("/");
+    await expectHydrated(page);
+  });
+
+  test("sends an address as a lead, and thanks the visitor", async ({ page }) => {
+    const address = `hero-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}@example.com`;
+    await hero(page).getByRole("textbox", { name: "Email" }).fill(address);
+    await hero(page).getByRole("button", { name: "Book a site visit" }).click();
+    await expect(hero(page).getByRole("status")).toContainText(
+      "We will reply by email to arrange your site visit.",
+    );
+    const mail = await sentMail(address);
+    expect(mail.replyTo).toBe(address);
+    expect(line(mail, "Email")).toBe(address);
+    expect(line(mail, "Name")).toBe("not given");
+  });
+
+  test("says what is wrong with an address that is not one, and sends nothing", async ({
+    page,
+  }) => {
+    const marker = `nothere${Date.now().toString(36)}`;
+    await hero(page).getByRole("textbox", { name: "Email" }).fill(marker);
+    await hero(page).getByRole("button", { name: "Book a site visit" }).click();
+    await expect(hero(page).getByRole("alert")).toHaveText("Check the email address.");
+    await expect(hero(page).getByRole("textbox", { name: "Email" })).toBeFocused();
+    expect(await mailFor(marker)).toEqual([]);
+  });
+});
+
+test.describe("the makers' marks", () => {
+  const marks = (page: Page) => hero(page).locator("[data-hero-brands] > div");
+
+  test("stop with the strip's pause button", async ({ page }) => {
+    test.skip(
+      await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches),
+      "nothing moves under reduced motion",
+    );
+    await expectHydrated(page);
+    await pause(page).click();
+    await expect(marks(page)).toHaveCSS("animation-play-state", "paused");
+    await pause(page).click();
+    await expect(marks(page)).toHaveCSS("animation-play-state", "running");
+  });
+
+  test("slow to a crawl under a mouse, and pick up as it leaves", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "a pointer behaviour");
+    // The cookie banner would sit over the marks' left end.
+    await withConsentDecided(page);
+    await page.goto("/");
+    await expectHydrated(page);
+    const rate = () =>
+      marks(page).evaluate((el) => el.getAnimations()[0]?.playbackRate ?? Number.NaN);
+    const box = (await marks(page).boundingBox())!;
+    await page.mouse.move(box.x + 200, box.y + box.height / 2);
+    await expect.poll(rate).toBeLessThan(0.2);
+    await page.mouse.move(box.x + 200, 5);
+    await expect.poll(rate).toBe(1);
+  });
+
+  test("stand still and wrapped under reduced motion", async ({ browser }) => {
+    const context = await browser.newContext({ reducedMotion: "reduce" });
+    const page = await context.newPage();
+    await page.goto("/");
+    await expect(hero(page).locator("[data-hero-brands] > div")).toHaveCSS(
+      "animation-name",
+      "none",
+    );
+    await expect(hero(page).locator("[data-hero-brands] [data-copy]").first()).toBeHidden();
+    await context.close();
+  });
 });
 
 test("the rating line has no outline", async ({ page }) => {
@@ -202,19 +311,22 @@ test("the strip is a share of the screen: about 42% of its height, or less", asy
   expect(box.height).toBeGreaterThan(120);
 });
 
-test("the strip ends exactly at the bottom of the screen, or just above a phone's nav", async ({
+test("the strip's top edge sits at 95% of the screen, so the page asks to be scrolled", async ({
   page,
 }) => {
+  // 2026-11-14: only its top shows above the fold, where it used to end at
+  // the screen's foot. Below lg the nav floats over the foot, so the 5% is
+  // above it; a phone whose copy needs more room pushes it further down.
   await page.evaluate(() => scrollTo(0, 0));
-  const stripBox = (await strip(page).boundingBox())!;
-  const bottom = stripBox.y + stripBox.height;
+  const top = (await strip(page).boundingBox())!.y;
   const height = page.viewportSize()!.height;
   if ((page.viewportSize()?.width ?? 0) >= 1024) {
-    expect(Math.abs(bottom - height)).toBeLessThanOrEqual(1);
+    expect(Math.abs(top - height * 0.95)).toBeLessThanOrEqual(1);
   } else {
+    // At most 5% of the screen shows above the floating nav, give or take
+    // the few pixels between the nav's box and the room the hero keeps for it.
     const nav = (await page.locator("header").boundingBox())!;
-    expect(bottom).toBeLessThanOrEqual(nav.y);
-    expect(nav.y - bottom).toBeLessThan(24);
+    expect(nav.y - top).toBeLessThanOrEqual(height * 0.05 + 12);
   }
 });
 
@@ -238,6 +350,7 @@ test.describe("the hand on the strip", () => {
     await expectHydrated(page);
     // Paused, so only the hand moves it.
     await pause(page).click();
+    await showStrip(page);
   });
 
   test("a mouse dragged left carries the strip left with it", async ({ page, hasTouch }) => {
@@ -542,6 +655,7 @@ test.describe("under reduced motion", () => {
     await withConsentDecided(page);
     await page.goto("/");
     await expectHydrated(page);
+    await showStrip(page);
     const box = (await strip(page).boundingBox())!;
     const y = box.y + box.height * 0.2;
     await page.mouse.move(box.x + 600, y);
@@ -604,11 +718,14 @@ test.describe("under reduced motion", () => {
 });
 
 test.describe("keyboard", () => {
-  test("Tab runs CTAs, the three controls, then each card's link once", async ({ page }) => {
+  test("Tab runs from the email field's button to the pause button, then each card's link", async ({
+    page,
+  }) => {
     // A Tab walk through links: WebKit, like Safari on a Mac, skips links on
-    // Tab unless the reader turns that on (keyboard.spec.ts).
+    // Tab unless the reader turns that on (keyboard.spec.ts). Nothing in the
+    // makers' marks takes focus, and the honeypot is out of the tab order.
     test.skip(test.info().project.name === "iPhone 17", "Tab reaches links only in Chromium");
-    await page.getByRole("link", { name: "WhatsApp", exact: true }).focus();
+    await hero(page).getByRole("button", { name: "Book a site visit" }).focus();
     const expected = [
       "Pause the images",
       "View lighting",
@@ -862,18 +979,22 @@ test.describe("every card, with a mouse", () => {
     }
   });
 
-  test("the CTA is brown-900 on brown-100, at full opacity", async ({ page }) => {
+  test("the CTA is brown-900 on the page's ground, at full opacity", async ({ page }) => {
+    // The inverse button fills with --color-bg-canvas, which moved from
+    // brown-100 to brown-50 with the page on 2026-11-14.
     await hoverCard(page, 0);
     const link = overlayOf(page, 0).getByRole("link");
-    await expect(link).toHaveCSS("background-color", "rgb(240, 233, 221)");
+    await expect(link).toHaveCSS("background-color", "rgb(248, 245, 240)");
     await expect(link).toHaveCSS("color", "rgb(20, 17, 14)");
     await expect(link).toHaveCSS("opacity", "1");
   });
 });
 
-// On an iPhone 17 (measured 2026-11-02) the subtitle is bigger on screen than
-// any one card, and is the largest paint; text in the hero copy is painted
-// from the server HTML, so it is as good as the h1. Consent decided first: on
+// Since the glass (2026-11-14) the largest paint is usually the hero section
+// itself: its ground picture, painted as its background. It is 3KB and
+// preloaded at high priority, so it lands with the first paint. On an iPhone
+// 17 (measured 2026-11-02) the subtitle was the largest; text in the hero
+// copy is painted from the server HTML, so it is as good as the h1. Consent decided first: on
 // a first visit the cookie banner's paragraph is larger still, which says
 // nothing about the hero (consent-boot.spec.ts covers the banner's paint).
 test("the largest paint is the hero's copy or an eager strip image, never a lazy one", async ({
@@ -917,7 +1038,10 @@ test("the largest paint is the hero's copy or an eager strip image, never a lazy
         }).observe({ type: "largest-contentful-paint", buffered: true });
       }),
   );
-  if (lcp.tag === "H1") {
+  if (lcp.tag === "SECTION") {
+    expect(await hero(page).getAttribute("aria-labelledby")).toBe("hero-title");
+    expect(lcp.inStrip).toBe(false);
+  } else if (lcp.tag === "H1") {
     expect(lcp.id).toBe("hero-title");
   } else if (lcp.tag === "P") {
     expect(lcp.inCopy).toBe(true);

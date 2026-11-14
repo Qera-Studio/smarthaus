@@ -28,7 +28,21 @@ jest.mock("../../components/Maple", () => ({ Maple: mockSection("maple") }));
 jest.mock("../../components/Partners", () => ({ Partners: mockSection("partners") }));
 jest.mock("../../components/Stats", () => ({ Stats: mockSection("stats") }));
 jest.mock("../../components/Hardware", () => ({ Hardware: mockSection("hardware") }));
-jest.mock("../../components/Process", () => ({ Process: mockSection("process") }));
+// Process holds the section before it (the hardware) under its first sheet,
+// so it is handed that section rather than following it (2026-11-14). The
+// stand-in draws what it is handed, then its own marker, and remembers it.
+const mockHeld: unknown[] = [];
+jest.mock("../../components/Process", () => ({
+  Process: function Process({ held }: { held?: unknown }) {
+    mockHeld.push(held);
+    return (
+      <>
+        {held as never}
+        <div data-section="process" />
+      </>
+    );
+  },
+}));
 jest.mock("../../components/Pricing", () => ({ Pricing: mockSection("pricing") }));
 jest.mock("../../components/Care", () => ({ Care: mockSection("care") }));
 jest.mock("../../components/HomeEnquiry", () => ({ HomeEnquiry: mockSection("enquiry") }));
@@ -51,9 +65,8 @@ describe("Home page", () => {
     const { container } = await renderServer(<Home />);
     expect(order(container)).toEqual([
       "hero",
-      "partners",
-      "hardware",
       "stats",
+      "hardware",
       "process",
       "care",
       "pricing",
@@ -85,22 +98,31 @@ describe("Home page", () => {
     expect(sections.indexOf("care")).toBe(sections.indexOf("process") + 1);
   });
 
-  it("puts the partner cards directly after the hero, where Maple was", async () => {
-    // 2026-10-06, at Shivanshu's call: the TIS and Fibaro partnerships are the
-    // stronger trust signal, and take the Maple banner's place.
+  it("leaves the partner cards off the page", async () => {
+    // Unmounted 2026-11-14 at Shivanshu's call: TIS and Fibaro are in the
+    // hero's rail of makers' marks now. The component and its content are kept
+    // in src/components/Partners; this fails if it comes back by accident.
     const { container } = await renderServer(<Home />);
-    const sections = order(container);
-    expect(sections.indexOf("partners")).toBe(sections.indexOf("hero") + 1);
+    expect(order(container)).not.toContain("partners");
   });
 
-  it("puts the hardware carousel between the partner cards and the figures", async () => {
-    // 2026-11-04, at Shivanshu's call: back above the figures, because the two
-    // plain brown sections side by side had no picture between them. The
-    // figures were above it from 2026-10-28.
+  it("puts the figures directly after the hero, then the hardware", async () => {
+    // 2026-11-14, at Shivanshu's call: "By the numbers" above the hardware
+    // carousel. From 2026-11-04 the hardware came first.
     const { container } = await renderServer(<Home />);
     const sections = order(container);
-    expect(sections.indexOf("hardware")).toBe(sections.indexOf("partners") + 1);
-    expect(sections.indexOf("stats")).toBe(sections.indexOf("hardware") + 1);
+    expect(sections.indexOf("stats")).toBe(sections.indexOf("hero") + 1);
+    expect(sections.indexOf("hardware")).toBe(sections.indexOf("stats") + 1);
+  });
+
+  it("hands the hardware to the Process stack, which holds it under its first sheet", async () => {
+    // 2026-11-14: the hardware holds still while the first sheet rises over
+    // it, so the two share one box (Process.tsx, held).
+    mockHeld.length = 0;
+    const { container } = await renderServer(<Home />);
+    expect(mockHeld).toHaveLength(1);
+    const sections = order(container);
+    expect(sections.indexOf("process")).toBe(sections.indexOf("hardware") + 1);
   });
 
   it("keeps the enquiry last, directly above the footer", async () => {

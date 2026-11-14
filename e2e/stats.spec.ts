@@ -110,13 +110,17 @@ test.describe("the figures' roll", () => {
   });
 });
 
-test("sits directly below the hardware carousel", async ({ page }) => {
-  // 2026-11-04, at Shivanshu's call, back where it was before 2026-10-28: the
-  // carousel keeps the two plain sections apart.
-  const next = await page
-    .locator('main > section[aria-labelledby="hardware"]')
-    .evaluate((el) => el.nextElementSibling?.getAttribute("aria-labelledby"));
-  expect(next).toBe("stats");
+test("sits directly after the hero, and above the hardware carousel", async ({ page }) => {
+  // 2026-11-14, at Shivanshu's call: "By the numbers" above the hardware,
+  // which the Process stack now holds (data-process-stack).
+  const around = await page.locator('main > section[aria-labelledby="stats"]').evaluate((el) => ({
+    before: el.previousElementSibling?.getAttribute("aria-labelledby"),
+    next: el.nextElementSibling?.hasAttribute("data-process-stack"),
+    held: el.nextElementSibling
+      ?.querySelector("[data-process-held] > section")
+      ?.getAttribute("aria-labelledby"),
+  }));
+  expect(around).toEqual({ before: "hero-title", next: true, held: "hardware" });
 });
 
 test("shows the four figures, number first", async ({ page }) => {

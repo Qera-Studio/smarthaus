@@ -79,7 +79,7 @@ test.describe("the homepage opening", () => {
     expect(lede.at(-1)! - lede[0]!).toBeGreaterThan(600);
   });
 
-  test("plays in order: title, subtitle, CTAs with the strip and nav, then the proofs", async ({
+  test("plays in order: title, subtitle, the email field with the strip and nav, then the proofs", async ({
     page,
   }) => {
     await recordStarts(page);
@@ -89,7 +89,8 @@ test.describe("the homepage opening", () => {
 
     const title = startOf(list, /word.*\|H1$/);
     const lede = startOf(list, /word.*\|P$/);
-    const ctas = startOf(list, /ctas/);
+    // The email field took the CTAs' place and step (2026-11-14).
+    const ctas = startOf(list, /leadForm/);
     const strip = startOf(list, /track/);
     const nav = startOf(list, /^HEADER\./);
     const bar = startOf(list, /^ASIDE\./);
@@ -324,8 +325,9 @@ test.describe("the page's scroll", () => {
   }) => {
     test.skip(await page.evaluate(() => matchMedia("(hover: none)").matches), "no hover");
     // By coordinates: hover() waits for the card to stop moving, and it drifts.
+    // Near its top: only the top 5% of the screen shows it (2026-11-14).
     const box = (await page.locator("[data-hero-strip]").boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.move(box.x + box.width / 2, box.y + 10);
     await expect.poll(async () => (await drift(page)).paused).toBe(true);
     const before = await drift(page);
     await scrollAndSettle(page, 100);
