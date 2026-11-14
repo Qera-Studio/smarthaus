@@ -1,15 +1,17 @@
 // One getter per document. cache() makes every component that asks for the
 // same document within one render share one fetch.
 import { cache } from "react";
-import { getDoc } from "./fetch";
+import { getDoc, getDocs } from "./fetch";
 import type {
   AboutPage,
+  BlogPage,
   ComingSoonPage,
   ConsentCopy,
   LegalDocument,
   ContactPage,
   FaqPage,
   HomePage,
+  Post,
   PricingPage,
   SiteSettings,
 } from "./types";
@@ -27,6 +29,14 @@ export const getComingSoonPage = cache((route: "solutions" | "designers" | "deve
 export type LegalName = "privacy" | "terms" | "accessibility";
 export const getLegalDocument = cache((name: LegalName) => getDoc<LegalDocument>(`legal-${name}`));
 export const getConsentCopy = cache(() => getDoc<ConsentCopy>("consentCopy"));
+
+export const getBlogPage = cache(() => getDoc<BlogPage>("blogPage"));
+/** Every article, newest first. One query, shared by the index and each article. */
+export const getPosts = cache(() => getDocs<Post>("post"));
+export async function getPost(slug: string): Promise<Post | undefined> {
+  return (await getPosts()).find((post) => post.slug === slug);
+}
+export const postPath = (slug: string) => `/blog/${slug}`;
 
 /**
  * /faq is publishable once no answer is pending and an editor has turned it on:
@@ -64,4 +74,17 @@ export const ROUTES: readonly { path: string; load: () => Promise<Routed> }[] = 
   { path: "/terms", load: () => getLegalDocument("terms") },
   { path: "/accessibility", load: () => getLegalDocument("accessibility") },
   { path: "/cookie-preferences", load: getConsentCopy },
+  { path: "/blog", load: getBlogPage },
 ];
+
+/**
+ * ROUTES and one route per article. The articles are content, so their routes
+ * are too: the sitemap and llms.txt read this, not ROUTES alone.
+ */
+export async function routes(): Promise<typeof ROUTES> {
+  const posts = await getPosts();
+  return [
+    ...ROUTES,
+    ...posts.map((post) => ({ path: postPath(post.slug), load: async () => post })),
+  ];
+}

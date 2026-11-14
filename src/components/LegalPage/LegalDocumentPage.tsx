@@ -1,18 +1,12 @@
 import { getLegalDocument, getSettings, type LegalName } from "../../sanity/content";
 import { JsonLd, pageGraph } from "../Schema";
+import { formatDate } from "../../lib/date";
 import { seoInput } from "../../lib/metadata";
 import { LegalBody } from "./LegalBody";
 import { LegalPage, LegalSectionBlock } from "./LegalPage";
 
-/** An ISO date as the legal pages print it: "27 September 2026". */
-export function formatDate(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
+// Kept as this module's export: the legal pages' tests read it from here.
+export { formatDate };
 
 /**
  * One legal document from Sanity, in the legal shell: header, contents rail,

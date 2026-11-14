@@ -54,8 +54,11 @@ afterEach(() => {
 // Every suite gets the seed instead: the same content the ci dataset holds,
 // in the shape getDoc returns. src/sanity/__tests__/fetch.test.ts unmocks it.
 jest.mock("./src/sanity/fetch", () => {
-  const { seedDoc } = jest.requireActual("./sanity/seed");
-  return { getDoc: jest.fn(async (id: string) => seedDoc(id)) };
+  const { seedDoc, seedDocs } = jest.requireActual("./sanity/seed");
+  return {
+    getDoc: jest.fn(async (id: string) => seedDoc(id)),
+    getDocs: jest.fn(async (type: string) => seedDocs(type)),
+  };
 });
 
 // The Studio's click-to-edit overlay, mounted by the root layout in draft

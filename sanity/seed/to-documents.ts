@@ -92,6 +92,22 @@ export function convert(field: SchemaField, value: unknown, at: string): Json | 
     if (!Array.isArray(value)) fail(at, "rich text must be a list of blocks");
     return { _type: type, en: value as Json[] };
   }
+  // An article's text, likewise, except that its pictures are uploads.
+  if (type === "localeArticle") {
+    if (!Array.isArray(value)) fail(at, "an article's text must be a list of blocks");
+    const nodes = (value as Record<string, unknown>[]).map((node, i): Json => {
+      if (node._type !== "articleImage") return node as Json;
+      return {
+        _type: "articleImage",
+        _key: node._key as string,
+        image: picture(node.image, `${at}[${i}].image`),
+        ...(typeof node.caption === "string"
+          ? { caption: { _type: "localeString", en: node.caption } }
+          : {}),
+      };
+    });
+    return { _type: type, en: nodes };
+  }
   if (SCALARS.has(type)) {
     if (typeof value === "object") fail(at, `expected a ${type}`);
     return value as Json;

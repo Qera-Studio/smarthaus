@@ -6,13 +6,21 @@ import { defineConfig } from "sanity";
 import { presentationTool } from "sanity/presentation";
 import { structureTool } from "sanity/structure";
 import { dataset, projectId } from "./env";
-import { schemaTypes } from "./schema";
+import { COLLECTIONS, schemaTypes } from "./schema";
 import { structure } from "./structure";
 
 export { dataset, projectId };
 
-/** Types whose documents are all fixed: no create, duplicate or delete. */
-const FIXED = new Set(schemaTypes.filter((t) => t.type === "document").map((t) => t.name));
+/**
+ * Types whose documents are all fixed: no create, duplicate or delete. Every
+ * document type but the articles, which editors write.
+ */
+const creatable: readonly string[] = COLLECTIONS;
+const FIXED = new Set(
+  schemaTypes
+    .filter((t) => t.type === "document" && !creatable.includes(t.name))
+    .map((t) => t.name),
+);
 
 export default defineConfig({
   name: "smarthaus",
@@ -31,7 +39,8 @@ export default defineConfig({
   ],
   schema: {
     types: schemaTypes as never,
-    // Nothing to create from the "+" menu: every page already exists.
+    // Nothing to create from the "+" menu but an article: every page already
+    // exists.
     templates: (templates) => templates.filter((t) => !FIXED.has(t.schemaType)),
   },
   document: {

@@ -119,3 +119,67 @@ export function pageGraph(input: PageMetadataInput, dateModified?: string) {
     ],
   };
 }
+
+/**
+ * An article: its page, the article itself and a three-step breadcrumb through
+ * the articles page. Indexable articles only. The author is the byline the
+ * page prints and the publisher is the business node the layout renders.
+ */
+export function articleGraph(
+  input: PageMetadataInput,
+  post: {
+    title: string;
+    author: string;
+    date: string;
+    updatedAt?: string;
+    image: { src: string };
+  },
+  blog: { path: string; name: string },
+) {
+  const url = pageUrl(input.path);
+  if (!input.index) throw new Error(`articleGraph: ${input.path} is noindex and gets no schema`);
+  const crumbs = [
+    { name: "Home", url: SITE_URL },
+    { name: blog.name, url: pageUrl(blog.path) },
+    { name: post.title, url },
+  ];
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": `${url}#webpage`,
+        url,
+        name: fullTitle(input),
+        description: input.description,
+        inLanguage: "en",
+        isPartOf: { "@id": WEBSITE_ID },
+        ...(post.updatedAt ? { dateModified: post.updatedAt } : {}),
+        breadcrumb: { "@id": `${url}#breadcrumb` },
+      },
+      {
+        "@type": "BlogPosting",
+        "@id": `${url}#article`,
+        mainEntityOfPage: { "@id": `${url}#webpage` },
+        headline: post.title,
+        description: input.description,
+        image: post.image.src,
+        datePublished: post.date,
+        ...(post.updatedAt ? { dateModified: post.updatedAt } : {}),
+        author: { "@type": "Person", name: post.author },
+        publisher: { "@id": ORG_ID },
+        inLanguage: "en",
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${url}#breadcrumb`,
+        itemListElement: crumbs.map((crumb, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: crumb.name,
+          item: crumb.url,
+        })),
+      },
+    ],
+  };
+}

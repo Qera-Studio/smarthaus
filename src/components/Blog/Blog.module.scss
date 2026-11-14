@@ -1,0 +1,541 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+// The blog: the articles page and one article (Figma 4900:2914 and 4898:2609).
+// Both are set in the design's own sizes, a little apart from the site's type
+// scale: 36px for an article's title, 16px text on a 1.4 line.
+
+@layer blocks {
+  .page,
+  .index {
+    // L2 component tokens.
+    //
+    // The design's line: 1.4 for every size on these pages.
+    --blog-leading: 1.4;
+    // An article's title, 36px on a desktop.
+    --blog-title-size: clamp(#{$font-size-xl}, 5vw, 2.25rem);
+    // The column an article is read in.
+    --blog-column: 62.5rem;
+    // Half the space between two cards, where the rule between them stands;
+    // the design's cards are 96px apart with the rule midway.
+    --blog-cell: #{$space-6};
+    // The pages' own inset on a desktop: the design's 48px, of which the
+    // page's gutter is 24.
+    --blog-inset: 0px;
+    // A tag's ground, and the rules: the site's sand, and ink at half strength.
+    --blog-tag: color-mix(in srgb, var(--brown-200) 62%, var(--brown-100));
+    --blog-rule: color-mix(in srgb, var(--brown-950) 50%, transparent);
+    --blog-ink-dim: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
+
+    padding-block: $space-12;
+    padding-inline: var(--blog-inset);
+    line-height: var(--blog-leading);
+    color: var(--color-text-primary);
+
+    @include bp-lg {
+      --blog-cell: #{$space-12};
+      --blog-inset: #{$space-6};
+    }
+  }
+
+  // --- One article -------------------------------------------------------------
+
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: $space-8;
+  }
+
+  // The way back, at the page's own edge, clear of the article's column.
+  .back {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: $space-1;
+    min-block-size: var(--size-touch-target);
+    font-size: var(--font-size-base);
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    text-decoration-line: none;
+    @include focus-ring;
+
+    &:hover {
+      text-decoration-line: underline;
+      text-underline-offset: 0.2em;
+    }
+  }
+
+  // The design's arrow points down and is turned a quarter to point back. A
+  // mask, so it takes the text's colour.
+  .backIcon {
+    inline-size: $space-4;
+    block-size: $space-4;
+    background-color: currentcolor;
+    mask-image: url("/blog/arrow-back.svg");
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    rotate: 90deg;
+
+    @media (forced-colors: active) {
+      forced-color-adjust: none;
+      background-color: CanvasText;
+    }
+  }
+
+  .article {
+    display: flex;
+    flex-direction: column;
+    gap: $space-8;
+    inline-size: 100%;
+    max-inline-size: var(--blog-column);
+    margin-inline: auto;
+  }
+
+  .title {
+    font-size: var(--blog-title-size);
+    font-weight: $font-weight-medium;
+    line-height: var(--blog-leading);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  // Who, what and when, in three columns: the first two share what the date
+  // leaves. On a phone they stack.
+  .meta {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+
+    @include bp-md {
+      flex-direction: row;
+      justify-content: space-between;
+
+      > div:not(:last-child) {
+        flex: 1;
+      }
+    }
+
+    > div {
+      display: flex;
+      flex-direction: column;
+      gap: $space-1;
+    }
+
+    dt {
+      font-size: var(--font-size-base);
+      letter-spacing: -0.02em;
+      color: var(--blog-ink-dim);
+    }
+
+    dd {
+      font-size: var(--font-size-lg);
+      letter-spacing: -0.02em;
+    }
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-1;
+    list-style: none;
+
+    li {
+      padding-block: $space-1;
+      padding-inline: $space-2;
+      background-color: var(--blog-tag);
+      font-size: var(--font-size-base);
+    }
+  }
+
+  // The main picture, 16:9 whatever the file is.
+  .hero {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background-color: var(--blog-tag);
+
+    img {
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+    }
+  }
+
+  // The text. One blank line between paragraphs, as the design sets it; a
+  // heading sits closer to the paragraph it names than to the one before.
+  .body {
+    font-size: var(--font-size-base);
+    line-height: var(--blog-leading);
+    text-wrap: pretty;
+
+    > * + * {
+      margin-block-start: 1.4em;
+    }
+
+    h2,
+    h3 {
+      font-weight: $font-weight-semibold;
+      line-height: var(--blog-leading);
+      letter-spacing: -0.01em;
+    }
+
+    h2 {
+      font-size: var(--font-size-lg);
+    }
+
+    h3 {
+      font-size: var(--font-size-md);
+    }
+
+    h2 + *,
+    h3 + * {
+      margin-block-start: $space-2;
+    }
+
+    ul,
+    ol {
+      padding-inline-start: $space-6;
+    }
+
+    li + li {
+      margin-block-start: $space-2;
+    }
+
+    a {
+      color: inherit;
+      text-decoration-line: underline;
+      text-underline-offset: 0.2em;
+      @include focus-ring;
+    }
+
+    figure {
+      margin-block: $space-12;
+    }
+
+    figure img {
+      display: block;
+      inline-size: 100%;
+      block-size: auto;
+    }
+
+    figcaption {
+      margin-block-start: $space-2;
+      font-size: var(--font-size-sm);
+      color: var(--blog-ink-dim);
+    }
+
+    // A line lifted out of the text: larger, behind a rule in the accent.
+    blockquote {
+      margin-block: $space-8;
+      padding-inline-start: $space-6;
+      border-inline-start-style: solid;
+      border-inline-start-width: 2px;
+      border-inline-start-color: var(--brown-500);
+      font-size: var(--font-size-lg);
+      letter-spacing: -0.02em;
+      text-wrap: balance;
+    }
+  }
+
+  // A note set apart: the tag's ground, squared like everything on the site.
+  .box {
+    padding: $space-6;
+    background-color: var(--blog-tag);
+    font-weight: $font-weight-medium;
+  }
+
+  // --- Related articles, and the heading row both pages share ---------------------
+
+  .related {
+    margin-block-start: $space-12;
+  }
+
+  .relatedTitle,
+  .indexTitle {
+    font-size: var(--font-size-2xl);
+    font-weight: $font-weight-medium;
+    line-height: var(--blog-leading);
+    letter-spacing: -0.02em;
+  }
+
+  .relatedTitle {
+    padding-block: $space-4;
+    margin-block-end: $space-6;
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-block-start-color: var(--blog-rule);
+  }
+
+  // --- The rows of cards ------------------------------------------------------------
+  //
+  // A grid with no gaps: each cell is padded by half the space between two
+  // cards, and the list is pulled out by the same on both sides, so the cards
+  // themselves line up with the page. That leaves every cell edge to edge
+  // with the next, which is what lets a rule along a row's head run unbroken
+  // and one down a cell's side stand midway between two cards, at any number
+  // of columns and with no counting of children. What the pull puts outside
+  // the page's own edges is clipped away: the first column's side rule, and
+  // each row rule's overhang.
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin-inline: calc(-1 * var(--blog-cell));
+    list-style: none;
+    // Clipped to the page's own edges, a cell's padding in from the list's.
+    clip-path: inset(0 var(--blog-cell));
+
+    @include bp-md {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @include bp-lg {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    > li {
+      position: relative;
+      display: flex;
+      padding-inline: var(--blog-cell);
+      padding-block-end: var(--blog-cell);
+
+      // The rule between a card and the one before it in the row.
+      &::before {
+        content: "";
+        position: absolute;
+        inset-block: 0 var(--blog-cell);
+        inset-inline-start: 0;
+        inline-size: 1px;
+        background-color: var(--blog-rule);
+      }
+    }
+
+    // On the articles page a rule runs along the head of every row, the first
+    // included: it parts the rows from the panel above them.
+    &[data-ruled] > li {
+      padding-block-start: var(--blog-cell);
+      border-block-start-style: solid;
+      border-block-start-width: 1px;
+      border-block-start-color: var(--blog-rule);
+
+      &::before {
+        inset-block-start: var(--blog-cell);
+      }
+    }
+  }
+
+  // --- A card -----------------------------------------------------------------------
+
+  .card {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: $space-3;
+    min-inline-size: 0;
+  }
+
+  .cardMedia {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background-color: var(--blog-tag);
+
+    img {
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+      transition-property: scale;
+      transition-duration: var(--duration-slow);
+      transition-timing-function: var(--ease-out);
+    }
+  }
+
+  .card:hover .cardMedia img {
+    scale: 1.03;
+  }
+
+  // The title at the head, the tag and date at the foot, whatever lies between.
+  .cardText {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: $space-3;
+  }
+
+  .cardTitle {
+    font-size: var(--font-size-lg);
+    font-weight: $font-weight-regular;
+    line-height: var(--blog-leading);
+    letter-spacing: -0.02em;
+  }
+
+  // The link covers the card, so the card is one target named by its title.
+  .cardLink {
+    color: inherit;
+    text-decoration-line: none;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+    }
+
+    &:focus-visible {
+      outline-style: none;
+    }
+
+    &:focus-visible::after {
+      outline: 2px solid var(--color-border-focus);
+      outline-offset: 2px;
+    }
+  }
+
+  .card:hover .cardLink {
+    text-decoration-line: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .cardExcerpt {
+    font-size: var(--font-size-sm);
+    letter-spacing: -0.02em;
+  }
+
+  .cardMeta {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    margin-block-start: auto;
+    padding-block-start: $space-8;
+    font-size: var(--font-size-sm);
+  }
+
+  .dot {
+    inline-size: 2px;
+    block-size: 2px;
+    background-color: currentcolor;
+  }
+
+  // The design's arrow in its dark square. The file's arrow points up and to
+  // the left, and the design turns it a quarter to point up and to the right.
+  .open {
+    inline-size: $space-5;
+    block-size: $space-5;
+    margin-inline-start: auto;
+    rotate: 90deg;
+    background-image: url("/blog/arrow-open.svg");
+    background-repeat: no-repeat;
+    background-size: contain;
+    transition-property: translate;
+    transition-duration: var(--duration-fast);
+  }
+
+  .card:hover .open {
+    translate: 2px -2px;
+  }
+
+  // The newest article on the articles page: the picture wide, the words
+  // beside it. Below lg it is a card like the rest, with its excerpt.
+  .card[data-featured] {
+    margin-block-end: var(--blog-cell);
+
+    @include bp-lg {
+      flex-direction: row;
+      gap: $space-6;
+
+      .cardMedia {
+        flex: 1;
+        // The design's panel: 876 by 319.
+        aspect-ratio: 876 / 319;
+      }
+
+      .cardText {
+        flex: none;
+        inline-size: 27.75rem;
+      }
+
+      .cardTitle {
+        font-size: var(--font-size-2xl);
+        font-weight: $font-weight-medium;
+      }
+    }
+  }
+
+  // --- The articles page's heading row ----------------------------------------------
+
+  .index {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .indexHead {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+    padding-block: $space-4;
+    margin-block-end: var(--blog-cell);
+
+    @include bp-md {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-2;
+  }
+
+  .search,
+  .select {
+    block-size: var(--size-touch-target);
+    padding-inline: $space-3;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--color-border-input);
+    border-radius: 0;
+    background-color: transparent;
+    font-family: inherit;
+    // 16px, never smaller: Safari on a phone zooms the page into any field
+    // below it.
+    font-size: var(--font-size-base);
+    color: var(--color-text-primary);
+    @include focus-ring;
+  }
+
+  .search {
+    flex: 1;
+    min-inline-size: 12rem;
+
+    &::placeholder {
+      color: var(--color-text-secondary);
+      opacity: 1;
+    }
+  }
+
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-4;
+    padding-block: var(--blog-cell);
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-block-start-color: var(--blog-rule);
+  }
+
+  .clear {
+    min-block-size: var(--size-touch-target);
+    padding: 0;
+    border-style: none;
+    background-color: transparent;
+    font: inherit;
+    color: inherit;
+    text-decoration-line: underline;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+    @include focus-ring;
+  }
+}

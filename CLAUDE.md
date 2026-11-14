@@ -116,16 +116,16 @@ The scene manifest contract, schema, and interaction rules live in `AGENTS.md`.
 
 Build order. Higher priority ships first.
 
-| Priority | Page                  | Purpose                                                                  | Notes                                                                                                         |
-| -------- | --------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| **P0**   | Homepage              | Hero moment + value prop + lead capture                                  | The Blender hero lives here. First impression. Ravi and James & Emma land here                                |
-| **P0**   | Contact / Get Started | Lead capture form                                                        | Server Actions + Zod + honeypot + Resend                                                                      |
-| **P1**   | Solutions (umbrella)  | What Smarthaus does — lighting, climate, security, entertainment, energy | One page or towns, not five thin pages. Ravi wants spec depth, James & Emma want clarity                      |
-| **P1**   | About                 | Who Smarthaus/MapleTech is                                               | Claims constraint applies hardest here. No invented heritage. Show the parent company's track record honestly |
-| **P2**   | Projects / Portfolio  | Visual proof                                                             | Renders until real photography exists. Gallery or case-study format. James & Emma's confidence builder        |
-| **P2**   | For Designers         | Nadia's page. Professional B2B landing                                   | Documentation she can hand to her client. Integration details, process, partnership path                      |
-| **P3**   | For Developers        | Aditya's page. Property developer landing                                | ROI framing, project scale, volume enquiry path                                                               |
-| **P3**   | Blog / Journal        | SEO + AEO content engine                                                 | Sanity CMS. Launches with 3–5 seed articles                                                                   |
+| Priority | Page                  | Purpose                                                                  | Notes                                                                                                                                             |
+| -------- | --------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P0**   | Homepage              | Hero moment + value prop + lead capture                                  | The Blender hero lives here. First impression. Ravi and James & Emma land here                                                                    |
+| **P0**   | Contact / Get Started | Lead capture form                                                        | Server Actions + Zod + honeypot + Resend                                                                                                          |
+| **P1**   | Solutions (umbrella)  | What Smarthaus does — lighting, climate, security, entertainment, energy | One page or towns, not five thin pages. Ravi wants spec depth, James & Emma want clarity                                                          |
+| **P1**   | About                 | Who Smarthaus/MapleTech is                                               | Claims constraint applies hardest here. No invented heritage. Show the parent company's track record honestly                                     |
+| **P2**   | Projects / Portfolio  | Visual proof                                                             | Renders until real photography exists. Gallery or case-study format. James & Emma's confidence builder                                            |
+| **P2**   | For Designers         | Nadia's page. Professional B2B landing                                   | Documentation she can hand to her client. Integration details, process, partnership path                                                          |
+| **P3**   | For Developers        | Aditya's page. Property developer landing                                | ROI framing, project scale, volume enquiry path                                                                                                   |
+| **P3**   | Blog                  | SEO + AEO content engine                                                 | **Built 2026-11-14** at `/blog`: the articles page (search, tag filter) and one page per article. Four seed articles; see "The blog" in AGENTS.md |
 
 **Sanity Studio** lives at `/studio` — authenticated, not public. Structured fields, not freeform rich text. English at launch; Arabic (V2) via field-level translation, not page duplication.
 
@@ -255,6 +255,7 @@ Server Components first. `'use client'` limited to:
 - Contact form (form state, Turnstile widget)
 - Mobile navigation (toggle state, and the Solutions menu: open state from lg, the solutions in place of the links below it), `Nav/SolutionsMenu.tsx` (the solution in hand, and the swipe on its picture), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
+- The articles page's search and tag filter (`Blog/ArticleBrowser.tsx` — two controlled fields that choose among the articles the server already sent; nothing is fetched as you type, and without JavaScript every article is listed)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
 
 Everything else is a Server Component. If you're reaching for `'use client'`, a Server Component with a small client island probably works instead.

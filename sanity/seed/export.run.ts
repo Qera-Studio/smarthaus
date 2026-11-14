@@ -12,7 +12,7 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { SEED } from ".";
+import { BLOG_SEED, SEED } from ".";
 import { toDocument } from "./to-documents";
 
 it("writes the seed as NDJSON", () => {
@@ -24,4 +24,20 @@ it("writes the seed as NDJSON", () => {
     `${docs.map((d) => JSON.stringify(d)).join("\n")}\n`,
   );
   expect(docs).toHaveLength(SEED.length);
+});
+
+// The blog's documents alone, for the one import production has had since it
+// was seeded (2026-11-14): new documents only, and without --replace, so no
+// document that already exists there can be touched.
+//
+//   pnpm exec sanity dataset import sanity/seed/out/blog.ndjson production
+it("writes the blog's documents on their own", () => {
+  const out = path.join(__dirname, "out");
+  mkdirSync(out, { recursive: true });
+  const docs = BLOG_SEED.map(toDocument);
+  writeFileSync(
+    path.join(out, "blog.ndjson"),
+    `${docs.map((d) => JSON.stringify(d)).join("\n")}\n`,
+  );
+  expect(docs.every((d) => d._type === "post" || d._type === "blogPage")).toBe(true);
 });

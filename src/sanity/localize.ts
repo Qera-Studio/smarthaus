@@ -46,6 +46,19 @@ export function localize(value: unknown): unknown {
     // Rich text is handed over untouched: its renderer needs _type and _key.
     case "localeBlocks":
       return node.en ?? [];
+    // An article's text is handed over the same way, with each picture in it
+    // turned into what the page draws.
+    case "localeArticle":
+      return ((node.en as Node[] | undefined) ?? []).map((child) =>
+        child._type === "articleImage"
+          ? {
+              _type: child._type,
+              _key: child._key,
+              image: localize(child.image),
+              ...(child.caption ? { caption: localize(child.caption) } : {}),
+            }
+          : child,
+      );
     case "figure": {
       const asset = node.asset as { _ref?: string } | undefined;
       if (!asset?._ref) throw new Error("Sanity: a picture has no image uploaded");

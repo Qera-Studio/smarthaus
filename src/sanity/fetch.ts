@@ -16,6 +16,8 @@ import { dataset, SANITY_TAG } from "./env";
 import { localize } from "./localize";
 
 const QUERY = "*[_id == $id][0]";
+// Newest first; the id settles two published on the same day.
+const LIST_QUERY = "*[_type == $type] | order(date desc, _id asc)";
 
 /**
  * Click-to-edit marks go on copy only: the English text of a field. Ids,
@@ -56,4 +58,19 @@ export async function getDoc<T>(id: string): Promise<T> {
     throw new Error(`Sanity: no published document "${id}" in dataset "${dataset}"`);
   }
   return localize(doc) as T;
+}
+
+/**
+ * Every document of a type editors create (the articles), newest first, in
+ * render shape. An empty list is a real answer: there may be none yet.
+ */
+export async function getDocs<T>(type: string): Promise<T[]> {
+  const docs = (await inDraftMode())
+    ? await draftClient().fetch<unknown[]>(LIST_QUERY, { type }, { cache: "no-store" })
+    : await client.fetch<unknown[]>(
+        LIST_QUERY,
+        { type },
+        { cache: "force-cache", next: { tags: [SANITY_TAG] } },
+      );
+  return (docs ?? []).map((doc) => localize(doc) as T);
 }

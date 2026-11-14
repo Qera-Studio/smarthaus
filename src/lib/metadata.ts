@@ -62,7 +62,18 @@ export type PageMetadataInput = {
   description: string;
   /** False for drafts and placeholders. */
   index: boolean;
+  /**
+   * The page's own share picture, in place of the site's two cards: an
+   * article's main picture. A Sanity CDN address, which only the crawler of
+   * the site it is shared on ever requests, never a visitor's browser.
+   */
+  image?: { src: string; alt: string };
+  /** Set on an article: the card says so, with its date and author. */
+  article?: { published: string; modified?: string; author: string };
 };
+
+/** A share card's size, which Sanity's image pipeline crops the picture to. */
+const CARD = { width: 1200, height: 630 } as const;
 
 /** The full title a browser tab and a search result show. */
 export function fullTitle({ title, absolute }: Pick<PageMetadataInput, "title" | "absolute">) {
@@ -75,6 +86,15 @@ export function pageMetadata(input: PageMetadataInput): Metadata {
     throw new Error(`pageMetadata: "${path}" is not a clean site-relative path`);
   }
   const title = fullTitle(input);
+  const images = input.image
+    ? [
+        {
+          url: `${input.image.src}?w=${CARD.width}&h=${CARD.height}&fit=crop&auto=format`,
+          ...CARD,
+          alt: input.image.alt,
+        },
+      ]
+    : OG_IMAGES;
   if (index) {
     const [tMin, tMax] = TITLE_RANGE;
     const [dMin, dMax] = DESCRIPTION_RANGE;
@@ -95,20 +115,27 @@ export function pageMetadata(input: PageMetadataInput): Metadata {
     alternates: { canonical: path },
     robots: index ? INDEXABLE_ROBOTS : NOINDEX_ROBOTS,
     openGraph: {
-      type: "website",
+      ...(input.article
+        ? {
+            type: "article" as const,
+            publishedTime: input.article.published,
+            ...(input.article.modified ? { modifiedTime: input.article.modified } : {}),
+            authors: [input.article.author],
+          }
+        : { type: "website" as const }),
       locale: "en_AE",
       siteName: SITE_NAME,
       url: path,
       title,
       description,
-      images: OG_IMAGES,
+      images,
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
       // The landscape only: X shows one image for this card type.
-      images: [OG_IMAGES[0]!],
+      images: [images[0]!],
     },
   };
 }

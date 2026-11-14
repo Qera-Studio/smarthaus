@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { ROUTES } from "../sanity/content";
+import { routes } from "../sanity/content";
 
 const BASE_URL = "https://smarthaus.ae";
 
@@ -10,7 +10,9 @@ const BASE_URL = "https://smarthaus.ae";
  * search switch on is also what puts it here.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const pages = await Promise.all(ROUTES.map(async (r) => ({ ...r, doc: await r.load() })));
+  const pages = await Promise.all(
+    (await routes()).map(async (r) => ({ ...r, doc: await r.load() })),
+  );
   return pages
     .filter(({ doc }) => doc.seo.index)
     .map(({ path, doc }) => ({

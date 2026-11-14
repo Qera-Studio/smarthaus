@@ -20,7 +20,7 @@ jest.mock("../client", () => ({
 const mockDraft = jest.fn(async () => false);
 jest.mock("../draft", () => ({ inDraftMode: () => mockDraft() }));
 
-import { getDoc, shouldMark } from "../fetch";
+import { getDoc, getDocs, shouldMark } from "../fetch";
 import { SANITY_TAG } from "../env";
 
 const env = process.env;
@@ -120,5 +120,57 @@ describe("shouldMark", () => {
     [["seo", "title", "en"]],
   ])("leaves %j clean, because the code compares it", (path) => {
     expect(shouldMark(path)).toBe(false);
+  });
+});
+
+describe("getDocs, the list of a type editors create", () => {
+  const LIST = "*[_type == $type] | order(date desc, _id asc)";
+
+  it("reads every document of the type, newest first, under the same tag", async () => {
+    mockFetch.mockResolvedValue([]);
+    await getDocs("post");
+    expect(mockFetch).toHaveBeenCalledWith(
+      LIST,
+      { type: "post" },
+      { cache: "force-cache", next: { tags: [SANITY_TAG] } },
+    );
+    expect(mockWithConfig).not.toHaveBeenCalled();
+  });
+
+  it("hands each back in render shape, in the order the query gave", async () => {
+    mockFetch.mockResolvedValue([
+      { _id: "post-b", _type: "post", slug: "b", title: { _type: "localeString", en: "Second" } },
+      { _id: "post-a", _type: "post", slug: "a", title: { _type: "localeString", en: "First" } },
+    ]);
+    expect(await getDocs("post")).toEqual([
+      { slug: "b", title: "Second" },
+      { slug: "a", title: "First" },
+    ]);
+  });
+
+  it.each([[[]], [null], [undefined]])(
+    "treats %p as no documents, not as a failure: there may be none yet",
+    async (answer) => {
+      mockFetch.mockResolvedValue(answer);
+      await expect(getDocs("post")).resolves.toEqual([]);
+    },
+  );
+
+  it("reads drafts, uncached, when an editor is previewing", async () => {
+    process.env.SANITY_API_TOKEN = "viewer-token";
+    mockDraft.mockResolvedValue(true);
+    mockFetch.mockResolvedValue([]);
+    await getDocs("post");
+    expect(mockFetch).toHaveBeenCalledWith(LIST, { type: "post" }, { cache: "no-store" });
+    expect(mockWithConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ token: "viewer-token", perspective: "drafts" }),
+    );
+  });
+
+  it("refuses to preview without the Viewer token", async () => {
+    delete process.env.SANITY_API_TOKEN;
+    mockDraft.mockResolvedValue(true);
+    await expect(getDocs("post")).rejects.toThrow("Draft preview needs SANITY_API_TOKEN");
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });

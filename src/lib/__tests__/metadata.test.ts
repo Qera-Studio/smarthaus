@@ -4,6 +4,7 @@
 import { readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { Metadata } from "next";
+import { POSTS } from "../../../sanity/seed/blog";
 import {
   DESCRIPTION_RANGE,
   INDEXABLE_ROBOTS,
@@ -103,10 +104,15 @@ describe("pageMetadata", () => {
   });
 });
 
-/** Every page.tsx under src/app, as [route, file]. */
-function pages(): [string, string][] {
+type Params = { slug: string };
+
+/**
+ * Every page.tsx under src/app, as [route, file, params]. An article's page
+ * is one file for every article: it is listed once per seeded article.
+ */
+function pages(): [string, string, Params | undefined][] {
   const app = join(__dirname, "../../app");
-  const out: [string, string][] = [];
+  const out: [string, string, Params | undefined][] = [];
   const walk = (dir: string) => {
     for (const name of readdirSync(dir)) {
       const full = join(dir, name);
@@ -114,12 +120,17 @@ function pages(): [string, string][] {
         if (!name.startsWith("_") && name !== "__tests__" && !name.startsWith("api")) walk(full);
       } else if (name === "page.tsx") {
         const rel = relative(app, dir).split(sep).join("/");
-        out.push([rel ? `/${rel}` : "/", full]);
+        const route = rel ? `/${rel}` : "/";
+        if (route.includes("[slug]")) {
+          for (const { slug } of POSTS) out.push([route.replace("[slug]", slug), full, { slug }]);
+          // Three places even with no params: it.each hands a row's missing
+          // third argument the test's done callback, not undefined.
+        } else out.push([route, full, undefined]);
       }
     }
   };
   walk(app);
-  return out.sort();
+  return out.sort((a, b) => a[0].localeCompare(b[0]));
 }
 
 // Routes that are not pages a visitor browses: a dev preview and the e2e
@@ -139,17 +150,64 @@ describe("every page's metadata", () => {
 
   it.each(all.filter(([route]) => !NOT_BROWSED.has(route)))(
     "%s names itself as canonical and og:url, with a robots line",
-    async (route, file) => {
+    async (route, file, params) => {
       // A page whose content is in Sanity builds its metadata from it
       // (generateMetadata); the seed stands in for the dataset here.
       const page = (await import(file)) as {
         metadata?: Metadata;
-        generateMetadata?: () => Promise<Metadata>;
+        generateMetadata?: (props: { params: Promise<Params | undefined> }) => Promise<Metadata>;
       };
-      const metadata = page.metadata ?? (await page.generateMetadata!());
+      const metadata =
+        page.metadata ?? (await page.generateMetadata!({ params: Promise.resolve(params) }));
       expect(metadata.alternates).toEqual({ canonical: route });
-      expect(metadata.openGraph).toMatchObject({ url: route, images: OG_IMAGES });
+      // Every page shares the site's two cards, except an article, which is
+      // shared with its own picture (2026-11-14).
+      const images = params ? [expect.objectContaining({ width: 1200, height: 630 })] : OG_IMAGES;
+      expect(metadata.openGraph).toMatchObject({ url: route, images });
       expect([INDEXABLE_ROBOTS, NOINDEX_ROBOTS]).toContainEqual(metadata.robots);
     },
   );
+});
+
+describe("an article's metadata", () => {
+  const article = {
+    ...ok,
+    path: "/blog/one-home-five-vendors",
+    image: { src: "https://cdn.sanity.io/images/p/d/abc-1000x562.png", alt: "A living room" },
+    article: { published: "2026-11-05", author: "Sunil Pareek" },
+  };
+
+  it("is shared as an article, with its date and its author", () => {
+    expect(pageMetadata(article).openGraph).toMatchObject({
+      type: "article",
+      publishedTime: "2026-11-05",
+      authors: ["Sunil Pareek"],
+    });
+  });
+
+  it("says when it was last changed, once it has been", () => {
+    const modified = "2026-11-10T09:00:00Z";
+    const meta = pageMetadata({ ...article, article: { ...article.article, modified } });
+    expect(meta.openGraph).toMatchObject({ modifiedTime: modified });
+    expect(pageMetadata(article).openGraph).not.toHaveProperty("modifiedTime");
+  });
+
+  it("carries its own picture, cropped to a card, in place of the site's two", () => {
+    const meta = pageMetadata(article);
+    const card = {
+      url: "https://cdn.sanity.io/images/p/d/abc-1000x562.png?w=1200&h=630&fit=crop&auto=format",
+      width: 1200,
+      height: 630,
+      alt: "A living room",
+    };
+    expect(meta.openGraph).toMatchObject({ images: [card] });
+    expect(meta.twitter).toMatchObject({ images: [card] });
+  });
+
+  it("leaves every other page a website with the site's cards", () => {
+    const meta = pageMetadata(ok);
+    expect(meta.openGraph).toMatchObject({ type: "website", images: OG_IMAGES });
+    expect(meta.openGraph).not.toHaveProperty("publishedTime");
+    expect(meta.openGraph).not.toHaveProperty("authors");
+  });
 });

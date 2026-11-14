@@ -19,6 +19,8 @@ const PAGES = [
   "/accessibility",
   "/cookie-preferences",
   "/solutions",
+  "/blog",
+  "/blog/one-home-five-vendors",
 ];
 
 const directives = (policy: string) =>

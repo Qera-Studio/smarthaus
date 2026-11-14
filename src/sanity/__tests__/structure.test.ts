@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 import { structure } from "../structure";
-import { FIXED_DOCUMENTS, SINGLETONS } from "../schema";
+import { COLLECTIONS, FIXED_DOCUMENTS, SINGLETONS } from "../schema";
 
 /**
  * A stand-in StructureBuilder: every call records itself, so the sidebar can
@@ -44,6 +44,12 @@ function builder() {
       list: () => chain("list"),
       listItem: () => chain("listItem"),
       document: () => chain("document"),
+      // The list of a type's documents: the articles.
+      documentTypeList: (type: string) => {
+        const list = chain("documentTypeList") as { node: Node };
+        list.node.schemaType = type;
+        return list;
+      },
       divider: () => ({ node: { kind: "divider" } }),
     },
     unwrap,
@@ -90,12 +96,37 @@ describe("the Studio sidebar", () => {
       "Pricing",
       "FAQ",
       "Coming-soon pages",
+      "Blog",
       "Legal",
       "Cookie and consent wording",
     ]);
   });
 
-  it("sets the shared settings, the pages and the legal text apart", () => {
-    expect(items.filter((i) => i.kind === "divider")).toHaveLength(2);
+  it("sets the shared settings, the pages, the blog and the legal text apart", () => {
+    expect(items.filter((i) => i.kind === "divider")).toHaveLength(3);
+  });
+
+  describe("the blog, the one group editors add to", () => {
+    const blog = entries.find((e) => e.title === "Blog")!.child!;
+
+    it("opens the articles page, then the list of articles", () => {
+      expect(blog.items!.map((i) => i.title)).toEqual(["Articles page", "Articles"]);
+      expect(opened(blog)).toEqual([["blogPage", "blogPage"]]);
+    });
+
+    it("lists every article, newest first", () => {
+      const list = blog.items![1]!.child!;
+      expect(list.kind).toBe("documentTypeList");
+      expect(list.schemaType).toBe("post");
+      expect(list.defaultOrdering).toEqual([{ field: "date", direction: "desc" }]);
+    });
+
+    it("is the only list of a type's documents in the sidebar", () => {
+      const lists = (node: Node): Node[] => [
+        ...(node.kind === "documentTypeList" ? [node] : []),
+        ...[...(node.items ?? []), ...(node.child ? [node.child] : [])].flatMap(lists),
+      ];
+      expect(lists(sidebar).map((l) => l.schemaType)).toEqual([...COLLECTIONS]);
+    });
   });
 });

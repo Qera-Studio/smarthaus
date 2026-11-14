@@ -36,6 +36,24 @@ export const structure: StructureResolver = (S) => {
       ...PAGES.map(([id, title]) => doc(id, id, title)),
       fixed("comingSoonPage", "Coming-soon pages"),
       S.divider(),
+      // The one list editors add to and remove from, newest first.
+      S.listItem()
+        .title("Blog")
+        .child(
+          S.list()
+            .title("Blog")
+            .items([
+              doc("blogPage", "blogPage", "Articles page"),
+              S.listItem()
+                .title("Articles")
+                .child(
+                  S.documentTypeList("post")
+                    .title("Articles")
+                    .defaultOrdering([{ field: "date", direction: "desc" }]),
+                ),
+            ]),
+        ),
+      S.divider(),
       fixed("legalPage", "Legal"),
       doc("consentCopy", "consentCopy", "Cookie and consent wording"),
     ]);

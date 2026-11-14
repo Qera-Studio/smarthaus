@@ -6,12 +6,20 @@ import { join, relative, sep } from "node:path";
 import type { Metadata } from "next";
 import sitemap from "../sitemap";
 import { getDoc } from "../../sanity/fetch";
-import { ROUTES } from "../../sanity/content";
+import { ROUTES, routes } from "../../sanity/content";
+import { POSTS } from "../../../sanity/seed/blog";
 
-/** Every browsable page under src/app, as [route, file]. */
-function pages(): [string, string][] {
+type Params = { slug: string };
+
+/**
+ * Every browsable page under src/app, as [route, file, params]. An article's
+ * page is one file for as many routes as there are articles (2026-11-14, the
+ * first route built from content): it is listed once per seeded article, with
+ * the slug its metadata is asked for.
+ */
+function pages(): [string, string, Params?][] {
   const app = join(__dirname, "..");
-  const out: [string, string][] = [];
+  const out: [string, string, Params?][] = [];
   const walk = (dir: string) => {
     for (const name of readdirSync(dir)) {
       const full = join(dir, name);
@@ -23,7 +31,10 @@ function pages(): [string, string][] {
         }
       } else if (name === "page.tsx") {
         const rel = relative(app, dir).split(sep).join("/");
-        out.push([rel ? `/${rel}` : "/", full]);
+        const route = rel ? `/${rel}` : "/";
+        if (route.includes("[slug]")) {
+          for (const { slug } of POSTS) out.push([route.replace("[slug]", slug), full, { slug }]);
+        } else out.push([route, full]);
       }
     }
   };
@@ -32,17 +43,18 @@ function pages(): [string, string][] {
 }
 
 async function indexableRoutes(): Promise<string[]> {
-  const routes: string[] = [];
-  for (const [route, file] of pages()) {
+  const found: string[] = [];
+  for (const [route, file, params] of pages()) {
     const page = (await import(file)) as {
       metadata?: Metadata;
-      generateMetadata?: () => Promise<Metadata>;
+      generateMetadata?: (props: { params: Promise<Params | undefined> }) => Promise<Metadata>;
     };
-    const metadata = page.metadata ?? (await page.generateMetadata!());
+    const metadata =
+      page.metadata ?? (await page.generateMetadata!({ params: Promise.resolve(params) }));
     const robots = metadata.robots as { index?: boolean } | undefined;
-    if (robots?.index === true) routes.push(route);
+    if (robots?.index === true) found.push(route);
   }
-  return routes.sort();
+  return found.sort();
 }
 
 const urls = async () => (await sitemap()).map((entry) => entry.url);
@@ -58,12 +70,29 @@ describe("the sitemap", () => {
   });
 
   it("knows every routed page, so a new route is not silently left out", async () => {
-    const routed = ROUTES.map((r) => r.path).sort();
+    const routed = (await routes()).map((r) => r.path).sort();
     expect(
       pages()
         .map(([path]) => path)
         .sort(),
     ).toEqual(routed);
+  });
+
+  it("adds one route per article to the routes that are code", async () => {
+    const all = (await routes()).map((r) => r.path);
+    expect(all.slice(0, ROUTES.length)).toEqual(ROUTES.map((r) => r.path));
+    expect(all.slice(ROUTES.length).sort()).toEqual(POSTS.map((p) => `/blog/${p.slug}`).sort());
+  });
+
+  it("lists an article only once it is in search, and the articles page itself", async () => {
+    const listed = (await urls()).map(route);
+    expect(listed).toContain("/blog");
+    for (const post of POSTS) {
+      expect(listed.includes(`/blog/${post.slug}`)).toBe(Boolean(post.seo.index));
+    }
+    // At least one each way, so neither half of the rule is vacuous.
+    expect(POSTS.some((p) => p.seo.index)).toBe(true);
+    expect(POSTS.some((p) => !p.seo.index)).toBe(true);
   });
 
   it("uses absolute URLs on the canonical host, with no trailing slash on the root", async () => {

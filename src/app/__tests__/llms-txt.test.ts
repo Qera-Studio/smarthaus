@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { SITE_URL } from "../../components/Schema/schema";
 import { getDoc } from "../../sanity/fetch";
-import { ROUTES } from "../../sanity/content";
+import { routes } from "../../sanity/content";
 import { SITE_SETTINGS } from "../../../sanity/seed/site-settings";
 import { GET, buildLlmsTxt } from "../llms.txt/route";
 
@@ -28,7 +28,10 @@ beforeAll(async () => {
 });
 
 const indexable = async () => {
-  const docs = await Promise.all(ROUTES.map(async (r) => ({ path: r.path, doc: await r.load() })));
+  // Every route: those that are code, and one per article (2026-11-14).
+  const docs = await Promise.all(
+    (await routes()).map(async (r) => ({ path: r.path, doc: await r.load() })),
+  );
   return docs.filter(({ doc }) => doc.seo.index).map(({ path }) => path);
 };
 

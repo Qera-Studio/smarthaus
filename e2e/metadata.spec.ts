@@ -8,7 +8,8 @@ import { test, expect } from "./fixtures";
  * Desktop Chrome only: the head is the same markup on every device.
  */
 const SITE = "https://smarthaus.ae";
-const INDEXABLE = ["/", "/contact", "/about", "/accessibility"];
+// An article's own head (one og:image, its picture) is in e2e/blog.spec.ts.
+const INDEXABLE = ["/", "/contact", "/about", "/accessibility", "/blog"];
 const NOINDEX = [
   "/pricing",
   "/faq",

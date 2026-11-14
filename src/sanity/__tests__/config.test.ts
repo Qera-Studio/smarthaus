@@ -12,7 +12,7 @@ jest.mock("sanity/presentation", () => ({
   presentationTool: (options: unknown) => ({ name: "presentation", options }),
 }));
 
-import { schemaTypes } from "../schema";
+import { COLLECTIONS, schemaTypes } from "../schema";
 
 type Action = { action?: string };
 type Config = {
@@ -96,8 +96,29 @@ describe("the Studio config", () => {
     expect(types).toEqual(schemaTypes.map((t) => t.name));
   });
 
-  describe("every document is fixed: a route is code", () => {
-    const docTypes = schemaTypes.filter((t) => t.type === "document").map((t) => t.name);
+  // Every document but an article (2026-11-14): the blog is the one thing
+  // editors add to and take from, and its routes are built from its content.
+  describe("every document but an article is fixed: a route is code", () => {
+    const creatable: readonly string[] = COLLECTIONS;
+    const docTypes = schemaTypes
+      .filter((t) => t.type === "document" && !creatable.includes(t.name))
+      .map((t) => t.name);
+
+    it("counts the articles, and nothing else, as what editors create", () => {
+      expect(COLLECTIONS).toEqual(["post"]);
+      expect(docTypes).not.toContain("post");
+      expect(docTypes.length).toBeGreaterThanOrEqual(9);
+    });
+
+    it("lets an editor create, duplicate and delete an article", async () => {
+      const { schema, document } = (await load(env)).default;
+      expect(schema.templates([{ schemaType: "post" }])).toEqual([{ schemaType: "post" }]);
+      expect(document.newDocumentOptions([{ templateId: "post" }])).toEqual([
+        { templateId: "post" },
+      ]);
+      const all = [{ action: "publish" }, { action: "delete" }, { action: "duplicate" }];
+      expect(document.actions(all, { schemaType: "post" })).toBe(all);
+    });
 
     it("offers no template to create one", async () => {
       const { templates } = (await load(env)).default.schema;

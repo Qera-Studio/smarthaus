@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import { SEED, seedDoc } from "../../../sanity/seed";
 import { convert, toDocument } from "../../../sanity/seed/to-documents";
 import { localize } from "../localize";
-import { FIXED_DOCUMENTS, SINGLETONS, schemaTypes } from "../schema";
+import { COLLECTIONS, FIXED_DOCUMENTS, SINGLETONS, schemaTypes } from "../schema";
 import { claimProblem } from "../claims";
 // The render types are declarations only. Loading the module once lets the
 // coverage report see it has no executable lines, rather than counting every
@@ -73,9 +73,21 @@ describe("the seed", () => {
     },
   );
 
-  it("has one document per singleton and per fixed route, and nothing else", () => {
+  it("has one document per singleton and per fixed route, the articles, and nothing else", () => {
     const fixed = Object.values(FIXED_DOCUMENTS).flatMap((ids) => Object.keys(ids));
-    expect(SEED.map((e) => e.id).sort()).toEqual([...SINGLETONS, ...fixed].sort());
+    const creatable: readonly string[] = COLLECTIONS;
+    const written = SEED.filter((e) => creatable.includes(e.type));
+    expect(
+      SEED.filter((e) => !creatable.includes(e.type))
+        .map((e) => e.id)
+        .sort(),
+    ).toEqual([...SINGLETONS, ...fixed].sort());
+    // An article's id is its type and its slug, so its address is its id's.
+    expect(written.length).toBeGreaterThanOrEqual(4);
+    for (const { id, value } of written) {
+      expect(id).toBe(`post-${(value as { slug: string }).slug}`);
+    }
+    expect(new Set(written.map((e) => e.id)).size).toBe(written.length);
   });
 
   it("gives every document type in the schema a seeded document", () => {
@@ -169,7 +181,8 @@ describe("the converter, strict both ways", () => {
       value.pageLinks,
       "at",
     ) as { _key: string; _type: string }[];
-    expect(links.map((l) => l._key)).toEqual(["k0", "k1", "k2", "k3", "k4"]);
+    // Six since the articles page joined the footer (2026-11-14).
+    expect(links.map((l) => l._key)).toEqual(["k0", "k1", "k2", "k3", "k4", "k5"]);
     expect(links[0]!._type).toBe("link");
   });
 });

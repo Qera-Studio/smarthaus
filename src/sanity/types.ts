@@ -355,3 +355,42 @@ export type ConsentCopy = {
     marketing: { label: string };
   };
 };
+
+/** An article's text: Portable Text blocks, and pictures between them. */
+export type ArticleBlock = {
+  _type: "block";
+  _key: string;
+  style?: "normal" | "h2" | "h3" | "blockquote" | "callout";
+  listItem?: "bullet" | "number";
+  level?: number;
+  markDefs?: { _type: "link"; _key: string; href: string }[];
+  children: PtSpan[];
+};
+
+export type ArticleImage = {
+  _type: "articleImage";
+  _key: string;
+  image: Picture;
+  caption?: string;
+};
+
+export type ArticleNode = ArticleBlock | ArticleImage;
+
+export type Post = {
+  /** When the document was last published, from Sanity. */
+  updatedAt?: string;
+  title: string;
+  /** The article's address under /blog/. */
+  slug: string;
+  author: string;
+  /** The publication date, ISO: 2026-11-12. */
+  date: string;
+  /** From BLOG_TAGS (schema/blog.ts). The first shows on the card. */
+  tags: string[];
+  excerpt: string;
+  image: Picture;
+  body: ArticleNode[];
+  seo: Seo;
+};
+
+export type BlogPage = { updatedAt?: string; seo: Seo; heading: string };

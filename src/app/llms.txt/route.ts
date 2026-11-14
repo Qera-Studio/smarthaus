@@ -1,5 +1,5 @@
 import { SITE_URL } from "../../components/Schema";
-import { ROUTES, getSettings } from "../../sanity/content";
+import { getSettings, routes } from "../../sanity/content";
 
 /**
  * /llms.txt, a summary for answer engines (llmstxt.org), built from the same
@@ -13,7 +13,9 @@ export const dynamic = "force-static";
 export async function buildLlmsTxt(): Promise<string> {
   const [{ contact, identity, seo }, pages] = await Promise.all([
     getSettings(),
-    Promise.all(ROUTES.map(async (r) => ({ path: r.path, doc: await r.load() }))),
+    routes().then((all) =>
+      Promise.all(all.map(async (r) => ({ path: r.path, doc: await r.load() }))),
+    ),
   ]);
   const lines = [
     "# Smarthaus",

@@ -3,6 +3,7 @@
 // tests render, through the getDoc mock in jest.setup.ts.
 import type { SeedEntry } from "./to-documents";
 import { ABOUT_PAGE } from "./about-page";
+import { BLOG_PAGE, POSTS } from "./blog";
 import { COMING_SOON } from "./coming-soon";
 import { CONSENT_COPY } from "./consent-copy";
 import { CONTACT_PAGE } from "./contact-page";
@@ -30,11 +31,28 @@ export const SEED: readonly SeedEntry[] = [
     type: "comingSoonPage",
     value,
   })),
+  { id: "blogPage", type: "blogPage", value: BLOG_PAGE },
+  // The articles: the one type with as many documents as editors write.
+  ...POSTS.map((value) => ({ id: `post-${value.slug}`, type: "post", value })),
 ];
+
+/**
+ * The documents the blog added (2026-11-14). Production was seeded before
+ * they existed and is never re-seeded, so these alone were imported into it:
+ * sanity/seed/export.run.ts writes them to their own file.
+ */
+export const BLOG_SEED = SEED.filter((e) => e.type === "blogPage" || e.type === "post");
 
 /** One seeded document, in render shape, as getDoc would return it. */
 export function seedDoc(id: string): unknown {
   const entry = SEED.find((e) => e.id === id);
   if (!entry) throw new Error(`seed: no document "${id}"`);
   return entry.value;
+}
+
+/** Every seeded document of a type, newest first, as getDocs would return them. */
+export function seedDocs(type: string): unknown[] {
+  return SEED.filter((e) => e.type === type)
+    .map((e) => e.value as { date?: string })
+    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
 }

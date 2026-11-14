@@ -48,6 +48,7 @@ export const SITE_SETTINGS: SiteSettings = {
     { href: "/pricing", label: "Pricing" },
     { href: "/about", label: "About" },
     { href: "/faq", label: "FAQs" },
+    { href: "/blog", label: "Articles" },
     { href: "/contact", label: "Contact" },
   ],
   installLinks: [

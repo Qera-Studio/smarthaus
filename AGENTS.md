@@ -418,7 +418,7 @@ The prefilled message is built from the page context: "Hi, I'm interested in [pa
 
 ### How the site reads it
 
-- **One read path.** `getDoc(id)` (`src/sanity/fetch.ts`) fetches one document, at build, cached under one tag; one getter per document in `src/sanity/content.ts`, wrapped in React's `cache()`. Every document has a fixed id, and pages and sections are async Server Components that read their own. A missing document fails the build, never renders empty.
+- **One read path.** `getDoc(id)` (`src/sanity/fetch.ts`) fetches one document, at build, cached under one tag; one getter per document in `src/sanity/content.ts`, wrapped in React's `cache()`. Every document has a fixed id, and pages and sections are async Server Components that read their own. A missing document fails the build, never renders empty. The one exception is the blog's articles, read as a list (below).
 - **Render shape.** `localize()` (`src/sanity/localize.ts`) turns a stored document into what components take: copy as English strings, pictures as `{ src, width, height, alt }` (size read from the asset id, no second query), Sanity's `_` fields gone. Types in `src/sanity/types.ts`.
 - **Publishing.** A webhook in sanity.io/manage (production dataset, create/update/delete) posts to `/api/revalidate`, signed with `SANITY_REVALIDATE_SECRET`; a valid call expires the tag (`expire: 0`), an invalid one gets a 401 and changes nothing. If a re-render throws, Next keeps the last good page.
 - **Pictures never come from Sanity's CDN in the browser.** `next/image` fetches them on the server (`remotePatterns`, this project's images only) and serves them from our domain, so the marketing CSP stays closed and the privacy policy's "Sanity sees nothing about you" stays true. `e2e/cms.spec.ts` fails on any browser request to a Sanity host.
@@ -431,11 +431,12 @@ The prefilled message is built from the page context: "Hi, I'm interested in [pa
 
 - **Re-seed `ci`** after a schema change: `pnpm sanity:seed`, then `pnpm exec sanity dataset import sanity/seed/out/seed.ndjson ci --replace` (Sanity CLI, Node 22.12 or later, `pnpm exec sanity login` once).
 - **Never import the seed into production again.** Production was seeded once; since then the Studio is its source of truth, and an import would overwrite every edit.
+- **One exception, made once (2026-11-14):** the blog's five documents, which production did not have, were imported into it alone and without `--replace`, from `sanity/seed/out/blog.ndjson` (`BLOG_SEED`, written by `pnpm sanity:seed`). Nothing that existed was touched. Do not repeat it: those documents are the Studio's now too.
 - **No prices in the seed.** The dataset is public: a price that is stored is published (Shivanshu, 2026-11-04).
 
 ### Studio
 
-Embedded at `/studio` (`src/app/studio/[[...tool]]/page.tsx`, config `src/sanity/config.ts`, sidebar `src/sanity/structure.ts`). One sidebar entry per page; every document is fixed, with no create, duplicate or delete, because a route is code. Not indexed, not in the sitemap, drawn without the site's chrome (`data-studio` and one rule in `globals.scss`).
+Embedded at `/studio` (`src/app/studio/[[...tool]]/page.tsx`, config `src/sanity/config.ts`, sidebar `src/sanity/structure.ts`). One sidebar entry per page; every document is fixed, with no create, duplicate or delete, because a route is code. The articles are the exception (`COLLECTIONS` in `src/sanity/schema/index.ts`): editors create, duplicate and delete them under "Blog". Not indexed, not in the sitemap, drawn without the site's chrome (`data-studio` and one rule in `globals.scss`).
 
 - **CORS origins** are set by hand in sanity.io/manage, with credentials: `http://localhost:3000` (the scheme counts) and the production hosts.
 - **Env:** `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET` (public); `SANITY_REVALIDATE_SECRET` and `SANITY_API_TOKEN` (a Viewer token, never write access), server-only. `src/lib/runtime-config.ts` reports any missing in production.
@@ -514,6 +515,18 @@ Consent is owned by **Legal System §6** (Consent, Cookies & Tracking). Earlier 
 
 ---
 
+## The blog
+
+`/blog` lists every article and `/blog/<slug>` is one article (Figma 4900:2914 and 4898:2609, built 2026-11-14). Components in `src/components/Blog/`, schema in `src/sanity/schema/blog.ts`, seed in `sanity/seed/blog.ts`.
+
+- **The one type editors create.** An article (`post`) is the only document that is not fixed: its route is built from its slug, so a new article needs no code. `getPosts()` reads them all in one list query (`getDocs` in `src/sanity/fetch.ts`, newest first, same cache tag); the index, each article and the sitemap share it. `routes()` in `src/sanity/content.ts` is `ROUTES` plus one route per article, and the sitemap and `llms.txt` read it.
+- **What an editor can write.** A slug of lower-case words and hyphens; one to three tags from `BLOG_TAGS` (a fixed list, so the filter never fills with near-duplicates); text in paragraphs, two heading levels, lists, a quote, a box and pictures, nothing else. The claims audit runs over every line of the text.
+- **The articles page's search** matches every word typed against titles and tags, and the tag filter narrows to one tag. It chooses among the articles the server sent (`ArticleBrowser`, the one client island); while narrowing, the wide "latest" panel gives way to plain rows so no match hides behind it. No date filter (2026-11-14): with a handful of articles it narrows nothing.
+- **Related articles** are the three newest others, those sharing a tag first (`related()` in `ArticlePage.tsx`). Never picked by hand.
+- **Search and sharing.** Each article has its own title, description and switch, its main picture as its share card (cropped by Sanity's image pipeline, requested only by the crawler of the site it is shared on), `og:type: article`, and BlogPosting structured data with a three-step breadcrumb (`articleGraph`). An article not in search has none of that and is not in the sitemap.
+- **The four seed articles.** "One Home, Five Vendors" is Shivanshu's and is in search. The other three were drafted for his review and stay out of search until he has read them: anything they say about Smarthaus is limited to the confirmed facts in the claims audit below, and `src/sanity/__tests__/seed/blog.test.ts` pins that.
+- **Back** on an article goes to `/blog`. The footer's "Articles" link is in the seed and the ci dataset; production gets it at launch (`docs/launch-gate/pre-launch-fixes.md`).
+
 ## Photography constraint
 
 No client photography exists and none will be sourced. Client privacy makes it permanently unavailable — this is positioned as a discretion signal, not an apology.
@@ -526,6 +539,8 @@ No client photography exists and none will be sourced. Client privacy makes it p
 - The brand's visual identity
 
 **One exception, temporary: the homepage hero strip** (`public/hero/hero_carousel/`, decided 2026-10-28). The client asked for lifestyle images there and Shivanshu confirmed they are licensed for our use. They are a stand-in, not a reversal of the rule: every card's picture is ticked "Temporary stock image" in the Studio, and `src/sanity/__tests__/seed/hero-carousel.test.ts` fails once the seed's last mark is cleared.
+
+**The same exception covers the blog's pictures** (`public/blog/`, 2026-11-14): licensed stock, every picture ticked "Temporary stock image", and `src/sanity/__tests__/seed/blog.test.ts` fails once the seed's last mark is cleared. Three are 384px wide and wait on larger originals.
 
 **The same exception covers the nav's Solutions menu** (`public/hero/navBar/`, decided 2026-10-28): licensed stock, temporary, every picture is ticked "Temporary stock image" in the Studio, and `src/sanity/__tests__/seed/solutions-menu.test.ts` fails once the seed's last mark is cleared.
 
