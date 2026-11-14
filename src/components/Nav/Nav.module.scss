@@ -1477,6 +1477,28 @@
   // divergence this replaces. A 400px capsule has no room for a link row, and
   // the footer belongs wherever the vertical menu is, which is now everywhere.
 
+  // --- Over the homepage's dark hero ------------------------------------------
+
+  // From lg the bar at rest has no glass and lies on the hero's dark ground
+  // (HomeHero.module.scss), so its ink is the light one and the CTA the light
+  // button. Once it shrinks to the capsule it is glass again and the dark ink
+  // returns. The Solutions panel has its own glass in both states, so inside
+  // it the ink is always the dark one. In :where(), adding no specificity
+  // beyond the state's own.
+  @include bp-lg {
+    :where(:root:has([data-hero])) .nav:not([data-stuck]) {
+      --nav-ink: var(--color-text-inverse);
+      --nav-link-ink: var(--color-text-inverse);
+      --nav-cta-bg: var(--color-bg-canvas);
+      --nav-cta-ink: var(--color-text-primary);
+
+      .menu {
+        --nav-ink: var(--color-text-primary);
+        --nav-link-ink: var(--color-text-primary);
+      }
+    }
+  }
+
   // --- The homepage opening -------------------------------------------------
 
   // With the hero's CTAs and strip, on the timings HomeHero.module.scss sets

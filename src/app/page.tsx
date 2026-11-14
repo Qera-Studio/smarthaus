@@ -1,7 +1,6 @@
 import { Care } from "../components/Care";
 import { Hardware } from "../components/Hardware";
 import { HomeHero } from "../components/HomeHero";
-import { Partners } from "../components/Partners";
 import { HomeEnquiry } from "../components/HomeEnquiry";
 import { Pricing } from "../components/Pricing";
 import { Process } from "../components/Process";
@@ -33,15 +32,16 @@ export default async function Home() {
       {/* FluidHero is unmounted, not deleted (2026-10-28), like the villa;
           src/components/FluidHero stays intact. */}
       <HomeHero />
-      {/* Who stands behind the systems, before anything asks to be trusted.
-          Took the Maple banner's place; src/components/Maple stays unmounted. */}
-      <Partners />
-      {/* What the house is made of, between the two plain sections so neither
-          runs into the other; what Smarthaus has done; how it gets installed;
-          then keeping it running, and the levels. */}
-      <Hardware />
+      {/* The partner cards are unmounted, not deleted (2026-11-14): TIS and
+          Fibaro are in the hero's logo rail now. src/components/Partners and
+          its content stay intact, as src/components/Maple does. */}
+      {/* What Smarthaus has done; what the house is made of; how it gets
+          installed; then keeping it running, and the levels (the figures
+          above the hardware: Shivanshu, 2026-11-14). The hardware is handed
+          to Process, which holds it still while its first sheet rises over
+          it. */}
       <Stats />
-      <Process />
+      <Process held={<Hardware />} />
       <Care />
       <Pricing />
       {/* Last thing on the page, directly above the footer. */}

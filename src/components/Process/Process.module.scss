@@ -34,10 +34,19 @@ $stack-min-block: 32rem;
 // shallower than the hero strip's photographs (Shivanshu, 2026-11-04).
 $parallax-spare: 22.5%;
 
+// The first sheet rises at this share of its size, then grows to fill the
+// screen (SheetSnap).
+$snap-scale: 0.8;
+
 @layer blocks {
   .process {
     // 96px above and below, as every homepage section after the hero has.
     padding-block: $space-24;
+    // So a sheet can tell how far the screen runs past the page's column:
+    // 50vw - 50cqi is the column's own gutter up to the column's cap, and
+    // more than that on a wider screen (.sheets).
+    container-type: inline-size;
+    position: relative;
 
     // L2 ink ramp. Colour tokens rather than `opacity`, which would inherit to
     // every descendant. Same approach as the footer's --footer-ink-* set.
@@ -54,10 +63,11 @@ $parallax-spare: 22.5%;
     margin: 0;
     padding: 0;
     list-style: none;
-    // Past body's gutter so the ground reaches the screen edge; each sheet
-    // gives the gutter back as padding. A token cancelled by name, as the
-    // footer does.
-    margin-inline: calc(-1 * var(--page-gutter));
+    // Out to the screen's edges, on any screen (Shivanshu, 2026-11-14: the
+    // ground used to stop at the column's cap, 1440). Each sheet gives the
+    // distance back as padding, so its content stays in the column.
+    --sheet-side: calc(50vw - 50cqi - var(--page-gutter));
+    margin-inline: calc(50cqi - 50vw);
     // Keeps each sheet's shadow on the sheets. On a screen wider than the
     // content column the page shows either side, and six shadows stacked up on
     // it, darkest by the last step (found 2026-11-04). clip, not hidden: a
@@ -70,7 +80,7 @@ $parallax-spare: 22.5%;
     flex-direction: column;
     gap: $space-4;
     padding-block: $space-8;
-    padding-inline: var(--page-gutter);
+    padding-inline: calc(var(--sheet-side) + var(--page-gutter));
     background-color: var(--process-sheet);
     // The top edge is what shows as a sheet slides over the one below it.
     border-block-start: 1px solid $brown-800;
@@ -87,7 +97,7 @@ $parallax-spare: 22.5%;
     @include bp-lg {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
-      padding-inline: $space-16;
+      padding-inline: calc(var(--sheet-side) + #{$space-16});
       // Clear of the floating nav capsule at the top.
       padding-block-start: calc(
         var(--nav-float-inset) + var(--nav-capsule-block-size) + #{$space-6}
@@ -97,6 +107,40 @@ $parallax-spare: 22.5%;
 
   // The stack. Only where it can work; see the head of this file.
   @media (prefers-reduced-motion: no-preference) and (min-height: $stack-min-block) {
+    // The section before the stack holds still once its foot reaches the
+    // screen's, and the first sheet rises over it. Its height is SheetSnap's
+    // to tell; until it has, the fallback is so tall that this never pins.
+    .held {
+      position: sticky;
+      inset-block-start: min(0px, calc(100svh - var(--held-block, 1000000px)));
+    }
+
+    // Nothing of the page between the held section and the first sheet, and
+    // nothing under the last for the held section to show through: what
+    // .process kept below itself moves out to the box they share.
+    .stack {
+      margin-block-end: $space-24;
+    }
+
+    .stack .process {
+      padding-block: 0;
+    }
+
+    // The first sheet comes up small and grows to fill the screen: from its
+    // top edge, so that edge stays where the scroll has put it. A soft
+    // overshoot of a hundredth or two, cut off at the screen's edge, is the
+    // pull at the end.
+    .sheet[data-snap] {
+      transform-origin: 50% 0;
+      transition-property: scale;
+      transition-duration: var(--duration-slower);
+      transition-timing-function: cubic-bezier(0.3, 1.3, 0.5, 1);
+    }
+
+    .sheet[data-snap="waiting"] {
+      scale: $snap-scale;
+    }
+
     .sheet {
       position: sticky;
       inset-block-start: 0;

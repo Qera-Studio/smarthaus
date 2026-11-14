@@ -1,10 +1,13 @@
 import Image from "next/image";
+import { preload } from "react-dom";
 
-import { whatsappLink } from "../../lib/contact";
-import { getHomePage, getSettings } from "../../sanity/content";
+import { getHomePage } from "../../sanity/content";
 import type { HeroCard } from "../../sanity/types";
 import { Button } from "../Button";
 import { Words } from "../Words";
+import { BRAND_REPEATS, BRANDS, BRANDS_LABEL } from "./brands";
+import { GlassCanvas } from "./GlassCanvas";
+import { HeroLead } from "./HeroLead";
 import { StripControls } from "./StripControls";
 import styles from "./HomeHero.module.scss";
 
@@ -13,6 +16,13 @@ import styles from "./HomeHero.module.scss";
 // confirmed before it was published, and a new one is asked first
 // (AGENTS.md, claims audit). The title and lede word limits are the schema's,
 // matched to the counts this stylesheet times.
+
+/**
+ * The ring picture behind the glass, already blurred as the design blurs it
+ * (scripts/bake-glass-ground.mjs). About 3KB: the stylesheet paints it as the
+ * hero's ground and GlassCanvas uploads the same file as its texture.
+ */
+export const GROUND = "/hero/glass/ground.webp";
 
 /** The cards the strip runs past on its way in, ahead of the first. */
 export const LEAD_CARDS = 2;
@@ -68,10 +78,42 @@ function Card({
 }
 
 /**
- * The homepage hero: the title, one line and two CTAs, with the four proofs on
- * one line at the far end of the buttons' foot (below lg, under them), then the strip's pause
- * button and a strip of images drifting right to left, pinned to the bottom of
- * the screen.
+ * One run of the makers' marks. Only the first in the rail is read out; the
+ * rest are the loop's filling, hidden from AT.
+ */
+function Brands({ copy }: { copy?: boolean }) {
+  return (
+    <ul
+      className={styles.brandList}
+      aria-label={copy ? undefined : BRANDS_LABEL}
+      aria-hidden={copy ? "true" : undefined}
+      data-copy={copy ? "" : undefined}
+    >
+      {BRANDS.map((brand) => (
+        <li key={brand.name}>
+          {/* A small SVG or PNG mark: next/image would only wrap it in a
+              loader it cannot use. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className={styles.brand}
+            src={`/hero/brands/${brand.logo}`}
+            alt={copy ? "" : brand.name}
+            width={brand.width}
+            height={brand.height}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The homepage hero (redesigned 2026-11-14, Figma 4886:1856): on a dark
+ * ground of reeded glass over a blurred ring (the stylesheet first, then
+ * GlassCanvas), the title, one line, the email field that sends a lead, the
+ * four proofs, and a rail of the makers' marks. Under the glass, the strip's
+ * pause button and the strip of images drifting right to left, its top a
+ * tenth of the screen above the fold so the page asks to be scrolled.
  *
  * Server Component. The strip moves on a CSS animation over two copies of the
  * list; the second copy is hidden from AT and out of the tab order, so each
@@ -79,42 +121,34 @@ function Card({
  * lead cards off the start of the track are inert, since only the opening ever
  * brings them on screen. Hover or focus inside the strip stops it (the stylesheet), and
  * StripControls holds the pause button WCAG 2.2.2 asks for, and lets a mouse
- * drag or a trackpad swipe move the strip.
- * Under reduced motion the strip does not move and scrolls sideways instead.
+ * drag or a trackpad swipe move the strip. The rail of marks runs the same
+ * way and stops with the same button.
+ * Under reduced motion the strip does not move and scrolls sideways instead,
+ * and the marks stand in a row.
  *
  * Replaced FluidHero on 2026-10-28; src/components/FluidHero stays, unmounted.
- * The h1 is the page's only one. The LCP element is the first card's image
- * (measured 2026-10-28 in Chromium, desktop and phone; on an iPhone 17 in
- * WebKit it is the subtitle, measured 2026-11-02), which is why it alone is
+ * The h1 is the page's only one, and the LCP element: the ground picture is
+ * a few kilobytes stretched over the screen, which the browser does not count,
+ * and the strip's first card is now mostly below the fold. That card is still
  * fetched at high priority, the next three at the default, and the rest at
  * low (see Load).
  */
 export async function HomeHero() {
-  const [{ hero }, { contact }] = await Promise.all([getHomePage(), getSettings()]);
+  const { hero } = await getHomePage();
   const cards = hero.cards;
+  // The stylesheet asks for it too, but only once it has loaded and parsed.
+  preload(GROUND, { as: "image", fetchPriority: "high" });
   return (
     <section className={styles.hero} aria-labelledby="hero-title" data-hero>
+      <GlassCanvas src={GROUND} />
       <div className={styles.copy}>
-        <div>
-          <h1 className={styles.title} id="hero-title">
-            <Words text={hero.title} className={styles.word} />
-          </h1>
-          <p className={styles.lede}>
-            <Words text={hero.lede} className={styles.word} />
-          </p>
-          <div className={styles.ctas}>
-            <Button href="/contact" size="sm">
-              {hero.visitCta}
-            </Button>
-            <Button
-              href={whatsappLink(contact.whatsapp, hero.whatsappMessage)}
-              variant="outline"
-              size="sm"
-            >
-              {hero.whatsappCta}
-            </Button>
-          </div>
-        </div>
+        <h1 className={styles.title} id="hero-title">
+          <Words text={hero.title} className={styles.word} />
+        </h1>
+        <p className={styles.lede}>
+          <Words text={hero.lede} className={styles.word} />
+        </p>
+        <HeroLead cta={hero.visitCta} />
         <ul className={styles.proof}>
           {hero.proof.map((text, index) => (
             <li key={text}>
@@ -123,6 +157,15 @@ export async function HomeHero() {
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className={styles.brands} data-hero-brands>
+        <div className={styles.brandTrack}>
+          <Brands />
+          {Array.from({ length: 2 * BRAND_REPEATS - 1 }, (_, index) => (
+            <Brands key={index} copy />
+          ))}
+        </div>
       </div>
 
       <StripControls className={styles.controls} buttonClassName={styles.control} />

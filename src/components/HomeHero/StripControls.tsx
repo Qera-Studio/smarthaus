@@ -26,6 +26,11 @@ export const GLIDE_STEP_MS = 33;
 export const GLIDE_DECAY = 0.7;
 /** How much of the drift's speed comes back each step after a scroll up. */
 export const DRIFT_RETURN = 0.08;
+/**
+ * How fast the makers' marks run while a pointer is over them, as a share of
+ * their own speed: a crawl, not a stop (Shivanshu, 2026-11-14).
+ */
+export const BRANDS_HOVER_RATE = 0.08;
 /** Below this share of the drift's own speed, the scroll's part is over. */
 const GLIDE_END = 0.25;
 
@@ -276,6 +281,19 @@ export function StripControls({
     });
     visible.observe(el);
 
+    // The marks slow under a pointer and pick up as it leaves. The rate of
+    // the CSS animation itself, so nothing jumps; under reduced motion there
+    // is no animation and this does nothing.
+    const marks = el.closest("[data-hero]")?.querySelector<HTMLElement>("[data-hero-brands]");
+    const pace = (rate: number) => () => {
+      for (const animation of marks?.firstElementChild?.getAnimations() ?? [])
+        animation.updatePlaybackRate(rate);
+    };
+    const slowMarks = pace(BRANDS_HOVER_RATE);
+    const freeMarks = pace(1);
+    marks?.addEventListener("pointerenter", slowMarks);
+    marks?.addEventListener("pointerleave", freeMarks);
+
     // The opening is over once this row, among the last to start and the
     // longest, has faded in (the keyframes' names are hashed, so by the end).
     const row = root.current;
@@ -351,6 +369,9 @@ export function StripControls({
       window.removeEventListener("scroll", onScroll);
       endGlide();
       row?.removeEventListener("animationend", onOpened);
+      marks?.removeEventListener("pointerenter", slowMarks);
+      marks?.removeEventListener("pointerleave", freeMarks);
+      freeMarks();
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onHover);
       el.removeEventListener("pointerleave", onLeave);
