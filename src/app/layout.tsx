@@ -90,7 +90,7 @@ export async function generateMetadata(): Promise<Metadata> {
 // match --color-bg-canvas, so the viewport reads as one surface. No
 // maximumScale or userScalable limits — pinch-zoom is a WCAG 1.4.4 requirement.
 export const viewport: Viewport = {
-  themeColor: "#f0e9dd",
+  themeColor: "#f8f5f0",
   colorScheme: "light",
 };
 

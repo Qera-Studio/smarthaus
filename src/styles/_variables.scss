@@ -52,8 +52,12 @@ $brown-50: #f8f5f0; // porcelain
 
   // L1 semantics — these are what components use
   // Backgrounds
-  --color-bg-canvas: #{$brown-100};
-  --color-bg-surface: #{$brown-50};
+  // The page's ground is brown-50 (Shivanshu, 2026-11-14): brown-100, which
+  // it was, read as too strong once the two were seen side by side. The
+  // surface took the other, so it is still one step off the canvas, now the
+  // darker step where it was the lighter.
+  --color-bg-canvas: #{$brown-50};
+  --color-bg-surface: #{$brown-100};
   --color-bg-muted: #{$brown-200};
   --color-bg-inverse: #{$brown-900};
   // The darkest ground — used where an inverse surface needs to read as solid

@@ -11,10 +11,10 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     description: seo.defaultDescription,
     start_url: "/",
     display: "standalone",
-    // Matches --color-bg-canvas ($brown-100) so the splash screen does not
+    // Matches --color-bg-canvas ($brown-50) so the splash screen does not
     // flash a different ground before first paint.
-    background_color: "#f0e9dd",
-    theme_color: "#f0e9dd",
+    background_color: "#f8f5f0",
+    theme_color: "#f8f5f0",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
