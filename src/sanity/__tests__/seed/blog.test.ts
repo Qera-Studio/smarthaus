@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { BLOG_PAGE, POSTS } from "../../../../sanity/seed/blog";
 import { DESCRIPTION_RANGE, fullTitle, TITLE_RANGE } from "../../../lib/metadata";
 import { claimProblem } from "../../claims";
-import { articleClaimsRule, BLOG_TAGS, SLUG } from "../../schema/blog";
+import { MAX_READ_MINUTES, readMinutes } from "../../../lib/reading-time";
+import { articleClaimsRule, BLOG_TAGS, readTimeRule, SLUG } from "../../schema/blog";
 import type { ArticleBlock, ArticleImage, Post } from "../../types";
 
 /**
@@ -223,6 +224,11 @@ describe.each(each)("%s", (_slug, post) => {
       expect(claimProblem(copy)).toBeNull();
     }
     expect(articleClaimsRule(post.body)).toBe(true);
+  });
+
+  it("reads in five minutes or less, so the Studio would publish it", () => {
+    expect(readTimeRule(post.body)).toBe(true);
+    expect(readMinutes(post.body)).toBeLessThanOrEqual(MAX_READ_MINUTES);
   });
 
   it("quotes no price, and no figure in dirhams", () => {

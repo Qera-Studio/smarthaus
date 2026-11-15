@@ -1,6 +1,7 @@
 // The blog: the one place editors create and delete documents. Every other
 // document is fixed, because a route is code; an article's route is its slug.
 import type { Rule } from "sanity";
+import { MAX_READ_MINUTES, readMinutes, WORDS_PER_MINUTE } from "../../lib/reading-time";
 import { claimProblem } from "../claims";
 import {
   optional,
@@ -52,6 +53,21 @@ export function articleClaimsRule(value: unknown): true | string {
     }
   }
   return true;
+}
+
+/** An article longer than MAX_READ_MINUTES cannot be published. */
+export function readTimeRule(value: unknown): true | string {
+  const minutes = readMinutes(value);
+  return (
+    minutes <= MAX_READ_MINUTES ||
+    `This reads in about ${minutes} minutes. Keep an article to ${MAX_READ_MINUTES} minutes or less, about ${MAX_READ_MINUTES * WORDS_PER_MINUTE} words.`
+  );
+}
+
+/** Every check on an article's text, the claims audit first. */
+export function articleTextRule(value: unknown): true | string {
+  const claims = articleClaimsRule(value);
+  return claims === true ? readTimeRule(value) : claims;
 }
 
 // An article's text. Layout stays code: these are the only shapes the page
@@ -108,7 +124,7 @@ export const localeArticle: SchemaType = {
       title: "English",
       type: "array",
       of: articleNodes,
-      validation: (rule: Rule) => rule.required().custom(articleClaimsRule),
+      validation: (rule: Rule) => rule.required().custom(articleTextRule),
     },
     {
       name: "ar",

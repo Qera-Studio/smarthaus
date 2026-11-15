@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import styles from "./Nav.module.scss";
 import { latestEntry } from "@/lib/observer";
@@ -55,6 +56,15 @@ export function NavShell({ brandMark, brandFull, links, solutions, cta, footer }
   // it, and kept: no visitor pays its elements and pictures until then.
   const [subUsed, setSubUsed] = useState(false);
   const [stuck, setStuck] = useState(false);
+  // A new page closes the phone menu. Following one of its links left it open
+  // over the page it opened (found 2026-11-15). Set while rendering, React's
+  // way to follow a value, rather than in an effect a frame later.
+  const pathname = usePathname();
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (pathname !== menuPath) {
+    setMenuPath(pathname);
+    setOpen(false);
+  }
   // True once the footer covers FOOTER_HIDE_RATIO of the viewport.
   const [atFooter, setAtFooter] = useState(false);
   // From lg up the links are always on show in the bar, so the panel is never

@@ -14,7 +14,9 @@ import type {
   Post,
   PricingPage,
   SiteSettings,
+  SolutionPage,
 } from "./types";
+import { FIXED_DOCUMENTS } from "./schema";
 
 export const getSettings = cache(() => getDoc<SiteSettings>("siteSettings"));
 export const getContactPage = cache(() => getDoc<ContactPage>("contactPage"));
@@ -37,6 +39,13 @@ export async function getPost(slug: string): Promise<Post | undefined> {
   return (await getPosts()).find((post) => post.slug === slug);
 }
 export const postPath = (slug: string) => `/blog/${slug}`;
+
+/** The solutions with a page, by their id in the Solutions menu. */
+export const SOLUTION_SLUGS: readonly string[] = Object.keys(FIXED_DOCUMENTS.solutionPage).map(
+  (id) => id.slice("solution-".length),
+);
+export const getSolutionPage = cache((slug: string) => getDoc<SolutionPage>(`solution-${slug}`));
+export const solutionPath = (slug: string) => `/solutions/${slug}`;
 
 /**
  * /faq is publishable once no answer is pending and an editor has turned it on:
@@ -68,6 +77,10 @@ export const ROUTES: readonly { path: string; load: () => Promise<Routed> }[] = 
     },
   },
   { path: "/solutions", load: () => getComingSoonPage("solutions") },
+  ...SOLUTION_SLUGS.map((slug) => ({
+    path: solutionPath(slug),
+    load: () => getSolutionPage(slug),
+  })),
   { path: "/designers", load: () => getComingSoonPage("designers") },
   { path: "/developers", load: () => getComingSoonPage("developers") },
   { path: "/privacy", load: () => getLegalDocument("privacy") },

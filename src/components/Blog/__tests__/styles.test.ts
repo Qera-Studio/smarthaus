@@ -163,6 +163,22 @@ describe("Blog.module.scss", () => {
       expect(rule(".cardMeta")).toMatch(/margin-block-start:\s*auto/);
     });
 
+    test("is two lines: tag and date 12px apart, the reading time under them", () => {
+      const meta = rule(".cardMeta");
+      expect(meta).toMatch(/display:\s*grid/);
+      expect(meta).toMatch(/grid-template-columns:\s*auto auto minmax\(0, 1fr\) auto/);
+      expect(meta).toMatch(/gap:\s*4px 12px/);
+      expect(rule(".cardMeta time")).toMatch(/grid-column:\s*3\/-1/);
+      expect(rule(".cardRead")).toMatch(/grid-column:\s*1\/4/);
+    });
+
+    test("puts the arrow at the end of the second line, at its own size", () => {
+      const open = rule(".open");
+      expect(open).toMatch(/grid-column:\s*4/);
+      expect(open).toMatch(/inline-size:\s*20px/);
+      expect(open).not.toMatch(/margin-inline-start/);
+    });
+
     test("draws the arrow from the design's file, turned to point up and right", () => {
       const open = rule(".open");
       expect(open).toMatch(/background-image:\s*url\("\/blog\/arrow-open\.svg"\)/);
@@ -297,6 +313,44 @@ describe("Blog.module.scss", () => {
       const forced = media("(forced-colors: active)");
       expect(rule(".searchIcon", forced)).toMatch(/background-color:\s*ButtonText/);
       expect(rule(".selectField::after", forced)).toMatch(/background-color:\s*FieldText/);
+    });
+
+    describe("under a mouse, a size down (Shivanshu, 2026-11-15)", () => {
+      const FINE = "(hover: hover) and (pointer: fine)";
+      const fine = () => media(FINE);
+
+      test("is asked of a mouse alone, so a finger keeps 44px and 16px", () => {
+        expect(fine()).not.toBe("");
+        expect(() => media("(pointer: coarse)")).toThrow("no @media");
+        expect(rule(".search,\n  .select")).toMatch(/block-size:\s*var\(--size-touch-target\)/);
+      });
+
+      test("the fields are 32px tall at 14px, still past the 24px a mouse needs", () => {
+        const field = rule(".search,\n    .select", fine());
+        expect(field).toMatch(/block-size:\s*32px/);
+        expect(field).toMatch(/font-size:\s*var\(--font-size-sm\)/);
+        expect(Number(field.match(/block-size:\s*(\d+)px/)![1])).toBeGreaterThanOrEqual(24);
+      });
+
+      test("the search button is a 32px square with a 16px magnifier", () => {
+        const button = rule(".searchButton", fine());
+        expect(button).toMatch(/inline-size:\s*32px/);
+        expect(button).toMatch(/block-size:\s*32px/);
+        const icon = rule(".searchIcon", fine());
+        expect(icon).toMatch(/inline-size:\s*16px/);
+        expect(icon).toMatch(/block-size:\s*16px/);
+      });
+
+      test("the filter's arrow is 12px, and the words stop short of it", () => {
+        expect(rule(".selectField::after", fine())).toMatch(/inline-size:\s*12px/);
+        expect(rule(".select", fine().slice(fine().indexOf(".searchIcon")))).toMatch(
+          /padding-inline-end:\s*32px/,
+        );
+      });
+
+      test("changes only sizes: the frame, the line and the icons stay as they are", () => {
+        expect(fine()).not.toMatch(/border|mask|background|outline|inset/);
+      });
     });
 
     test("stand on one foot: the search's line and the filter's frame end level", () => {

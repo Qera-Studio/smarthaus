@@ -319,3 +319,56 @@ $reveal-word-wait: 400ms;
     }
   }
 }
+
+// --- The solution opening ---------------------------------------------------
+//
+// SolutionsMenu.tsx: a solution's picture in the nav's menu grows into its
+// page's, half the screen, in one native view transition (Shivanshu,
+// 2026-11-15), while the rest of the page cross-fades and the title and its
+// line rise in as the picture lands. Here and not in a module, which refuses
+// a selector without a class of its own. Never under reduced motion: the
+// menu does not start one.
+@layer base {
+  :root {
+    --solution-open: calc(var(--duration-slower) * 1.5);
+  }
+
+  ::view-transition-group(solution-picture) {
+    animation-duration: var(--solution-open);
+    // Slow away, long and soft into place.
+    animation-timing-function: cubic-bezier(0.7, 0, 0.2, 1);
+  }
+
+  // Both pictures fill the moving box as they fill their own frames, cropped
+  // rather than stretched while its shape changes. A snapshot shows what
+  // overflows it unless told to clip: without it both crops showed at once,
+  // one wider and one taller than the box.
+  ::view-transition-old(solution-picture),
+  ::view-transition-new(solution-picture) {
+    block-size: 100%;
+    object-fit: cover;
+    overflow: clip;
+    animation-timing-function: cubic-bezier(0.7, 0, 0.2, 1);
+  }
+
+  ::view-transition-group(solution-copy),
+  ::view-transition-group(solution-nav),
+  ::view-transition-new(solution-nav) {
+    animation-name: none;
+  }
+
+  ::view-transition-new(solution-copy) {
+    animation-name: solution-copy-in;
+    animation-duration: var(--duration-slower);
+    animation-timing-function: var(--ease-out);
+    animation-delay: calc(var(--solution-open) * 0.6);
+    animation-fill-mode: both;
+  }
+
+  @keyframes solution-copy-in {
+    from {
+      opacity: 0;
+      translate: 0 var(--space-4);
+    }
+  }
+}

@@ -85,10 +85,13 @@ const nextConfig: NextConfig = {
     // hosts and api.sanity.io itself), shows images from its CDN, avatars from
     // the sign-in providers, and blob: previews of uploads. That route only:
     // the marketing pages stay closed. Clarity and GA4 are left out there, so
-    // no session recording ever sees an editor's work.
+    // no session recording ever sees an editor's work. sanity-cdn.com is the
+    // Studio asking, on load and every 15 minutes, which version of Sanity is
+    // current (JSON only, so connect-src and not script-src); blocked, it
+    // logged "Failed to fetch version for package" on every visit.
     const sanity = {
       img: " blob: https://cdn.sanity.io https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
-      connect: " https://*.sanity.io wss://*.sanity.io",
+      connect: " https://*.sanity.io wss://*.sanity.io https://sanity-cdn.com",
       font: " https://design-system-static.sanity.io",
     };
 

@@ -273,11 +273,12 @@ test.describe("from lg", () => {
     await expect(panel(page)).toBeHidden();
   });
 
-  test("a solution opens /solutions and the menu closes behind it", async ({ page }) => {
+  // Shivanshu, 2026-11-15: every solution has its own page, Lighting's included.
+  test("a solution opens its page and the menu closes behind it", async ({ page }) => {
     await trigger(page).hover();
     await expectOpen(page);
     await panelLinks(page).nth(1).click();
-    await expect(page).toHaveURL(/\/solutions$/);
+    await expect(page).toHaveURL(/\/solutions\/lighting$/);
     await expect(header(page)).not.toHaveAttribute("data-menu");
   });
 
@@ -420,10 +421,12 @@ test.describe("below lg", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("a tap on the picture opens /solutions", async ({ page }) => {
+  // The first solution is cameras, which has its own page since 2026-11-15
+  // (Shivanshu): the picture opens the solution showing, as its link does.
+  test("a tap on the picture opens the solution showing: cameras, its page", async ({ page }) => {
     await openSolutions(page);
     await picture(page).click();
-    await expect(page).toHaveURL(/\/solutions$/);
+    await expect(page).toHaveURL(/\/solutions\/cameras$/);
   });
 
   test("closed on the solutions, the menu opens next time on the links", async ({ page }) => {

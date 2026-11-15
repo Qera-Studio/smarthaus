@@ -116,16 +116,16 @@ The scene manifest contract, schema, and interaction rules live in `AGENTS.md`.
 
 Build order. Higher priority ships first.
 
-| Priority | Page                  | Purpose                                                                  | Notes                                                                                                                                             |
-| -------- | --------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **P0**   | Homepage              | Hero moment + value prop + lead capture                                  | The Blender hero lives here. First impression. Ravi and James & Emma land here                                                                    |
-| **P0**   | Contact / Get Started | Lead capture form                                                        | Server Actions + Zod + honeypot + Resend                                                                                                          |
-| **P1**   | Solutions (umbrella)  | What Smarthaus does — lighting, climate, security, entertainment, energy | One page or towns, not five thin pages. Ravi wants spec depth, James & Emma want clarity                                                          |
-| **P1**   | About                 | Who Smarthaus/MapleTech is                                               | Claims constraint applies hardest here. No invented heritage. Show the parent company's track record honestly                                     |
-| **P2**   | Projects / Portfolio  | Visual proof                                                             | Renders until real photography exists. Gallery or case-study format. James & Emma's confidence builder                                            |
-| **P2**   | For Designers         | Nadia's page. Professional B2B landing                                   | Documentation she can hand to her client. Integration details, process, partnership path                                                          |
-| **P3**   | For Developers        | Aditya's page. Property developer landing                                | ROI framing, project scale, volume enquiry path                                                                                                   |
-| **P3**   | Blog                  | SEO + AEO content engine                                                 | **Built 2026-11-14** at `/blog`: the articles page (search, tag filter) and one page per article. Four seed articles; see "The blog" in AGENTS.md |
+| Priority | Page                  | Purpose                                                                  | Notes                                                                                                                                                                   |
+| -------- | --------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P0**   | Homepage              | Hero moment + value prop + lead capture                                  | The Blender hero lives here. First impression. Ravi and James & Emma land here                                                                                          |
+| **P0**   | Contact / Get Started | Lead capture form                                                        | Server Actions + Zod + honeypot + Resend                                                                                                                                |
+| **P1**   | Solutions (umbrella)  | What Smarthaus does — lighting, climate, security, entertainment, energy | One page per solution in the nav's menu, at `/solutions/<id>` (2026-11-15). **All eight built**, drafts out of search until reviewed. See "Solution pages" in AGENTS.md |
+| **P1**   | About                 | Who Smarthaus/MapleTech is                                               | Claims constraint applies hardest here. No invented heritage. Show the parent company's track record honestly                                                           |
+| **P2**   | Projects / Portfolio  | Visual proof                                                             | Renders until real photography exists. Gallery or case-study format. James & Emma's confidence builder                                                                  |
+| **P2**   | For Designers         | Nadia's page. Professional B2B landing                                   | Documentation she can hand to her client. Integration details, process, partnership path                                                                                |
+| **P3**   | For Developers        | Aditya's page. Property developer landing                                | ROI framing, project scale, volume enquiry path                                                                                                                         |
+| **P3**   | Blog                  | SEO + AEO content engine                                                 | **Built 2026-11-14** at `/blog`: the articles page (search, tag filter) and one page per article. Four seed articles; see "The blog" in AGENTS.md                       |
 
 **Sanity Studio** lives at `/studio` — authenticated, not public. Structured fields, not freeform rich text. English at launch; Arabic (V2) via field-level translation, not page duplication.
 
@@ -256,7 +256,7 @@ Server Components first. `'use client'` limited to:
 - The Process stack's snap (`Process/SheetSnap.tsx` — renders nothing; one ResizeObserver tells the stylesheet the held section's height, and one IntersectionObserver marks the first sheet as it covers four fifths of the screen, where the stylesheet grows it from 80% to full. Off under reduced motion and on a short screen, as the stack is)
 - Wireframe/scene reveal (Web Animations API)
 - Contact form (form state, Turnstile widget)
-- Mobile navigation (toggle state, and the Solutions menu: open state from lg, the solutions in place of the links below it), `Nav/SolutionsMenu.tsx` (the solution in hand, and the swipe on its picture), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
+- Mobile navigation (toggle state, and the Solutions menu: open state from lg, the solutions in place of the links below it; a new page closes it), `Nav/SolutionsMenu.tsx` (the solution in hand, the swipe on its picture, and the opening: a solution with a page grows its picture into that page in a view transition, see "Solution pages" in AGENTS.md), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
 - The articles page's search and tag filter (`Blog/ArticleBrowser.tsx` — two controlled fields that choose among the articles the server already sent; nothing is fetched as you type, the search button only puts the field down, and without JavaScript every article is listed)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
@@ -268,6 +268,8 @@ Everything else is a Server Component. If you're reaching for `'use client'`, a 
 ## Motion stack
 
 CSS transitions + IntersectionObserver + Web Animations API. Nothing else.
+
+The View Transitions API counts as CSS here (2026-11-15): the browser snapshots the page and the stylesheet animates the snapshots, with no library and no loop. One use, the solution opening (`Nav/SolutionsMenu.tsx`, its CSS in `globals.scss`), never under reduced motion.
 
 No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget can't afford them, and the `prefers-reduced-motion` path is simpler when animations are CSS-driven.
 

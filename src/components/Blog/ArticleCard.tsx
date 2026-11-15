@@ -2,24 +2,31 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { formatDate } from "../../lib/date";
+import { readMinutes } from "../../lib/reading-time";
 import type { Post } from "../../sanity/types";
 import styles from "./Blog.module.scss";
 
-/** What a card shows of an article: enough to choose it, not its text. */
-export type PostSummary = Pick<Post, "slug" | "title" | "date" | "tags" | "excerpt" | "image">;
+/**
+ * What a card shows of an article: enough to choose it, not its text. The
+ * text stays on the server; only how long it takes to read comes along.
+ */
+export type PostSummary = Pick<Post, "slug" | "title" | "date" | "tags" | "excerpt" | "image"> & {
+  minutes: number;
+};
 
-export const summary = ({ slug, title, date, tags, excerpt, image }: Post): PostSummary => ({
+export const summary = ({ slug, title, date, tags, excerpt, image, body }: Post): PostSummary => ({
   slug,
   title,
   date,
   tags,
   excerpt,
   image,
+  minutes: readMinutes(body),
 });
 
 /**
- * One article, as a card: its picture, its title, its first tag and its date,
- * and the arrow that says it opens. The title is the link and the link covers
+ * One article, as a card: its picture, its title, its first tag, its date,
+ * how long it takes to read, and the arrow that says it opens. The title is the link and the link covers
  * the card, so the whole card is one target with one name. The picture is
  * decoration beside a title that already says what the article is, so it has
  * no alt text; the arrow is drawn, and hidden from screen readers.
@@ -68,6 +75,7 @@ export function ArticleCard({
           <span>{post.tags[0]}</span>
           <span className={styles.dot} aria-hidden="true" />
           <time dateTime={post.date}>{formatDate(post.date)}</time>
+          <span className={styles.cardRead}>{post.minutes} min read</span>
           <span className={styles.open} aria-hidden="true" />
         </p>
       </div>

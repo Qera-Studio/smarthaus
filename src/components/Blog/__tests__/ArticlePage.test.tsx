@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 
 import { POSTS } from "../../../../sanity/seed/blog";
+import { readMinutes } from "../../../lib/reading-time";
 import type { Post } from "../../../sanity/types";
 import { ArticlePage, related, RELATED } from "../ArticlePage";
 
@@ -122,14 +123,28 @@ describe("ArticlePage", () => {
     expect(article.querySelector(".body")).not.toBeNull();
   });
 
-  it("says who wrote it, what it is about and when, as terms and their values", () => {
+  it("says who wrote it, what it is about, when, and how long it reads, as terms and values", () => {
     const root = page();
     const terms = Array.from(root.querySelectorAll("dl dt"), (dt) => dt.textContent);
-    expect(terms).toEqual(["by:", "tags:", "date:"]);
+    expect(terms).toEqual(["by:", "tags:", "date:", "read:"]);
     const values = root.querySelectorAll("dl dd");
     expect(values[0]).toHaveTextContent("Sunil Pareek");
     expect(values[2]).toHaveTextContent("5 November 2026");
+    expect(values[3]).toHaveTextContent(/^3 min$/);
   });
+
+  it("counts the reading time from this article's own text", () => {
+    const short = { ...POST, body: POST.body.slice(0, 1) };
+    expect(page(short).querySelectorAll("dl dd")[3]).toHaveTextContent(/^1 min$/);
+  });
+
+  it.each(posts.map((p) => [p.slug, p] as const))(
+    "gives %s the same minutes as its card",
+    (_slug, p) => {
+      const value = page(p).querySelectorAll("dl dd")[3]!.textContent;
+      expect(value).toBe(`${readMinutes(p.body)} min`);
+    },
+  );
 
   it("lists every tag the article carries, in order", () => {
     const tags = page().querySelectorAll("dl ul li");

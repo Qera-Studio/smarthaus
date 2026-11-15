@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 
 import { POSTS } from "../../../../sanity/seed/blog";
+import { readMinutes } from "../../../lib/reading-time";
 import { ArticleCard, summary, type PostSummary } from "../ArticleCard";
 
 /**
@@ -18,14 +19,14 @@ const card = (props: Partial<Parameters<typeof ArticleCard>[0]> = {}) =>
 describe("summary", () => {
   it("keeps what a card shows and leaves the article's text behind", () => {
     expect(Object.keys(summary(POST)).sort()).toEqual(
-      ["date", "excerpt", "image", "slug", "tags", "title"].sort(),
+      ["date", "excerpt", "image", "minutes", "slug", "tags", "title"].sort(),
     );
     expect(summary(POST)).not.toHaveProperty("body");
     expect(summary(POST)).not.toHaveProperty("seo");
     expect(summary(POST)).not.toHaveProperty("author");
   });
 
-  it("copies each value as it is", () => {
+  it("copies each value as it is, and counts how long the text takes to read", () => {
     expect(summary(POST)).toEqual({
       slug: POST.slug,
       title: POST.title,
@@ -33,7 +34,22 @@ describe("summary", () => {
       tags: POST.tags,
       excerpt: POST.excerpt,
       image: POST.image,
+      minutes: 3,
     });
+  });
+
+  it("takes its minutes from the article's own text", () => {
+    const short = { ...POST, body: POST.body.slice(0, 1) };
+    expect(summary(short).minutes).toBe(1);
+    expect(summary(POST).minutes).toBe(readMinutes(POST.body));
+  });
+
+  it("carries the minutes as a number, so the browser gets no text to count", () => {
+    expect(typeof summary(POST).minutes).toBe("number");
+    expect(JSON.stringify(summary(POST))).not.toContain(
+      (POST.body.find((n) => n._type === "block") as { children: { text: string }[] }).children[0]!
+        .text,
+    );
   });
 });
 
@@ -85,6 +101,26 @@ describe("ArticleCard", () => {
     const hidden = card().querySelectorAll('[aria-hidden="true"]');
     expect(Array.from(hidden, (el) => el.className).sort()).toEqual(["dot", "open"]);
     for (const el of hidden) expect(el).toBeEmptyDOMElement();
+  });
+
+  it("says how long it takes to read, after the date and before the arrow", () => {
+    const meta = card().querySelector(".cardMeta")!;
+    expect(Array.from(meta.children, (el) => el.className || el.tagName)).toEqual([
+      "SPAN",
+      "dot",
+      "TIME",
+      "cardRead",
+      "open",
+    ]);
+    const said = Array.from(meta.children)
+      .filter((el) => el.getAttribute("aria-hidden") !== "true")
+      .map((el) => el.textContent);
+    expect(said).toEqual([POST.tags[0], "5 November 2026", "3 min read"]);
+  });
+
+  it.each([1, 5])("shows %p min read as the summary counts it", (minutes) => {
+    render(<ArticleCard post={{ ...post, minutes }} level="h2" />);
+    expect(screen.getByText(`${minutes} min read`)).toBeInTheDocument();
   });
 
   it("does not show the excerpt on an ordinary card", () => {

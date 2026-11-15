@@ -95,6 +95,7 @@ describe("the Studio sidebar", () => {
       "Contact",
       "Pricing",
       "FAQ",
+      "Solution pages",
       "Coming-soon pages",
       "Blog",
       "Legal",

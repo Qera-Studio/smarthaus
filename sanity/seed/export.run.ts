@@ -12,7 +12,7 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { BLOG_SEED, SEED } from ".";
+import { BLOG_SEED, SEED, SOLUTION_SEED } from ".";
 import { toDocument } from "./to-documents";
 
 it("writes the seed as NDJSON", () => {
@@ -40,4 +40,16 @@ it("writes the blog's documents on their own", () => {
     `${docs.map((d) => JSON.stringify(d)).join("\n")}\n`,
   );
   expect(docs.every((d) => d._type === "post" || d._type === "blogPage")).toBe(true);
+});
+
+it("writes the solution pages on their own", () => {
+  const out = path.join(__dirname, "out");
+  mkdirSync(out, { recursive: true });
+  const docs = SOLUTION_SEED.map(toDocument);
+  writeFileSync(
+    path.join(out, "solutions.ndjson"),
+    `${docs.map((d) => JSON.stringify(d)).join("\n")}\n`,
+  );
+  expect(docs.length).toBeGreaterThan(0);
+  expect(docs.every((d) => d._type === "solutionPage")).toBe(true);
 });

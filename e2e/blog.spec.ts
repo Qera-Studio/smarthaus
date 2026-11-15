@@ -231,7 +231,10 @@ test.describe("the review's fixes", () => {
     expect(await size("li")).toBe("12px");
   });
 
-  test("the search is a line under its words, with a button on the line", async ({ page }) => {
+  test("the search is a line under its words, with a button on the line", async ({
+    page,
+    hasTouch,
+  }) => {
     await page.goto("/blog");
     const search = page.getByRole("searchbox", { name: "Search articles by title or tag" });
     const line = search.locator("..");
@@ -244,8 +247,31 @@ test.describe("the review's fixes", () => {
     const field = (await line.boundingBox())!;
     const box = (await button.boundingBox())!;
     expect(box.x + box.width).toBeLessThanOrEqual(field.x + field.width + 0.5);
-    expect(Math.round(box.width)).toBeGreaterThanOrEqual(44);
-    expect(Math.round(box.height)).toBeGreaterThanOrEqual(44);
+    // A finger gets 44px; a mouse 32px, past the 24px it needs (2026-11-15).
+    const target = hasTouch ? 44 : 32;
+    expect(Math.round(box.width)).toBe(target);
+    expect(Math.round(box.height)).toBe(target);
+    await expect(search).toHaveCSS("font-size", hasTouch ? "16px" : "14px");
+  });
+
+  test("the search and the filter are one height, a size down under a mouse", async ({
+    page,
+    hasTouch,
+  }) => {
+    await page.goto("/blog");
+    const search = page.getByRole("searchbox", { name: "Search articles by title or tag" });
+    const select = page.getByRole("combobox", { name: "Filter by tag" });
+    const target = hasTouch ? 44 : 32;
+    expect(Math.round((await search.boundingBox())!.height)).toBe(target);
+    expect(Math.round((await select.boundingBox())!.height)).toBe(target);
+    await expect(select).toHaveCSS("font-size", hasTouch ? "16px" : "14px");
+    const icon = await page
+      .getByRole("search")
+      .getByRole("button", { name: "Search" })
+      .locator("span")
+      .first()
+      .boundingBox();
+    expect(Math.round(icon!.width)).toBe(hasTouch ? 20 : 16);
   });
 
   test("the search button keeps the matches and puts the field down", async ({ page }) => {
@@ -273,11 +299,12 @@ test.describe("the review's fixes", () => {
 
   test("the filter draws its arrow inside its frame, a padding in from the end", async ({
     page,
+    hasTouch,
   }) => {
     await page.goto("/blog");
     const select = page.getByRole("combobox", { name: "Filter by tag" });
     await expect(select).toHaveCSS("appearance", "none");
-    await expect(select).toHaveCSS("padding-right", "40px");
+    await expect(select).toHaveCSS("padding-right", hasTouch ? "40px" : "32px");
     const frame = (await select.boundingBox())!;
     const arrow = await select.locator("..").evaluate((box) => {
       const after = getComputedStyle(box, "::after");
@@ -285,7 +312,7 @@ test.describe("the review's fixes", () => {
     });
     const wrapper = (await select.locator("..").boundingBox())!;
     expect(Math.abs(wrapper.x + wrapper.width - (frame.x + frame.width))).toBeLessThanOrEqual(0.5);
-    expect(arrow).toMatchObject({ right: "12px", width: "16px" });
+    expect(arrow).toMatchObject({ right: "12px", width: hasTouch ? "16px" : "12px" });
     expect(arrow.mask).toContain("/blog/chevron-down.svg");
   });
 
@@ -310,5 +337,98 @@ test.describe("the review's fixes", () => {
     await expect(img).toHaveAttribute("loading", "eager");
     await expect(img).toHaveAttribute("fetchpriority", "high");
     await expect(page.locator('[data-blog-index] img[fetchpriority="high"]')).toHaveCount(1);
+  });
+});
+
+/**
+ * How long each article takes to read (Shivanshu, 2026-11-15): on its card,
+ * as a second line under the tag and the date with the arrow at its end, and
+ * in the article's details. 238 words a minute, rounded up; the four
+ * articles read in two or three minutes, and none may read longer than five.
+ */
+test.describe("the reading time", () => {
+  const MINUTES: Record<string, number> = {
+    [NEWEST]: 2,
+    [ARTICLE_TITLE]: 3,
+    "Why the Best Smart Homes Still Have Something on the Wall": 2,
+    "Wi-Fi Isn’t Enough: The Network Your Smart Home Really Runs On": 2,
+  };
+
+  test("every card says it, in whole minutes, five at most", async ({ page }) => {
+    await page.goto("/blog");
+    for (const [title, minutes] of Object.entries(MINUTES)) {
+      const card = page.locator("[data-blog-index] article").filter({ hasText: title });
+      await expect(card).toContainText(`${minutes} min read`);
+      expect(minutes).toBeLessThanOrEqual(5);
+    }
+  });
+
+  test("sits under the tag and the date, with the arrow at its end, inside the card", async ({
+    page,
+  }) => {
+    await page.goto("/blog");
+    const rows = await page.locator("[data-blog-index] article").evaluateAll((cards) =>
+      cards.map((card) => {
+        const box = (el: Element) => el.getBoundingClientRect();
+        const meta = card.lastElementChild!.lastElementChild!;
+        const [tag, , date, read, arrow] = Array.from(meta.children);
+        const c = box(card);
+        return {
+          dateBesideTag: Math.abs(box(tag!).top - box(date!).top) <= 1,
+          readUnder: box(read!).top >= box(date!).bottom,
+          readAtStart: Math.abs(box(read!).left - box(tag!).left) <= 1,
+          arrowOnReadLine:
+            Math.abs(
+              box(arrow!).top + box(arrow!).height / 2 - (box(read!).top + box(read!).height / 2),
+            ) <= 1,
+          arrowAtEnd: Math.abs(box(arrow!).right - c.right) <= 1,
+          inside: Array.from(meta.children).every(
+            (el) => box(el).left >= c.left - 0.5 && box(el).right <= c.right + 0.5,
+          ),
+          oneLineEach: [tag, date, read].every((el) => box(el!).height <= 24),
+        };
+      }),
+    );
+    expect(rows).toHaveLength(4);
+    for (const row of rows) {
+      expect(row).toEqual({
+        dateBesideTag: true,
+        readUnder: true,
+        readAtStart: true,
+        arrowOnReadLine: true,
+        arrowAtEnd: true,
+        inside: true,
+        oneLineEach: true,
+      });
+    }
+  });
+
+  test("every card's foot is the same height, so a row of cards lines up", async ({ page }) => {
+    await page.goto("/blog");
+    const heights = await page
+      .locator("[data-blog-index] article")
+      .evaluateAll((cards) =>
+        cards.map((card) => Math.round(card.lastElementChild!.lastElementChild!.clientHeight)),
+      );
+    expect(new Set(heights).size).toBe(1);
+  });
+
+  test("the article's details end with it", async ({ page }) => {
+    await page.goto(ARTICLE);
+    const terms = await page.locator("main dl dt").allInnerTexts();
+    expect(terms).toEqual(["by:", "tags:", "date:", "read:"]);
+    await expect(page.locator("main dl dd").last()).toHaveText("3 min");
+  });
+
+  test("the article and its card agree", async ({ page }) => {
+    for (const [title, minutes] of Object.entries(MINUTES)) {
+      await page.goto("/blog");
+      await page
+        .locator("[data-blog-index] article")
+        .filter({ hasText: title })
+        .getByRole("link")
+        .click();
+      await expect(page.locator("main dl dd").last()).toHaveText(`${minutes} min`);
+    }
   });
 });

@@ -5,6 +5,7 @@ import { readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { Metadata } from "next";
 import { POSTS } from "../../../sanity/seed/blog";
+import { SOLUTION_PAGES } from "../../../sanity/seed/solutions";
 import {
   DESCRIPTION_RANGE,
   INDEXABLE_ROBOTS,
@@ -108,7 +109,8 @@ type Params = { slug: string };
 
 /**
  * Every page.tsx under src/app, as [route, file, params]. An article's page
- * is one file for every article: it is listed once per seeded article.
+ * is one file for every article: it is listed once per seeded article, and a
+ * solution's once per seeded solution page.
  */
 function pages(): [string, string, Params | undefined][] {
   const app = join(__dirname, "../../app");
@@ -122,7 +124,10 @@ function pages(): [string, string, Params | undefined][] {
         const rel = relative(app, dir).split(sep).join("/");
         const route = rel ? `/${rel}` : "/";
         if (route.includes("[slug]")) {
-          for (const { slug } of POSTS) out.push([route.replace("[slug]", slug), full, { slug }]);
+          const slugs = route.startsWith("/solutions/")
+            ? Object.keys(SOLUTION_PAGES)
+            : POSTS.map((post) => post.slug);
+          for (const slug of slugs) out.push([route.replace("[slug]", slug), full, { slug }]);
           // Three places even with no params: it.each hands a row's missing
           // third argument the test's done callback, not undefined.
         } else out.push([route, full, undefined]);
@@ -162,7 +167,9 @@ describe("every page's metadata", () => {
       expect(metadata.alternates).toEqual({ canonical: route });
       // Every page shares the site's two cards, except an article, which is
       // shared with its own picture (2026-11-14).
-      const images = params ? [expect.objectContaining({ width: 1200, height: 630 })] : OG_IMAGES;
+      const images = route.startsWith("/blog/")
+        ? [expect.objectContaining({ width: 1200, height: 630 })]
+        : OG_IMAGES;
       expect(metadata.openGraph).toMatchObject({ url: route, images });
       expect([INDEXABLE_ROBOTS, NOINDEX_ROBOTS]).toContainEqual(metadata.robots);
     },

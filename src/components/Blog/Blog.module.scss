@@ -5,40 +5,52 @@
 // Both are set in the design's own sizes, a little apart from the site's type
 // scale: 36px for an article's title, 16px text on a 1.4 line.
 
+// L2 component tokens: the two pages', and the related articles' where they
+// stand on a page of their own (a solution page's foot).
+@mixin blog-tokens {
+  // The design's line: 1.4 for every size on these pages.
+  --blog-leading: 1.4;
+  // An article's title, 36px on a desktop.
+  --blog-title-size: clamp(#{$font-size-xl}, 5vw, 2.25rem);
+  // The column an article is read in.
+  --blog-column: 62.5rem;
+  // Half the space between two cards, where the rule between them stands;
+  // the design's cards are 96px apart with the rule midway.
+  --blog-cell: #{$space-6};
+  // The pages' own inset on a desktop: the design's 48px, of which the
+  // page's gutter is 24.
+  --blog-inset: 0px;
+  // A tag's ground, and the rules: the site's sand, and ink at half strength.
+  --blog-tag: color-mix(in srgb, var(--brown-200) 62%, var(--brown-100));
+  --blog-rule: color-mix(in srgb, var(--brown-950) 50%, transparent);
+  --blog-ink-dim: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
+  // An article's details (who, tags, when) are set 4px under the design's
+  // sizes (Shivanshu, 2026-11-14): 12px labels and tags, 16px values.
+  --blog-meta-less: 0.25rem;
+
+  @include bp-lg {
+    --blog-cell: #{$space-12};
+    --blog-inset: #{$space-6};
+  }
+}
+
 @layer blocks {
+  // The tokens last: their breakpoint splits the rule in two as Sass writes
+  // it, and the declarations stay in the first half.
   .page,
   .index {
-    // L2 component tokens.
-    //
-    // The design's line: 1.4 for every size on these pages.
-    --blog-leading: 1.4;
-    // An article's title, 36px on a desktop.
-    --blog-title-size: clamp(#{$font-size-xl}, 5vw, 2.25rem);
-    // The column an article is read in.
-    --blog-column: 62.5rem;
-    // Half the space between two cards, where the rule between them stands;
-    // the design's cards are 96px apart with the rule midway.
-    --blog-cell: #{$space-6};
-    // The pages' own inset on a desktop: the design's 48px, of which the
-    // page's gutter is 24.
-    --blog-inset: 0px;
-    // A tag's ground, and the rules: the site's sand, and ink at half strength.
-    --blog-tag: color-mix(in srgb, var(--brown-200) 62%, var(--brown-100));
-    --blog-rule: color-mix(in srgb, var(--brown-950) 50%, transparent);
-    --blog-ink-dim: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
-    // An article's details (who, tags, when) are set 4px under the design's
-    // sizes (Shivanshu, 2026-11-14): 12px labels and tags, 16px values.
-    --blog-meta-less: 0.25rem;
-
     padding-block: $space-12;
     padding-inline: var(--blog-inset);
     line-height: var(--blog-leading);
     color: var(--color-text-primary);
 
-    @include bp-lg {
-      --blog-cell: #{$space-12};
-      --blog-inset: #{$space-6};
-    }
+    @include blog-tokens;
+  }
+
+  .standalone {
+    line-height: var(--blog-leading);
+
+    @include blog-tokens;
   }
 
   // --- One article -------------------------------------------------------------
@@ -256,6 +268,13 @@
     margin-block-start: $space-12;
   }
 
+  // At a solution page's foot, under the enquiry form's own 96px, and the
+  // last thing before the footer.
+  .related.standalone {
+    margin-block-start: 0;
+    padding-block-end: $space-24;
+  }
+
   .relatedTitle,
   .indexTitle {
     font-size: var(--font-size-2xl);
@@ -406,13 +425,28 @@
     letter-spacing: -0.02em;
   }
 
+  // Two lines (2026-11-15): the tag and the date, as the design has them, and
+  // under them how long it reads, the arrow at its end. One line does not
+  // hold all three under about 1300px: a three-column card at 1024px is 245px
+  // wide, which the tag and the date alone fill. Two lines on every card
+  // keeps every card the same, and never leaves a dot at a line's end.
   .cardMeta {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: $space-3;
+    gap: $space-1 $space-3;
     margin-block-start: auto;
     padding-block-start: $space-8;
     font-size: var(--font-size-sm);
+
+    // The date runs to the row's end: the arrow is on the line below.
+    time {
+      grid-column: 3 / -1;
+    }
+  }
+
+  .cardRead {
+    grid-column: 1 / 4;
   }
 
   .dot {
@@ -424,9 +458,9 @@
   // The design's arrow in its dark square. The file's arrow points up and to
   // the left, and the design turns it a quarter to point up and to the right.
   .open {
+    grid-column: 4;
     inline-size: $space-5;
     block-size: $space-5;
-    margin-inline-start: auto;
     rotate: 90deg;
     background-image: url("/blog/arrow-open.svg");
     background-repeat: no-repeat;
@@ -605,6 +639,37 @@
     border-width: 1px;
     border-color: var(--color-border-input);
     @include focus-ring;
+  }
+
+  // Smaller under a mouse (Shivanshu, 2026-11-15): 32px tall at 14px, the
+  // magnifier and the arrow a size down. A mouse needs 24px (the register's
+  // target-size row); a finger keeps 44px and 16px, the size a phone will not
+  // zoom into.
+  @media (hover: hover) and (pointer: fine) {
+    .search,
+    .select {
+      block-size: $space-8;
+      font-size: var(--font-size-sm);
+    }
+
+    .searchButton {
+      inline-size: $space-8;
+      block-size: $space-8;
+    }
+
+    .searchIcon {
+      inline-size: $space-4;
+      block-size: $space-4;
+    }
+
+    // The arrow's 12px in and its 12px take 24 of the 32.
+    .select {
+      padding-inline-end: $space-8;
+    }
+
+    .selectField::after {
+      inline-size: $space-3;
+    }
   }
 
   .empty {

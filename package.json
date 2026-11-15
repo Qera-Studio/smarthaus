@@ -35,6 +35,7 @@
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "lucide-react": "^1.72.0",
     "next": "16.4.2",
     "next-sanity": "13.4.0",
     "react": "19.3.1",

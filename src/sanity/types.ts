@@ -394,3 +394,26 @@ export type Post = {
 };
 
 export type BlogPage = { updatedAt?: string; seo: Seo; heading: string };
+
+/** One solution's page (schema/solution.ts). Its picture is its menu item's. */
+export type SolutionPage = {
+  updatedAt?: string;
+  seo: Seo;
+  title: string;
+  lede: string;
+  features: {
+    heading: string;
+    standfirst: string;
+    /** Names from SOLUTION_ICONS. Exactly FEATURE_COUNT of them. */
+    items: { icon: string; title: string; text: string }[];
+    image: Picture;
+    ctaText: string;
+    ctaLabel: string;
+  };
+  faqHeading: string;
+  faqs: FaqEntry[];
+  enquiry: { title: string; standfirst: string };
+  articlesHeading: string;
+  /** From BLOG_TAGS: the articles carrying it come first. */
+  articlesTag: string;
+};

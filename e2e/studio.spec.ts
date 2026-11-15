@@ -29,9 +29,21 @@ const policyAt = async (
 
 test.describe("the Studio's CSP", () => {
   for (const route of ["/studio", "/studio/structure"]) {
-    test(`${route} may reach Sanity's API over https and wss`, async ({ request }) => {
+    test(`${route} may reach Sanity's API over https and wss, and its version check`, async ({
+      request,
+    }) => {
       const policy = await policyAt(request, route);
-      expect(policy["connect-src"]).toBe("'self' https://*.sanity.io wss://*.sanity.io");
+      expect(policy["connect-src"]).toBe(
+        "'self' https://*.sanity.io wss://*.sanity.io https://sanity-cdn.com",
+      );
+    });
+
+    test(`${route} may fetch from sanity-cdn.com but run nothing from it`, async ({ request }) => {
+      for (const header of ["content-security-policy", "content-security-policy-report-only"]) {
+        const policy = await policyAt(request, route, header);
+        const naming = Object.keys(policy).filter((name) => policy[name]!.includes("sanity-cdn"));
+        expect(naming).toEqual(["connect-src"]);
+      }
     });
 
     test(`${route} shows Sanity's images, sign-in avatars and upload previews`, async ({
@@ -55,7 +67,9 @@ test.describe("the Studio's CSP", () => {
 
     test(`${route} widens the report-only twin the same way`, async ({ request }) => {
       const strict = await policyAt(request, route, "content-security-policy-report-only");
-      expect(strict["connect-src"]).toBe("'self' https://*.sanity.io wss://*.sanity.io");
+      expect(strict["connect-src"]).toBe(
+        "'self' https://*.sanity.io wss://*.sanity.io https://sanity-cdn.com",
+      );
       expect(strict["font-src"]).toBe("'self' https://design-system-static.sanity.io");
       expect(strict["script-src"]).not.toContain("'unsafe-inline'");
     });

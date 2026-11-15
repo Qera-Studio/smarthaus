@@ -71,21 +71,35 @@
     // at once and its ground runs back in from the start edge to the end, in
     // 300ms, the ink turning with it. It ends as it began. No transition on
     // the ground or the ink, or leaving would fade through the emptied band.
-    // Solid only ever sits on a light ground, where the emptied brown-950 ink
-    // holds. Under reduced motion the reset ends it at once, so nothing moves.
+    // Under reduced motion the reset ends it at once, so nothing moves.
+    //
+    // Two bands swipe, each naming its ground and ink. Solid only ever sits on
+    // a light ground, where the emptied brown-950 ink holds. Inverse, brown-100
+    // (Shivanshu, 2026-11-15, so the hero's email button swipes as the nav's
+    // light button beside it does), only on a dark ground or the strip's dark
+    // overlay, where the emptied brown-100 ink holds; the hero's glass is
+    // capped so brown-100 text clears 4.5:1 on it.
     &[data-variant="solid"] {
-      background-color: var(--color-bg-inverse-strong);
-      color: var(--color-text-inverse);
+      --button-ground: var(--color-bg-inverse-strong);
+      --button-ink: var(--color-text-inverse);
+    }
+
+    &[data-variant="inverse"] {
+      --button-ground: var(--color-bg-surface);
+      --button-ink: var(--color-text-primary);
+    }
+
+    &[data-variant="solid"],
+    &[data-variant="inverse"] {
+      background-color: var(--button-ground);
+      color: var(--button-ink);
       transition-property: opacity;
 
       &:hover:not(:disabled) {
         background-color: transparent;
-        background-image: linear-gradient(
-          var(--color-bg-inverse-strong),
-          var(--color-bg-inverse-strong)
-        );
+        background-image: linear-gradient(var(--button-ground), var(--button-ground));
         background-repeat: no-repeat;
-        border-color: var(--color-bg-inverse-strong);
+        border-color: var(--button-ground);
         animation-name: button-swipe;
         animation-duration: 300ms;
         animation-timing-function: var(--ease-in-out);
@@ -100,20 +114,6 @@
 
       &:hover:not(:disabled) {
         background-color: var(--color-bg-inverse);
-      }
-    }
-
-    // Brown-100 on a dark ground or an image (the hero strip's card CTA,
-    // Shivanshu's spec, 2026-10-28; it was bone until then, with no other
-    // caller). The hover goes *down* to brown-200, keeping the light face.
-    // The surface, not the page's ground: the ground went to brown-50 and
-    // the button stays brown-100 (Shivanshu, 2026-11-14).
-    &[data-variant="inverse"] {
-      background-color: var(--color-bg-surface);
-      color: var(--color-text-primary);
-
-      &:hover:not(:disabled) {
-        background-color: var(--color-bg-muted);
       }
     }
 
@@ -133,15 +133,16 @@
     }
   }
 
+  // The band's own ground and ink, read on the element, as the nav's CTA does.
   @keyframes button-swipe {
     from {
       background-size: 0% 100%;
-      color: var(--color-bg-inverse-strong);
+      color: var(--button-ground);
     }
 
     to {
       background-size: 100% 100%;
-      color: var(--color-text-inverse);
+      color: var(--button-ink);
     }
   }
 }

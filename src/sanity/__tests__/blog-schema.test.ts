@@ -1,13 +1,16 @@
 /**
  * @jest-environment node
  */
+import { MAX_READ_MINUTES, WORDS_PER_MINUTE } from "../../lib/reading-time";
 import {
   articleClaimsRule,
   articleImage,
+  articleTextRule,
   blogPage,
   BLOG_TAGS,
   localeArticle,
   post,
+  readTimeRule,
   SLUG,
   slugRule,
 } from "../schema/blog";
@@ -243,6 +246,83 @@ describe("the claims audit, over an article's text", () => {
 
   it("copes with a block that has no text yet", () => {
     expect(articleClaimsRule([{ _type: "block" }, { _type: "block", children: [{}] }])).toBe(true);
+  });
+});
+
+/** `n` words, as one paragraph. */
+const ofWords = (n: number) => paragraph(Array.from({ length: n }, () => "word").join(" "));
+
+describe("the five-minute limit", () => {
+  // Shivanshu, 2026-11-15: readers rarely give an article more than five
+  // minutes, so a longer one cannot be published. 5 x 238 words.
+  it("publishes an article that reads in five minutes, 1,190 words", () => {
+    expect(readTimeRule([ofWords(1190)])).toBe(true);
+  });
+
+  it("publishes a short one", () => {
+    expect(readTimeRule([ofWords(40)])).toBe(true);
+  });
+
+  it("refuses one a word longer, saying how long it reads and where the limit is", () => {
+    expect(readTimeRule([ofWords(1191)])).toBe(
+      "This reads in about 6 minutes. Keep an article to 5 minutes or less, about 1190 words.",
+    );
+  });
+
+  it("counts the whole text, not one paragraph", () => {
+    expect(readTimeRule([ofWords(600), ofWords(600)])).toEqual(
+      expect.stringContaining("about 6 minutes"),
+    );
+  });
+
+  it("does not count pictures towards it", () => {
+    const picture = { _type: "articleImage", caption: { en: "A cabinet" } };
+    expect(readTimeRule([picture, ofWords(1190), picture])).toBe(true);
+  });
+
+  it("states the limit from the constants, so they cannot drift apart", () => {
+    const message = readTimeRule([ofWords(MAX_READ_MINUTES * WORDS_PER_MINUTE + 1)]);
+    expect(message).toEqual(expect.stringContaining(`${MAX_READ_MINUTES} minutes or less`));
+    expect(message).toEqual(
+      expect.stringContaining(`about ${MAX_READ_MINUTES * WORDS_PER_MINUTE} words`),
+    );
+  });
+});
+
+describe("every check on an article's text", () => {
+  it("passes a short, plain article", () => {
+    expect(articleTextRule([ofWords(300)])).toBe(true);
+  });
+
+  it("refuses a claim", () => {
+    expect(articleTextRule([paragraph("Trusted by families across Dubai.")])).toEqual(
+      expect.stringContaining("trusted by"),
+    );
+  });
+
+  it("refuses an article that is too long", () => {
+    expect(articleTextRule([ofWords(1300)])).toEqual(expect.stringContaining("6 minutes"));
+  });
+
+  it("names the claim first when an article has both problems", () => {
+    const both = [ofWords(1300), paragraph("Book today!")];
+    expect(articleTextRule(both)).toEqual(expect.stringContaining("exclamation mark"));
+  });
+
+  it("is the check the English text runs", () => {
+    const [en] = localeArticle.fields!;
+    const passed: unknown[] = [];
+    const rule: unknown = new Proxy(
+      {},
+      {
+        get: (_t, prop: string) => (arg?: unknown) => {
+          if (prop === "custom") passed.push(arg);
+          return rule;
+        },
+      },
+    );
+    en!.validation?.(rule as never);
+    expect(passed).toEqual([articleTextRule]);
   });
 });
 

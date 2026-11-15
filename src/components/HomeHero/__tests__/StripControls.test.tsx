@@ -71,7 +71,7 @@ function setup({ animated = true, at = 0 }: { animated?: boolean; at?: number } 
         <div data-testid="track">
           <ul>
             <li>
-              <a href="/solutions">View cameras</a>
+              <a href="#cameras">View cameras</a>
             </li>
           </ul>
         </div>

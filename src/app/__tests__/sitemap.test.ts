@@ -8,14 +8,20 @@ import sitemap from "../sitemap";
 import { getDoc } from "../../sanity/fetch";
 import { ROUTES, routes } from "../../sanity/content";
 import { POSTS } from "../../../sanity/seed/blog";
+import { SOLUTION_PAGES } from "../../../sanity/seed/solutions";
 
 type Params = { slug: string };
+
+/** The seeded slugs a [slug] route is built for: articles, or solutions. */
+const slugsFor = (route: string) =>
+  route.startsWith("/solutions/") ? Object.keys(SOLUTION_PAGES) : POSTS.map(({ slug }) => slug);
 
 /**
  * Every browsable page under src/app, as [route, file, params]. An article's
  * page is one file for as many routes as there are articles (2026-11-14, the
  * first route built from content): it is listed once per seeded article, with
- * the slug its metadata is asked for.
+ * the slug its metadata is asked for. A solution's page likewise, once per
+ * seeded solution page (2026-11-15).
  */
 function pages(): [string, string, Params?][] {
   const app = join(__dirname, "..");
@@ -33,7 +39,9 @@ function pages(): [string, string, Params?][] {
         const rel = relative(app, dir).split(sep).join("/");
         const route = rel ? `/${rel}` : "/";
         if (route.includes("[slug]")) {
-          for (const { slug } of POSTS) out.push([route.replace("[slug]", slug), full, { slug }]);
+          for (const slug of slugsFor(route)) {
+            out.push([route.replace("[slug]", slug), full, { slug }]);
+          }
         } else out.push([route, full]);
       }
     }

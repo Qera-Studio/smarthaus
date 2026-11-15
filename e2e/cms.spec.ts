@@ -19,6 +19,14 @@ const PAGES = [
   "/accessibility",
   "/cookie-preferences",
   "/solutions",
+  "/solutions/cameras",
+  "/solutions/lighting",
+  "/solutions/audio",
+  "/solutions/ac",
+  "/solutions/garage",
+  "/solutions/smart-lock",
+  "/solutions/wall-controller",
+  "/solutions/curtains",
   "/blog",
   "/blog/one-home-five-vendors",
 ];
@@ -110,7 +118,9 @@ test.describe("the draft preview", () => {
     const policy = directives(response.headers()["content-security-policy"]!);
     expect(policy["frame-ancestors"]).toBe("'self'");
     // The Studio's policy: Sanity reachable, and no analytics on a draft.
-    expect(policy["connect-src"]).toBe("'self' https://*.sanity.io wss://*.sanity.io");
+    expect(policy["connect-src"]).toBe(
+      "'self' https://*.sanity.io wss://*.sanity.io https://sanity-cdn.com",
+    );
     expect(policy["script-src"]).not.toMatch(/https?:/);
     const strict = directives(response.headers()["content-security-policy-report-only"]!);
     expect(strict["frame-ancestors"]).toBe("'self'");

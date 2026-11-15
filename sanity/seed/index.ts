@@ -12,6 +12,7 @@ import { HOME_PAGE } from "./home-page";
 import { LEGAL } from "./legal";
 import { PRICING_PAGE } from "./pricing-page";
 import { SITE_SETTINGS } from "./site-settings";
+import { SOLUTION_PAGES } from "./solutions";
 
 export const SEED: readonly SeedEntry[] = [
   { id: "siteSettings", type: "siteSettings", value: SITE_SETTINGS },
@@ -31,6 +32,11 @@ export const SEED: readonly SeedEntry[] = [
     type: "comingSoonPage",
     value,
   })),
+  ...Object.entries(SOLUTION_PAGES).map(([id, value]) => ({
+    id: `solution-${id}`,
+    type: "solutionPage",
+    value,
+  })),
   { id: "blogPage", type: "blogPage", value: BLOG_PAGE },
   // The articles: the one type with as many documents as editors write.
   ...POSTS.map((value) => ({ id: `post-${value.slug}`, type: "post", value })),
@@ -42,6 +48,14 @@ export const SEED: readonly SeedEntry[] = [
  * sanity/seed/export.run.ts writes them to their own file.
  */
 export const BLOG_SEED = SEED.filter((e) => e.type === "blogPage" || e.type === "post");
+
+/**
+ * The solution pages (2026-11-15), written on their own like the blog's.
+ * Cameras was imported into production alone, without --replace, at
+ * Shivanshu's yes, and the other seven the same way later that day (this file
+ * less cameras), at his second yes. They are the Studio's from then on.
+ */
+export const SOLUTION_SEED = SEED.filter((e) => e.type === "solutionPage");
 
 /** One seeded document, in render shape, as getDoc would return it. */
 export function seedDoc(id: string): unknown {

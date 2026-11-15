@@ -1,7 +1,7 @@
 import { within } from "@testing-library/react";
 import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
 import { NAV_LINKS } from "../../../lib/nav-links";
-import { Nav } from "../Nav";
+import { Nav, solutionLinks } from "../Nav";
 import { renderServer } from "../../../__tests__/helpers/server";
 
 const SOLUTIONS_MENU_ITEMS = SITE_SETTINGS.solutionsMenu.items;
@@ -21,7 +21,10 @@ jest.mock("../NavShell", () => ({
 }));
 
 let pathname: string | null = "/";
-jest.mock("next/navigation", () => ({ usePathname: () => pathname }));
+jest.mock("next/navigation", () => ({
+  usePathname: () => pathname,
+  useRouter: () => ({ push: jest.fn() }),
+}));
 
 function slot(name: string) {
   return document.querySelector<HTMLElement>(`[data-slot="${name}"]`)!;
@@ -131,5 +134,60 @@ describe("Nav", () => {
   it("signs the open panel as by MapleTech", async () => {
     await renderServer(<Nav />);
     expect(within(slot("footer")).getByText("by MapleTech")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Where each solution in the menu goes (2026-11-15): its own page once it has
+ * one, /solutions until then. All eight have one since that afternoon. The pages are fixed documents, so the list is
+ * code's (SOLUTION_SLUGS); the menu's ids are the editors'.
+ */
+describe("solutionLinks", () => {
+  const menu = SITE_SETTINGS.solutionsMenu;
+  const linked = solutionLinks(menu).items;
+
+  it("keeps every solution, in the menu's order, with its label and picture", () => {
+    expect(linked.map(({ id, label, image }) => ({ id, label, image }))).toEqual(menu.items);
+  });
+
+  // Shivanshu, 2026-11-15: every solution in the menu has a page.
+  it("sends every solution to its own page", () => {
+    for (const item of linked) {
+      expect(item).toMatchObject({ href: `/solutions/${item.id}`, page: true });
+    }
+  });
+
+  it("keeps the menu's own address for a solution without a page", () => {
+    const moved = solutionLinks({
+      ...menu,
+      href: "/what-we-do",
+      items: [...menu.items, { ...menu.items[0]!, id: "sauna", label: "Sauna" }],
+    }).items;
+    expect(moved.find((item) => item.id === "sauna")).toMatchObject({
+      href: "/what-we-do",
+      page: false,
+    });
+    expect(moved.find((item) => item.id === "cameras")!.href).toBe("/solutions/cameras");
+  });
+
+  it("gives no page to an id the code has no document for", () => {
+    const [item] = solutionLinks({ ...menu, items: [{ ...menu.items[0]!, id: "sauna" }] }).items;
+    expect(item).toMatchObject({ href: menu.href, page: false });
+  });
+
+  it("hands both copies of the menu the same links", async () => {
+    await renderServer(<Nav />);
+    const desktop = within(document.querySelector<HTMLElement>("[data-menu-panel]")!);
+    const phone = within(document.querySelector<HTMLElement>('[data-slot="solutions"]')!);
+    for (const copy of [desktop, phone]) {
+      expect(copy.getByRole("link", { name: "Cameras" })).toHaveAttribute(
+        "href",
+        "/solutions/cameras",
+      );
+      expect(copy.getByRole("link", { name: "Lighting" })).toHaveAttribute(
+        "href",
+        "/solutions/lighting",
+      );
+    }
   });
 });

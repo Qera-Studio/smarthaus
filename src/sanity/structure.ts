@@ -34,6 +34,7 @@ export const structure: StructureResolver = (S) => {
       doc("siteSettings", "siteSettings", "Site settings"),
       S.divider(),
       ...PAGES.map(([id, title]) => doc(id, id, title)),
+      fixed("solutionPage", "Solution pages"),
       fixed("comingSoonPage", "Coming-soon pages"),
       S.divider(),
       // The one list editors add to and remove from, newest first.

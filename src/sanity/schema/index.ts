@@ -8,6 +8,7 @@ import { homePage } from "./home-page";
 import { consentCopy, legalPage, localeBlocks } from "./legal";
 import { aboutPage, comingSoonPage, faqPage, pricingPage } from "./pages";
 import { siteSettings } from "./site-settings";
+import { solutionPage } from "./solution";
 
 export const schemaTypes: SchemaType[] = [
   localeString,
@@ -22,6 +23,7 @@ export const schemaTypes: SchemaType[] = [
   pricingPage,
   faqPage,
   comingSoonPage,
+  solutionPage,
   legalPage,
   consentCopy,
   articleImage,
@@ -63,5 +65,17 @@ export const FIXED_DOCUMENTS = {
     "comingSoon-solutions": "Solutions",
     "comingSoon-designers": "For Designers",
     "comingSoon-developers": "For Developers",
+  },
+  // One per solution with a page, solution-<its id in the Solutions menu>, in
+  // the menu's order. An item with no page here goes to /solutions.
+  solutionPage: {
+    "solution-cameras": "Cameras",
+    "solution-lighting": "Lighting",
+    "solution-audio": "Audio",
+    "solution-ac": "AC",
+    "solution-garage": "Garage",
+    "solution-smart-lock": "Smart lock",
+    "solution-wall-controller": "Wall controller",
+    "solution-curtains": "Curtains",
   },
 } as const;

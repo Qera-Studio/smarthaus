@@ -254,6 +254,52 @@ test.describe("the email field", () => {
     await expect(hero(page).getByRole("textbox", { name: "Email" })).toBeFocused();
     expect(await mailFor(marker)).toEqual([]);
   });
+
+  // The light band swipes as the nav's light button beside it does
+  // (Shivanshu, 2026-11-15): empty to a brown-100 outline, the ground back in
+  // from the start edge in 300ms, ending brown-900 on brown-100 as it began.
+  test("its button swipes on hover, ending as it began", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "hover is a mouse concern");
+    const button = hero(page).getByRole("button", { name: "Book a site visit" });
+    const BROWN_100 = "rgb(240, 233, 221)";
+    const BROWN_900 = "rgb(20, 17, 14)";
+    const look = () =>
+      button.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { ground: s.backgroundColor, ink: s.color };
+      });
+    expect(await look()).toEqual({ ground: BROWN_100, ink: BROWN_900 });
+
+    await button.hover();
+    const swipe = await button.evaluate((el) => {
+      const animation = el
+        .getAnimations()
+        .find((a) => (a as CSSAnimation).animationName.endsWith("button-swipe"))!;
+      animation.pause();
+      const duration = animation.effect!.getComputedTiming().duration;
+      animation.currentTime = 0;
+      const s = getComputedStyle(el);
+      const start = {
+        size: s.backgroundSize,
+        ground: s.backgroundColor,
+        border: s.borderTopColor,
+        ink: s.color,
+        image: s.backgroundImage,
+      };
+      animation.finish();
+      return { duration, start };
+    });
+    expect(swipe.duration).toBe(300);
+    expect(swipe.start).toEqual({
+      size: "0% 100%",
+      ground: "rgba(0, 0, 0, 0)",
+      border: BROWN_100,
+      ink: BROWN_100,
+      image: `linear-gradient(${BROWN_100}, ${BROWN_100})`,
+    });
+    await expect.poll(() => button.evaluate((el) => getComputedStyle(el).color)).toBe(BROWN_900);
+    await expectAccessible(page);
+  });
 });
 
 test.describe("the makers' marks", () => {

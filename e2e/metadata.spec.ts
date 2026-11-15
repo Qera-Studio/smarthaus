@@ -17,6 +17,15 @@ const NOINDEX = [
   "/terms",
   "/cookie-preferences",
   "/solutions",
+  // Drafted for review: out of search until Shivanshu has read them.
+  "/solutions/cameras",
+  "/solutions/lighting",
+  "/solutions/audio",
+  "/solutions/ac",
+  "/solutions/garage",
+  "/solutions/smart-lock",
+  "/solutions/wall-controller",
+  "/solutions/curtains",
   "/designers",
   "/developers",
 ];
