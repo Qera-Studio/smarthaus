@@ -28,11 +28,23 @@ describe("FAQ content", () => {
     }
   });
 
-  it("quotes no price in any answer", () => {
-    // The site discloses no prices for now (Shivanshu, 2026-11-04).
-    for (const entry of allEntries) {
-      expect(entry.answer.join(" ")).not.toMatch(/AED|\d,\d{3}/);
-    }
+  it("quotes only the deck's starting prices, and only in the cost answer", () => {
+    // Prices are shown from 2026-11-19 (Shivanshu), which reversed "no
+    // prices" of 2026-11-04. They are the package deck's, as /pricing shows.
+    const priced = allEntries.filter((entry) => /AED|\d,\d{3}/.test(entry.answer.join(" ")));
+    expect(priced.map((entry) => entry.id)).toEqual(["system-cost"]);
+    expect(priced[0]!.answer.join(" ").match(/AED [\d,]+/g)).toEqual(["AED 16,000", "AED 68,000"]);
+  });
+
+  it("holds no pending note: every answer was confirmed on 2026-11-19", () => {
+    expect(allEntries.filter((entry) => entry.pending).map((entry) => entry.id)).toEqual([]);
+    expect(FAQ_PAGE.seo.index).toBe(true);
+  });
+
+  it("states the confirmed founding year and the free visit", () => {
+    const text = allEntries.flatMap((entry) => entry.answer).join(" ");
+    expect(text).toContain("operating since 2019");
+    expect(text).not.toMatch(/paid visit|visit is paid|credited in full/);
   });
 
   it("strips placeholder braces from the schema text", () => {

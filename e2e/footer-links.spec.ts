@@ -63,7 +63,13 @@ test.describe("social links", () => {
       .toBeGreaterThan(0);
   });
 
-  for (const platform of ["Instagram", "Facebook", "X", "LinkedIn"]) {
+  test("Instagram goes to the Smarthaus profile, named as the profile", async ({ page }) => {
+    // Live since 2026-11-19 (Shivanshu).
+    const link = footer(page).getByRole("link", { name: "Smarthaus on Instagram", exact: true });
+    await expect(link).toHaveAttribute("href", "https://www.instagram.com/smarthaus_dxb/");
+  });
+
+  for (const platform of ["Facebook", "X", "LinkedIn"]) {
     test(`${platform} tells a screen reader the profile is coming soon`, async ({ page }) => {
       // Until the real profile exists the link lands on the platform's home
       // page, so its accessible name must not promise the Smarthaus profile.

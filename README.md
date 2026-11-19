@@ -263,6 +263,7 @@ When two rules disagree, the lower number wins. Before writing any threshold int
 | [`CLAUDE.md`](CLAUDE.md)                                                       | Who Smarthaus is, the four personas, tone, visual direction, the client-island list               |
 | [`AGENTS.md`](AGENTS.md)                                                       | CMS, CSP, forms, analytics, the claims audit, dependency policy, testing policy                   |
 | [`docs/launch-gate/pre-launch-fixes.md`](docs/launch-gate/pre-launch-fixes.md) | The work left before launch; decisions in `accepted-risks.md`, questions in `blocked-on-input.md` |
+| [`docs/updates/2.1.0.md`](docs/updates/2.1.0.md)                               | Everything after 2.0.0: the design, the deferred items, and every later change request            |
 
 **Five rules that surprise people:**
 

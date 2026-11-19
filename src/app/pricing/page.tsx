@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { ClosingCta } from "../../components/ClosingCta";
+import { JsonLd, pageGraph } from "../../components/Schema";
 import { PricingComparison } from "../../components/PricingComparison";
 import { PricingTiers } from "../../components/PricingTiers";
 import styles from "./page.module.scss";
@@ -10,10 +11,9 @@ import { getPricingPage } from "../../sanity/content";
 const PATH = "/pricing";
 
 /**
- * LAUNCH GATE, now a switch in the Studio: "Show in search" on the pricing
- * document. It is off because every feature on this page is still to be
- * confirmed with Sunil; while it is, the page ships noindex, stays out of the
- * sitemap and emits no structured data. Turn it on only once they are.
+ * "Show in search" on the pricing document decides the robots line and the
+ * sitemap entry. On since 2026-11-19, when the package deck confirmed every
+ * package, device count and price on the page.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const { seo } = await getPricingPage();
@@ -21,7 +21,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * The pricing page: the four tier cards, then the full comparison.
+ * The pricing page: the four package cards, the device table, the deck's
+ * package notes, then the questions a price raises.
  *
  * Not LegalPage. That shell brings a table-of-contents rail and a prose column
  * built for legal text, neither of which a row of cards wants. The header is
@@ -36,6 +37,12 @@ export default async function PricingPage() {
   const page = await getPricingPage();
   return (
     <div className={styles.page}>
+      {/* The page and its breadcrumb, as every page in search has. No Offer:
+          a starting price is not the price (PricingTiers). */}
+      {page.seo.index ? (
+        <JsonLd data={pageGraph(seoInput(PATH, page.seo), page.updatedAt)} />
+      ) : null}
+
       <header className={styles.header}>
         <h1 className={styles.title}>{page.title}</h1>
         <p className={styles.standfirst}>{page.standfirst}</p>
@@ -44,6 +51,21 @@ export default async function PricingPage() {
       <PricingTiers headingLevel="h2" />
 
       <PricingComparison />
+
+      {/* The deck's terms under its prices: what the survey can change and
+          what is quoted separately. An ordered list, as the deck numbers them. */}
+      <section className={styles.section} aria-labelledby="pricing-notes">
+        <h2 className={styles.sectionTitle} id="pricing-notes">
+          {page.notesHeading}
+        </h2>
+        <ol className={styles.notes}>
+          {page.notes.map((note) => (
+            <li key={note} className={styles.note}>
+              {note}
+            </li>
+          ))}
+        </ol>
+      </section>
 
       {/* The questions a number raises. Six, not the full FAQ: that page is
           linked from the closing prompt for everything else. The block is the

@@ -209,7 +209,12 @@ export type PricingTier = {
   /** Stable key, and the anchor the comparison uses. */
   id: string;
   name: string;
+  /** The deck's line under the name: "Smart essentials". */
+  tagline: string;
+  /** The home the package is sized for. */
   description: string;
+  /** The starting price in AED, a whole number (the package deck, 2026-11-19). */
+  price: number;
   includes: string[];
   /** The card's ground; the button's style is chosen separately. */
   tone: "sand" | "image" | "dark";
@@ -232,11 +237,15 @@ export type PricingPage = {
   title: string;
   standfirst: string;
   tierCta: string;
-  /** After the tier's name: "Essential includes:". */
+  /** After the package's name: "Starter includes:". */
   includes: string;
+  /** Before each price: "Starting from". */
+  priceLabel: string;
   tiers: PricingTier[];
   compareHeading: string;
   comparison: ComparisonSection[];
+  notesHeading: string;
+  notes: string[];
   faqHeading: string;
   faqs: FaqEntry[];
   closing: ClosingCta;

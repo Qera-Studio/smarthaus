@@ -71,9 +71,8 @@ export const SITE_SETTINGS: SiteSettings = {
     { id: "whatsapp", label: "Smarthaus on WhatsApp", href: "https://wa.me/971543755150" },
     {
       id: "instagram",
-      label: "Smarthaus on Instagram (profile coming soon)",
-      href: "https://instagram.com/",
-      pending: true,
+      label: "Smarthaus on Instagram",
+      href: "https://www.instagram.com/smarthaus_dxb/",
     },
     {
       id: "facebook",

@@ -40,15 +40,29 @@ describe("PricingComparison", () => {
 
   /**
    * The load-bearing one. With no <table>, the only thing that tells a screen
-   * reader which tier a tick belongs to is the hidden label in the cell.
+   * reader which package a count or a tick belongs to is the hidden label in
+   * the cell.
    */
-  it("names the tier in every cell so a mark reads as a sentence", async () => {
+  it("names the package in every cell so a count or a mark reads as a sentence", async () => {
     const { container } = await renderServer(<PricingComparison />);
     const text = container.textContent ?? "";
     for (const tier of PRICING_TIERS) {
       expect(text).toContain(`${tier.name}: Included`);
     }
-    expect(text).toContain("Essential: Not included");
+    expect(text).toContain("Starter: Not included");
+    // The deck's counts: lighting keypads, then CCTV cameras, by package.
+    expect(text).toContain("Starter: 3Aura: 6Elevate: 13Luxe: 20");
+    expect(text).toContain("Starter: 1Aura: 1Elevate: 1Luxe: 4");
+  });
+
+  it("gives every cell of a row one package, in the cards' order", async () => {
+    const { container } = await renderServer(<PricingComparison />);
+    const cells = [...container.querySelectorAll(".visually-hidden")].map((el) => el.textContent);
+    const rows = COMPARISON.flatMap((section) => section.rows);
+    expect(cells).toHaveLength(rows.length * PRICING_TIERS.length);
+    cells.forEach((cell, i) => {
+      expect(cell).toMatch(new RegExp(`^${PRICING_TIERS[i % PRICING_TIERS.length]!.name}: `));
+    });
   });
 
   it("draws the not-included mark without a dash character", async () => {
@@ -61,7 +75,7 @@ describe("PricingComparison", () => {
   it("titles the comparison with an h2 and names the scroll region", async () => {
     await renderServer(<PricingComparison />);
     expect(
-      screen.getByRole("heading", { level: 2, name: "Compare all features" }),
+      screen.getByRole("heading", { level: 2, name: "What each package includes" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /feature comparison/i })).toHaveAttribute(
       "tabindex",
@@ -69,7 +83,7 @@ describe("PricingComparison", () => {
     );
   });
 
-  it("emits no structured data while the figures are unconfirmed", async () => {
+  it("emits no structured data for the packages", async () => {
     const { container } = await renderServer(<PricingComparison />);
     expect(container.querySelector('script[type="application/ld+json"]')).toBeNull();
   });

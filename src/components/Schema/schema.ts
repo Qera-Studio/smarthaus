@@ -5,10 +5,11 @@ import { fullTitle, SITE_NAME, type PageMetadataInput } from "../../lib/metadata
  * The structured data, as plain objects so it is testable without rendering.
  * SEO System §9. Every value is a confirmed fact already published on the
  * site: the address, phone, email and licence numbers from the site settings
- * in Sanity, the same document the footer and the legal pages read. Left out on purpose, because schema
- * must match what the page shows: sameAs (the social profiles are
- * placeholders), geo and openingHours (blocked on Sunil), a SearchAction (the
- * site has no search), and any rating or price.
+ * in Sanity, the same document the footer and the legal pages read. sameAs
+ * lists only the profiles that are live (not pending in the Studio), and never
+ * WhatsApp, a chat link rather than a profile. Left out on purpose, because
+ * schema must match what the page shows: geo and openingHours (blocked on
+ * Sunil), a SearchAction (the site has no search), and any rating or price.
  */
 
 /** The canonical host. @id values are built on it so they persist across deploys. */
@@ -29,7 +30,12 @@ const pageUrl = (path: string) => (path === "/" ? SITE_URL : `${SITE_URL}${path}
  * Organization, so one node serves both, under one persistent @id (§9: no
  * duplicate types, a consistent Organization @id).
  */
-export function siteGraph({ contact, identity }: Pick<SiteSettings, "contact" | "identity">) {
+export function siteGraph({
+  contact,
+  identity,
+  socials,
+}: Pick<SiteSettings, "contact" | "identity" | "socials">) {
+  const sameAs = socials.filter((s) => !s.pending && s.id !== "whatsapp").map((s) => s.href);
   return {
     "@context": "https://schema.org",
     "@graph": [
@@ -69,6 +75,7 @@ export function siteGraph({ contact, identity }: Pick<SiteSettings, "contact" | 
           },
           { "@type": "PropertyValue", propertyID: "SIRA licence", value: identity.siraLicence },
         ],
+        ...(sameAs.length > 0 ? { sameAs } : {}),
       },
       {
         "@type": "WebSite",

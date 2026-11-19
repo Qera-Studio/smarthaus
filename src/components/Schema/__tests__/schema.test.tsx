@@ -74,16 +74,25 @@ describe("siteGraph", () => {
     }
   });
 
-  it.each([
-    "sameAs",
-    "geo",
-    "openingHours",
-    "openingHoursSpecification",
-    "aggregateRating",
-    "priceRange",
-  ])("leaves out %s, which the site cannot yet back with a visible fact", (key) => {
-    expect(business).not.toHaveProperty(key);
+  it("lists only the live profiles as sameAs: Instagram, never WhatsApp or a placeholder", () => {
+    // Instagram went live on 2026-11-19; WhatsApp is a chat link, not a profile.
+    expect(business).toHaveProperty("sameAs", ["https://www.instagram.com/smarthaus_dxb/"]);
   });
+
+  it("leaves out sameAs while no profile is live", () => {
+    const socials = SITE_SETTINGS.socials.map((s) =>
+      s.id === "whatsapp" ? s : { ...s, pending: true },
+    );
+    const node = byType(siteGraph({ ...SITE_SETTINGS, socials }), "LocalBusiness");
+    expect(node).not.toHaveProperty("sameAs");
+  });
+
+  it.each(["geo", "openingHours", "openingHoursSpecification", "aggregateRating", "priceRange"])(
+    "leaves out %s, which the site cannot yet back with a visible fact",
+    (key) => {
+      expect(business).not.toHaveProperty(key);
+    },
+  );
 
   it("has no SearchAction, because the site has no search", () => {
     expect(website).not.toHaveProperty("potentialAction");

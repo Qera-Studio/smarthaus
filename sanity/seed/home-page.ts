@@ -470,11 +470,12 @@ export const HOME_PAGE: HomePage = {
       },
     ],
   },
+  // From the package deck (2026-11-19): its heading, its four homes.
   pricing: {
-    heading: "Choose your level of intelligence",
+    heading: "Designed around your home",
     standfirst:
-      "Four levels, from a single room to a fully engineered residence. Every one is quoted against your own drawings after a site visit.",
-    compareCta: "Compare every feature",
+      "Four packages, from one bedroom to four, each a clear starting point. The final price is fixed after a site survey.",
+    compareCta: "Compare the packages",
   },
   enquiry: {
     title: "Book a site visit",

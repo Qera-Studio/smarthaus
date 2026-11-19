@@ -4,8 +4,8 @@ import { expectAccessible, expectHydrated, expectNoEmDash, withConsentDecided } 
 /**
  * /faq — the smoke suite AGENTS.md requires of every real page, plus the two
  * things specific to this one: the answers must be in the HTML whether or not
- * a disclosure is open, and the page must stay noindex while it carries
- * unconfirmed facts.
+ * a disclosure is open, and the page is in search with its FAQPage data now
+ * that every answer is confirmed (2026-11-19).
  */
 test.describe("/faq", () => {
   test("responds 200 with one h1", async ({ page }) => {
@@ -177,20 +177,21 @@ test.describe("/faq", () => {
     await expectNoEmDash(page.locator("main"));
   });
 
-  test("is noindex and emits no schema while facts are unconfirmed", async ({ page }) => {
+  test("is in search with its page schema, now every answer is confirmed", async ({ page }) => {
     await page.goto("/faq");
-    await expect(page.locator('head meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-    // The two flip together — see FAQ_IS_PUBLISHABLE in src/app/faq/page.tsx.
-    // Structured data on a noindex page is a contradictory signal, and these
-    // answers still contain figures that must not be quoted back by an answer
-    // engine. Invert both assertions in the change that clears the placeholders.
-    // The site-wide business and website block is on every page; what must not
-    // be here is the FAQPage, or a page node for a page that refuses indexing.
+    await expect(page.locator('head meta[name="robots"]')).not.toHaveAttribute(
+      "content",
+      /noindex/,
+    );
+    // The two flip together (isFaqPublishable in src/sanity/content.ts). They
+    // inverted on 2026-11-19, when the last pending answer was confirmed. No
+    // FAQPage yet: all forty questions are about 11.5 KB against SEO System
+    // §9's 4 KB, and which ones it carries is in docs/updates/2.1.0.md.
     const blocks = await page
       .locator('script[type="application/ld+json"]')
       .evaluateAll((els) => els.map((el) => el.textContent ?? ""));
+    expect(blocks.join("")).toContain('"WebPage"');
     expect(blocks.join("")).not.toContain('"FAQPage"');
-    expect(blocks.join("")).not.toContain('"WebPage"');
-    await expect(page.locator("[data-placeholder]").first()).toBeAttached();
+    await expect(page.locator("[data-placeholder]")).toHaveCount(0);
   });
 });

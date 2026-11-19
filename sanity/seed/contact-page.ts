@@ -1,9 +1,9 @@
 // Seed for the contactPage document, verbatim from src/app/contact/page.tsx
 // and ContactForm.tsx on 2026-11-11.
 //
-// The first answer states the paid visit, which /faq still marks pending
-// ("Fee pending Sunil's approval"). That is why /contact emits no FAQPage
-// structured data: an answer engine would quote an unconfirmed term.
+// Every answer is confirmed (2026-11-19): the visit is free and the founding
+// year is 2019, as /faq says, so /contact emits its questions as FAQPage
+// structured data.
 import type { ContactPage } from "../../src/sanity/types";
 
 export const CONTACT_PAGE: ContactPage = {
@@ -37,12 +37,12 @@ export const CONTACT_PAGE: ContactPage = {
     {
       question: "Is the visit an obligation?",
       answer:
-        "No. The site assessment is a paid visit, credited in full against any installation you go ahead with. If you decide not to, you keep the report and owe us nothing further.",
+        "No. The site visit is free. If you decide not to go ahead, you keep the report and owe us nothing.",
     },
     {
       question: "What happens during the visit?",
       answer:
-        "A technician and a technical salesperson spend about 90 minutes in your home. They check your cabling, network and any systems you already have, go room by room to see what is possible, and ask how you actually use the house. You will have a fixed, itemised proposal within 48 hours.",
+        "A technician and a technical lead spend about 90 minutes in your home. They check your cabling, network and any systems you already have, go room by room to see what is possible, and ask how you actually use the house. You will have a fixed, itemised proposal within 48 hours.",
     },
     {
       question: "Do I need to be renovating?",
@@ -50,11 +50,9 @@ export const CONTACT_PAGE: ContactPage = {
         "No. Most of our work happens in homes people are living in. Some things need new cabling, and we will tell you exactly which ones before you commit to anything.",
     },
     {
-      // The founding year is a placeholder (AGENTS.md) and must not be
-      // invented, so the answer carries the licence instead.
       question: "Is Smarthaus a new company?",
       answer:
-        "No. Smarthaus is the home division of Maple Technologies Security Systems LLC, a SIRA-licensed Dubai company. Same team, same licence, same accountability.",
+        "No. Smarthaus is the home division of Maple Technologies Security Systems LLC, a SIRA-licensed Dubai company operating since 2019. Same team, same licence, same accountability.",
     },
     {
       question: "Do you work outside Dubai?",

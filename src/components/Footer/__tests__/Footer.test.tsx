@@ -53,10 +53,9 @@ describe("Footer", () => {
     }
   });
 
-  it("names the four placeholder profiles as coming soon", async () => {
+  it("names the three placeholder profiles as coming soon", async () => {
     const soon = screen.getAllByRole("link", { name: /\(profile coming soon\)$/ });
     expect(soon.map((link) => link.getAttribute("aria-label"))).toEqual([
-      "Smarthaus on Instagram (profile coming soon)",
       "Smarthaus on Facebook (profile coming soon)",
       "Smarthaus on X (profile coming soon)",
       "Smarthaus on LinkedIn (profile coming soon)",

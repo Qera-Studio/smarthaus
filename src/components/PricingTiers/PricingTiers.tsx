@@ -2,20 +2,29 @@ import { Button } from "../Button";
 import { getPricingPage } from "../../sanity/content";
 import styles from "./PricingTiers.module.scss";
 
+/** "AED 16,000": whole dirhams, the form the package deck prints. */
+export const formatPrice = (aed: number) =>
+  new Intl.NumberFormat("en-AE", {
+    style: "currency",
+    currency: "AED",
+    maximumFractionDigits: 0,
+  }).format(aed);
+
 /**
- * The four tier cards, as one row.
+ * The four package cards, as one row.
  *
  * Rendered in two places: under the homepage pricing section's h2, and under
- * the /pricing page's h1. The tier name's heading level is therefore a prop,
+ * the /pricing page's h1. The package name's heading level is therefore a prop,
  * so that neither surface skips a level in its outline. Two values only; a
  * free string would let a caller do exactly that.
  *
- * Content is the pricing document in Sanity. No prices: the
- * client does not want them shown for now (2026-11-04), so each tier's `price`
- * stays in the content and is not rendered.
+ * Content is the pricing document in Sanity, from the package deck that is
+ * the source for every package, device count and price (Shivanshu,
+ * 2026-11-19). Prices are shown from that date; until then the site disclosed
+ * none (2026-11-04).
  */
 export async function PricingTiers({ headingLevel }: { headingLevel: "h2" | "h3" }) {
-  const { tiers, tierCta, includes } = await getPricingPage();
+  const { tiers, tierCta, includes, priceLabel } = await getPricingPage();
   const Heading = headingLevel;
 
   return (
@@ -33,11 +42,16 @@ export async function PricingTiers({ headingLevel }: { headingLevel: "h2" | "h3"
           {...(tier.tone === "dark" ? { "data-ground": "dark" } : {})}
         >
           <Heading className={styles.tierName}>{tier.name}</Heading>
+          <p className={styles.tierTagline}>{tier.tagline}</p>
           <p className={styles.tierDescription}>{tier.description}</p>
+          <p className={styles.price}>
+            <span className={styles.priceLabel}>{priceLabel}</span>{" "}
+            <span className={styles.priceAmount}>{formatPrice(tier.price)}</span>
+          </p>
 
           <div className={styles.tierCta}>
-            {/* Every tier goes to the same form: the enquiry is the only
-                conversion event on the site, and a tier is not a checkout. */}
+            {/* Every package goes to the same form: the enquiry is the only
+                conversion event on the site, and a package is not a checkout. */}
             <Button href="/contact" variant={tier.ctaVariant}>
               {tierCta}
             </Button>

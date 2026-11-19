@@ -34,15 +34,16 @@ test("responds 200, with one h1 and the comparison under an h2", async ({ page }
   const response = await page.goto("/pricing");
   expect(response?.status()).toBe(200);
   await expect(page.locator("h1")).toHaveCount(1);
-  await expect(page.getByRole("heading", { level: 1, name: "Pricing" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Smart home packages" })).toBeVisible();
   await expect(
-    comparison(page).getByRole("heading", { level: 2, name: "Compare all features" }),
+    comparison(page).getByRole("heading", { level: 2, name: "What each package includes" }),
   ).toBeVisible();
 });
 
-test("shows the four tiers, each reaching the enquiry form", async ({ page }) => {
+test("shows the four packages, each reaching the enquiry form", async ({ page }) => {
   await expect(page.locator("[data-tone]")).toHaveCount(4);
-  const ctas = page.getByRole("link", { name: "Get started" });
+  // Scoped to the cards: the nav and the closing prompt say the same words.
+  const ctas = page.locator("[data-tone]").getByRole("link", { name: "Book a site visit" });
   await expect(ctas).toHaveCount(4);
   for (const cta of await ctas.all()) await expect(cta).toHaveAttribute("href", "/contact");
 });
@@ -145,10 +146,21 @@ test("freezes the header row under the nav while the table scrolls", async ({ pa
   expect(Math.round(textTop)).toBe(76 + 12);
 });
 
-test("tells crawlers to wait while the figures are unconfirmed", async ({ page }) => {
+// Noindex until the package deck confirmed every figure (2026-11-19).
+test("is open to crawlers now the figures are confirmed", async ({ page }) => {
   const robots = page.locator('meta[name="robots"]');
-  await expect(robots).toHaveAttribute("content", /noindex/);
-  await expect(robots).toHaveAttribute("content", /follow/);
+  await expect(robots).not.toHaveAttribute("content", /noindex/);
+  await expect(robots).toHaveAttribute("content", /^index, follow/);
+});
+
+test("shows each device's count by package, and the deck's notes", async ({ page }) => {
+  const keypads = comparison(page).locator("details details", { hasText: "Lighting keypads" });
+  const row = keypads.locator("xpath=../..");
+  await expect(row).toContainText("Starter: 3");
+  await expect(row).toContainText("Luxe: 20");
+  const notes = page.locator('section[aria-labelledby="pricing-notes"] li');
+  await expect(notes).toHaveCount(7);
+  await expect(notes.last()).toContainText("quoted separately");
 });
 
 test("carries no placeholder marks and no em dashes", async ({ page }) => {
@@ -188,7 +200,7 @@ test("passes axe with no violations", async ({ page }) => {
 
 test("the homepage's comparison button now lands here", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Compare every feature" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Compare the packages" })).toHaveAttribute(
     "href",
     "/pricing",
   );

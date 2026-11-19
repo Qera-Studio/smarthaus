@@ -14,7 +14,7 @@ const BANNED: readonly [RegExp, string][] = [
   ],
   [/\b(platinum|gold|premier) partner\b/i, "a partner tier that has not been confirmed"],
   [/\baward[- ]winning\b/i, "an award with no source"],
-  [/\byears of experience\b/i, "a track record in years (the founding year is unconfirmed)"],
+  [/\byears of experience\b/i, "a track record in years; state the founding year, 2019, instead"],
   [/\btrusted by\b/i, '"trusted by", a claim with no source'],
   [/\b(industry|market)[- ]leading\b/i, "a superlative"],
   [/\b(world|best)[- ]in[- ]class\b|\bworld[- ]class\b/i, "a superlative"],

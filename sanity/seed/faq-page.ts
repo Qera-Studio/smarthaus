@@ -1,10 +1,13 @@
 // Seed for the faqPage document, from src/content/faq.ts on 2026-11-11.
 //
-// Five answers still hold unconfirmed facts, each with a pending note: the
-// founding year, the visit fee, what the price includes, the payment split,
-// and the three designer commitments. Each must be confirmed with Sunil and
-// its note cleared; /faq stays out of search, and emits no FAQPage data,
-// until none is left. A founding year is never invented.
+// Every answer is confirmed (Shivanshu, 2026-11-19): the founding year, 2019,
+// is Maple Technologies' (the same team, ownership and operations as
+// Smarthaus); the visit is free; what the price includes is the package
+// deck's; the payment split and the three designer commitments were approved
+// as written. So no pending note is left, and /faq is in search (its FAQPage
+// waits for a set of questions within 4 KB, 2.1.0). The packages' warranty and whether the first year of Standard
+// Care is included are for 2.1.0 (docs/updates/2.1.0.md); the answers that
+// state them are unchanged.
 import type { FaqPage } from "../../src/sanity/types";
 
 export const FAQ_PAGE: FaqPage = {
@@ -12,7 +15,7 @@ export const FAQ_PAGE: FaqPage = {
     title: "Frequently Asked Questions",
     description:
       "What a Smarthaus system costs, how the site assessment works, what happens at handover, and who we are, answered plainly.",
-    index: false,
+    index: true,
   },
   title: "Frequently Asked Questions",
   standfirst: "Everything below is what people actually ask us before they commit.",
@@ -31,9 +34,8 @@ export const FAQ_PAGE: FaqPage = {
           id: "new-company",
           question: "Is Smarthaus a new company?",
           answer: [
-            "No. Smarthaus is the home division of Maple Technologies Security Systems LLC, a SIRA-licensed Dubai company operating since {YEAR}. Same team, same licence, same accountability.",
+            "No. Smarthaus is the home division of Maple Technologies Security Systems LLC, a SIRA-licensed Dubai company operating since 2019. Same team, same licence, same accountability.",
           ],
-          pending: "Founding year unconfirmed. Do not invent one.",
         },
         {
           id: "separate-name",
@@ -78,23 +80,20 @@ export const FAQ_PAGE: FaqPage = {
           id: "how-it-begins",
           question: "How does it begin?",
           answer: [
-            "With a site assessment. A technician and a technical salesperson spend about 90 minutes in your home, check what you already have, and send a fixed, itemised proposal within 48 hours.",
+            "With a site assessment. A technician and a technical lead spend about 90 minutes in your home, check what you already have, and send a fixed, itemised proposal within 48 hours.",
           ],
         },
         {
-          id: "paid-visit",
-          question: "Why is the visit paid?",
+          id: "free-visit",
+          question: "Is the visit free?",
           answer: [
-            "The fee is credited in full against any installation. A proper assessment takes two people and half a day including the write-up. Charging for it means you get a real technical survey rather than a salesperson's guess, and it's free the moment you go ahead.",
+            "Yes. You get a real technical survey of your home rather than a salesperson's guess, and it costs you nothing, whether or not you go ahead.",
           ],
-          pending: "Fee pending Sunil's approval.",
         },
         {
           id: "commitment",
           question: "Am I committing to anything?",
-          answer: [
-            "No. If you decide not to proceed, you keep the report and owe nothing further.",
-          ],
+          answer: ["No. If you decide not to proceed, you keep the report and owe nothing."],
         },
         {
           id: "visit-lead-time",
@@ -124,14 +123,14 @@ export const FAQ_PAGE: FaqPage = {
           id: "system-cost",
           question: "What does a system cost?",
           answer: [
-            "It depends on how much of the house is covered and what is already in the walls. We do not quote without a visit: after it, you get a fixed, itemised price.",
+            "Our packages start from AED 16,000 for one living room and one bedroom, and from AED 68,000 for four bedrooms. After a site visit you get a fixed, itemised price for your home.",
           ],
         },
         {
           id: "price-range",
-          question: "Why can you not give a price before the visit?",
+          question: "Why is the final price set after the visit?",
           answer: [
-            "A four-bedroom villa with existing cabling costs far less than a larger home needing new runs. The assessment is what turns that into a number.",
+            "Because every home is different. A package is a starting point; the visit confirms the scope, the sizes of the curtains, the AC units you have and the cameras the house needs, and that is what turns a package into a fixed price.",
           ],
         },
         {
@@ -145,9 +144,8 @@ export const FAQ_PAGE: FaqPage = {
           id: "whats-included",
           question: "What's included in the price?",
           answer: [
-            "Equipment, installation, setup, a training session, documentation of what was installed, 12 months of hardware warranty, and your first year of Standard Care.",
+            "The devices listed for your package, and their installation, configuration, integration and testing. Civil works, electrical changes and authority approvals are quoted separately when a home needs them.",
           ],
-          pending: "Confirm against final package pricing.",
         },
         {
           id: "payments",
@@ -155,7 +153,6 @@ export const FAQ_PAGE: FaqPage = {
           answer: [
             "Part on order, the balance on completion. The exact split is in your proposal.",
           ],
-          pending: "Payment terms to be confirmed with Sunil.",
         },
       ],
     },
@@ -168,7 +165,7 @@ export const FAQ_PAGE: FaqPage = {
           id: "brands",
           question: "Which brands do you use?",
           answer: [
-            "We choose professional-grade equipment to suit each home, and every choice is named and explained in your proposal. We don't install consumer kit bought off a marketplace.",
+            "Apex keypads and thermostats, NICE curtain tracks, Fibaro sensors and controllers, the Yubii home controller, Akubela door locks and Dahua cameras, among others. Every choice is named and explained in your proposal.",
           ],
         },
         {
@@ -194,7 +191,7 @@ export const FAQ_PAGE: FaqPage = {
           id: "power-cuts",
           question: "What about power cuts?",
           answer: [
-            "The network cabinet can be fitted with backup power so the core system stays up. It's included in some packages and available in all of them.",
+            "The network cabinet can be fitted with backup power so the core system stays up. It can be added to any package.",
           ],
         },
         {
@@ -350,7 +347,6 @@ export const FAQ_PAGE: FaqPage = {
           answer: [
             "Yes. Brief us once and we'll update your PM at agreed milestones, hand over full documentation, and never contact your client without you.",
           ],
-          pending: "All three commitments to be confirmed with Sunil before publishing.",
         },
         {
           id: "drawings-and-programme",

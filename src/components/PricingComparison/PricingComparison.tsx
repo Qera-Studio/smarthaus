@@ -3,8 +3,9 @@ import type { Cell as CellValue } from "../../sanity/types";
 import styles from "./PricingComparison.module.scss";
 
 /**
- * The full feature comparison: every section open, every row expandable to a
- * one-line description, four tier columns.
+ * The device table: every section open, every row expandable to a one-line
+ * description, four package columns. A cell is the package's count of that
+ * device, a tick, or a rule for a device the package does not include.
  *
  * Not a <table>, deliberately. Both levels of collapse are native <details>,
  * the FAQ accordion's precedent, which means zero client JavaScript and a
@@ -14,17 +15,17 @@ import styles from "./PricingComparison.module.scss";
  * stay centred against the open text the way they do here.
  *
  * What a table gave for free was column association: a screen reader on a
- * tick in the third column would know it belongs to Connected. Without one,
- * every cell carries its tier name in visually-hidden text, so the same cell
- * reads "Connected: Included". The header row is visual only and hidden from
+ * count in the third column would know it belongs to Elevate. Without one,
+ * every cell carries its package name in visually-hidden text, so the same
+ * cell reads "Elevate: 13". The header row is visual only and hidden from
  * AT; the cells are the source of truth.
  *
  * Below md the row is wider than the viewport by design and the region
  * scrolls sideways with the feature column pinned; the page never does. The
  * region is focusable and named, which axe requires of any scroll stop.
  *
- * Content is the pricing document in Sanity. This emits no
- * structured data, and the unit suite asserts the absence.
+ * Content is the pricing document in Sanity, from the package deck. This
+ * emits no structured data, and the unit suite asserts the absence.
  */
 export async function PricingComparison() {
   const { tiers, comparison, compareHeading } = await getPricingPage();
@@ -56,7 +57,7 @@ export async function PricingComparison() {
 
         {comparison.map((section) => (
           // Open by default: the page is the comparison, and a visitor should
-          // not have to click eleven times to see it. Closing is for skipping
+          // not have to click seven times to see it. Closing is for skipping
           // a system they do not care about.
           <details key={section.id} className={styles.section} open>
             <summary className={styles.sectionSummary}>
@@ -98,7 +99,7 @@ export async function PricingComparison() {
 /**
  * One cell: the wrapper and one hidden label, nothing else. A tick or a rule
  * is drawn by the wrapper's own ::before (data-value), with the words beside
- * it in the label, so a screen reader hears "Essential: Included" and a
+ * it in the label, so a screen reader hears "Starter: Included" and a
  * sighted reader sees a mark. The rule is not a dash character: the copy
  * guards forbid em dashes, and a lone "-" reads as a typo rather than "no".
  *

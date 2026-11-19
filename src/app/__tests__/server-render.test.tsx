@@ -57,10 +57,34 @@ describe("the contact page", () => {
     expect(crumbs).toBeDefined();
   });
 
-  it("carries no FAQPage while the assessment fee is unconfirmed", async () => {
+  // Withheld until the free visit in the first answer was confirmed
+  // (2026-11-19); now every question the page shows is in its FAQPage, and
+  // nothing else is.
+  it("carries its questions as one FAQPage, exactly as the page shows them", async () => {
+    const { default: ContactPage } = await import("../contact/page");
+    const { CONTACT_PAGE } = await import("../../../sanity/seed/contact-page");
+    const html = await renderMarkup(<ContactPage />);
+    const faqs = jsonLd(html).filter((block) => block["@type"] === "FAQPage");
+    expect(faqs).toHaveLength(1);
+    const questions = (
+      faqs[0] as unknown as {
+        mainEntity: { name: string; acceptedAnswer: { text: string } }[];
+      }
+    ).mainEntity;
+    expect(questions).toEqual(
+      CONTACT_PAGE.faqs.map(({ question, answer }) => ({
+        "@type": "Question",
+        name: question,
+        acceptedAnswer: { "@type": "Answer", text: answer },
+      })),
+    );
+  });
+
+  it("says the visit is free, and never that it is paid", async () => {
     const { default: ContactPage } = await import("../contact/page");
     const html = await renderMarkup(<ContactPage />);
-    expect(nodes(html).map((node) => node["@type"])).not.toContain("FAQPage");
+    expect(html).toContain("The site visit is free.");
+    expect(html).not.toMatch(/paid visit|credited in full/);
   });
 });
 

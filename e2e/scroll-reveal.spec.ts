@@ -76,8 +76,9 @@ test.describe("on the homepage", () => {
     const delays = await heading
       .locator("> span")
       .evaluateAll((words) => words.map((w) => getComputedStyle(w).animationDelay));
-    expect(delays).toEqual(["0.4s", "0.46s", "0.52s", "0.58s", "0.64s"]);
-    await expect(heading).toHaveText("Choose your level of intelligence");
+    // Four words since the heading became the package deck's (2026-11-19).
+    expect(delays).toEqual(["0.4s", "0.46s", "0.52s", "0.58s"]);
+    await expect(heading).toHaveText("Designed around your home");
   });
 
   test("words blur on a wide screen, and not on a phone", async ({ page }) => {
@@ -175,7 +176,7 @@ test.describe("without JavaScript", () => {
   test("every word and card is there, at full strength", async ({ page }) => {
     await page.goto("/");
     await expect(waiting(page)).toHaveCount(0);
-    await expect(page.locator("#pricing")).toHaveText("Choose your level of intelligence");
+    await expect(page.locator("#pricing")).toHaveText("Designed around your home");
     await expect(page.locator("#pricing")).toHaveCSS("opacity", "1");
   });
 });

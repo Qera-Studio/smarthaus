@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FaqAccordion, FaqSchema } from "../../components/Faq";
+import { FaqAccordion } from "../../components/Faq";
+import { JsonLd, pageGraph } from "../../components/Schema";
 import { LegalPage, LegalSectionBlock, type LegalSection } from "../../components/LegalPage";
 import { ClosingCta } from "../../components/ClosingCta";
 import styles from "../../components/Faq/Faq.module.scss";
@@ -17,11 +18,16 @@ const PATH = "/faq";
 // split, the three designer commitments), and a {braced} value renders
 // through the <Placeholder> marker. The schema refuses a brace without a note.
 //
-// While any note remains the page ships noindex and emits no FAQPage schema,
-// whatever "Show in search" says: an unconfirmed figure that an answer engine
-// repeats back is worse than no answer at all (AGENTS.md, claims audit).
-// Clearing the last note and turning "Show in search" on publishes it, and
-// the sitemap follows the page's own metadata.
+// While any note remains the page ships noindex and emits no schema, whatever
+// "Show in search" says: an unconfirmed figure that an answer engine repeats
+// back is worse than no answer at all (AGENTS.md, claims audit). The last
+// note was cleared on 2026-11-19, so the page is in search with its page and
+// breadcrumb schema, and the sitemap follows the page's own metadata.
+//
+// No FAQPage here yet: all forty questions come to about 11.5 KB, and SEO
+// System §9 keeps a page's JSON-LD under 4 KB. /contact carries the core
+// questions as FAQPage; choosing the ones /faq carries is in
+// docs/updates/2.1.0.md.
 // ---------------------------------------------------------------------------
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -41,7 +47,9 @@ export default async function FaqPage() {
   }));
   return (
     <div className={styles.shell}>
-      {isFaqPublishable(page) ? <FaqSchema categories={page.categories} /> : null}
+      {isFaqPublishable(page) ? (
+        <JsonLd data={pageGraph(seoInput(PATH, page.seo), page.updatedAt)} />
+      ) : null}
 
       <LegalPage
         title={page.title}

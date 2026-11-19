@@ -2,10 +2,10 @@ import { test, expect } from "./fixtures";
 import { expectAccessible, expectNoHorizontalOverflow } from "./checks";
 
 /**
- * The four-tier pricing section on the homepage.
+ * The four packages on the homepage, from the package deck (2026-11-19).
  *
  * Two things here cannot be caught by the unit suite, and both are the reason
- * this file exists: contrast on the Connected card, whose ground is an image
+ * this file exists: contrast on the Elevate card, whose ground is an image
  * rather than a token and so cannot be reasoned about from the stylesheet; and
  * the full-bleed ground, which depends on body's cap and the viewport width and
  * therefore only exists in a real browser.
@@ -22,15 +22,15 @@ test.beforeEach(async ({ page }) => {
 test("keeps the homepage to one h1 and titles the section with an h2", async ({ page }) => {
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(
-    pricing(page).getByRole("heading", { level: 2, name: "Choose your level of intelligence" }),
+    pricing(page).getByRole("heading", { level: 2, name: "Designed around your home" }),
   ).toBeVisible();
 });
 
-test("shows four tiers, each reaching the enquiry form", async ({ page }) => {
+test("shows four packages, each reaching the enquiry form", async ({ page }) => {
   const section = pricing(page);
   await expect(section.locator("[data-tone]")).toHaveCount(4);
 
-  const ctas = section.getByRole("link", { name: "Get started" });
+  const ctas = section.getByRole("link", { name: "Book a site visit" });
   await expect(ctas).toHaveCount(4);
 
   for (const cta of await ctas.all()) {
@@ -39,12 +39,20 @@ test("shows four tiers, each reaching the enquiry form", async ({ page }) => {
 });
 
 /**
- * The client does not want prices shown for now (2026-11-04). The section's own
- * standfirst must not point at a figure that is not there either.
+ * Shown from 2026-11-19 (Shivanshu), reversing "no prices" of 2026-11-04: the
+ * deck's four starting prices, each said to be a starting price.
  */
-test("prints no price anywhere in the section", async ({ page }) => {
-  await expect(pricing(page)).not.toContainText(/AED|\d,\d{3}/);
-  await expect(pricing(page)).not.toContainText(/figure/);
+test("prints each package's starting price, and no other figure in dirhams", async ({ page }) => {
+  const prices = await pricing(page)
+    .getByText(/^AED\s[\d,]+$/)
+    .allTextContents();
+  expect(prices.map((p) => p.replace(/\s/g, " "))).toEqual([
+    "AED 16,000",
+    "AED 25,000",
+    "AED 42,000",
+    "AED 68,000",
+  ]);
+  await expect(pricing(page).getByText("Starting from", { exact: true })).toHaveCount(4);
 });
 
 /**
@@ -86,7 +94,7 @@ test("lines the four buttons up on one row", async ({ page }) => {
   await pricing(page).scrollIntoViewIfNeeded();
 
   const tops = await pricing(page)
-    .getByRole("link", { name: "Get started" })
+    .getByRole("link", { name: "Book a site visit" })
     .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
 
   expect(tops).toHaveLength(4);
@@ -94,15 +102,15 @@ test("lines the four buttons up on one row", async ({ page }) => {
 });
 
 /**
- * The Connected card's CTA is the solid band. Its hover swipes: the band
+ * The Elevate card's CTA is the solid band. Its hover swipes: the band
  * empties and the ground runs back in from the start edge in 300ms
  * (Shivanshu, 2026-11-04), ending as it began.
  */
-test("swipes the Connected card's CTA on hover, ending as it began", async ({ page, isMobile }) => {
+test("swipes the Elevate card's CTA on hover, ending as it began", async ({ page, isMobile }) => {
   test.skip(isMobile, "hover is a mouse concern");
   const cta = pricing(page)
     .locator('[data-tone="image"]')
-    .getByRole("link", { name: "Get started" });
+    .getByRole("link", { name: "Book a site visit" });
   await cta.scrollIntoViewIfNeeded();
   const BROWN_950 = "rgb(10, 8, 7)";
   expect(await cta.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(BROWN_950);
@@ -138,7 +146,7 @@ test("does not introduce a horizontal scrollbar", async ({ page }) => {
 });
 
 /**
- * The gate that matters. The Connected card puts brown-900 text over a rendered
+ * The gate that matters. The Elevate card puts brown-900 text over a rendered
  * swirl behind a bone scrim, and 4.5:1 body contrast is an Accessibility System
  * [Floor]. axe reads the composited pixels, so this catches a scrim that is too
  * light in a way reading the stylesheet cannot.

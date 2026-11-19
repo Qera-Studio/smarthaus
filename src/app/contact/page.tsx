@@ -4,6 +4,7 @@ import Image from "next/image";
 import { whatsappLink } from "../../lib/contact";
 import { ContactForm } from "./ContactForm";
 import styles from "./page.module.scss";
+import { FaqSchema } from "../../components/Faq";
 import { JsonLd, pageGraph } from "../../components/Schema";
 import { pageMetadata, seoInput } from "../../lib/metadata";
 import { getConsentCopy, getContactPage, getSettings } from "../../sanity/content";
@@ -18,17 +19,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * No FAQPage JSON-LD on this page, deliberately.
- *
- * The paid visit in the first answer is the term /faq carries as
- * `pending: "Fee pending Sunil's approval."`. Showing an unconfirmed term to a
- * reader who can ask about it is one thing; publishing it as structured data is
- * another, because that is what an answer engine quotes back with no way to
- * check whether it still holds. /faq withholds its schema for exactly this
- * reason (see the launch-gate row in AGENTS.md).
- *
- * To add it: confirm the fee, clear that `pending` note, then emit the schema
- * from the page's questions in the same change.
+ * The page's questions as FAQPage JSON-LD, from the same array the page
+ * renders, while the page is in search. Withheld until 2026-11-19, when the
+ * free visit in the first answer was confirmed: an answer engine quotes
+ * structured data back with no way to check it still holds.
  */
 
 export default async function ContactPage() {
@@ -60,7 +54,22 @@ export default async function ContactPage() {
   return (
     <>
       {page.seo.index ? (
-        <JsonLd data={pageGraph(seoInput(PATH, page.seo), page.updatedAt)} />
+        <>
+          <JsonLd data={pageGraph(seoInput(PATH, page.seo), page.updatedAt)} />
+          <FaqSchema
+            categories={[
+              {
+                id: "contact",
+                title: page.faqHeading,
+                entries: page.faqs.map(({ question, answer }) => ({
+                  id: question,
+                  question,
+                  answer: [answer],
+                })),
+              },
+            ]}
+          />
+        </>
       ) : null}
       <div className={styles.page}>
         <header className={styles.header}>

@@ -46,7 +46,7 @@ test("the hero's email field shows a dot, not the text cursor's bar alone", asyn
 });
 
 test("a Button link and everything inside it show the dot", async ({ page }) => {
-  const link = page.getByRole("link", { name: "Compare every feature" });
+  const link = page.getByRole("link", { name: "Compare the packages" });
   expect(await cursorOf(link)).toContain(DARK_DOT);
   const inner = await link.evaluate((el) =>
     Array.from(el.querySelectorAll("*")).map((c) => getComputedStyle(c).cursor),

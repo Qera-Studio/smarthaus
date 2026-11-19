@@ -9,10 +9,8 @@ import { test, expect } from "./fixtures";
  */
 const SITE = "https://smarthaus.ae";
 // An article's own head (one og:image, its picture) is in e2e/blog.spec.ts.
-const INDEXABLE = ["/", "/contact", "/about", "/accessibility", "/blog"];
+const INDEXABLE = ["/", "/contact", "/about", "/accessibility", "/blog", "/pricing", "/faq"];
 const NOINDEX = [
-  "/pricing",
-  "/faq",
   "/privacy",
   "/terms",
   "/cookie-preferences",
