@@ -378,6 +378,28 @@ test.describe("the hold and the snap", () => {
     await expect(first(page)).toHaveAttribute("data-snap", "waiting");
   });
 
+  // 2026-11-19: held under the sheets the section is still on screen, so its
+  // own observer kept the slides advancing where nobody could see them.
+  test("holds the hardware's timer while the first sheet covers it", async ({ page }) => {
+    const { height } = page.viewportSize()!;
+    const [top] = await naturalTops(page);
+    const timer = page.locator("[data-process-held] [data-running]");
+    const playState = () => timer.evaluate((el) => getComputedStyle(el).animationPlayState);
+
+    await scrollTo(page, top! - height / 2);
+    await expect(first(page)).toHaveAttribute("data-snap", "waiting");
+    await expect(timer).toHaveAttribute("data-running", "true");
+    await expect.poll(playState).toBe("running");
+
+    await scrollTo(page, top!);
+    await expect(first(page)).toHaveAttribute("data-snap", "in");
+    await expect.poll(playState).toBe("paused");
+
+    await scrollTo(page, top! - height / 2);
+    await expect(first(page)).toHaveAttribute("data-snap", "waiting");
+    await expect.poll(playState).toBe("running");
+  });
+
   test("leaves the hardware's buttons where a keyboard can see them", async ({ page }) => {
     // Pinned at the very foot, its CTA sat under the cookie banner where no
     // scroll could bring it out (WCAG 2.4.11, found 2026-11-14).

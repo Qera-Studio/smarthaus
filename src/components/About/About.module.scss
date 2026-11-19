@@ -51,6 +51,24 @@ $mission-travel: 10%;
     position: absolute;
     inset-block: (-$hero-spare) 0;
     inset-inline: 0;
+
+    // A brown-900 shade over the photograph's top, under the title (resolved
+    // the accepted risk of 2026-10-07 on 2026-11-19; the title had measured
+    // 2.68:1 on a desktop and about 1.6:1 on a phone). On the moving layer, so
+    // it travels with the picture as part of it: the title sits between 20%
+    // and 52% of the layer at rest and between 0% and 32% at the end of the
+    // parallax, inside the dark part either way. e2e/about.spec.ts measures 3:1.
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(
+        to bottom,
+        rgba($brown-900, 0.55) 0%,
+        rgba($brown-900, 0.45) 52%,
+        rgba($brown-900, 0) 85%
+      );
+    }
   }
 
   // Scroll-driven, so no script: each picture moves more slowly than the
@@ -107,10 +125,7 @@ $mission-travel: 10%;
     }
   }
 
-  // brown-50 straight on the photograph, untreated, at Shivanshu's call
-  // (2026-10-07): 2.68:1 on a desktop, about 1.6:1 on a phone, under the 3:1
-  // floor. An accepted risk, docs/launch-gate/accepted-risks.md, to resolve
-  // before launch.
+  // brown-50 over the shade on .heroLayer::after.
   .heroTitle {
     position: relative;
     align-self: start;

@@ -41,6 +41,13 @@ describe("Hardware.module.scss", () => {
     expect(css).not.toMatch(/:has\(\.tabs :focus-visible\) /);
   });
 
+  test("the timer holds while the Process stack's first sheet covers the section", () => {
+    // Found 2026-11-19: held under the sheets, the slides kept advancing.
+    expect(css).toMatch(
+      /\[data-process-stack\]:has\(\[data-snap=in\]\) \.progress\s*\{\s*animation-play-state:\s*paused/,
+    );
+  });
+
   test("the pause glyph reads play while that focus holds it", () => {
     expect(css).toMatch(
       /\.stageRoot:has\(\.tabs :focus-visible, \.stage :focus-visible\) \.glyphPause/,
