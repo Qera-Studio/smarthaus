@@ -324,10 +324,10 @@ $reveal-word-wait: 400ms;
 //
 // SolutionsMenu.tsx: a solution's picture in the nav's menu grows into its
 // page's, half the screen, in one native view transition (Shivanshu,
-// 2026-11-15), while the rest of the page cross-fades and the title and its
-// line rise in as the picture lands. Here and not in a module, which refuses
-// a selector without a class of its own. Never under reduced motion: the
-// menu does not start one.
+// 2026-11-15), over the page it was opened from, which gives way only near
+// the end; the title and its line rise in once the picture has landed. Here
+// and not in a module, which refuses a selector without a class of its own.
+// Never under reduced motion: the menu does not start one.
 @layer base {
   :root {
     --solution-open: calc(var(--duration-slower) * 1.5);
@@ -351,17 +351,89 @@ $reveal-word-wait: 400ms;
     animation-timing-function: cubic-bezier(0.7, 0, 0.2, 1);
   }
 
+  // From lg the bar stays drawn above the picture as it grows, as it is on
+  // the page it opens: its own layer, held still. Named on the old screen
+  // too, so the bar as it was, open panel and all, leaves at once: held under
+  // the picture, the panel was an empty frame where the picture had been, and
+  // a scrolled capsule showed beside the new bar. Named here and not in
+  // Nav.module.scss, which renamed it as it does a class, so until
+  // 2026-11-15 none of the rules below reached the bar.
+  @include bp-lg {
+    :root[data-solution-leaving] [data-site-nav],
+    :root[data-solution-opening] [data-site-nav] {
+      view-transition-name: solution-nav;
+    }
+  }
+
   ::view-transition-group(solution-copy),
   ::view-transition-group(solution-nav),
   ::view-transition-new(solution-nav) {
     animation-name: none;
   }
 
+  // The bar as it was, from lg (Nav.module.scss), goes from the first frame.
+  ::view-transition-old(solution-nav) {
+    animation-name: none;
+    opacity: 0;
+  }
+
+  // And the bar stays above the picture. The layers stack in the order the
+  // old screen paints them, and there the picture is inside the bar.
+  ::view-transition-group(solution-nav) {
+    z-index: var(--z-sticky);
+  }
+
+  // The page it was opened from stays whole under the growing picture
+  // (Shivanshu, 2026-11-15), rather than emptying from the first frame, and
+  // gives way to the page it opens once the picture has come nine tenths of
+  // its way: at 66% of the time, on the curve above, over the next tenth.
+  // The two opacities always sum to one, since the browser adds the pair's
+  // light. Keyed on the opening's attribute, so no other root transition
+  // changes.
+  :root[data-solution-opening]::view-transition-old(root),
+  :root[data-solution-opening]::view-transition-new(root) {
+    animation-duration: var(--solution-open);
+    animation-timing-function: linear;
+  }
+
+  :root[data-solution-opening]::view-transition-old(root) {
+    animation-name: solution-page-out;
+  }
+
+  :root[data-solution-opening]::view-transition-new(root) {
+    animation-name: solution-page-in;
+  }
+
+  @keyframes solution-page-out {
+    0%,
+    66% {
+      opacity: 1;
+    }
+
+    76%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes solution-page-in {
+    0%,
+    66% {
+      opacity: 0;
+    }
+
+    76%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  // Then the title, once the picture has landed.
   ::view-transition-new(solution-copy) {
     animation-name: solution-copy-in;
     animation-duration: var(--duration-slower);
     animation-timing-function: var(--ease-out);
-    animation-delay: calc(var(--solution-open) * 0.6);
+    animation-delay: var(--solution-open);
     animation-fill-mode: both;
   }
 

@@ -353,6 +353,8 @@ export function NavShell({ brandMark, brandFull, links, solutions, cta, footer }
       <header
         ref={headerRef}
         className={styles.nav}
+        // The solution opening's hook (globals.scss), outside the module.
+        data-site-nav
         data-open={open || undefined}
         data-stuck={stuck || undefined}
         data-at-footer={atFooter || undefined}

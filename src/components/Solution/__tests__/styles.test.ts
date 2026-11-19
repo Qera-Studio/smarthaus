@@ -298,6 +298,106 @@ describe("Solution.module.scss", () => {
     });
   });
 
+  // Shivanshu, 2026-11-16: visit, install, maintain, under the features.
+  describe("the process", () => {
+    test("opens 96px under the features, as the features open under what is above", () => {
+      expect(rule(".process")).toMatch(/padding-block-start:\s*96px/);
+    });
+
+    test("centres its heading and its line, the block itself too", () => {
+      const centred = rule(".centred");
+      expect(centred).toMatch(/text-align:\s*center/);
+      expect(centred).toMatch(/align-items:\s*center/);
+      expect(centred).toMatch(/margin-inline:\s*auto/);
+    });
+
+    test("comes after .intro, so the centring wins at the same specificity", () => {
+      expect(flat.indexOf(".centred {")).toBeGreaterThan(flat.indexOf(".intro {"));
+    });
+
+    test("stacks its cards in one column on a phone", () => {
+      expect(rule(".steps")).toMatch(/display:\s*grid/);
+      expect(rule(".steps", outsideMedia())).not.toMatch(/grid-template-columns/);
+    });
+
+    test("sets them three across from md", () => {
+      expect(rule(".steps", md())).toMatch(
+        /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
+      );
+    });
+
+    test("keeps 16px between the cards", () => {
+      expect(rule(".steps")).toMatch(/gap:\s*16px/);
+    });
+
+    test("takes the list's markers off itself: the reset only does for role=list", () => {
+      expect(rule(".steps")).toMatch(/list-style:\s*none/);
+    });
+
+    test("frames each card in the grid's own hairline, on the page's ground", () => {
+      const step = rule(".step");
+      expect(step).toMatch(/border-style:\s*solid/);
+      expect(step).toMatch(/border-width:\s*1px/);
+      expect(step).toMatch(/border-color:\s*var\(--solution-rule\)/);
+      expect(step).toMatch(/background-color:\s*var\(--color-bg-canvas\)/);
+    });
+
+    test("puts the drawing at a card's head and the words at its foot, on a phone", () => {
+      const step = rule(".step", outsideMedia());
+      expect(step).toMatch(/display:\s*flex/);
+      expect(step).toMatch(/flex-direction:\s*column/);
+      expect(step).toMatch(/justify-content:\s*space-between/);
+      expect(step).toMatch(/gap:\s*32px/);
+    });
+
+    test("shares the drawings' row and the words' row across the cards from md, so titles start level", () => {
+      const step = rule(".step", md());
+      expect(step).toMatch(/display:\s*grid/);
+      expect(step).toMatch(/grid-row:\s*span 2/);
+      expect(step).toMatch(/grid-template-rows:\s*subgrid/);
+    });
+
+    test("keeps the card's own 32px between its rows, not the list's 16px", () => {
+      // A subgrid takes its parent's gap unless it sets its own.
+      expect(rule(".step", outsideMedia())).toMatch(/(?:^|[;\s])gap:\s*32px/);
+    });
+
+    // Shivanshu, 2026-11-16: 16px, down from 32.
+    test("pads a card 16px at every width, with no step up on a wide screen", () => {
+      expect(rule(".step", outsideMedia())).toMatch(/padding:\s*16px/);
+      for (const query of [md(), lg(), xl()]) {
+        expect(query.match(/\.step\s*\{[^}]*\}/g)?.join(" ") ?? "").not.toMatch(/padding/);
+      }
+    });
+
+    test("centres the drawing by its margins, in the flex column and the grid alike", () => {
+      expect(rule(".drawing")).toMatch(/margin-inline:\s*auto/);
+      expect(rule(".drawing")).not.toMatch(/align-self/);
+    });
+
+    test("leaves the words at the start: nothing in a card is centred but the drawing", () => {
+      expect(rule(".step")).not.toMatch(/align-items:\s*center/);
+      expect(rule(".step")).not.toMatch(/text-align/);
+      expect(rule(".stepTitle")).not.toMatch(/text-align/);
+      expect(rule(".stepText")).not.toMatch(/text-align/);
+    });
+
+    test("draws it large, but never wider than its card", () => {
+      const drawing = rule(".drawing");
+      expect(drawing).toMatch(/inline-size:\s*min\(100%, 20rem\)/);
+      expect(drawing).toMatch(/block-size:\s*auto/);
+    });
+
+    test("sets a step's title 24px medium over a 16px line in the softer ink", () => {
+      const title = rule(".stepTitle");
+      expect(title).toMatch(/font-size:\s*var\(--font-size-xl\)/);
+      expect(title).toMatch(/font-weight:\s*500/);
+      const text = rule(".stepText");
+      expect(text).toMatch(/font-size:\s*var\(--font-size-base\)/);
+      expect(text).toMatch(/color:\s*var\(--color-text-secondary\)/);
+    });
+  });
+
   describe("under the hero", () => {
     test("sits 48px in on a desktop, as the design's grid does", () => {
       expect(rule(".body", lg())).toMatch(/padding-inline:\s*24px/);

@@ -22,6 +22,13 @@ export const OPENING_WAIT_MS = 1500;
 /** On <html> while an opening runs: Nav.module.scss hides the panel at once. */
 export const OPENING = "data-solution-opening";
 
+/**
+ * On <html> only while the old screen is taken: from lg the bar, open panel
+ * and all, is its own layer of it, which globals.scss hides from the first
+ * frame. Not OPENING, which collapses the panel the picture is still in.
+ */
+export const LEAVING = "data-solution-leaving";
+
 /** A solution in the menu, and where it goes: its own page, or /solutions. */
 export type SolutionLink = SolutionsMenuData["items"][number] & {
   href: string;
@@ -87,9 +94,11 @@ export function openSolution(
   picture.style.viewTransitionName = SOLUTION_PICTURE_NAME;
   let named: HTMLElement[] = [];
   const root = document.documentElement;
+  root.toggleAttribute(LEAVING, true);
   const transition = document.startViewTransition(async () => {
     // The old screen is taken: from here on is the page it opens.
     picture.style.viewTransitionName = "";
+    root.removeAttribute(LEAVING);
     root.toggleAttribute(OPENING, true);
     push(item.href);
     named = await arrival(item.id);

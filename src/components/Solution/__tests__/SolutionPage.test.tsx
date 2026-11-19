@@ -1,13 +1,16 @@
 import { screen, within } from "@testing-library/react";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { POSTS } from "../../../../sanity/seed/blog";
 import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
 import { SOLUTION_PAGES } from "../../../../sanity/seed/solutions";
+import { stubBrowser } from "../../../__tests__/helpers/browser";
 import { renderServer } from "../../../__tests__/helpers/server";
 import { SOLUTION_PICTURE_SIZES } from "../../../lib/solution-picture";
 import { getDoc, getDocs } from "../../../sanity/fetch";
-import { FEATURE_COUNT } from "../../../sanity/schema/solution";
-import { SolutionPage } from "../SolutionPage";
+import { FEATURE_COUNT, PROCESS_STEP_COUNT } from "../../../sanity/schema/solution";
+import { PROCESS_DRAWINGS, SolutionPage } from "../SolutionPage";
 
 /**
  * One solution's page (Figma 4903:4464), from the seed. jsdom draws no CSS,
@@ -30,6 +33,11 @@ const mockedGetDocs = getDocs as jest.MockedFunction<typeof getDocs>;
 const mockedGetDoc = getDoc as jest.MockedFunction<typeof getDoc>;
 
 const render = () => renderServer(<SolutionPage slug="cameras" />);
+
+// The "Works with" ring asks for matchMedia and IntersectionObserver on mount.
+beforeEach(() => {
+  stubBrowser();
+});
 
 /** The section a heading names. */
 const section = (name: string | RegExp) =>
@@ -189,6 +197,118 @@ describe("SolutionPage", () => {
     });
   });
 
+  // Shivanshu, 2026-11-16: visit, install, maintain, under the features.
+  describe("the process", () => {
+    const PROCESS = CAMERAS.process;
+
+    it("is a section named by its h2, the line under it", async () => {
+      await render();
+      const heading = screen.getByRole("heading", { name: PROCESS.heading });
+      expect(heading.tagName).toBe("H2");
+      expect(heading.closest("section")).toHaveAttribute("aria-labelledby", heading.id);
+      expect(heading.nextElementSibling).toHaveTextContent(PROCESS.subtext);
+    });
+
+    it("has nothing above its heading: no eyebrow", async () => {
+      await render();
+      const heading = screen.getByRole("heading", { name: PROCESS.heading });
+      expect(heading.previousElementSibling).toBeNull();
+      expect(heading.parentElement!.children).toHaveLength(2);
+    });
+
+    it(`is an ordered list of ${PROCESS_STEP_COUNT} steps, read in order`, async () => {
+      await render();
+      const list = within(section(PROCESS.heading)).getByRole("list");
+      expect(list.tagName).toBe("OL");
+      expect(within(list).getAllByRole("listitem")).toHaveLength(PROCESS_STEP_COUNT);
+    });
+
+    it("leaves the list its own role: an explicit one is redundant on an <ol>", async () => {
+      await render();
+      expect(section(PROCESS.heading).querySelector("ol")).not.toHaveAttribute("role");
+    });
+
+    it("titles each step with an h3, its line under it", async () => {
+      await render();
+      const titles = within(section(PROCESS.heading)).getAllByRole("heading", { level: 3 });
+      expect(titles.map((h) => h.textContent)).toEqual(PROCESS.steps.map((step) => step.title));
+      PROCESS.steps.forEach((step, index) => {
+        expect(titles[index]!.nextElementSibling).toHaveTextContent(step.text);
+      });
+    });
+
+    it("draws each step's own drawing, in order", async () => {
+      await render();
+      const drawings = section(PROCESS.heading).querySelectorAll("img");
+      expect(Array.from(drawings, (img) => img.getAttribute("src"))).toEqual(
+        PROCESS_DRAWINGS.map((file) => `/solutions/process/${file}`),
+      );
+    });
+
+    it("leaves the drawings as decoration: each title says what it shows", async () => {
+      await render();
+      for (const img of section(PROCESS.heading).querySelectorAll("img")) {
+        expect(img).toHaveAttribute("alt", "");
+      }
+    });
+
+    it("gives each drawing its size, so nothing moves as it arrives", async () => {
+      await render();
+      for (const img of section(PROCESS.heading).querySelectorAll("img")) {
+        expect(img).toHaveAttribute("width", "480");
+        expect(img).toHaveAttribute("height", "440");
+      }
+    });
+
+    it("loads them late: they are below the fold on every screen", async () => {
+      await render();
+      for (const img of section(PROCESS.heading).querySelectorAll("img")) {
+        expect(img).toHaveAttribute("loading", "lazy");
+        expect(img).not.toHaveAttribute("fetchpriority");
+      }
+    });
+
+    it("sets the drawing first in each card and the words last, at its foot", async () => {
+      await render();
+      for (const card of within(section(PROCESS.heading)).getAllByRole("listitem")) {
+        expect(card.children).toHaveLength(2);
+        expect(card.firstElementChild!.tagName).toBe("IMG");
+        expect(card.lastElementChild!.querySelector("h3")).not.toBeNull();
+      }
+    });
+
+    it("links nowhere and asks for nothing: the dark box above already does", async () => {
+      await render();
+      expect(within(section(PROCESS.heading)).queryAllByRole("link")).toEqual([]);
+    });
+  });
+
+  describe("the process's drawings", () => {
+    const DIR = join(process.cwd(), "public/solutions/process");
+
+    it(`are ${PROCESS_STEP_COUNT}, one per step`, () => {
+      expect(PROCESS_DRAWINGS).toHaveLength(PROCESS_STEP_COUNT);
+    });
+
+    it("are numbered in the order they are drawn", () => {
+      PROCESS_DRAWINGS.forEach((file, index) => {
+        expect(file).toMatch(new RegExp(`^0${index + 1}-[a-z]+\\.svg$`));
+      });
+    });
+
+    it.each(PROCESS_DRAWINGS)("%s exists, drawn at the 480 by 440 the page reserves", (file) => {
+      const path = join(DIR, file);
+      expect(existsSync(path)).toBe(true);
+      const svg = readFileSync(path, "utf8");
+      expect(svg).toMatch(/<svg[^>]*\bviewBox="0 0 480 440"/);
+    });
+
+    it.each(PROCESS_DRAWINGS)("%s carries no script and loads nothing", (file) => {
+      const svg = readFileSync(join(DIR, file), "utf8");
+      expect(svg).not.toMatch(/<script|\bon[a-z]+=|xlink:href="http|href="http|<image\b/i);
+    });
+  });
+
   describe("the questions", () => {
     it("are a section under their own h2", async () => {
       await render();
@@ -261,11 +381,14 @@ describe("SolutionPage", () => {
     });
   });
 
-  it("reads hero, features, questions, enquiry, articles, in that order", async () => {
+  // Works with went under the hero on 2026-11-16 (Shivanshu).
+  it("reads hero, works with, features, process, questions, enquiry, articles, in that order", async () => {
     await render();
     const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual([
+      CAMERAS.worksWith.heading,
       CAMERAS.features.heading,
+      CAMERAS.process.heading,
       CAMERAS.faqHeading,
       CAMERAS.enquiry.title,
       CAMERAS.articlesHeading,
@@ -300,11 +423,14 @@ describe("SolutionPage", () => {
 describe.each(Object.entries(SOLUTION_PAGES))("SolutionPage: %s", (slug, page) => {
   const draw = () => renderServer(<SolutionPage slug={slug} />);
 
-  it("reads its own hero, features, questions, enquiry and articles, in that order", async () => {
+  // Works with went under the hero on 2026-11-16 (Shivanshu).
+  it("reads its own hero, works with, features, process, questions, enquiry and articles, in that order", async () => {
     await draw();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(page.title);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      page.worksWith.heading,
       page.features.heading,
+      page.process.heading,
       page.faqHeading,
       page.enquiry.title,
       page.articlesHeading,
@@ -337,6 +463,20 @@ describe.each(Object.entries(SOLUTION_PAGES))("SolutionPage: %s", (slug, page) =
     expect(
       within(slab as HTMLElement).getByRole("link", { name: page.features.ctaLabel }),
     ).toHaveAttribute("href", "/contact");
+  });
+
+  it("draws its own process: each step's title over its line, under its drawing", async () => {
+    await draw();
+    const steps = within(section(page.process.heading)).getAllByRole("listitem");
+    expect(steps).toHaveLength(PROCESS_STEP_COUNT);
+    steps.forEach((step, index) => {
+      expect(step.querySelector("h3")).toHaveTextContent(page.process.steps[index]!.title);
+      expect(step).toHaveTextContent(page.process.steps[index]!.text);
+      expect(step.querySelector("img")).toHaveAttribute(
+        "src",
+        `/solutions/process/${PROCESS_DRAWINGS[index]}`,
+      );
+    });
   });
 
   it("lists its own questions", async () => {

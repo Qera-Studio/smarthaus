@@ -2,7 +2,7 @@ import { compile } from "sass";
 import { join } from "node:path";
 
 import { SOLUTION_COPY_NAME, SOLUTION_PICTURE_NAME } from "../../lib/solution-picture";
-import { OPENING } from "../../components/Nav/SolutionsMenu";
+import { LEAVING, OPENING } from "../../components/Nav/SolutionsMenu";
 
 /**
  * The solution opening's CSS (2026-11-15): the view transition SolutionsMenu
@@ -77,10 +77,12 @@ describe("the solution opening, in globals.scss", () => {
     expect(rule(globals, pair)).toMatch(/overflow:\s*clip/);
   });
 
-  test("brings the title in once the picture has nearly landed", () => {
+  // Shivanshu, 2026-11-15: it rose at 60% of the opening until the page
+  // opened from was kept under the picture; now it waits for the landing.
+  test("brings the title in once the picture has landed", () => {
     const copy = rule(globals, `::view-transition-new(${SOLUTION_COPY_NAME})`);
     expect(copy).toMatch(/animation-name:\s*solution-copy-in/);
-    expect(copy).toMatch(/animation-delay:\s*calc\(var\(--solution-open\) \* 0\.6\)/);
+    expect(copy).toMatch(/animation-delay:\s*var\(--solution-open\)/);
     expect(copy).toMatch(/animation-duration:\s*var\(--duration-slower\)/);
     expect(copy).toMatch(/animation-fill-mode:\s*both/);
   });
@@ -100,6 +102,16 @@ describe("the solution opening, in globals.scss", () => {
     ).toMatch(/animation-name:\s*none/);
   });
 
+  test("drops the bar as it was from the first frame, open panel and all", () => {
+    const old = rule(globals, "::view-transition-old(solution-nav)");
+    expect(old).toMatch(/animation-name:\s*none/);
+    expect(old).toMatch(/opacity:\s*0/);
+  });
+
+  test("keeps the bar's layer above the picture's, which the old screen paints inside it", () => {
+    expect(rule(globals, group("solution-nav"))).toMatch(/z-index:\s*var\(--z-sticky\)/);
+  });
+
   test("uses longhands, so a missing token cannot void the animation", () => {
     const opening = globals.slice(globals.indexOf(group(SOLUTION_PICTURE_NAME)));
     expect(opening.slice(0, opening.indexOf("@keyframes"))).not.toMatch(/[\s;{]animation:\s/);
@@ -111,6 +123,108 @@ describe("the solution opening, in globals.scss", () => {
     expect(before.lastIndexOf("@layer base")).toBeGreaterThan(
       before.lastIndexOf("@layer utilities"),
     );
+  });
+});
+
+/** The opacity a keyframes block sets at each of its offsets. */
+function opacities(name: string) {
+  const at = globals.indexOf(`@keyframes ${name}`);
+  if (at === -1) throw new Error(`no @keyframes ${name}`);
+  const body = globals.slice(at, globals.indexOf("} }", at) + 3);
+  const steps = new Map<number, number>();
+  for (const [, offsets, value] of body.matchAll(/([\d%,\s]+)\{\s*opacity:\s*([\d.]+);?\s*\}/g)) {
+    for (const offset of offsets!.split(",")) steps.set(Number.parseFloat(offset), Number(value));
+  }
+  return steps;
+}
+
+/** How far along cubic-bezier(0.7, 0, 0.2, 1) the picture is at this share of the time. */
+function progressAt(time: number) {
+  const point = (t: number, a: number, b: number) =>
+    3 * (1 - t) ** 2 * t * a + 3 * (1 - t) * t ** 2 * b + t ** 3;
+  let low = 0;
+  let high = 1;
+  for (let step = 0; step < 60; step += 1) {
+    const middle = (low + high) / 2;
+    if (point(middle, 0.7, 0.2) < time) low = middle;
+    else high = middle;
+  }
+  return point(low, 0, 1);
+}
+
+describe("the page under the picture, in globals.scss", () => {
+  const old = `:root[${OPENING}]::view-transition-old(root)`;
+  const fresh = `:root[${OPENING}]::view-transition-new(root)`;
+
+  test("only in the opening: no other change of the root is touched", () => {
+    expect(globals).not.toMatch(/(?:^|[}\s])::view-transition-(?:old|new)\(root\)/);
+    expect(rule(globals, `${old}, ${fresh}`)).toMatch(
+      /animation-duration:\s*var\(--solution-open\)/,
+    );
+  });
+
+  test("holds the page opened from, then gives way to the page it opens", () => {
+    expect(rule(globals, old)).toMatch(/animation-name:\s*solution-page-out/);
+    expect(rule(globals, fresh)).toMatch(/animation-name:\s*solution-page-in/);
+    const out = opacities("solution-page-out");
+    expect(out.get(0)).toBe(1);
+    expect(out.get(100)).toBe(0);
+  });
+
+  // Shivanshu, 2026-11-15: the page goes once the picture is 90% of the way.
+  test("gives way once the picture has come nine tenths of its way", () => {
+    const out = [...opacities("solution-page-out")];
+    const held = Math.max(...out.filter(([, value]) => value === 1).map(([offset]) => offset));
+    expect(progressAt(held / 100)).toBeCloseTo(0.9, 2);
+  });
+
+  test("goes in a tenth of the time, not as a cut", () => {
+    const out = [...opacities("solution-page-out")];
+    const held = Math.max(...out.filter(([, value]) => value === 1).map(([offset]) => offset));
+    const gone = Math.min(...out.filter(([, value]) => value === 0).map(([offset]) => offset));
+    expect(gone - held).toBe(10);
+  });
+
+  test("is gone before the title rises, so the two titles never meet", () => {
+    const out = [...opacities("solution-page-out")];
+    const gone = Math.min(...out.filter(([, value]) => value === 0).map(([offset]) => offset));
+    expect(gone).toBeLessThan(100);
+  });
+
+  test("sums to one at every step, since the browser adds the pair's light", () => {
+    const out = opacities("solution-page-out");
+    const into = opacities("solution-page-in");
+    expect([...into.keys()]).toEqual([...out.keys()]);
+    for (const [offset, value] of out) expect(value + into.get(offset)!).toBe(1);
+    expect(rule(globals, `${old}, ${fresh}`)).toMatch(/animation-timing-function:\s*linear/);
+  });
+});
+
+describe("the bar's layer, in globals.scss", () => {
+  const desktop = () => media(globals, "(min-width: 1024px)");
+  const naming = `:root[${LEAVING}] [data-site-nav], :root[${OPENING}] [data-site-nav]`;
+
+  test("names the bar on the old screen and the new, from lg", () => {
+    expect(rule(desktop(), naming)).toMatch(/view-transition-name:\s*solution-nav/);
+  });
+
+  test("leaves the phone's bar alone: its sheet would cover the picture's start", () => {
+    const count = (css: string) => css.split("view-transition-name: solution-nav").length - 1;
+    expect(count(globals)).toBe(1);
+    expect(count(desktop())).toBe(1);
+  });
+
+  // Found 2026-11-15: a module renamed it as it does a class, so the rules
+  // for solution-nav above never reached the bar.
+  test("is never named in a CSS Module, which would rename it", () => {
+    expect(nav).not.toMatch(/view-transition-name/);
+  });
+
+  test("keys on the header's own hook, within the house's specificity", () => {
+    // 0,3,0 each: :root, the mark, [data-site-nav].
+    for (const selector of naming.split(", ")) {
+      expect(selector.match(/\[|:root/g)).toHaveLength(3);
+    }
   });
 });
 
@@ -128,22 +242,11 @@ describe("the solution opening, in Nav.module.scss", () => {
     expect(panel).toMatch(/transition:\s*none/);
   });
 
-  test("lifts the desktop bar into its own layer, over the growing picture", () => {
-    expect(rule(desktop(), `:global(html[${OPENING}]) .nav`)).toMatch(
-      /view-transition-name:\s*solution-nav/,
-    );
-  });
-
-  test("leaves the phone's bar alone: its sheet would cover the picture's start", () => {
-    const outside = nav.replace(desktop(), "");
-    expect(outside).not.toContain(`html[${OPENING}] .nav`);
-  });
-
   test("stays within the house's specificity: an attribute on html, then one class", () => {
     // 0,2,1 at most: html, [data-solution-opening], one class. The limit is 0,3,0.
-    // Three: the panel, the bar and the logo.
+    // Two: the panel and the logo.
     const uses = [...nav.matchAll(new RegExp(`:global\\(html\\[${OPENING}\\]\\)([^{]*)\\{`, "g"))];
-    expect(uses.length).toBe(3);
+    expect(uses.length).toBe(2);
     for (const [, rest] of uses) expect(rest!.trim()).toMatch(/^\.[a-zA-Z]+$/);
   });
 });
@@ -188,13 +291,13 @@ describe("the logo over a solution's picture, in Nav.module.scss", () => {
     expect(turning).toMatch(/transition-timing-function:\s*var\(--ease-in-out\)/);
   });
 
-  test("starts turning with the title, which rises from the same moment", () => {
+  // It started with the title until 2026-11-15, when the title moved to the
+  // landing; the logo stays on the picture's own clock.
+  test("has turned before the title rises", () => {
     const copy = rule(globals, `::view-transition-new(${SOLUTION_COPY_NAME})`);
+    expect(copy).toMatch(/animation-delay:\s*var\(--solution-open\)/);
     const turning = rule(desktop(), `:global(html[${OPENING}]) .logo`);
-    const at = /calc\(var\(--solution-open\) \* ([\d.]+)\)/;
-    expect(turning.split("transition-delay:")[1]!.match(at)![1]).toBe(
-      copy.split("animation-delay:")[1]!.match(at)![1],
-    );
+    expect(turning).toMatch(/transition-delay:\s*calc\(var\(--solution-open\) \* 0\.6\)/);
   });
 
   test("has finished turning by the time the picture lands", () => {

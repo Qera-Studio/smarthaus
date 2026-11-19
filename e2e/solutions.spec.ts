@@ -18,6 +18,11 @@ import { SOLUTION_PAGES } from "../sanity/seed/solutions";
 
 const PAGE = "/solutions/cameras";
 const TITLE = "Cameras & CCTV";
+// The features grid, by its heading: since 2026-11-16 the "Works with"
+// section sits between it and the hero, with h3s and Lucide arrows of its own.
+const FEATURES = 'section[aria-labelledby="solution-features"]';
+// The process under the features (Shivanshu, 2026-11-16): visit, install, maintain.
+const PROCESS = 'section[aria-labelledby="solution-process"]';
 
 const header = (page: Page) => page.locator("header");
 const zone = (page: Page) => header(page).locator("[data-menu-zone]");
@@ -39,7 +44,21 @@ async function watchTransitions(page: Page) {
       log.push(entry);
       const transition = start(arg);
       transition.ready.then(
-        () => (entry.ready = true),
+        () => {
+          entry.ready = true;
+          // The layers as they start: the bar's name, and what animates each.
+          const bar = document.querySelector("[data-site-nav]");
+          (window as unknown as { __layers: object }).__layers = {
+            bar: bar ? getComputedStyle(bar).viewTransitionName : "",
+            animations: document
+              .getAnimations()
+              .filter((a) => (a.effect as KeyframeEffect | null)?.pseudoElement)
+              .map(
+                (a) =>
+                  `${(a.effect as KeyframeEffect).pseudoElement} ${(a as CSSAnimation).animationName}`,
+              ),
+          };
+        },
         (error: unknown) => (entry.error = String(error)),
       );
       transition.finished.then(() => (entry.finished = true));
@@ -61,6 +80,8 @@ const transitions = (page: Page) =>
 /** What the opening must leave behind: no names, no attribute. */
 async function expectSettled(page: Page) {
   await expect(page.locator("html")).not.toHaveAttribute("data-solution-opening", "");
+  await expect(page.locator("html")).not.toHaveAttribute("data-solution-leaving", "");
+  await expect(page.locator("[data-site-nav]")).toHaveCSS("view-transition-name", "none");
   const named = await page.evaluate(
     () =>
       [...document.querySelectorAll<HTMLElement>("*")].filter((el) => el.style.viewTransitionName)
@@ -95,20 +116,39 @@ for (const [slug, solution] of Object.entries(SOLUTION_PAGES)) {
       page,
     }) => {
       await page.goto(path);
-      await expect(page.locator("main h3").filter({ hasNot: page.locator("a") })).toHaveText(
+      await expect(page.locator(`${FEATURES} h3`).filter({ hasNot: page.locator("a") })).toHaveText(
         solution.features.items.map((item) => item.title),
       );
-      await expect(page.locator("main svg.lucide")).toHaveCount(9);
+      await expect(page.locator(`${FEATURES} svg.lucide`)).toHaveCount(9);
       // Lazy, and WebKit loads it only near the screen: go to it, then wait.
-      const picture = page.locator("main section").nth(1).locator("img").first();
+      const picture = page.locator(FEATURES).locator("img").first();
       await picture.scrollIntoViewIfNeeded();
       await expect(picture).toBeVisible();
       await expect
         .poll(() => picture.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth))
         .toBeGreaterThan(0);
       await expect(
-        page.locator("main [data-ground=dark]").getByRole("link", { name: "Book a site visit" }),
+        page
+          .locator(`${FEATURES} [data-ground=dark]`)
+          .getByRole("link", { name: "Book a site visit" }),
       ).toHaveAttribute("href", "/contact");
+    });
+
+    test("shows its process: three steps, each under a drawing that loads", async ({ page }) => {
+      await page.goto(path);
+      await expect(page.locator(`${PROCESS} h2`)).toHaveText(solution.process.heading);
+      await expect(page.locator(`${PROCESS} li h3`)).toHaveText(
+        solution.process.steps.map((step) => step.title),
+      );
+      const drawings = page.locator(`${PROCESS} li img`);
+      await expect(drawings).toHaveCount(3);
+      // Lazy: go to each, then wait for it to decode.
+      for (const drawing of await drawings.all()) {
+        await drawing.scrollIntoViewIfNeeded();
+        await expect
+          .poll(() => drawing.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth))
+          .toBeGreaterThan(0);
+      }
     });
 
     test("stays out of search while the draft waits for review", async ({ page }) => {
@@ -141,10 +181,15 @@ test.describe(PAGE, () => {
     await expectNoEmDash(page.locator("main"));
   });
 
-  test("reads hero, features, questions, enquiry, articles, in that order", async ({ page }) => {
+  // Works with went under the hero on 2026-11-16 (Shivanshu).
+  test("reads hero, works with, features, process, questions, enquiry, articles, in that order", async ({
+    page,
+  }) => {
     await page.goto(PAGE);
     await expect(page.locator("main h2")).toHaveText([
+      "Cameras that do more than watch",
       "How the cameras work",
+      "One team, start to finish",
       "Questions about cameras",
       "Plan your cameras with us",
       "Related articles",
@@ -153,10 +198,10 @@ test.describe(PAGE, () => {
 
   test("shows nine features, each with its icon", async ({ page }) => {
     await page.goto(PAGE);
-    const features = page.locator("main h3").filter({ hasNot: page.locator("a") });
+    const features = page.locator(`${FEATURES} h3`).filter({ hasNot: page.locator("a") });
     await expect(features).toHaveCount(9);
-    await expect(page.locator("main svg.lucide")).toHaveCount(9);
-    const icon = await page.locator("main svg.lucide").first().boundingBox();
+    await expect(page.locator(`${FEATURES} svg.lucide`)).toHaveCount(9);
+    const icon = await page.locator(`${FEATURES} svg.lucide`).first().boundingBox();
     expect(icon).toMatchObject({ width: 28, height: 28 });
   });
 
@@ -255,7 +300,8 @@ test.describe("its layout, from lg", () => {
    */
   async function grid(page: Page) {
     return page.evaluate(() => {
-      const grid = document.querySelector("main h3")!.parentElement!.parentElement!.parentElement!;
+      const grid = document.querySelector('section[aria-labelledby="solution-features"] h3')!
+        .parentElement!.parentElement!.parentElement!;
       const g = grid.getBoundingClientRect();
       const boxes = [...grid.children].map((kid) => {
         const r = kid.getBoundingClientRect();
@@ -308,37 +354,37 @@ test.describe("its layout, from lg", () => {
     near(slab.y, 1 + 2 * row);
     near(slab.w, 2 * column - 1);
     near(slab.h, row - 1);
-    await expect(page.locator("main [data-ground=dark]")).toHaveCSS(
+    await expect(page.locator(`${FEATURES} [data-ground=dark]`)).toHaveCSS(
       "background-color",
       "rgb(10, 8, 7)",
     );
   });
 
   test("keeps each box about as tall as it is wide, as the design's are", async ({ page }) => {
-    const box = (await page.locator("main h3").first().locator("../..").boundingBox())!;
+    const box = (await page.locator(`${FEATURES} h3`).first().locator("../..").boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(260);
     expect(box.height / box.width).toBeLessThan(1.2);
   });
 
   test("pins each feature's words to its foot", async ({ page }) => {
-    const box = (await page.locator("main h3").first().locator("../..").boundingBox())!;
-    const words = (await page.locator("main h3").first().locator("..").boundingBox())!;
+    const box = (await page.locator(`${FEATURES} h3`).first().locator("../..").boundingBox())!;
+    const words = (await page.locator(`${FEATURES} h3`).first().locator("..").boundingBox())!;
     expect(Math.round(words.y + words.height)).toBe(Math.round(box.y + box.height - 16));
   });
 
   // Shivanshu, 2026-11-15: 4px under the design's 24 over 20, and its 40px h2.
   test("sets a feature 20px over 16px, the dark box's line 20px", async ({ page }) => {
-    await expect(page.locator("main h3").first()).toHaveCSS("font-size", "20px");
-    await expect(page.locator("main h3 + p").first()).toHaveCSS("font-size", "16px");
-    await expect(page.locator("main [data-ground=dark] p")).toHaveCSS("font-size", "20px");
-    await expect(page.locator("main h2").first()).toHaveCSS("font-size", "36px");
+    await expect(page.locator(`${FEATURES} h3`).first()).toHaveCSS("font-size", "20px");
+    await expect(page.locator(`${FEATURES} h3 + p`).first()).toHaveCSS("font-size", "16px");
+    await expect(page.locator(`${FEATURES} [data-ground=dark] p`)).toHaveCSS("font-size", "20px");
+    await expect(page.locator(`${FEATURES} h2`)).toHaveCSS("font-size", "36px");
   });
 
   // Shivanshu, 2026-11-15: the line top left, left aligned; the button bottom right.
   test("puts the dark box's line at its top left and the button at its bottom right", async ({
     page,
   }) => {
-    const slab = page.locator("main [data-ground=dark]");
+    const slab = page.locator(`${FEATURES} [data-ground=dark]`);
     const box = (await slab.boundingBox())!;
     const line = (await slab.locator("p").boundingBox())!;
     const button = (await slab.getByRole("link", { name: "Book a site visit" }).boundingBox())!;
@@ -347,6 +393,70 @@ test.describe("its layout, from lg", () => {
     near(button.x + button.width, box.x + box.width - 24);
     near(button.y + button.height, box.y + box.height - 24);
     await expect(slab.locator("p")).toHaveCSS("text-align", "start");
+  });
+
+  // Shivanshu, 2026-11-16: the heading centred, the cards' words left aligned.
+  test("centres the process's heading and its line on the page", async ({ page }) => {
+    const section = (await page.locator(PROCESS).boundingBox())!;
+    const middle = section.x + section.width / 2;
+    for (const part of ["h2", "h2 + p"]) {
+      const box = (await page.locator(`${PROCESS} ${part}`).boundingBox())!;
+      near(box.x + box.width / 2, middle);
+      await expect(page.locator(`${PROCESS} ${part}`)).toHaveCSS("text-align", "center");
+    }
+  });
+
+  test("sets the three cards in one row, one height, every title level", async ({ page }) => {
+    const cards = await page.locator(`${PROCESS} li`).evaluateAll((items) =>
+      items.map((item) => {
+        const box = item.getBoundingClientRect();
+        const title = item.querySelector("h3")!.getBoundingClientRect();
+        return { y: box.y, height: box.height, title: title.top };
+      }),
+    );
+    expect(cards).toHaveLength(3);
+    expect(new Set(cards.map((card) => Math.round(card.y))).size).toBe(1);
+    expect(new Set(cards.map((card) => Math.round(card.height))).size).toBe(1);
+    expect(new Set(cards.map((card) => Math.round(card.title))).size).toBe(1);
+  });
+
+  // The words' row is as tall as the longest; that one reaches the foot.
+  test("sets the words in the card's lower part, the longest 16px off its foot", async ({
+    page,
+  }) => {
+    const cards = await page.locator(`${PROCESS} li`).evaluateAll((items) =>
+      items.map((item) => {
+        const box = item.getBoundingClientRect();
+        const drawing = item.querySelector("img")!.getBoundingClientRect();
+        const words = item.lastElementChild!.getBoundingClientRect();
+        return { foot: box.bottom, drawn: drawing.bottom, top: words.top, end: words.bottom };
+      }),
+    );
+    for (const card of cards) expect(card.top).toBeGreaterThanOrEqual(card.drawn + 31);
+    const lowest = Math.max(...cards.map((card) => card.end));
+    near(lowest, cards[0]!.foot - 16);
+  });
+
+  test("draws each drawing large and centred at the card's head", async ({ page }) => {
+    for (const card of await page.locator(`${PROCESS} li`).all()) {
+      const box = (await card.boundingBox())!;
+      const drawing = (await card.locator("img").boundingBox())!;
+      near(drawing.x + drawing.width / 2, box.x + box.width / 2);
+      near(drawing.y, box.y + 16);
+      expect(drawing.width).toBe(320);
+      near(drawing.height, (320 * 440) / 480);
+    }
+  });
+
+  test("sets the words left aligned, 16px in, 24px over 16px", async ({ page }) => {
+    for (const card of await page.locator(`${PROCESS} li`).all()) {
+      const box = (await card.boundingBox())!;
+      const title = (await card.locator("h3").boundingBox())!;
+      near(title.x, box.x + 16);
+      await expect(card.locator("h3")).toHaveCSS("text-align", "start");
+      await expect(card.locator("h3")).toHaveCSS("font-size", "24px");
+      await expect(card.locator("p")).toHaveCSS("font-size", "16px");
+    }
   });
 });
 
@@ -405,11 +515,34 @@ test.describe("its layout on a phone", () => {
   test("stacks the features in one column", async ({ page }) => {
     await page.goto(PAGE);
     const xs = await page
-      .locator("main h3")
+      .locator(`${FEATURES} h3`)
       .evaluateAll((titles) =>
         titles.slice(0, 9).map((t) => Math.round(t.getBoundingClientRect().x)),
       );
     expect(new Set(xs).size).toBe(1);
+  });
+
+  test("stacks the process's cards in one column, each drawing inside its card", async ({
+    page,
+  }) => {
+    await page.goto(PAGE);
+    const cards = await page.locator(`${PROCESS} li`).evaluateAll((items) =>
+      items.map((item) => {
+        const box = item.getBoundingClientRect();
+        const drawing = item.querySelector("img")!.getBoundingClientRect();
+        return {
+          x: Math.round(box.x),
+          top: box.top,
+          bottom: box.bottom,
+          inside: drawing.left >= box.left && drawing.right <= box.right,
+        };
+      }),
+    );
+    expect(new Set(cards.map((card) => card.x)).size).toBe(1);
+    cards.slice(1).forEach((card, index) => {
+      expect(card.top).toBeGreaterThan(cards[index]!.bottom);
+    });
+    expect(cards.every((card) => card.inside)).toBe(true);
   });
 });
 
@@ -467,6 +600,26 @@ test.describe("the opening, from the Solutions menu", () => {
       await expect.poll(async () => (await transitions(page))[0]?.finished).toBe(true);
       await expectSettled(page);
       await expect(panel(page)).toHaveCSS("visibility", "hidden");
+    });
+
+    // Shivanshu, 2026-11-15: the picture grows over the page opened from,
+    // which gives way near the end, and the bar stays above both.
+    test("holds the page under the picture, and the bar still above it", async ({ page }) => {
+      const link = await openMenuOn(page);
+      await link.click();
+      await expect.poll(async () => (await transitions(page))[0]?.finished).toBe(true);
+      const layers = await page.evaluate(
+        () => (window as unknown as { __layers: { bar: string; animations: string[] } }).__layers,
+      );
+      expect(layers.animations).toEqual(
+        expect.arrayContaining([
+          "::view-transition-old(root) solution-page-out",
+          "::view-transition-new(root) solution-page-in",
+        ]),
+      );
+      // Under its own name, not a module's renaming of it, and held still.
+      expect(layers.bar).toBe("solution-nav");
+      expect(layers.animations.filter((a) => a.includes("solution-nav"))).toEqual([]);
     });
 
     test("is a soft navigation: the page is not loaded again", async ({ page }) => {

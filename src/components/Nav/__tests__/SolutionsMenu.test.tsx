@@ -5,7 +5,7 @@ import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
 import { SOLUTION_SLUGS } from "../../../sanity/content";
 import { solutionLinks } from "../Nav";
 import { SOLUTION_PICTURE_SIZES } from "../../../lib/solution-picture";
-import { OPENING, OPENING_WAIT_MS, SWIPE_MIN_PX, SolutionsMenu } from "../SolutionsMenu";
+import { LEAVING, OPENING, OPENING_WAIT_MS, SWIPE_MIN_PX, SolutionsMenu } from "../SolutionsMenu";
 
 const mockPreload = jest.fn();
 jest.mock("react-dom", () => ({
@@ -352,7 +352,14 @@ describe("SolutionsMenu", () => {
  * runs the real thing.
  */
 describe("the opening", () => {
-  type Run = { ran: Promise<void>; finish: () => void; nameAtStart: string };
+  type Run = {
+    ran: Promise<void>;
+    finish: () => void;
+    nameAtStart: string;
+    /** The marks on <html> as the old screen is taken. */
+    leavingAtStart: boolean;
+    openingAtStart: boolean;
+  };
   let runs: Run[];
   let reduced: boolean;
 
@@ -385,10 +392,13 @@ describe("the opening", () => {
           document.querySelector<HTMLElement>(
             "[data-solutions-media] img[style*='view-transition-name']",
           )?.style.viewTransitionName ?? "";
+        const html = document.documentElement;
+        const leavingAtStart = html.hasAttribute(LEAVING);
+        const openingAtStart = html.hasAttribute(OPENING);
         let finish!: () => void;
         const finished = new Promise<void>((resolve) => (finish = resolve));
         const ran = Promise.resolve().then(update);
-        runs.push({ ran, finish, nameAtStart });
+        runs.push({ ran, finish, nameAtStart, leavingAtStart, openingAtStart });
         return { finished, ready: Promise.resolve(), updateCallbackDone: ran, skipTransition() {} };
       }),
     });
@@ -414,6 +424,7 @@ describe("the opening", () => {
     jest.useRealTimers();
     document.querySelectorAll("[data-test-page]").forEach((node) => node.remove());
     document.documentElement.removeAttribute(OPENING);
+    document.documentElement.removeAttribute(LEAVING);
   });
 
   /** Runs the update and lets the page's picture decode. */
@@ -489,6 +500,31 @@ describe("the opening", () => {
     expect(document.documentElement.hasAttribute(OPENING)).toBe(true);
     await finish();
     expect(document.documentElement.hasAttribute(OPENING)).toBe(false);
+  });
+
+  // Shivanshu, 2026-11-15: the page opened from stays under the picture, so
+  // the old bar and its open panel must leave it, as their own layer.
+  it("marks the old screen as leaving as it is taken, and the new screen not", async () => {
+    arriveOnPush();
+    const { links } = setup();
+    click(links[0]!);
+    expect(LEAVING).toBe("data-solution-leaving");
+    expect(runs[0]!.leavingAtStart).toBe(true);
+    // Not the opening's mark, which would collapse the panel the picture is in.
+    expect(runs[0]!.openingAtStart).toBe(false);
+    await update();
+    expect(document.documentElement.hasAttribute(LEAVING)).toBe(false);
+    await finish();
+    expect(document.documentElement.hasAttribute(LEAVING)).toBe(false);
+  });
+
+  it("never marks a plain navigation as leaving", () => {
+    reduced = true;
+    arriveOnPush();
+    const { links } = setup();
+    click(links[0]!);
+    expect(document.startViewTransition).not.toHaveBeenCalled();
+    expect(document.documentElement.hasAttribute(LEAVING)).toBe(false);
   });
 
   it("leaves no name and no style behind once it ends", async () => {

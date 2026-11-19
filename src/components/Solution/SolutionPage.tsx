@@ -6,13 +6,21 @@ import { byTags, RelatedArticles } from "../Blog";
 import { Button } from "../Button";
 import { FaqAccordion } from "../Faq";
 import { HomeEnquiry } from "../HomeEnquiry";
+import { WorksWith } from "../WorksWith";
 import { solutionIcon } from "./icons";
 import styles from "./Solution.module.scss";
 
 /**
+ * The process's drawings, one per step and in its order, in
+ * public/solutions/process/. Decoration: each step's title says what it shows.
+ */
+export const PROCESS_DRAWINGS = ["01-inspect.svg", "02-install.svg", "03-maintain.svg"] as const;
+
+/**
  * One solution's page (Figma 4903:4464, Shivanshu 2026-11-15): its picture on
  * the screen's left half and its name beside it; nine features round a
- * picture and a dark box that asks for a visit; then the questions, the
+ * picture and a dark box that asks for a visit; the process, visit, install
+ * and maintain, one card each over its drawing; then the questions, the
  * enquiry form and the articles, in that order on every solution page.
  *
  * The picture is the Solutions menu's own, which the menu grows into this
@@ -35,7 +43,7 @@ export async function SolutionPage({
   const item = solutionsMenu.items.find((entry) => entry.id === slug);
   if (!item) throw new Error(`Solution page "${slug}": no item with that id in the Solutions menu`);
   const picture = item.image;
-  const { features } = page;
+  const { features, process } = page;
   return (
     <div className={styles.page}>
       <section className={styles.hero} aria-labelledby="solution-title">
@@ -57,6 +65,8 @@ export async function SolutionPage({
       </section>
 
       <div className={styles.body}>
+        <WorksWith slug={slug} />
+
         <section className={styles.features} aria-labelledby="solution-features">
           <div className={styles.intro}>
             <h2 className={styles.heading} id="solution-features">
@@ -98,6 +108,34 @@ export async function SolutionPage({
               </Button>
             </div>
           </div>
+        </section>
+
+        <section className={styles.process} aria-labelledby="solution-process">
+          <div className={`${styles.intro} ${styles.centred}`}>
+            <h2 className={styles.heading} id="solution-process">
+              {process.heading}
+            </h2>
+            <p className={styles.standfirst}>{process.subtext}</p>
+          </div>
+          <ol className={styles.steps}>
+            {process.steps.map(({ title, text }, index) => (
+              <li key={title} className={styles.step}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- an SVG, which next/image would only wrap */}
+                <img
+                  className={styles.drawing}
+                  src={`/solutions/process/${PROCESS_DRAWINGS[index]}`}
+                  alt=""
+                  width={480}
+                  height={440}
+                  loading="lazy"
+                />
+                <div>
+                  <h3 className={styles.stepTitle}>{title}</h3>
+                  <p className={styles.stepText}>{text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </section>
 
         <section className={styles.ruled} aria-labelledby="solution-faqs">

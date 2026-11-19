@@ -1,4 +1,5 @@
 import { Care } from "../components/Care";
+import { Connectivity } from "../components/Connectivity";
 import { Hardware } from "../components/Hardware";
 import { HomeHero } from "../components/HomeHero";
 import { HomeEnquiry } from "../components/HomeEnquiry";
@@ -35,12 +36,14 @@ export default async function Home() {
       {/* The partner cards are unmounted, not deleted (2026-11-14): TIS and
           Fibaro are in the hero's logo rail now. src/components/Partners and
           its content stay intact, as src/components/Maple does. */}
-      {/* What Smarthaus has done; what the house is made of; how it gets
-          installed; then keeping it running, and the levels (the figures
+      {/* What Smarthaus has done, and the standards it connects (under the
+          figures: Shivanshu, 2026-11-16); what the house is made of; how it
+          gets installed; then keeping it running, and the levels (the figures
           above the hardware: Shivanshu, 2026-11-14). The hardware is handed
           to Process, which holds it still while its first sheet rises over
           it. */}
       <Stats />
+      <Connectivity />
       <Process held={<Hardware />} />
       <Care />
       <Pricing />

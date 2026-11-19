@@ -163,6 +163,15 @@ function click(target: Element) {
   return event.defaultPrevented;
 }
 
+describe("NavShell: the solution opening's hook", () => {
+  // globals.scss names the bar through it: a module's name would be renamed.
+  it("marks the header with an attribute no module renames", () => {
+    const { header } = renderNav();
+    expect(header).toHaveAttribute("data-site-nav");
+    expect(document.querySelectorAll("[data-site-nav]")).toHaveLength(1);
+  });
+});
+
 describe("NavShell: the Solutions menu, from lg", () => {
   describe("by mouse", () => {
     it("is shut to begin with", () => {

@@ -257,6 +257,7 @@ Server Components first. `'use client'` limited to:
 - Wireframe/scene reveal (Web Animations API)
 - Contact form (form state, Turnstile widget)
 - Mobile navigation (toggle state, and the Solutions menu: open state from lg, the solutions in place of the links below it; a new page closes it), `Nav/SolutionsMenu.tsx` (the solution in hand, the swipe on its picture, and the opening: a solution with a page grows its picture into that page in a view transition, see "Solution pages" in AGENTS.md), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
+- The solution pages' "Works with" diagram (`WorksWith/Wiring.tsx` — which button is picked, the panel's 4.5s cycle as a CSS animation's end, the glowing progress bar along the picked wire, a pause button for both (WCAG 2.2.2), one IntersectionObserver that draws the diagram in and holds the cycle off screen, and the arrow keys; the geometry is CSS. Nothing moves under reduced motion. See "Solution pages" in AGENTS.md)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
 - The articles page's search and tag filter (`Blog/ArticleBrowser.tsx` — two controlled fields that choose among the articles the server already sent; nothing is fetched as you type, the search button only puts the field down, and without JavaScript every article is listed)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)

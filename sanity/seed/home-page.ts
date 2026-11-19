@@ -312,6 +312,13 @@ export const HOME_PAGE: HomePage = {
       },
     ],
   },
+  // Drafted for Shivanshu's review (2026-11-16). The six standards under it
+  // are confirmed as installed in clients' homes the same day.
+  connectivity: {
+    heading: "One system, whatever your devices speak",
+    lead: "Your lights, locks, cameras and climate rarely share a maker. We install equipment on each of these standards and connect it, so all of it answers to one system.",
+    cta: "Book a site visit",
+  },
   process: {
     heading: "Our Process",
     stepLabel: "Step",

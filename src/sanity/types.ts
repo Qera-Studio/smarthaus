@@ -156,6 +156,8 @@ export type HomePage = {
   partners: { heading: string; visit: string; items: Partner[] };
   hardware: { heading: string; lead: string; href: string; items: HardwareItem[] };
   stats: { heading: string; items: Stat[] };
+  /** The standards section under the figures; its logos are code's (Connectivity/protocols.ts). */
+  connectivity: { heading: string; lead: string; cta: string };
   process: { heading: string; stepLabel: string; pages: ProcessPage[] };
   care: { heading: string; lead: string; packagesHeading: string; packages: CarePackage[] };
   pricing: { heading: string; standfirst: string; compareCta: string };
@@ -396,11 +398,29 @@ export type Post = {
 export type BlogPage = { updatedAt?: string; seo: Seo; heading: string };
 
 /** One solution's page (schema/solution.ts). Its picture is its menu item's. */
+/** One of a solution page's pairs: what happens when the two work together. */
+export type WorksWithPair = {
+  /** The other solution's id, from SOLUTION_IDS. */
+  with: string;
+  title: string;
+  trigger: string;
+  action: string;
+  body: string;
+};
+
 export type SolutionPage = {
   updatedAt?: string;
   seo: Seo;
   title: string;
   lede: string;
+  worksWith: {
+    heading: string;
+    subtext: string;
+    /** This solution in one line, for its own card when the middle is picked. */
+    line: string;
+    /** One to MAX_PAIRS, top to bottom. */
+    pairs: WorksWithPair[];
+  };
   features: {
     heading: string;
     standfirst: string;
@@ -410,6 +430,8 @@ export type SolutionPage = {
     ctaText: string;
     ctaLabel: string;
   };
+  /** Visit, install, maintain: exactly PROCESS_STEP_COUNT steps, in that order. */
+  process: { heading: string; subtext: string; steps: { title: string; text: string }[] };
   faqHeading: string;
   faqs: FaqEntry[];
   enquiry: { title: string; standfirst: string };

@@ -207,6 +207,16 @@ export const maxWords = (limit: number) => (value: unknown) => {
   );
 };
 
+/** A character limit, for copy that has to fit a fixed box. */
+export const maxChars = (limit: number) => (value: unknown) => {
+  const text = typeof value === "string" ? value : (value as { en?: unknown } | undefined)?.en;
+  return (
+    typeof text !== "string" ||
+    text.length <= limit ||
+    `At most ${limit} characters, to fit its box: this is ${text.length}.`
+  );
+};
+
 /** The seo field every page document carries. */
 export const seoField: SchemaField = {
   name: "seo",

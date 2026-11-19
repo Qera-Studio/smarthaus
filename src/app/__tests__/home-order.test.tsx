@@ -27,6 +27,9 @@ jest.mock("../../components/FluidHero", () => ({ FluidHero: mockSection("fluid")
 jest.mock("../../components/Maple", () => ({ Maple: mockSection("maple") }));
 jest.mock("../../components/Partners", () => ({ Partners: mockSection("partners") }));
 jest.mock("../../components/Stats", () => ({ Stats: mockSection("stats") }));
+jest.mock("../../components/Connectivity", () => ({
+  Connectivity: mockSection("connectivity"),
+}));
 jest.mock("../../components/Hardware", () => ({ Hardware: mockSection("hardware") }));
 // Process holds the section before it (the hardware) under its first sheet,
 // so it is handed that section rather than following it (2026-11-14). The
@@ -66,6 +69,8 @@ describe("Home page", () => {
     expect(order(container)).toEqual([
       "hero",
       "stats",
+      // The standards under the figures (Shivanshu, 2026-11-16).
+      "connectivity",
       "hardware",
       "process",
       "care",
@@ -106,13 +111,15 @@ describe("Home page", () => {
     expect(order(container)).not.toContain("partners");
   });
 
-  it("puts the figures directly after the hero, then the hardware", async () => {
+  it("puts the figures directly after the hero, then the standards, then the hardware", async () => {
     // 2026-11-14, at Shivanshu's call: "By the numbers" above the hardware
-    // carousel. From 2026-11-04 the hardware came first.
+    // carousel. From 2026-11-04 the hardware came first. 2026-11-16: the
+    // standards section goes between the figures and the hardware.
     const { container } = await renderServer(<Home />);
     const sections = order(container);
     expect(sections.indexOf("stats")).toBe(sections.indexOf("hero") + 1);
-    expect(sections.indexOf("hardware")).toBe(sections.indexOf("stats") + 1);
+    expect(sections.indexOf("connectivity")).toBe(sections.indexOf("stats") + 1);
+    expect(sections.indexOf("hardware")).toBe(sections.indexOf("connectivity") + 1);
   });
 
   it("hands the hardware to the Process stack, which holds it under its first sheet", async () => {

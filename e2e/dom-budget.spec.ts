@@ -23,10 +23,14 @@ import { test, expect } from "./fixtures";
  * Articles link, which put it at 1,159 with the partner cards gone. Confirmed
  * by Shivanshu the same day.
  *
+ * 2026-11-16: to 1,500 (Shivanshu) for the standards section under the
+ * figures (the heading's word reveal, six marks), which put it at 1,218
+ * with the dither's filter, since dropped.
+ *
  * Desktop Chrome only: the markup is the same on every device.
  */
 const BUDGETS = [
-  { path: "/", page: 1200, footer: 540 },
+  { path: "/", page: 1500, footer: 540 },
   { path: "/contact", page: 830, footer: 540 },
   { path: "/pricing", page: 2000, footer: 540 },
 ];

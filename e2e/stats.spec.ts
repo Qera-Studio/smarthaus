@@ -110,17 +110,26 @@ test.describe("the figures' roll", () => {
   });
 });
 
-test("sits directly after the hero, and above the hardware carousel", async ({ page }) => {
+test("sits directly after the hero, then the standards, then the hardware carousel", async ({
+  page,
+}) => {
   // 2026-11-14, at Shivanshu's call: "By the numbers" above the hardware,
-  // which the Process stack now holds (data-process-stack).
+  // which the Process stack now holds (data-process-stack). 2026-11-16: the
+  // standards section goes between them.
   const around = await page.locator('main > section[aria-labelledby="stats"]').evaluate((el) => ({
     before: el.previousElementSibling?.getAttribute("aria-labelledby"),
-    next: el.nextElementSibling?.hasAttribute("data-process-stack"),
-    held: el.nextElementSibling
+    next: el.nextElementSibling?.getAttribute("aria-labelledby"),
+    then: el.nextElementSibling?.nextElementSibling?.hasAttribute("data-process-stack"),
+    held: el.nextElementSibling?.nextElementSibling
       ?.querySelector("[data-process-held] > section")
       ?.getAttribute("aria-labelledby"),
   }));
-  expect(around).toEqual({ before: "hero-title", next: true, held: "hardware" });
+  expect(around).toEqual({
+    before: "hero-title",
+    next: "connectivity",
+    then: true,
+    held: "hardware",
+  });
 });
 
 test("shows the four figures, number first", async ({ page }) => {

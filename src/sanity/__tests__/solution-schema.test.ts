@@ -5,7 +5,12 @@ import { COLLECTIONS, FIXED_DOCUMENTS, schemaTypes, SINGLETONS } from "../schema
 import { BLOG_TAGS } from "../schema/blog";
 import { faqEntry } from "../schema/faq";
 import type { SchemaField } from "../schema/primitives";
-import { FEATURE_COUNT, SOLUTION_ICONS, solutionPage } from "../schema/solution";
+import {
+  FEATURE_COUNT,
+  PROCESS_STEP_COUNT,
+  SOLUTION_ICONS,
+  solutionPage,
+} from "../schema/solution";
 import { ROUTES, SOLUTION_SLUGS, solutionPath } from "../content";
 import { SITE_SETTINGS } from "../../../sanity/seed/site-settings";
 import { SOLUTION_PAGES } from "../../../sanity/seed/solutions";
@@ -83,7 +88,11 @@ describe("the solution page's type", () => {
       "seo",
       "title",
       "lede",
+      // Under the hero (Shivanshu, 2026-11-16).
+      "worksWith",
       "features",
+      // Under the features (Shivanshu, 2026-11-16).
+      "process",
       "faqHeading",
       "faqs",
       "enquiry",
@@ -148,6 +157,55 @@ describe("the features", () => {
     const image = field(features, "image");
     expect(image.type).toBe("figure");
     expect(image.options).toEqual({ hotspot: true });
+  });
+});
+
+describe("the process", () => {
+  const process = field(solutionPage, "process");
+  const steps = field(process, "steps");
+  const step = steps.of![0] as SchemaField;
+
+  it("is required: the page draws it on every solution", () => {
+    expect(rules(process).map(([m]) => m)).toContain("required");
+  });
+
+  it("holds its heading, the line under it and its steps, in that order", () => {
+    expect(process.fields!.map((f) => f.name)).toEqual(["heading", "subtext", "steps"]);
+  });
+
+  it("asks for its heading as one line and its line as a paragraph, through the claims audit", () => {
+    expect(field(process, "heading").type).toBe("localeString");
+    expect(field(process, "subtext").type).toBe("localeText");
+  });
+
+  it(`has exactly ${PROCESS_STEP_COUNT} steps: one per drawing`, () => {
+    expect(PROCESS_STEP_COUNT).toBe(3);
+    expect(rules(steps)).toEqual([
+      ["required", []],
+      ["length", [PROCESS_STEP_COUNT]],
+    ]);
+  });
+
+  it("tells an editor which step is which, since the drawings follow the order", () => {
+    expect(steps.title).toMatch(/visit, install, maintain/);
+  });
+
+  it("gives each step a title and a line or two, both required", () => {
+    expect(step.fields!.map((f) => [f.name, f.type])).toEqual([
+      ["title", "localeString"],
+      ["text", "localeText"],
+    ]);
+    for (const f of step.fields!) expect(rules(f).map(([m]) => m)).toContain("required");
+  });
+
+  it("shows each step by its title in the Studio's list", () => {
+    expect(step.preview).toEqual({ select: { title: "title.en" } });
+  });
+
+  it("takes no picture: the drawings are code's", () => {
+    const types = [...process.fields!, ...step.fields!].map((f) => f.type);
+    expect(types).not.toContain("figure");
+    expect(types).not.toContain("image");
   });
 });
 

@@ -169,6 +169,14 @@ export const homePage = singleton(
       ]),
     ),
     group(
+      "connectivity",
+      obj("connectivity", "Standards we connect", [
+        str("heading", "Heading"),
+        txt("lead", "Lead"),
+        str("cta", "Site visit button"),
+      ]),
+    ),
+    group(
       "process",
       obj("process", "Process", [
         str("heading", "Heading"),
@@ -236,6 +244,7 @@ export const homePage = singleton(
     { name: "partners", title: "Partners" },
     { name: "hardware", title: "Hardware" },
     { name: "stats", title: "Figures" },
+    { name: "connectivity", title: "Connectivity" },
     { name: "process", title: "Process" },
     { name: "care", title: "Maintenance" },
     { name: "pricing", title: "Pricing" },

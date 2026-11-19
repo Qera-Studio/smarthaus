@@ -1,4 +1,5 @@
 import type { SolutionPage } from "../../src/sanity/types";
+import { WORKS_WITH } from "./works-with";
 
 type Feature = SolutionPage["features"]["items"][number];
 type Faq = SolutionPage["faqs"][number];
@@ -18,6 +19,28 @@ const PRICED: Faq = {
   question: "How is it priced?",
   answer: [
     "After a site visit, where a technician and a technical lead go through the house with you. The price that follows is fixed and itemised.",
+  ],
+};
+// The process under the features (2026-11-16), drafted for review from the
+// About page's confirmed promises: the visit, the record left at handover,
+// and maintenance with one number to call.
+const PROCESS: SolutionPage["process"] = {
+  heading: "One team, start to finish",
+  subtext:
+    "We visit, install and look after the whole system ourselves, so you have one team and one number to call.",
+  steps: [
+    {
+      title: "Site visit",
+      text: "A technician and a technical lead spend about 90 minutes in your home. The price that follows is fixed and itemised.",
+    },
+    {
+      title: "Installation",
+      text: "The same team installs it, then hands over a record of what went in, where it sits and how it is set up.",
+    },
+    {
+      title: "Maintenance",
+      text: "Maintenance, updates and one number to call, for as long as you want us.",
+    },
   ],
 };
 
@@ -42,6 +65,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
     },
     title: "Cameras & CCTV",
     lede: "See home from anywhere, without false alerts",
+    worksWith: WORKS_WITH.cameras!,
     features: {
       heading: "How the cameras work",
       standfirst:
@@ -103,6 +127,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       ctaText: "Every home is different. We plan the cameras with you at a site visit.",
       ctaLabel: BUTTON,
     },
+    process: PROCESS,
     faqHeading: "Questions about cameras",
     faqs: [
       {
@@ -158,6 +183,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
     },
     title: "Lighting control",
     lede: "Light that suits the hour, set with one touch",
+    worksWith: WORKS_WITH.lighting!,
     features: {
       heading: "How the lighting works",
       standfirst:
@@ -215,6 +241,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       ctaText: "Every home is different. We plan the lighting with you at a site visit.",
       ctaLabel: BUTTON,
     },
+    process: PROCESS,
     faqHeading: "Questions about lighting",
     faqs: [
       {
@@ -259,6 +286,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
     },
     title: "Multi-room audio",
     lede: "Music in every room, or just the one you’re in",
+    worksWith: WORKS_WITH.audio!,
     features: {
       heading: "How the audio works",
       standfirst:
@@ -308,6 +336,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       ctaText: "Every home is different. We plan the audio with you at a site visit.",
       ctaLabel: BUTTON,
     },
+    process: PROCESS,
     faqHeading: "Questions about audio",
     faqs: [
       {
@@ -354,6 +383,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
     },
     title: "Air conditioning",
     lede: "Cool rooms when you need them, not all day",
+    worksWith: WORKS_WITH.ac!,
     features: {
       heading: "How the AC control works",
       standfirst:
@@ -403,6 +433,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       ctaText: "Every home is different. We plan the AC control with you at a site visit.",
       ctaLabel: BUTTON,
     },
+    process: PROCESS,
     faqHeading: "Questions about AC control",
     faqs: [
       {
@@ -449,6 +480,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
     },
     title: "Garage doors",
     lede: "Open on arrival, and know it’s shut",
+    worksWith: WORKS_WITH.garage!,
     features: {
       heading: "How the garage works",
       standfirst:
@@ -502,6 +534,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       ctaText: "Every home is different. We plan the garage with you at a site visit.",
       ctaLabel: BUTTON,
     },
+    process: PROCESS,
     faqHeading: "Questions about garage doors",
     faqs: [
       {
@@ -548,6 +581,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
     },
     title: "Smart locks",
     lede: "Keys you can’t lose, and entry you can see",
+    worksWith: WORKS_WITH["smart-lock"]!,
     features: {
       heading: "How the locks work",
       standfirst:
@@ -601,6 +635,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       ctaText: "Every home is different. We choose the locks with you at a site visit.",
       ctaLabel: BUTTON,
     },
+    process: PROCESS,
     faqHeading: "Questions about smart locks",
     faqs: [
       {
@@ -647,6 +682,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
     },
     title: "Wall controllers",
     lede: "The whole room from one panel on the wall",
+    worksWith: WORKS_WITH["wall-controller"]!,
     features: {
       heading: "How the controllers work",
       standfirst:
@@ -696,6 +732,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       ctaText: "Every home is different. We plan the controls with you at a site visit.",
       ctaLabel: BUTTON,
     },
+    process: PROCESS,
     faqHeading: "Questions about wall controllers",
     faqs: [
       {
@@ -742,6 +779,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
     },
     title: "Curtains & blinds",
     lede: "Open with the morning, closed against the afternoon sun",
+    worksWith: WORKS_WITH.curtains!,
     features: {
       heading: "How the curtains work",
       standfirst:
@@ -787,6 +825,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       ctaText: "Every home is different. We plan the curtains with you at a site visit.",
       ctaLabel: BUTTON,
     },
+    process: PROCESS,
     faqHeading: "Questions about curtains",
     faqs: [
       {

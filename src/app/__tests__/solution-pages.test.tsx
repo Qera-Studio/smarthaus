@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 
 import { SITE_SETTINGS } from "../../../sanity/seed/site-settings";
 import { SOLUTION_PAGES } from "../../../sanity/seed/solutions";
+import { stubBrowser } from "../../__tests__/helpers/browser";
 import { renderMarkup, renderServer } from "../../__tests__/helpers/server";
 import { INDEXABLE_ROBOTS, NOINDEX_ROBOTS } from "../../lib/metadata";
 import { getDoc } from "../../sanity/fetch";
@@ -15,6 +16,11 @@ import SolutionRoute, { generateMetadata, generateStaticParams } from "../soluti
  * and a 404 for the rest, metadata from the document, the picture taken from
  * the Solutions menu, and structured data only for a page in search.
  */
+
+// The "Works with" ring asks for matchMedia and IntersectionObserver on mount.
+beforeEach(() => {
+  stubBrowser();
+});
 
 // The enquiry form imports the server action, which imports Resend, which
 // wants a TextEncoder jsdom does not have. The action is not under test here.

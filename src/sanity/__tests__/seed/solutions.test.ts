@@ -8,7 +8,7 @@ import { pixelSize } from "../../../__tests__/helpers/pixel-size";
 import { DESCRIPTION_RANGE, fullTitle, TITLE_RANGE } from "../../../lib/metadata";
 import { claimProblem } from "../../claims";
 import { BLOG_TAGS } from "../../schema/blog";
-import { FEATURE_COUNT, SOLUTION_ICONS } from "../../schema/solution";
+import { FEATURE_COUNT, PROCESS_STEP_COUNT, SOLUTION_ICONS } from "../../schema/solution";
 import type { SolutionPage } from "../../types";
 
 /**
@@ -26,11 +26,18 @@ function copy(page: SolutionPage): string[] {
   return [
     page.title,
     page.lede,
+    page.worksWith.heading,
+    page.worksWith.subtext,
+    page.worksWith.line,
+    ...page.worksWith.pairs.flatMap((pair) => [pair.title, pair.trigger, pair.action, pair.body]),
     page.features.heading,
     page.features.standfirst,
     ...page.features.items.flatMap((item) => [item.title, item.text]),
     page.features.ctaText,
     page.features.ctaLabel,
+    page.process.heading,
+    page.process.subtext,
+    ...page.process.steps.flatMap((step) => [step.title, step.text]),
     page.faqHeading,
     ...page.faqs.flatMap((entry) => [entry.question, ...entry.answer]),
     page.enquiry.title,
@@ -227,6 +234,64 @@ describe("the seeded solution pages", () => {
       expect(bill.answer.join(" ")).toContain("we do not promise a figure");
       for (const [, page] of LATER) {
         for (const line of copy(page)) expect(line).not.toMatch(/\d+\s*%|per ?cent/i);
+      }
+    });
+  });
+
+  // Shivanshu, 2026-11-16: visit, install, maintain, under the features.
+  describe("the process", () => {
+    it.each(PAGES)(`%s has exactly ${PROCESS_STEP_COUNT} steps, one per drawing`, (_id, page) => {
+      expect(page.process.steps).toHaveLength(PROCESS_STEP_COUNT);
+    });
+
+    it("is the same on every page: one process, whatever is installed", () => {
+      const first = PAGES[0]![1].process;
+      for (const [, page] of PAGES) expect(page.process).toEqual(first);
+    });
+
+    const { process } = SOLUTION_PAGES.cameras!;
+
+    it("goes visit, install, maintain, the order its drawings are in", () => {
+      expect(process.steps.map((step) => step.title)).toEqual([
+        "Site visit",
+        "Installation",
+        "Maintenance",
+      ]);
+    });
+
+    it("names each step once, short enough for one line on a card", () => {
+      const titles = process.steps.map((step) => step.title);
+      expect(new Set(titles).size).toBe(titles.length);
+      for (const title of titles) expect(title.length).toBeLessThanOrEqual(16);
+    });
+
+    it("keeps each step to two or three lines on a card at 1440", () => {
+      for (const { text } of process.steps) expect(text.length).toBeLessThanOrEqual(120);
+    });
+
+    it("keeps the line under its heading to two lines, centred", () => {
+      expect(process.subtext.length).toBeLessThanOrEqual(120);
+    });
+
+    it("describes the visit only as confirmed: a technician and a technical lead, about 90 minutes, a fixed and itemised price", () => {
+      const visit = process.steps[0]!.text;
+      expect(visit).toContain("technician and a technical lead");
+      expect(visit).toContain("about 90 minutes");
+      expect(visit).toContain("fixed and itemised");
+    });
+
+    it("promises at handover only the record the About page confirms", () => {
+      expect(process.steps[1]!.text).toMatch(/record of what went in, where it sits/);
+    });
+
+    it("promises after it only maintenance, updates and one number to call", () => {
+      expect(process.steps[2]!.text).toMatch(/^Maintenance, updates and one number to call/);
+    });
+
+    it("says nothing about response times, warranties or guarantees, none of them confirmed", () => {
+      const lines = [process.heading, process.subtext, ...process.steps.map((s) => s.text)];
+      for (const line of lines) {
+        expect(line).not.toMatch(/\b(?:hours?|days?|guarantee|warrant(?:y|ies)|24\/7)\b/i);
       }
     });
   });

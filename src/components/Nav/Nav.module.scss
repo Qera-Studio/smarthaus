@@ -884,18 +884,15 @@
 
     // A solution's opening (SolutionsMenu.tsx) grows its picture out of the
     // panel: on the page it opens, the panel is gone at once rather than
-    // folding up beside the picture. The old screen's snapshot still fades it.
+    // folding up beside the picture. The old screen's snapshot keeps it until
+    // that screen gives way (globals.scss).
     :global(html[data-solution-opening]) .menu {
       visibility: hidden;
       transition: none;
     }
 
-    // And the bar stays drawn above the picture as it grows, as it is on the
-    // page it opens, rather than going under it and coming back at the end:
-    // its own layer of the transition, which globals.scss holds still.
-    :global(html[data-solution-opening]) .nav {
-      view-transition-name: solution-nav;
-    }
+    // The bar's own layer of the opening is named in globals.scss, not here:
+    // a CSS Module renames a view-transition-name as it does a class.
 
     .nav[data-menu] .menu {
       grid-template-rows: 1fr;
@@ -1521,8 +1518,8 @@
   // ground. So the logo alone takes the light ink (Shivanshu, 2026-11-15),
   // until the bar shrinks to its glass. In the opening the picture reaches
   // the logo's corner only as it lands, so the logo turns over the opening's
-  // last 40%, as the title starts to rise (globals.scss); any earlier and it
-  // was light on the page's light ground.
+  // last 40%; any earlier and it was light on the page's light ground. The
+  // title rises after (globals.scss).
   @include bp-lg {
     :where(:root:has([data-solution-picture])) .nav:not([data-stuck]) .logo {
       --nav-ink: var(--color-text-inverse);

@@ -245,6 +245,86 @@
     text-wrap: pretty;
   }
 
+  // --- The process ------------------------------------------------------------
+  //
+  // Visit, install, maintain (Shivanshu, 2026-11-16): the heading and its line
+  // centred, then three framed cards, one column on a phone and a row from md.
+  // In each, its drawing large and centred at the top, the title and its line
+  // left aligned at the foot. A row stretches its cards to one height, so the
+  // feet line up.
+
+  .process {
+    padding-block-start: $space-24;
+  }
+
+  // After .intro, so it wins: the heading and the line centred on the page.
+  .centred {
+    align-items: center;
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  // The reset strips markers only from ol[role="list"], and the role is
+  // redundant on an <ol> (jsx-a11y/no-redundant-roles): stripped here, as the
+  // footer and the nav do.
+  .steps {
+    display: grid;
+    gap: $space-4;
+    list-style: none;
+
+    @include bp-md {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: $space-8;
+    // 16px at every width (Shivanshu, 2026-11-16), as a feature's box above.
+    padding: $space-4;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--solution-rule);
+    background-color: var(--color-bg-canvas);
+
+    // In a row, the cards share two rows, the drawings' and the words', so
+    // every title starts level however long the line under it; the longest
+    // reaches the foot. The gap above is the rows' gap here.
+    @include bp-md {
+      display: grid;
+      grid-row: span 2;
+      grid-template-rows: subgrid;
+    }
+  }
+
+  // The drawings are 480 by 440; 20rem is about three quarters of a card at
+  // 1440, and a phone's card is narrower than that. Auto margins centre it in
+  // the flex column and the grid alike.
+  .drawing {
+    inline-size: min(100%, 20rem);
+    block-size: auto;
+    margin-inline: auto;
+  }
+
+  // 24px over 16px, the features' sizes a step up: these cards are three
+  // across where those are five.
+  .stepTitle {
+    font-size: var(--font-size-xl);
+    font-weight: $font-weight-medium;
+    line-height: 1.4;
+    letter-spacing: -0.02em;
+  }
+
+  .stepText {
+    margin-block-start: $space-2;
+    font-size: var(--font-size-base);
+    line-height: $line-height-normal;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
   // --- The questions ----------------------------------------------------------
   //
   // The About page's pattern: a rule across the top, the title on the left
