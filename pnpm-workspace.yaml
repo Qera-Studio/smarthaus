@@ -20,9 +20,12 @@ minimumReleaseAge: 4320
 #
 # The Sanity CLI (`sanity` > `@sanity/cli`) pins three below their fixes, each
 # within its own major, and the audit in CI fails on all three (2026-11-19).
-# None runs in the site's server or browser code: they parse the CLI's config
-# files and fetch for its build tooling. Drop each once `pnpm why` shows the
-# CLI resolving the patched version itself.
+# The pins are its dependencies' exact versions: `@vercel/frameworks` (js-yaml,
+# smol-toml) and `@module-federation/dts-plugin` (undici 7.30.1), still so with
+# sanity 6.23.0 and CLI 8.30.0 (checked 2026-11-20 by dropping them and
+# auditing). None runs in the site's server or browser code: they parse the
+# CLI's config files and fetch for its build tooling. Drop each once `pnpm why`
+# shows the CLI resolving the patched version itself.
 # js-yaml 3.x: GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj, GHSA-2883-xcg3-v3hh.
 # smol-toml: GHSA-7w5x-hrqm-74c2 and two moderates, fixed by 1.9.0.
 # undici 7.x: GHSA-xjj6-f33q-929c, GHSA-4w7w-5xrc-9h26 and the TLS advisories.
