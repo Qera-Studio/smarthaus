@@ -7,9 +7,10 @@ import { fullTitle, SITE_NAME, type PageMetadataInput } from "../../lib/metadata
  * site: the address, phone, email and licence numbers from the site settings
  * in Sanity, the same document the footer and the legal pages read. sameAs
  * lists only the profiles that are live (not pending in the Studio), and never
- * WhatsApp, a chat link rather than a profile. Left out on purpose, because
- * schema must match what the page shows: geo and openingHours (blocked on
- * Sunil), a SearchAction (the site has no search), and any rating or price.
+ * WhatsApp, a chat link rather than a profile. The opening hours are the
+ * footer's (2026-11-20). Left out on purpose, because schema must match what
+ * the page shows: geo (no coordinates yet), a SearchAction (the site has no
+ * search), and any rating or price.
  */
 
 /** The canonical host. @id values are built on it so they persist across deploys. */
@@ -57,6 +58,13 @@ export function siteGraph({
           addressCountry: "AE",
         },
         areaServed: { "@type": "City", name: "Dubai" },
+        // As the footer shows them, from the same field (src/lib/hours.ts).
+        openingHoursSpecification: {
+          "@type": "OpeningHoursSpecification",
+          dayOfWeek: contact.hours.days,
+          opens: contact.hours.opens,
+          closes: contact.hours.closes,
+        },
         contactPoint: {
           "@type": "ContactPoint",
           telephone: contact.phoneE164,

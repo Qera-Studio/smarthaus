@@ -1,8 +1,9 @@
 // Seed for the siteSettings document, verbatim from the constants it replaced
 // (src/lib/contact.ts, src/lib/nav-links.ts, the footer, the contact strip,
 // src/lib/metadata.ts) on 2026-11-11. The address is the trade licence's,
-// confirmed 2026-09-26. The social profiles are placeholders: each is marked
-// pending until the brand has a real profile there.
+// confirmed 2026-09-26. Instagram, Facebook and LinkedIn are the brand's own
+// profiles and the hours are its own (Shivanshu, 2026-11-20). X has no
+// profile yet: it stays marked pending, and says so.
 import type { SiteSettings } from "../../src/sanity/types";
 
 export const SITE_SETTINGS: SiteSettings = {
@@ -18,6 +19,12 @@ export const SITE_SETTINGS: SiteSettings = {
     ],
     mapsUrl: "https://maps.app.goo.gl/6TaV1nqiKs5StD566",
     locality: "Dubai, U.A.E.",
+    // Shivanshu, 2026-11-20.
+    hours: {
+      days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+      opens: "09:00",
+      closes: "18:00",
+    },
   },
   identity: {
     legalName: "Maple Technologies Security Systems LLC",
@@ -72,13 +79,12 @@ export const SITE_SETTINGS: SiteSettings = {
     {
       id: "instagram",
       label: "Smarthaus on Instagram",
-      href: "https://www.instagram.com/smarthaus_dxb/",
+      href: "https://www.instagram.com/smarthaus.dxb/",
     },
     {
       id: "facebook",
-      label: "Smarthaus on Facebook (profile coming soon)",
-      href: "https://facebook.com/",
-      pending: true,
+      label: "Smarthaus on Facebook",
+      href: "https://www.facebook.com/profile.php?id=61596663210810",
     },
     {
       id: "x",
@@ -88,9 +94,8 @@ export const SITE_SETTINGS: SiteSettings = {
     },
     {
       id: "linkedin",
-      label: "Smarthaus on LinkedIn (profile coming soon)",
-      href: "https://linkedin.com/",
-      pending: true,
+      label: "Smarthaus on LinkedIn",
+      href: "https://www.linkedin.com/company/smarthaus-smart-home-automation",
     },
   ],
   solutionsMenu: {

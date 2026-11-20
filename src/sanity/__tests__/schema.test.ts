@@ -43,6 +43,7 @@ function validate(field: SchemaField, value: unknown, document?: unknown): true 
     },
     min: () => rule,
     email: () => rule,
+    unique: () => rule,
     custom: (fn: (v: unknown, ctx: { document: unknown }) => true | string) => {
       if (problem === true && value !== undefined) problem = fn(value, { document });
       return rule;
@@ -269,6 +270,30 @@ describe("the site settings", () => {
     const whatsapp = field(contact, "whatsapp");
     expect(validate(whatsapp, "971543755150")).toBe(true);
     expect(validate(whatsapp, "+971543755150")).toMatch(/Digits only/);
+  });
+
+  it("takes the opening hours as days of the week and 24-hour times", () => {
+    const hours = field(contact, "hours");
+    const days = field(hours, "days");
+    expect(days.options?.list).toEqual([
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ]);
+    expect(validate(days, undefined)).toBe("Required");
+    for (const name of ["opens", "closes"]) {
+      const time = field(hours, name);
+      expect(validate(time, "09:00")).toBe(true);
+      expect(validate(time, "18:30")).toBe(true);
+      expect(validate(time, "9:00")).toMatch(/24-hour/);
+      expect(validate(time, "6pm")).toMatch(/24-hour/);
+      expect(validate(time, "24:00")).toMatch(/24-hour/);
+      expect(validate(time, undefined)).toBe("Required");
+    }
   });
 
   it("refuses a pending profile that does not say so", () => {

@@ -74,9 +74,23 @@ describe("siteGraph", () => {
     }
   });
 
-  it("lists only the live profiles as sameAs: Instagram, never WhatsApp or a placeholder", () => {
-    // Instagram went live on 2026-11-19; WhatsApp is a chat link, not a profile.
-    expect(business).toHaveProperty("sameAs", ["https://www.instagram.com/smarthaus_dxb/"]);
+  it("lists only the live profiles as sameAs, never WhatsApp or a placeholder", () => {
+    // Instagram, Facebook and LinkedIn are live (2026-11-20); X is still a
+    // placeholder, and WhatsApp is a chat link, not a profile.
+    expect(business).toHaveProperty("sameAs", [
+      "https://www.instagram.com/smarthaus.dxb/",
+      "https://www.facebook.com/profile.php?id=61596663210810",
+      "https://www.linkedin.com/company/smarthaus-smart-home-automation",
+    ]);
+  });
+
+  it("gives the opening hours the footer shows, from the same field", () => {
+    expect(business).toHaveProperty("openingHoursSpecification", {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+      opens: "09:00",
+      closes: "18:00",
+    });
   });
 
   it("leaves out sameAs while no profile is live", () => {
@@ -87,7 +101,9 @@ describe("siteGraph", () => {
     expect(node).not.toHaveProperty("sameAs");
   });
 
-  it.each(["geo", "openingHours", "openingHoursSpecification", "aggregateRating", "priceRange"])(
+  // openingHours, the string form, is left out because the specification
+  // above says the same thing in the structured form.
+  it.each(["geo", "openingHours", "aggregateRating", "priceRange"])(
     "leaves out %s, which the site cannot yet back with a visible fact",
     (key) => {
       expect(business).not.toHaveProperty(key);

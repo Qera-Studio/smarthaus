@@ -53,13 +53,17 @@ describe("Footer", () => {
     }
   });
 
-  it("names the three placeholder profiles as coming soon", async () => {
+  it("names the one placeholder profile, X, as coming soon", async () => {
     const soon = screen.getAllByRole("link", { name: /\(profile coming soon\)$/ });
     expect(soon.map((link) => link.getAttribute("aria-label"))).toEqual([
-      "Smarthaus on Facebook (profile coming soon)",
       "Smarthaus on X (profile coming soon)",
-      "Smarthaus on LinkedIn (profile coming soon)",
     ]);
+  });
+
+  it("shows the opening hours under the city, from the contact details", async () => {
+    // Shivanshu, 2026-11-20. The business's structured data reads the same
+    // field, so what search engines are told is what the footer shows.
+    expect(screen.getByText("Monday to Saturday, 9am to 6pm")).toBeInTheDocument();
   });
 
   it("draws WhatsApp as its full-colour logo and the rest in the chip's ink", async () => {

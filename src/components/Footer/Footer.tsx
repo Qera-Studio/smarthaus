@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { PREFERENCES_ROUTE } from "../../lib/consent";
 import { whatsappLink } from "../../lib/contact";
+import { formatHours } from "../../lib/hours";
 import type { NavLink } from "../../lib/nav-links";
 import { getSettings } from "../../sanity/content";
 import { PreferencesLink } from "../Consent";
@@ -116,6 +117,7 @@ export async function Footer() {
                 </a>
               </li>
               <li className={styles.contactItem}>{contact.locality}</li>
+              <li className={styles.contactItem}>{formatHours(contact.hours)}</li>
             </ul>
 
             <ul className={styles.socials}>

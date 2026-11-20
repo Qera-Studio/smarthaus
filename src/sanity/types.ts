@@ -1,6 +1,7 @@
 // The render shape of each document: what src/sanity/localize.ts hands the
 // pages, and what the seed in sanity/seed/ is written as. The Studio schema in
 // src/sanity/schema/ describes the stored shape; seed.test.ts holds them equal.
+import type { Weekday } from "../lib/hours";
 import type { Picture } from "./localize";
 
 export type { Picture };
@@ -18,6 +19,8 @@ export type SiteSettings = {
     addressLines: string[];
     mapsUrl: string;
     locality: string;
+    /** Days by their English name, times as 24-hour HH:MM. */
+    hours: { days: Weekday[]; opens: string; closes: string };
   };
   identity: {
     legalName: string;

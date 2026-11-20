@@ -5,12 +5,17 @@
 // The primary nav's links and its button label are NOT here: the scrolled
 // capsule is measured by hand around their exact widths (Nav.module.scss,
 // --nav-links-row and --nav-cta-width), so renaming one would break the nav.
+import { WEEKDAYS } from "../../lib/hours";
 import { link, list, obj, optional, pic, plain, singleton, str, txt } from "./primitives";
 
 const digitsOnly = (value: unknown) =>
   typeof value !== "string" ||
   /^\d{8,15}$/.test(value) ||
   "Digits only, country code first, no + or spaces.";
+const hhmm = (value: unknown) =>
+  typeof value !== "string" ||
+  /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ||
+  "24-hour time, e.g. 09:00.";
 const e164 = (value: unknown) =>
   typeof value !== "string" || /^\+\d{8,15}$/.test(value) || "A + and digits only, no spaces.";
 
@@ -52,6 +57,24 @@ export const siteSettings = singleton("siteSettings", "Site settings", [
     ),
     plain("mapsUrl", "Map link"),
     str("locality", "City, as the footer shows it"),
+    obj("hours", "Opening hours (the footer and search results)", [
+      {
+        name: "days",
+        title: "Days open",
+        type: "array",
+        of: [{ name: "day", type: "string" }],
+        options: { list: [...WEEKDAYS] },
+        validation: (rule) => rule.required().min(1).unique(),
+      },
+      plain("opens", "Opens", {
+        description: "24-hour, e.g. 09:00.",
+        validation: (rule) => rule.required().custom(hhmm),
+      }),
+      plain("closes", "Closes", {
+        description: "24-hour, e.g. 18:00.",
+        validation: (rule) => rule.required().custom(hhmm),
+      }),
+    ]),
   ]),
   obj("identity", "Legal identity", [
     plain("legalName", "Legal entity"),

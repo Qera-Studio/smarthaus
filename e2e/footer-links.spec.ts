@@ -63,13 +63,26 @@ test.describe("social links", () => {
       .toBeGreaterThan(0);
   });
 
-  test("Instagram goes to the Smarthaus profile, named as the profile", async ({ page }) => {
-    // Live since 2026-11-19 (Shivanshu).
-    const link = footer(page).getByRole("link", { name: "Smarthaus on Instagram", exact: true });
-    await expect(link).toHaveAttribute("href", "https://www.instagram.com/smarthaus_dxb/");
+  // Live since 2026-11-20 (Shivanshu).
+  for (const [platform, href] of [
+    ["Instagram", "https://www.instagram.com/smarthaus.dxb/"],
+    ["Facebook", "https://www.facebook.com/profile.php?id=61596663210810"],
+    ["LinkedIn", "https://www.linkedin.com/company/smarthaus-smart-home-automation"],
+  ]) {
+    test(`${platform} goes to the Smarthaus profile, named as the profile`, async ({ page }) => {
+      const link = footer(page).getByRole("link", {
+        name: `Smarthaus on ${platform}`,
+        exact: true,
+      });
+      await expect(link).toHaveAttribute("href", href!);
+    });
+  }
+
+  test("shows the opening hours with the contact details", async ({ page }) => {
+    await expect(footer(page).getByText("Monday to Saturday, 9am to 6pm")).toBeVisible();
   });
 
-  for (const platform of ["Facebook", "X", "LinkedIn"]) {
+  for (const platform of ["X"]) {
     test(`${platform} tells a screen reader the profile is coming soon`, async ({ page }) => {
       // Until the real profile exists the link lands on the platform's home
       // page, so its accessible name must not promise the Smarthaus profile.

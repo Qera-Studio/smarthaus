@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// The footer's social links. Three of five point at a platform's home page
-// until the real profiles exist. These keep the label honest about that, and
+// The footer's social links. X points at the platform's home page until a
+// real profile exists. These keep the label honest about that, and
 // make going live a deliberate change rather than a silent one.
 import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
 import { socialRule } from "../../../../src/sanity/schema/site-settings";
@@ -78,19 +78,25 @@ describe("footer socials", () => {
     for (const social of pending) expect(social.src).toBeUndefined();
   });
 
-  it("still has three placeholder profiles; this fails when the next real one lands", () => {
+  it("still has one placeholder profile, X; this fails when it lands", () => {
     // Replacing a placeholder is meant to fail here, so the change that brings
-    // a real profile URL also updates this count and clears `pending`.
-    // Instagram went live on 2026-11-19 (Shivanshu).
-    expect(pending.map((social) => social.id)).toEqual(["facebook", "x", "linkedin"]);
+    // a real profile URL also updates this list and clears `pending`.
+    // Instagram, Facebook and LinkedIn went live on 2026-11-20 (Shivanshu).
+    expect(pending.map((social) => social.id)).toEqual(["x"]);
   });
 
-  it("links Instagram to the Smarthaus profile, named without the pending suffix", () => {
-    const instagram = live.find((social) => social.id === "instagram")!;
-    expect(instagram.href).toBe("https://www.instagram.com/smarthaus_dxb/");
-    expect(isBareHomePage(instagram.href)).toBe(false);
-    expect(instagram.label).toBe("Smarthaus on Instagram");
-    expect(socialRule({ label: { en: instagram.label }, pending: instagram.pending })).toBe(true);
+  it.each([
+    ["instagram", "https://www.instagram.com/smarthaus.dxb/", "Instagram"],
+    ["facebook", "https://www.facebook.com/profile.php?id=61596663210810", "Facebook"],
+    ["linkedin", "https://www.linkedin.com/company/smarthaus-smart-home-automation", "LinkedIn"],
+  ])("links %s to the Smarthaus profile, named without the pending suffix", (id, href, name) => {
+    // Instagram was smarthaus_dxb on 2026-11-19, an empty account: the brand's
+    // own is smarthaus.dxb ("Smarthaus Home Automation"), checked 2026-11-20.
+    const social = live.find((s) => s.id === id)!;
+    expect(social.href).toBe(href);
+    expect(isBareHomePage(social.href)).toBe(false);
+    expect(social.label).toBe(`Smarthaus on ${name}`);
+    expect(socialRule({ label: { en: social.label }, pending: social.pending })).toBe(true);
   });
 
   describe.each(pending.map((social) => [social.id, social] as const))(
