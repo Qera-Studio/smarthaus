@@ -21,6 +21,31 @@ const BRONZE = "rgb(176, 128, 79)"; // brown-400, the lit wire
 const WALNUT = "rgb(82, 60, 42)"; // brown-700, the track
 const LINEN = "rgb(240, 233, 221)"; // brown-100
 
+/**
+ * Bring the diagram on screen and let its entrance end. A diagram below the
+ * screen on load (a narrow phone) fades in once it arrives, and axe read the
+ * middle half-faded as low contrast: 3 runs in 10 on Galaxy S24, on the
+ * committed code as well (found 2026-11-20). One already in view on load has
+ * no entrance, and nothing to wait for.
+ */
+async function drawnIn(page: Page) {
+  const stage = section(page).locator("[data-entrance]");
+  if ((await stage.count()) === 0) return;
+  await stage.scrollIntoViewIfNeeded();
+  await expect(stage).toHaveAttribute("data-entrance", "in");
+  await expect
+    .poll(() =>
+      stage.evaluate(
+        (el) =>
+          el
+            .getAnimations({ subtree: true })
+            .filter((a) => /works-(enter|show)/.test((a as CSSAnimation).animationName ?? ""))
+            .filter((a) => a.playState !== "finished").length,
+      ),
+    )
+    .toBe(0);
+}
+
 /** The middle, the tabs, the wires and the column, as drawn. */
 async function drawing(page: Page) {
   return section(page).evaluate((el) => {
@@ -473,6 +498,7 @@ test.describe("works with: what a reader can see", () => {
   test("passes axe with a pair, the pause, and the middle picked", async ({ page }) => {
     await page.goto("/solutions/cameras");
     await expectHydrated(page);
+    await drawnIn(page);
     const include = { include: SECTION };
     await expectAccessible(page, include);
     await section(page).getByRole("button", { name: "Pause the animation" }).click();

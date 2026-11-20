@@ -57,6 +57,24 @@ async function hoverCard(page: Page, index: number) {
   await page.mouse.move(Math.max(x, box.x + 8), box.y + box.height * 0.2);
 }
 
+/**
+ * Press the pause button as a person would: bring it on screen, let the page
+ * answer that scroll, then press. Any scroll shows Back to top, which on a
+ * phone with the cookie banner up floats mid-screen at the right, where the
+ * pause button lands. Pressed at once, Back to top faded in between the press
+ * and the release: the press went down on one button and up on the other, and
+ * the click reached neither (2 runs in 10 on iPhone 17, found 2026-11-20).
+ * Pressed after it, Playwright's own check sees anything over the button and
+ * scrolls again.
+ */
+async function pressPause(page: Page) {
+  await pause(page).scrollIntoViewIfNeeded();
+  if (await page.evaluate(() => scrollY > 0)) {
+    await expect(page.locator('button[aria-label="Back to top"]')).not.toHaveAttribute("inert");
+  }
+  await pause(page).click();
+}
+
 /** The track's offset now and a little later: equal means it is not moving. */
 async function drift(page: Page): Promise<[string, string]> {
   const read = () => track(page).evaluate((el) => getComputedStyle(el).translate);
@@ -100,7 +118,7 @@ test("the strip drifts right to left on its own", async ({ page }) => {
 test("the pause button stops it, and a second press starts it again", async ({ page }) => {
   // Move the pointer off the strip first, so hover is not what stops it.
   await page.mouse.move(0, 0);
-  await pause(page).click();
+  await pressPause(page);
   await page.mouse.move(0, 0);
   await expect(pause(page)).toHaveAttribute("aria-pressed", "true");
   // Reaching the button scrolls a phone's page, and a scroll runs the strip
@@ -111,7 +129,7 @@ test("the pause button stops it, and a second press starts it again", async ({ p
   await expect(strip(page)).not.toHaveAttribute("data-gliding", "", { timeout: 8_000 });
   const [a, b] = await drift(page);
   expect(a).toBe(b);
-  await pause(page).click();
+  await pressPause(page);
   await page.mouse.move(0, 0);
   const [c, d] = await drift(page);
   expect(c).not.toBe(d);
@@ -311,9 +329,9 @@ test.describe("the makers' marks", () => {
       "nothing moves under reduced motion",
     );
     await expectHydrated(page);
-    await pause(page).click();
+    await pressPause(page);
     await expect(marks(page)).toHaveCSS("animation-play-state", "paused");
-    await pause(page).click();
+    await pressPause(page);
     await expect(marks(page)).toHaveCSS("animation-play-state", "running");
   });
 
@@ -395,7 +413,7 @@ test.describe("the hand on the strip", () => {
     await page.goto("/");
     await expectHydrated(page);
     // Paused, so only the hand moves it.
-    await pause(page).click();
+    await pressPause(page);
     await showStrip(page);
   });
 
@@ -1005,7 +1023,7 @@ test.describe("every card, with a mouse", () => {
     // The banner covers the first cards on a 1280x720 screen.
     await withConsentDecided(page);
     await page.goto("/");
-    await pause(page).click();
+    await pressPause(page);
     await page.mouse.move(0, 0);
   });
 
@@ -1101,7 +1119,7 @@ test("the largest paint is the hero's copy or an eager strip image, never a lazy
 });
 
 test("every card's overlay content stays inside its card", async ({ page }) => {
-  await pause(page).click();
+  await pressPause(page);
   for (const index of [0, 2, 7]) {
     await cards(page).nth(index).getByRole("link").focus();
     const card = (await cards(page).nth(index).boundingBox())!;

@@ -11,12 +11,23 @@ test.use({ reveal: true });
 const marked = (page: Page) => page.locator("[data-reveal]");
 const waiting = (page: Page) => page.locator('[data-reveal="waiting"]');
 
-/** Scrolls the whole page down a part-screen at a time, as a visitor would. */
+/**
+ * Scrolls the whole page down a part-screen at a time, as a visitor would.
+ *
+ * Each step waits for two frames as well as 40ms: an IntersectionObserver
+ * looks only when the browser draws, and on a step whose frame came late the
+ * page had already moved on, so what was on screen for that step was never
+ * seen and stayed hidden (5 runs in 20 on iPhone 17 against one build,
+ * 2026-11-20). A visitor's scroll is drawn; a script's need not be.
+ */
 async function walkDown(page: Page) {
   await page.evaluate(async () => {
     const step = window.innerHeight * 0.6;
+    const frame = () => new Promise((done) => requestAnimationFrame(done));
     for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
       window.scrollTo({ top: y, behavior: "instant" });
+      await frame();
+      await frame();
       await new Promise((done) => setTimeout(done, 40));
     }
   });
