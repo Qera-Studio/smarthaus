@@ -9,7 +9,7 @@ import { fullTitle, SITE_NAME, type PageMetadataInput } from "../../lib/metadata
  * lists only the profiles that are live (not pending in the Studio), and never
  * WhatsApp, a chat link rather than a profile. The opening hours are the
  * footer's (2026-11-20). Left out on purpose, because schema must match what
- * the page shows: geo (no coordinates yet), a SearchAction (the site has no
+ * the page shows: geo (not wanted, Shivanshu 2026-11-20), a SearchAction (the site has no
  * search), and any rating or price.
  */
 

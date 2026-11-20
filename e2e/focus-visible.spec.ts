@@ -40,8 +40,9 @@ async function focusReport(page: Page) {
  * scroll a Tab-focused element into view at all (measured 2026-09-27: the
  * message field left at y=700 in a 681px viewport, with no banner and no bar
  * in the way), so a failure there cannot be told apart from the emulator.
- * Whether real Safari with a keyboard behaves is a manual check, recorded in
- * docs/launch-gate/blocked-on-input.md.
+ * Whether real Safari with a keyboard behaves is a manual check: done on real
+ * devices before launch (Shivanshu, 2026-11-20), and again in 2.1.0's
+ * responsiveness sweep (docs/updates/2.1.0.md).
  */
 test.skip(
   ({ browserName }) => browserName === "webkit",
