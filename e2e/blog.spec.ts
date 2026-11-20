@@ -166,11 +166,12 @@ test.describe("what an article tells crawlers", () => {
     expect(graph.map((n) => n["@type"])).toContain("BlogPosting");
   });
 
-  test("a drafted article stays out of search and is not described", async ({ page }) => {
+  test("a reviewed draft is in search and described as an article", async ({ page }) => {
+    // Approved as written (2026-11-19), in search since 2026-11-20.
     await page.goto("/blog/installation-day");
     await expect(page.locator('head meta[name="robots"]')).toHaveAttribute(
       "content",
-      "noindex, follow",
+      /^index, follow/,
     );
     const types = await page
       .locator('script[type="application/ld+json"]')
@@ -179,16 +180,14 @@ test.describe("what an article tells crawlers", () => {
           (el) => (JSON.parse(el.textContent ?? "{}")["@graph"] ?? []) as { "@type": string }[],
         ),
       );
-    expect(types.map((n) => n["@type"])).not.toContain("BlogPosting");
+    expect(types.map((n) => n["@type"])).toContain("BlogPosting");
   });
 
-  test("the sitemap lists the articles page and the article in search, not the drafts", async ({
-    request,
-  }) => {
+  test("the sitemap lists the articles page and every article", async ({ request }) => {
     const xml = await (await request.get("/sitemap.xml")).text();
     expect(xml).toContain("<loc>https://smarthaus.ae/blog</loc>");
     expect(xml).toContain(`<loc>https://smarthaus.ae${ARTICLE}</loc>`);
-    expect(xml).not.toContain("installation-day");
+    expect(xml).toContain("<loc>https://smarthaus.ae/blog/installation-day</loc>");
   });
 });
 

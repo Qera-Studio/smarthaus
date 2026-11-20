@@ -151,9 +151,12 @@ for (const [slug, solution] of Object.entries(SOLUTION_PAGES)) {
       }
     });
 
-    test("stays out of search while the draft waits for review", async ({ page }) => {
+    test("is in search, reviewed and approved", async ({ page }) => {
       await page.goto(path);
-      await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+        "content",
+        /^index, follow/,
+      );
     });
   });
 }
@@ -245,12 +248,21 @@ test.describe(PAGE, () => {
     await expect(links.first()).toHaveAttribute("href", "/blog/one-home-five-vendors");
   });
 
-  test("stays out of search while the draft waits for review", async ({ page }) => {
+  test("is in search, and describes itself as a page of the site", async ({ page }) => {
     await page.goto(PAGE);
-    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-    await expect(
-      page.locator('script[type="application/ld+json"]', { hasText: "WebPage" }),
-    ).toHaveCount(0);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /^index, follow/);
+    // Parsed, not matched by text: Playwright's text matching skips what is
+    // inside a <script>, so a hasText filter on one never finds anything.
+    const types = await page
+      .locator('script[type="application/ld+json"]')
+      .evaluateAll((els) =>
+        els.flatMap(
+          (el) => (JSON.parse(el.textContent ?? "{}")["@graph"] ?? []) as { "@type": string }[],
+        ),
+      );
+    expect(types.map((n) => n["@type"])).toEqual(
+      expect.arrayContaining(["WebPage", "BreadcrumbList"]),
+    );
   });
 
   // Every solution in the menu has a page since 2026-11-15, Lighting's too:

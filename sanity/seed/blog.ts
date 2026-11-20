@@ -1,8 +1,8 @@
 // The blog as it was first published: the articles page and four articles.
 //
 // "One Home, Five Vendors" is Shivanshu's text (2026-11-14). The other three
-// were drafted the same day for his review and stay out of search (index:
-// false) until he has read them. Anything they say about Smarthaus itself is
+// were drafted the same day for his review, approved as written (2026-11-19)
+// and in search since 2026-11-20. Anything they say about Smarthaus itself is
 // from the confirmed list in AGENTS.md (claims audit): the visit, the fixed
 // itemised price, work in homes already lived in, the record left behind.
 // Everything else is general advice and names no figure.
@@ -171,7 +171,7 @@ const INSTALLATION_DAY: Post = {
     title: "What happens on installation day",
     description:
       "What a planned smart home installation looks like from the first visit to handover: the order of the work, who is in your home and what you are left with.",
-    index: false,
+    index: true,
   },
 };
 
@@ -228,7 +228,7 @@ const ON_THE_WALL: Post = {
     title: "Why smart homes still need wall controls",
     description:
       "An app is the wrong first control for a home. What belongs on the wall, how few buttons it takes and the simple test of a guest on their first evening.",
-    index: false,
+    index: true,
   },
 };
 
@@ -286,7 +286,7 @@ const WIFI: Post = {
     title: "Wi-Fi is not enough for a smart home",
     description:
       "Why one router cannot run a connected villa: what belongs on a cable, how coverage is planned and how to keep household devices apart from guests.",
-    index: false,
+    index: true,
   },
 };
 

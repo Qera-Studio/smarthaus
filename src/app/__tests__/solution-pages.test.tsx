@@ -69,7 +69,7 @@ describe("/solutions/[slug]", () => {
       expect(meta.title).toBe(page.seo.title);
       expect(meta.description).toBe(page.seo.description);
       expect(meta.alternates).toEqual({ canonical: `/solutions/${slug}` });
-      expect(meta.robots).toEqual(NOINDEX_ROBOTS);
+      expect(meta.robots).toEqual(INDEXABLE_ROBOTS);
     },
   );
 
@@ -97,14 +97,14 @@ describe("/solutions/[slug]", () => {
     expect(meta.openGraph).toMatchObject({ url: "/solutions/cameras" });
   });
 
-  it("stays out of search until its switch is on", async () => {
-    expect(CAMERAS.seo.index).toBe(false);
-    expect((await generateMetadata(params("cameras"))).robots).toEqual(NOINDEX_ROBOTS);
+  it("is in search while its switch is on", async () => {
+    expect(CAMERAS.seo.index).toBe(true);
+    expect((await generateMetadata(params("cameras"))).robots).toEqual(INDEXABLE_ROBOTS);
   });
 
-  it("goes into search once the switch is on", async () => {
-    withDoc("solution-cameras", { ...CAMERAS, seo: { ...CAMERAS.seo, index: true } });
-    expect((await generateMetadata(params("cameras"))).robots).toEqual(INDEXABLE_ROBOTS);
+  it("leaves search once the switch is off", async () => {
+    withDoc("solution-cameras", { ...CAMERAS, seo: { ...CAMERAS.seo, index: false } });
+    expect((await generateMetadata(params("cameras"))).robots).toEqual(NOINDEX_ROBOTS);
   });
 
   it("gives no metadata for a solution with no page", async () => {
@@ -152,14 +152,14 @@ describe("/solutions/[slug]", () => {
     );
   });
 
-  it("gives a page not yet in search no structured data to be quoted from", async () => {
+  it("gives a page not in search no structured data to be quoted from", async () => {
+    withDoc("solution-cameras", { ...CAMERAS, seo: { ...CAMERAS.seo, index: false } });
     const html = await renderMarkup(await SolutionRoute(params("cameras")));
     expect(jsonLd(html)).toEqual([]);
     expect(html.replaceAll("&amp;", "&")).toContain(CAMERAS.title);
   });
 
   it("describes a page in search as a page of the site, with a breadcrumb", async () => {
-    withDoc("solution-cameras", { ...CAMERAS, seo: { ...CAMERAS.seo, index: true } });
     const [graph] = jsonLd(await renderMarkup(await SolutionRoute(params("cameras"))));
     expect(graph!["@graph"].map((node) => node["@type"])).toEqual(["WebPage", "BreadcrumbList"]);
     expect(graph!["@graph"][0]).toMatchObject({

@@ -145,9 +145,10 @@ describe("the seeded solution pages", () => {
       for (const line of copy(page)) expect([line, MAKERS.test(line)]).toEqual([line, false]);
     });
 
-    it("stays out of search until Shivanshu has read the draft", () => {
-      // Turning this on is the review: say so in the change that does it.
-      expect(page.seo.index).toBe(false);
+    it("is in search, reviewed and approved as written", () => {
+      // Shivanshu approved all eight on 2026-11-19 and turned them on on
+      // 2026-11-20. Taking one out is a decision: say so in that change.
+      expect(page.seo.index).toBe(true);
     });
 
     it("describes the visit only as confirmed: a technician and a technical lead, a fixed and itemised price", () => {

@@ -89,11 +89,10 @@ describe("the articles", () => {
     expect(used.size).toBeGreaterThanOrEqual(4);
   });
 
-  it("put Shivanshu's own article in search and hold the three drafts back", () => {
-    // The drafts wait on his review (docs/launch-gate/pre-launch-fixes.md).
-    // Turning one on is a deliberate edit, here and in the Studio.
-    expect(POSTS.filter((p) => p.seo.index).map((p) => p.slug)).toEqual(["one-home-five-vendors"]);
-    expect(POSTS.filter((p) => !p.seo.index)).toHaveLength(3);
+  it("are all in search, the three drafts approved as written", () => {
+    // Shivanshu approved the drafts on 2026-11-19 and turned them on on
+    // 2026-11-20. Taking one out is a decision: say so in that change.
+    expect(POSTS.filter((p) => !p.seo.index).map((p) => p.slug)).toEqual([]);
   });
 });
 
@@ -251,7 +250,7 @@ describe.each(each)("%s", (_slug, post) => {
 describe("what the drafted articles say about Smarthaus itself", () => {
   // Only what AGENTS.md lists as confirmed (claims audit). A figure or a
   // promise beyond that list is a claim with no source.
-  const drafts = POSTS.filter((p) => !p.seo.index);
+  const drafts = POSTS.filter((p) => p.slug !== "one-home-five-vendors");
   const all = drafts.map(text).join(" ");
 
   it("states the visit as it was confirmed: two people, about 90 minutes", () => {

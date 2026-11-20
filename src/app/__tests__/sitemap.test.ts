@@ -5,7 +5,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { Metadata } from "next";
 import sitemap from "../sitemap";
-import { getDoc } from "../../sanity/fetch";
+import { getDoc, getDocs } from "../../sanity/fetch";
 import { ROUTES, routes } from "../../sanity/content";
 import { POSTS } from "../../../sanity/seed/blog";
 import { SOLUTION_PAGES } from "../../../sanity/seed/solutions";
@@ -93,14 +93,28 @@ describe("the sitemap", () => {
   });
 
   it("lists an article only once it is in search, and the articles page itself", async () => {
-    const listed = (await urls()).map(route);
-    expect(listed).toContain("/blog");
-    for (const post of POSTS) {
-      expect(listed.includes(`/blog/${post.slug}`)).toBe(Boolean(post.seo.index));
+    // Every seeded article is in search since 2026-11-20, so one is switched
+    // off here: neither half of the rule may be vacuous.
+    const off = POSTS[1]!.slug;
+    const seed = jest.requireActual("../../../sanity/seed") as {
+      seedDocs: (type: string) => { slug: string; seo: object }[];
+    };
+    jest
+      .mocked(getDocs)
+      .mockImplementation(async (type: string) =>
+        seed
+          .seedDocs(type)
+          .map((doc) => (doc.slug === off ? { ...doc, seo: { ...doc.seo, index: false } } : doc)),
+      );
+    try {
+      const listed = (await urls()).map(route);
+      expect(listed).toContain("/blog");
+      for (const post of POSTS) {
+        expect(listed.includes(`/blog/${post.slug}`)).toBe(post.slug !== off);
+      }
+    } finally {
+      jest.mocked(getDocs).mockImplementation(async (type: string) => seed.seedDocs(type));
     }
-    // At least one each way, so neither half of the rule is vacuous.
-    expect(POSTS.some((p) => p.seo.index)).toBe(true);
-    expect(POSTS.some((p) => !p.seo.index)).toBe(true);
   });
 
   it("uses absolute URLs on the canonical host, with no trailing slash on the root", async () => {

@@ -5,6 +5,7 @@ import { BLOG_PAGE, POSTS } from "../../../sanity/seed/blog";
 import { renderMarkup, renderServer } from "../../__tests__/helpers/server";
 import { postInput } from "../../components/Blog/post-metadata";
 import { INDEXABLE_ROBOTS, NOINDEX_ROBOTS } from "../../lib/metadata";
+import { getDocs } from "../../sanity/fetch";
 import BlogPage, { generateMetadata as indexMetadata } from "../blog/page";
 import BlogPostPage, { generateMetadata, generateStaticParams } from "../blog/[slug]/page";
 
@@ -22,7 +23,6 @@ const jsonLd = (html: string): { "@graph": Record<string, unknown>[] }[] =>
   );
 
 const inSearch = POSTS.find((p) => p.seo.index)!;
-const draft = POSTS.find((p) => !p.seo.index)!;
 
 describe("/blog", () => {
   it("takes its metadata from the articles page's document", async () => {
@@ -124,10 +124,22 @@ describe("/blog/[slug]", () => {
     ]);
   });
 
-  it("gives an article not yet in search no structured data to be quoted from", async () => {
-    const html = await renderMarkup(await BlogPostPage(params(draft.slug)));
-    expect(jsonLd(html)).toEqual([]);
-    expect(html).toContain(draft.title);
+  it("gives an article not in search no structured data to be quoted from", async () => {
+    // Every seeded article is in search since 2026-11-20: one is switched off.
+    const draft = { ...POSTS[1]!, seo: { ...POSTS[1]!.seo, index: false } };
+    const { seedDocs } =
+      jest.requireActual<typeof import("../../../sanity/seed")>("../../../sanity/seed");
+    const swap = (doc: unknown) => ((doc as { slug: string }).slug === draft.slug ? draft : doc);
+    jest
+      .mocked(getDocs)
+      .mockImplementation(async (type: string) => seedDocs(type).map(swap) as never);
+    try {
+      const html = await renderMarkup(await BlogPostPage(params(draft.slug)));
+      expect(jsonLd(html)).toEqual([]);
+      expect(html).toContain(draft.title);
+    } finally {
+      jest.mocked(getDocs).mockImplementation(async (type: string) => seedDocs(type) as never);
+    }
   });
 });
 

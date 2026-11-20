@@ -52,8 +52,8 @@ const PROCESS: SolutionPage["process"] = {
  * figure and no price, says nothing about Smarthaus beyond the confirmed facts
  * in AGENTS.md (one team, the visit by a technician and a technical lead, the
  * fixed and itemised price, most homes already lived in, footage kept in the
- * house, the SIRA licence for security work), and each page stays out of
- * search until he has read it.
+ * house, the SIRA licence for security work). Approved as written
+ * (Shivanshu, 2026-11-19) and in search since 2026-11-20.
  */
 export const SOLUTION_PAGES: Record<string, SolutionPage> = {
   cameras: {
@@ -61,7 +61,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       title: "Cameras and CCTV for Dubai homes",
       description:
         "Home cameras planned at a site visit, recorded on equipment inside your house, and quiet until something matters. Installed under a SIRA licence.",
-      index: false,
+      index: true,
     },
     title: "Cameras & CCTV",
     lede: "See home from anywhere, without false alerts",
@@ -179,7 +179,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       title: "Lighting control for Dubai homes",
       description:
         "Lighting scenes for every room, dimmed and timed to the day, planned at a site visit and looked after by the one team that installs it.",
-      index: false,
+      index: true,
     },
     title: "Lighting control",
     lede: "Light that suits the hour, set with one touch",
@@ -282,7 +282,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       title: "Multi-room audio for Dubai homes",
       description:
         "Music in the rooms you choose, from speakers set into ceilings and walls, planned at a site visit and looked after by the team that installs it.",
-      index: false,
+      index: true,
     },
     title: "Multi-room audio",
     lede: "Music in every room, or just the one you’re in",
@@ -379,7 +379,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       title: "Air conditioning control for Dubai homes",
       description:
         "Air conditioning set room by room and hour by hour, from the wall or your phone, planned at a site visit and looked after by one team.",
-      index: false,
+      index: true,
     },
     title: "Air conditioning",
     lede: "Cool rooms when you need them, not all day",
@@ -476,7 +476,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       title: "Garage door automation for Dubai homes",
       description:
         "Garage doors that open from your phone, show whether they are shut from anywhere, and close behind you. Planned at a site visit, installed by one team.",
-      index: false,
+      index: true,
     },
     title: "Garage doors",
     lede: "Open on arrival, and know it’s shut",
@@ -577,7 +577,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       title: "Smart locks for Dubai homes",
       description:
         "Smart locks opened by code, fingerprint or phone, with a record of every entry. Fitted to your doors and installed under our SIRA security licence.",
-      index: false,
+      index: true,
     },
     title: "Smart locks",
     lede: "Keys you can’t lose, and entry you can see",
@@ -678,7 +678,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       title: "Wall controllers for Dubai homes",
       description:
         "One panel on the wall for a room’s lights, AC, curtains and music, so nobody in the house needs the app. Planned with you at a site visit.",
-      index: false,
+      index: true,
     },
     title: "Wall controllers",
     lede: "The whole room from one panel on the wall",
@@ -775,7 +775,7 @@ export const SOLUTION_PAGES: Record<string, SolutionPage> = {
       title: "Motorised curtains for Dubai homes",
       description:
         "Motorised curtains and blinds that open with the morning and close against the afternoon sun, from the wall or your phone. Planned at a site visit.",
-      index: false,
+      index: true,
     },
     title: "Curtains & blinds",
     lede: "Open with the morning, closed against the afternoon sun",
