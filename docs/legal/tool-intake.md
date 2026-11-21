@@ -17,9 +17,9 @@ The new-tool intake gate (Legal System §16), run on 2026-11-21 for the two tool
 
 **To do before it runs**
 
-- [ ] Admin, Account details: confirm the Data Processing Terms are accepted (Shivanshu)
-- [ ] Admin, Account settings: turn all four data-sharing settings off, so Google stays a processor (Shivanshu)
-- [ ] Data retention to 14 months (already on the launch list)
+- [x] Admin, Account details: confirm the Data Processing Terms are accepted (Shivanshu) (done 2026-11-21)
+- [x] Admin, Account settings: turn all four data-sharing settings off, so Google stays a processor (Shivanshu) (done 2026-11-21)
+- [x] Data retention to 14 months (already on the launch list) (done 2026-11-21)
 - [ ] Privacy policy: add the link to Google's page, and correct §6's "Analytics data: up to 14 months, then deletion", since aggregated reports outlive it
 
 ## Microsoft Clarity

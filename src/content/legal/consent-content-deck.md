@@ -606,18 +606,18 @@ conversion tag is ever added, **all** of these fire:
 
 ## 13. Open items before this ships
 
-| #   | Item                                                                                                                   | Owner       | Blocking?                               |
-| --- | ---------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------- |
-| 1   | **Regime confirmed** — federal PDPL vs DIFC/ADGM. Same open item as the privacy policy; settled by the trade licence   | Client      | **Yes**                                 |
-| 2   | **DPIA screen** for session recording — Legal §1 names new tracking technology as a trigger                            | Counsel     | **Yes**                                 |
-| 3   | **Cross-border transfer basis** for Google and Microsoft, documented in writing (Legal §9)                             | Counsel     | **Yes**                                 |
-| 4   | **Clarity masking verified** by watching a real replay — §9. The policy text is false until this is done               | Engineering | **Yes**                                 |
-| 5   | Privacy policy §3.3, §4, §5, §6 edits merged in the same PR as the tags                                                | Engineering | **Yes**                                 |
-| 6   | Microsoft Clarity retention period confirmed from Microsoft's own documentation                                        | Engineering | No — placeholder until then             |
-| 7   | GA4 retention set to 14 months in the property settings, to match what §7.3 claims                                     | Engineering | No                                      |
-| 8   | Google and Microsoft run through the **new-tool intake gate** (Legal §16). Run 2026-11-21: `docs/legal/tool-intake.md` | Qera        | **Yes**, until its to-do lists are done |
-| 9   | AGENTS.md "No GA4" line reconciled with reality                                                                        | Qera        | No                                      |
-| 10  | Counsel review of this deck alongside the privacy policy — one review, not two                                         | Counsel     | **Yes**                                 |
+| #   | Item                                                                                                                                                                       | Owner       | Blocking?                               |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------- |
+| 1   | **Regime confirmed** — federal PDPL vs DIFC/ADGM. Same open item as the privacy policy; settled by the trade licence                                                       | Client      | **Yes**                                 |
+| 2   | **DPIA screen** for session recording — Legal §1 names new tracking technology as a trigger                                                                                | Counsel     | **Yes**                                 |
+| 3   | **Cross-border transfer basis** for Google and Microsoft, documented in writing (Legal §9)                                                                                 | Counsel     | **Yes**                                 |
+| 4   | **Clarity masking verified** by watching a real replay — §9. The policy text is false until this is done                                                                   | Engineering | **Yes**                                 |
+| 5   | Privacy policy §3.3, §4, §5, §6 edits merged in the same PR as the tags                                                                                                    | Engineering | **Yes**                                 |
+| 6   | Microsoft Clarity retention period confirmed from Microsoft's own documentation. Confirmed 2026-11-21 (`docs/legal/tool-intake.md`); the policy's wording waits on counsel | Engineering | No — placeholder until then             |
+| 7   | GA4 retention set to 14 months in the property settings, to match what §7.3 claims. Done 2026-11-21 (Shivanshu)                                                            | Engineering | No                                      |
+| 8   | Google and Microsoft run through the **new-tool intake gate** (Legal §16). Run 2026-11-21: `docs/legal/tool-intake.md`                                                     | Qera        | **Yes**, until its to-do lists are done |
+| 9   | AGENTS.md "No GA4" line reconciled with reality                                                                                                                            | Qera        | No                                      |
+| 10  | Counsel review of this deck alongside the privacy policy — one review, not two                                                                                             | Counsel     | **Yes**                                 |
 
 ---
 
