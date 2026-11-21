@@ -613,7 +613,7 @@ The brief suggested building `/en` routing now. **This is deferred.** Rationale:
 
 ## Git workflow
 
-- **Branches:** three, and no others (Shivanshu, 2026-11-10). `main` is production, `latest` is staging, and `version/2.0.0` holds everything not yet live on `main`. Work is committed to `version/2.0.0`, which reaches `latest` and then `main` by pull request. Dependabot opens no branches (`.github/dependabot.yml`)
+- **Branches:** two, and no others (Shivanshu, 2026-11-21). `main` is production and `latest` is staging, and each takes changes only by pull request (the ruleset below). 2.0.0 was built on `version/2.0.0`, which reached `latest` and then `main` by pull request and was deleted once 2.0.0 was live. Where 2.1.0's work is committed is decided when it starts. Dependabot opens no branches (`.github/dependabot.yml`)
 - **Commits:** imperative mood, lowercase, concise. The diff tells what; the message tells why
 - **No co-author attribution** on commits or PRs
 - **Pre-commit:** Husky runs `lint-staged` — ESLint fix + Prettier + typecheck on staged `.ts`/`.tsx` files

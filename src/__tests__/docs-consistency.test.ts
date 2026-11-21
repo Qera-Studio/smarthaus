@@ -175,10 +175,10 @@ describe("numbers the project docs state", () => {
 
 describe("the branch flow the docs describe", () => {
   it.each(["CLAUDE.md", "AGENTS.md", "README.md"])(
-    "%s names the three branches and no feature branches",
+    "%s names the two branches and no feature branches",
     (doc) => {
       const text = read(doc);
-      for (const branch of ["`main`", "`latest`", "`version/2.0.0`"]) {
+      for (const branch of ["`main`", "`latest`"]) {
         expect(text).toContain(branch);
       }
       expect(text).not.toContain("feature/*");

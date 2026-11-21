@@ -3,9 +3,9 @@
 # any other change. Both ecosystems wait three days after a release before
 # proposing it, the same cooldown pnpm-workspace.yaml enforces on installs.
 #
-# Opens no pull requests (Shivanshu, 2026-11-10): the repo keeps three
-# branches, main, latest and version/2.0.0, and every update branch was a
-# fourth. A limit of 0 turns version updates off and keeps the config, so
+# Opens no pull requests (Shivanshu, 2026-11-10): the repo keeps two
+# branches, main and latest (2026-11-21), and every update branch was one
+# more. A limit of 0 turns version updates off and keeps the config, so
 # raising it turns them back on. Dependabot alerts stay on and open nothing.
 version: 2
 updates:

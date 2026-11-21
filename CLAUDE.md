@@ -352,5 +352,5 @@ The Process rail's requestAnimationFrame fallback (`ProcessFallback.tsx`) was th
 - **qera-system is read-only from this repo.** If a system document needs updating, say so — don't edit it here.
 - **No co-author attribution on commits or PRs.**
 - **Commit messages:** imperative mood, lowercase, concise. The diff tells what changed; the message tells why.
-- **Branch strategy:** three branches only. `main` is production, `latest` is staging, and `version/2.0.0` holds everything not yet live on `main`; work is committed there and reaches `latest`, then `main`, by pull request. No feature branches.
+- **Branch strategy:** two branches only (2026-11-21). `main` is production and `latest` is staging; changes reach `latest`, then `main`, by pull request. 2.0.0 was built on `version/2.0.0`, deleted once it was live; where 2.1.0's work is committed is decided when it starts. No feature branches.
 - **Push back.** If something is wrong, smells wrong, or could be better — say it immediately with the fix. Don't wait to be asked. Don't soften it.
