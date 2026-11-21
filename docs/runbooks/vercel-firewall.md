@@ -10,7 +10,7 @@ In Vercel, open the project, then **Firewall**, then **Configure**, then **Add N
 - **If:** `Method` `equals` `POST`
 - **Then:** `Rate Limit`, fixed window, `60` seconds, `20` requests, keyed on `IP Address`, action `Deny`.
 
-Every POST on this site is an enquiry send (server actions post to the page they are on, `/` and `/contact`) or a CSP report to `/api/csp-report`. None of those legitimately exceeds twenty a minute from one address. GET requests, meaning every page view, are untouched.
+Every POST on this site is an enquiry send (server actions post to the page they are on, `/` and `/contact`) or a CSP report to `/api/csp-report`. None of those legitimately exceeds twenty a minute from one address. GET requests, meaning every page view, are untouched. Sanity's publish webhook (`/api/revalidate`) is a POST too, one per document published, so an editor publishing more than twenty documents inside a minute would have the rest refused; publishing in the Studio is one document at a time, and a bulk import is the case to watch.
 
 Publish the rule, then note the date in `docs/launch-gate/blocked-on-input.md` against the firewall row and delete that row.
 
@@ -33,3 +33,5 @@ for i in $(seq 1 25); do curl -s -o /dev/null -w "%{http_code}\n" -X POST https:
 ```
 
 The first twenty answer `204` or `429` (the in-code limiter), and the rest are refused by the firewall. The Firewall tab's traffic view shows the denied requests.
+
+Published and checked on 2026-11-20: twenty `204`s, then `403` from the firewall.
