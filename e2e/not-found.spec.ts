@@ -1,5 +1,6 @@
 import { test, expect, devices } from "./fixtures";
 import { expectAccessible } from "./checks";
+import { MAX_STEPS, STEP_MS } from "../src/components/ParticleText/physics";
 
 // Any unrouted path renders not-found, so this doubles as a routing check.
 const MISSING = "/this-page-does-not-exist";
@@ -269,14 +270,18 @@ test.describe("404 particle physics on touch", () => {
    * API emits a tap rather than a sustained drag with intermediate moves.
    */
   // One drag, run inside the page: a move at most every 28ms, as a finger
-  // reports, with the finger's place set by the wall clock, so it crosses the
-  // stage in 392ms however slowly the page draws. Two earlier versions tied the
-  // finger to something slower than a finger. Fifteen page.evaluate round trips
-  // first (11 and 21px on CI against ~66px locally), then one move per 28ms of
-  // frames: on the CI iPhone, from 2026-11-09, frames came slowly enough that
-  // the finger crawled and the field moved 9 to 15px. Measured locally with
-  // 40ms and 80ms of work added to every frame: 5 to 33px and 11 to 18px that
-  // way, 60 to 67px and 34px this way. The field is read in the same evaluate,
+  // reports, crossing the stage in 392ms of the physics' own clock. Each frame
+  // adds its time capped at MAX_STEPS steps, exactly what the physics will
+  // simulate (fixedSteps drops the rest, by design), so on a page that keeps up
+  // this is the wall clock, and on one that cannot the finger slows with the
+  // field instead of outrunning it. Three earlier versions tied the finger to
+  // the wrong clock: fifteen page.evaluate round trips (11 and 21px on CI
+  // against ~66px locally); one move per 28ms of frames, a finger that crawled
+  // on the CI iPhone from 2026-11-09 (9 to 15px); then the wall clock, which on
+  // frames over 67ms swept faster than the physics ran (10.8 and 21.8px on CI's
+  // iPhone, 2026-11-21). Measured locally on iPhone 17 with 100ms of work added
+  // to every frame: 10 to 13px on the wall clock, 50 to 52px on this one; with
+  // none, 84 to 92px either way. The field is read in the same evaluate,
   // because on a slow runner the trip back to read it gave the field time to
   // relax. The assertions did not change.
   const drag = (
@@ -285,7 +290,7 @@ test.describe("404 particle physics on touch", () => {
     opts: { down: boolean },
   ) =>
     page.evaluate(
-      ([bx, by, bw, bh, down]) =>
+      ([bx, by, bw, bh, down, maxFrame]) =>
         new Promise<{ x: number; y: number }>((resolve) => {
           const DURATION = 14 * 28;
           const INTERVAL = 28;
@@ -317,24 +322,28 @@ test.describe("404 particle physics on touch", () => {
             }
             return { x: n ? sx / n : 0, y: n ? sy / n : 0 };
           };
-          let start = -1;
+          // The physics' clock: each frame's time, capped where it caps it.
+          let prev = -1;
+          let t = 0;
           let last = -Infinity;
           const tick = (now: number) => {
-            if (start < 0) {
-              start = now;
+            if (prev < 0) {
               if (down) window.dispatchEvent(mk("pointerdown", bx + 8));
+            } else {
+              t += Math.min(now - prev, maxFrame);
             }
-            const k = Math.min((now - start) / DURATION, 1);
-            if (now - last >= INTERVAL || k === 1) {
+            prev = now;
+            const k = Math.min(t / DURATION, 1);
+            if (t - last >= INTERVAL || k === 1) {
               window.dispatchEvent(mk("pointermove", bx + 8 + (bw - 16) * k));
-              last = now;
+              last = t;
             }
             if (k < 1) requestAnimationFrame(tick);
             else requestAnimationFrame(() => resolve(centroidNow()));
           };
           requestAnimationFrame(tick);
         }),
-      [box.x, box.y, box.width, box.height, opts.down] as const,
+      [box.x, box.y, box.width, box.height, opts.down, MAX_STEPS * STEP_MS] as const,
     );
 
   test("a finger drag deforms the field, and lifting it lets the field recover", async ({
