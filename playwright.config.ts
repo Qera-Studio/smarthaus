@@ -57,7 +57,10 @@ export default defineConfig({
     baseURL: BASE_URL,
     // The first failed attempt, not the retry: a flake passes on retry, so a
     // retry's trace never shows what went wrong (2026-11-21, four CI flakes).
-    trace: "retain-on-first-failure",
+    // Without the screencast, which loads CI's WebKit runner (no GPU): the 404's
+    // touch test failed there once traces were on, at 9 frames a second
+    // (2026-11-21). Actions, page snapshots, console and network still record.
+    trace: { mode: "retain-on-first-failure", screenshots: false },
     screenshot: "only-on-failure",
   },
   projects: [
