@@ -1,7 +1,12 @@
 import type { Page } from "@playwright/test";
 
 import { test, expect } from "./fixtures";
-import { expectAccessible, expectNoEmDash, expectNoHorizontalOverflow } from "./checks";
+import {
+  expectAccessible,
+  expectHydrated,
+  expectNoEmDash,
+  expectNoHorizontalOverflow,
+} from "./checks";
 
 /**
  * "By the numbers", under the hardware carousel. What only a browser shows: that
@@ -26,11 +31,105 @@ test.beforeEach(async ({ page }) => {
   await section(page).scrollIntoViewIfNeeded();
 });
 
-test("sits directly after the hardware carousel", async ({ page }) => {
-  const next = await page
-    .locator('main > section[aria-labelledby="hardware"]')
-    .evaluate((el) => el.nextElementSibling?.getAttribute("aria-labelledby"));
-  expect(next).toBe("stats");
+test.describe("the figures' roll", () => {
+  const first = (page: Page) => section(page).locator("[data-stat-value]").first();
+  const roll = (page: Page) => first(page).getAttribute("data-roll");
+
+  test("waits at zero off screen, rolls up on arrival, and leaves the real figure", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectHydrated(page);
+    // beforeEach came here once already, on the page before this one.
+    await expect.poll(() => roll(page)).toBe("0+");
+    await expect(first(page)).toHaveText("150+");
+
+    await first(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await expect.poll(() => roll(page).then((v) => v !== "0+")).toBe(true);
+    // The real figure throughout, and the drawn one gone at the end.
+    await expect(first(page)).toHaveText("150+");
+    await expect(first(page)).not.toHaveAttribute("data-roll", /.*/, { timeout: 4_000 });
+    await expect(first(page)).toHaveCSS("color", /rgb\(/);
+  });
+
+  test("while it rolls, only the drawn digits show", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectHydrated(page);
+    await expect.poll(() => roll(page)).toBe("0+");
+    const style = await first(page).evaluate((el) => ({
+      ink: getComputedStyle(el).color,
+      drawn: getComputedStyle(el, "::after").content,
+      drawnInk: getComputedStyle(el, "::after").color,
+    }));
+    expect(style.ink).toBe("rgba(0, 0, 0, 0)");
+    expect(style.drawn).toContain("0+");
+    expect(style.drawnInk).not.toBe(style.ink);
+  });
+
+  test("the running digits are hazy and blurred, and end in focus", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectHydrated(page);
+    await expect.poll(() => roll(page)).toBe("0+");
+    await first(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await expect(first(page)).toHaveAttribute("data-rolling", "");
+    const blur = await first(page).evaluate((el) => {
+      const [animation] = el.getAnimations({ subtree: true });
+      animation!.pause();
+      animation!.currentTime = 0;
+      const s = getComputedStyle(el, "::after");
+      const seen = { filter: s.filter, opacity: s.opacity };
+      animation!.play();
+      return seen;
+    });
+    expect(blur.filter).toBe("blur(8px)");
+    expect(blur.opacity).toBe("0.5");
+    await expect(first(page)).not.toHaveAttribute("data-rolling", "", { timeout: 4_000 });
+  });
+
+  test("a print of the page gets the real figures", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectHydrated(page);
+    await expect.poll(() => roll(page)).toBe("0+");
+    await page.emulateMedia({ media: "print" });
+    await expect(first(page)).not.toHaveCSS("color", "rgba(0, 0, 0, 0)");
+  });
+
+  test.describe("under reduced motion", () => {
+    test.use({ reducedMotion: "reduce" });
+
+    test("the figures simply stand", async ({ page }) => {
+      await page.goto("/");
+      await expectHydrated(page);
+      await expect(first(page)).not.toHaveAttribute("data-roll", /.*/);
+      await expect(first(page)).toHaveText("150+");
+    });
+  });
+});
+
+test("sits directly after the hero, then the standards, then the hardware carousel", async ({
+  page,
+}) => {
+  // 2026-11-14, at Shivanshu's call: "By the numbers" above the hardware,
+  // which the Process stack now holds (data-process-stack). 2026-11-16: the
+  // standards section goes between them.
+  const around = await page.locator('main > section[aria-labelledby="stats"]').evaluate((el) => ({
+    before: el.previousElementSibling?.getAttribute("aria-labelledby"),
+    next: el.nextElementSibling?.getAttribute("aria-labelledby"),
+    then: el.nextElementSibling?.nextElementSibling?.hasAttribute("data-process-stack"),
+    held: el.nextElementSibling?.nextElementSibling
+      ?.querySelector("[data-process-held] > section")
+      ?.getAttribute("aria-labelledby"),
+  }));
+  expect(around).toEqual({
+    before: "hero-title",
+    next: "connectivity",
+    then: true,
+    held: "hardware",
+  });
 });
 
 test("shows the four figures, number first", async ({ page }) => {
@@ -103,4 +202,16 @@ test("is accessible, and fits the screen", async ({ page }) => {
   await expectAccessible(page, { include: "[data-stats]" });
   await expectNoHorizontalOverflow(page);
   await expectNoEmDash(section(page));
+});
+
+test("the cards are 16px apart, across and down", async ({ page }) => {
+  await page.goto("/");
+  const grid = page.locator("[data-stats] ul");
+  await grid.scrollIntoViewIfNeeded();
+  const [row, column] = await grid.evaluate((el) => [
+    getComputedStyle(el).rowGap,
+    getComputedStyle(el).columnGap,
+  ]);
+  expect(row).toBe("16px");
+  expect(column).toBe("16px");
 });

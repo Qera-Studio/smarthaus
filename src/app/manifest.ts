@@ -1,19 +1,20 @@
 import type { MetadataRoute } from "next";
+import { getSettings } from "../sanity/content";
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const { seo } = await getSettings();
   return {
     // The site's own title and description, so an installed app says what the
     // search result does.
-    name: "Smarthaus | Home Automation and Security in Dubai",
+    name: seo.defaultTitle,
     short_name: "Smarthaus",
-    description:
-      "Cameras, entry, audio and home automation for Dubai villas, installed, connected and looked after by one licensed team. Book a site visit.",
+    description: seo.defaultDescription,
     start_url: "/",
     display: "standalone",
-    // Matches --color-bg-canvas ($brown-100) so the splash screen does not
+    // Matches --color-bg-canvas ($brown-50) so the splash screen does not
     // flash a different ground before first paint.
-    background_color: "#f0e9dd",
-    theme_color: "#f0e9dd",
+    background_color: "#f8f5f0",
+    theme_color: "#f8f5f0",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },

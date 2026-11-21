@@ -1,0 +1,634 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+// The panel steps through the pairs at this pace, and the picked tab's wire
+// fills in the same time: the bar is the timer, drawn.
+$cycle: 4.5s;
+
+// An elbow wire's bar rises out of the middle in this share of the time, and
+// runs across to its tab in the rest.
+$rise: 20%;
+
+// The hardware carousel's icons, one per solution (public/hero/hardware/icons).
+$glyphs: (
+  "cameras": "cctv",
+  "smart-lock": "smartLock",
+  "garage": "garageDoor",
+  "lighting": "lighting",
+  "curtains": "curtains",
+  "ac": "ac",
+  "audio": "tv",
+  "wall-controller": "smartScreen",
+);
+
+@layer components {
+  // --- The section: a dark band, edge to edge ---------------------------------
+  //
+  // Dark (Shivanshu, 2026-11-16), and to the screen's edges, as the hero's
+  // picture is, giving the distance back as padding so its content stays in
+  // the page's column. data-ground="dark" on it brings the light focus ring
+  // and the light cursor dot (globals.scss).
+
+  .section {
+    // L2 component tokens, measured on brown-950: brown-100 is 17.6:1, the
+    // soft ink (brown-200) 11.6:1 and bronze 5.4:1 (text-legal on dark). The
+    // icons are brown-900 on brown-100, 15.6:1. The track (brown-700) is
+    // decoration only: the lit wire is what shows the pick.
+    --works-ground: var(--brown-950);
+    --works-lit: var(--brown-100);
+    --works-lit-hover: var(--brown-50);
+    --works-lit-ink: var(--brown-900);
+    --works-soft: var(--brown-200);
+    --works-track: var(--brown-700);
+    --works-edge: var(--brown-800);
+    --works-glow: var(--color-accent);
+    --works-glow-hot: var(--brown-200);
+
+    margin-block-start: $space-16;
+    margin-inline: calc(50% - 50vw);
+    padding-block: $space-16;
+    padding-inline: calc(50vw - 50%);
+    background-color: var(--works-ground);
+    color: var(--color-text-inverse);
+
+    @include bp-md {
+      padding-block: $space-24;
+    }
+  }
+
+  // --- The header: the heading and the line under it, no label above ---------
+  //
+  // Sized as the features section under it is (Solution.module.scss).
+
+  .header {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+    max-inline-size: 40rem;
+    margin-block-end: $space-8;
+
+    @include bp-md {
+      margin-block-end: $space-12;
+    }
+  }
+
+  .heading {
+    font-size: max(var(--font-size-xl), calc(var(--type-h2) - 0.25rem));
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .subtext {
+    max-inline-size: 46ch;
+    font-size: var(--font-size-base);
+    line-height: $line-height-relaxed;
+    color: var(--works-soft);
+    text-wrap: pretty;
+  }
+
+  // --- The stage: the diagram, then the panel; side by side from lg ----------
+
+  .stage {
+    display: grid;
+    gap: $space-8;
+    align-items: center;
+
+    @include bp-lg {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: $space-12;
+    }
+  }
+
+  // Paused by the button, and off screen: every bar and glow reads this.
+  .stage[data-paused] {
+    --works-play: paused;
+  }
+
+  // --- The diagram ------------------------------------------------------------
+  //
+  // The middle at the left edge, centred on a column of three rows of tabs at
+  // the right, and the wires between them (Shivanshu, 2026-11-16). Every
+  // length below comes from four: the middle's side, a tab's height, the gap
+  // between tabs, and the column's width. A wire has one turn at most, and
+  // the bottom one is the top one turned over, so the drawing is symmetrical
+  // about the middle by construction. Left to right whatever the page's
+  // direction: it is a figure.
+
+  .diagram {
+    --works-centre: #{$space-24};
+    --works-tab: #{$space-12 + $space-2};
+    --works-gap: #{$space-6};
+    --works-reach: #{$space-8};
+    // The tabs take what the middle and the shortest wire leave on a phone,
+    // and 18rem once there is room.
+    --works-tabs: min(18rem, 100% - var(--works-centre) - var(--works-reach));
+    --works-icon: #{$space-6};
+    --works-centre-icon: #{$space-8};
+
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-inline-size: 36rem;
+    direction: ltr;
+
+    @include bp-md {
+      --works-centre: #{$space-32};
+      --works-tab: #{$space-16};
+      --works-gap: #{$space-12};
+      --works-icon: #{$space-6 + $space-1};
+      --works-centre-icon: #{$space-10};
+    }
+  }
+
+  // --- The wires --------------------------------------------------------------
+  //
+  // 2px, so each is centred exactly on the middle's centre line and on its
+  // tab's. Each ends at the middle's edge and at its tab's.
+
+  .wires {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .wire {
+    position: absolute;
+    box-sizing: border-box;
+    inset-inline-end: var(--works-tabs);
+    border-width: 0;
+    border-style: solid;
+    border-color: var(--works-track);
+  }
+
+  // Up out of the middle's top edge, from its centre, and one turn across
+  // into the top tab's middle. The bottom wire is the same box, set from the
+  // foot and turned over.
+  .wire[data-slot="top"],
+  .wire[data-slot="bottom"] {
+    inset-block-start: calc(var(--works-tab) / 2 - 1px);
+    inset-inline-start: calc(var(--works-centre) / 2 - 1px);
+    block-size: calc(var(--works-tab) + var(--works-gap) - var(--works-centre) / 2 + 1px);
+    border-block-start-width: 2px;
+    border-inline-start-width: 2px;
+  }
+
+  .wire[data-slot="bottom"] {
+    inset-block-start: auto;
+    inset-block-end: calc(var(--works-tab) / 2 - 1px);
+    scale: 1 -1;
+  }
+
+  // Straight across, from the middle's edge to the middle tab's.
+  .wire[data-slot="middle"] {
+    inset-block-start: calc(50% - 1px);
+    inset-inline-start: var(--works-centre);
+    block-size: 2px;
+    border-block-start-width: 2px;
+  }
+
+  // Picked and still (picked by hand, or under reduced motion): lit end to
+  // end. This is what shows the pick; the tabs themselves carry no ring.
+  .wire[data-lit] {
+    border-color: var(--works-glow);
+  }
+
+  // The progress bar, while the panel cycles: on the picked wire only, it
+  // rises out of the middle, turns, and runs across to the tab, brightest at
+  // its head, its glow growing all the way there (Shivanshu, 2026-11-16). It
+  // holds full until the panel moves on, which takes it away.
+
+  .rise,
+  .run {
+    position: absolute;
+    animation-duration: $cycle;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-play-state: var(--works-play, running);
+  }
+
+  // Over the wire's upright, from the middle's edge up to the turn.
+  .rise {
+    inset-block: -2px 0;
+    inset-inline-start: -2px;
+    inline-size: 2px;
+    background-color: var(--works-glow);
+    transform: scaleY(0);
+    transform-origin: 50% 100%;
+    animation-name: works-rise;
+  }
+
+  // Over the wire's run, from the turn to the tab.
+  .run {
+    inset-block-start: -2px;
+    inset-inline: 0;
+    block-size: 2px;
+    background-image: linear-gradient(to right, var(--works-glow) 60%, var(--works-glow-hot));
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    animation-name: works-run;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset-block: -3px;
+      inset-inline: 0;
+      background-image: linear-gradient(
+        to right,
+        transparent 40%,
+        var(--works-glow) 80%,
+        var(--works-glow-hot)
+      );
+      filter: blur(4px);
+      opacity: 0;
+      animation-name: works-glow;
+      animation-duration: $cycle;
+      animation-timing-function: ease-in;
+      animation-fill-mode: both;
+      animation-play-state: var(--works-play, running);
+    }
+  }
+
+  // No upright on the middle wire: its bar runs across from the first moment.
+  .wire[data-slot="middle"] .run {
+    animation-name: works-fill;
+  }
+
+  // --- The middle and the tabs ------------------------------------------------
+  //
+  // Square, sharp and lit, all four the same (Shivanshu, 2026-11-16): linen
+  // with dark icons. No ring, no glow and no dot on any of them.
+
+  .icon {
+    display: block;
+    flex: none;
+    inline-size: var(--works-icon);
+    block-size: var(--works-icon);
+    background-color: currentColor;
+    mask-image: var(--works-glyph);
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: contain;
+
+    // The system would paint the ground the icon is cut from: draw it in the
+    // text colour instead.
+    @media (forced-colors: active) {
+      forced-color-adjust: none;
+      background-color: CanvasText;
+    }
+  }
+
+  @each $id, $file in $glyphs {
+    .icon[data-icon="#{$id}"] {
+      --works-glyph: url("/hero/hardware/icons/#{$file}.svg");
+    }
+  }
+
+  .centre,
+  .tab {
+    border-width: 0;
+    border-radius: 0;
+    background-color: var(--works-lit);
+    color: var(--works-lit-ink);
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+
+    &:focus-visible {
+      outline-offset: $space-1;
+    }
+
+    @media (forced-colors: active) {
+      border-style: solid;
+      border-width: 2px;
+    }
+  }
+
+  @media (hover: hover) {
+    .centre:hover,
+    .tab:hover {
+      background-color: var(--works-lit-hover);
+    }
+  }
+
+  // This page's solution: a square, its name under its icon.
+  .centre {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $space-1;
+    inline-size: var(--works-centre);
+    block-size: var(--works-centre);
+    padding: $space-2;
+    text-align: center;
+
+    .icon {
+      inline-size: var(--works-centre-icon);
+      block-size: var(--works-centre-icon);
+    }
+  }
+
+  // Three rows whatever the count, so the middle is always centred on the
+  // middle row.
+  .tabs {
+    display: grid;
+    flex: none;
+    grid-template-rows: repeat(3, var(--works-tab));
+    row-gap: var(--works-gap);
+    inline-size: var(--works-tabs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .place[data-slot="top"] {
+    grid-row: 1;
+  }
+
+  .place[data-slot="middle"] {
+    grid-row: 2;
+  }
+
+  .place[data-slot="bottom"] {
+    grid-row: 3;
+  }
+
+  @for $k from 1 through 3 {
+    .place:nth-child(#{$k}) {
+      --works-i: #{$k - 1};
+    }
+  }
+
+  // A sharp rectangle: its icon, then its name.
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    inline-size: 100%;
+    block-size: 100%;
+    padding-inline: $space-4;
+    text-align: start;
+  }
+
+  // Picked, under forced colours, where the wires' colours are the system's:
+  // the one state shown on the box itself.
+  @media (forced-colors: active) {
+    .centre[aria-pressed="true"],
+    .tab[aria-pressed="true"] {
+      border-color: Highlight;
+    }
+
+    .wire[data-lit] {
+      border-color: Highlight;
+    }
+
+    .rise,
+    .run {
+      display: none;
+    }
+  }
+
+  // Draws nothing: its end moves the panel on.
+  .timer {
+    position: absolute;
+    animation-name: works-timer;
+    animation-duration: $cycle;
+    animation-timing-function: linear;
+    animation-play-state: paused;
+
+    &[data-running] {
+      animation-play-state: running;
+    }
+  }
+
+  // --- The entrance: once, as the diagram comes on screen ---------------------
+  //
+  // The middle, then the wires, then the tabs top to bottom.
+
+  @media (prefers-reduced-motion: no-preference) {
+    .stage[data-entrance="waiting"] .centre,
+    .stage[data-entrance="waiting"] .wires,
+    .stage[data-entrance="waiting"] .place {
+      opacity: 0;
+    }
+
+    .stage[data-entrance="in"] .centre {
+      animation-name: works-enter;
+      animation-duration: 300ms;
+      animation-timing-function: var(--ease-out);
+      animation-fill-mode: backwards;
+    }
+
+    .stage[data-entrance="in"] .wires {
+      animation-name: works-show;
+      animation-duration: 400ms;
+      animation-timing-function: var(--ease-out);
+      animation-delay: 300ms;
+      animation-fill-mode: backwards;
+    }
+
+    .stage[data-entrance="in"] .place {
+      animation-name: works-enter;
+      animation-duration: 300ms;
+      animation-timing-function: var(--ease-out);
+      animation-delay: calc(600ms + var(--works-i) * 80ms);
+      animation-fill-mode: backwards;
+    }
+  }
+
+  // --- The panel --------------------------------------------------------------
+  //
+  // Every panel stacked in one cell, so the box is as tall as the longest and
+  // never jumps; the one picked fades in over the last. Each fills the cell,
+  // so its link sits at the card's foot, on the left, whatever is above it
+  // (Shivanshu, 2026-11-16). The pause button holds the opposite corner.
+
+  .panel {
+    position: relative;
+    display: grid;
+    padding: $space-6;
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--works-edge);
+    background-color: var(--color-bg-inverse);
+
+    @include bp-md {
+      padding: $space-8;
+    }
+  }
+
+  .variant {
+    display: flex;
+    flex-direction: column;
+    grid-area: 1 / 1;
+    align-items: flex-start;
+    gap: $space-3;
+    transition-property: opacity, visibility;
+    transition-duration: 200ms;
+    transition-timing-function: var(--ease-out);
+
+    &:not([data-shown]) {
+      opacity: 0;
+      visibility: hidden;
+    }
+  }
+
+  .cta {
+    margin-block-start: auto;
+  }
+
+  .panelLabel {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    color: var(--works-glow);
+  }
+
+  .panelTitle {
+    font-size: var(--font-size-lg);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    text-wrap: balance;
+
+    @include bp-md {
+      font-size: var(--font-size-xl);
+    }
+  }
+
+  // When, then: one under the other. Side by side they wrapped in the
+  // panel's column and left the arrow hanging at a line's end.
+  .chips {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-2;
+  }
+
+  .chip {
+    padding-block: $space-2;
+    padding-inline: $space-3;
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--works-edge);
+    background-color: var(--works-ground);
+    font-size: var(--font-size-sm);
+    line-height: $line-height-snug;
+
+    strong {
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  .arrow {
+    flex-shrink: 0;
+    margin-inline-start: $space-3;
+    color: var(--works-soft);
+    rotate: 90deg;
+  }
+
+  .body {
+    max-inline-size: 46ch;
+    margin-block-end: $space-2;
+    line-height: $line-height-relaxed;
+    color: var(--works-soft);
+  }
+
+  // In the card's foot, opposite its link.
+  .pause {
+    position: absolute;
+    inset-block-end: $space-6;
+    inset-inline-end: $space-6;
+    display: grid;
+    place-items: center;
+    inline-size: $space-10;
+    block-size: $space-10;
+    padding: 0;
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--works-soft);
+    background-color: transparent;
+    color: var(--color-text-inverse);
+
+    @include bp-md {
+      inset-block-end: $space-8;
+      inset-inline-end: $space-8;
+    }
+  }
+
+  .glyphPlay,
+  .pause[aria-pressed="true"] .glyphPause {
+    display: none;
+  }
+
+  .pause[aria-pressed="true"] .glyphPlay {
+    display: block;
+  }
+}
+
+// An elbow wire's bar: up to the turn, then held.
+@keyframes works-rise {
+  from {
+    transform: scaleY(0);
+  }
+
+  #{$rise},
+  to {
+    transform: scaleY(1);
+  }
+}
+
+// Then across to the tab.
+@keyframes works-run {
+  from,
+  #{$rise} {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+// The middle wire's: across, the whole time.
+@keyframes works-fill {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+// Its glow rises all the way to the tab.
+@keyframes works-glow {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes works-timer {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes works-enter {
+  from {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+
+@keyframes works-show {
+  from {
+    opacity: 0;
+  }
+}

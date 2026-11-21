@@ -7,6 +7,7 @@
 import { StrictMode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { ConsentShell } from "../ConsentShell";
+import { CONSENT_COPY } from "../../../../sanity/seed/consent-copy";
 
 jest.mock("next/navigation", () => ({ usePathname: () => "/" }));
 
@@ -31,6 +32,7 @@ function renderBanner() {
   render(
     <StrictMode>
       <ConsentShell
+        copy={CONSENT_COPY}
         intro={<p>intro</p>}
         panelIntro={<p>panel</p>}
         essential={<p>essential</p>}

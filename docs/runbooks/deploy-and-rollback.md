@@ -1,6 +1,6 @@
 # Deploy and roll back
 
-Production is Vercel, deployed from `main`. `latest` is the staging branch: every phase merges there first, and `main` is updated from it.
+Production is Vercel, deployed from `main`. `latest` is the staging branch: work reaches it by pull request, and `main` is updated from `latest`. They are the only two branches (2026-11-21).
 
 ## Deploy
 
@@ -22,8 +22,21 @@ Rolling back is for when production is broken now. Fix forward when it can wait 
 
 Record what happened in `docs/launch-gate/catch-log.md`: the date, what broke, which deployment was restored, and what fixed it.
 
+Drilled on 2026-11-20: rolled back to the previous production deployment and undone (project **Overview**, then **Undo Rollback**; the Deployments list has no undo). On Hobby the only target is the deployment just before the current one; Pro can go further back.
+
 ## What a rollback does not undo
 
+- **Content.** It lives in Sanity, not in the build. Restore it from a backup (below).
 - **Environment variables.** They are not part of the build. If the fault was a variable, fix the variable.
 - **Emails already sent.** Leads that arrived stay in the mailbox.
 - **Consent records.** They live in each visitor's cookie. A rollback to a build with an older `CONSENT_VERSION` re-asks everyone who agreed to the newer one; see `consent-version-bump.md`.
+
+## Restore the content from a backup
+
+Backups are exports of the production dataset, kept outside the repo in `../smarthaus-backups/`. The Sanity CLI needs Node 22.12 or later.
+
+1. **Back up first:** `pnpm exec sanity dataset export production ../smarthaus-backups/sanity-production-<date>.tar.gz`.
+2. **Restore:** `pnpm exec sanity dataset import ../smarthaus-backups/<file>.tar.gz production --replace`. Only on Shivanshu's yes. It puts every document the backup holds back to its backed-up version and leaves any document created since then alone: an import never deletes.
+3. **Check:** every document in the backup's `data.ndjson` matches the dataset once its `_rev`, `_createdAt` and `_updatedAt` are set aside, and its `_sanityAsset` strings are read as the asset references they become. For pictures, each backup file is the original (its SHA-1 is the asset id), but Sanity's CDN serves JPEGs re-encoded, so compare the CDN's bytes with another dataset's CDN bytes, never with the backup file.
+
+Tested on 2026-11-20: the backup of 2026-11-19 restored into `ci`, with all 26 documents identical and all 50 pictures served exactly as production serves them; `ci` was re-seeded after it.

@@ -11,14 +11,24 @@ import { join } from "node:path";
 const root = process.cwd();
 const claude = readFileSync(join(root, "CLAUDE.md"), "utf8");
 const canvas = readFileSync(join(root, "src/components/FluidHero/FluidCanvas.tsx"), "utf8");
-const section = claude.slice(claude.indexOf("### The third exception: the fluid hero"));
+// The fluid hero's record sits under the glass's since the glass took the
+// exception over (2026-11-14); src/components/HomeHero/__tests__/docs.test.ts
+// pins the glass's own.
+const section = claude.slice(claude.indexOf("#### Before it: the fluid hero, dormant"));
 
 describe("CLAUDE.md records the third exception", () => {
-  test("the section exists and follows the second", () => {
+  test("the record exists, under the third exception, which follows the second", () => {
     expect(claude.indexOf("### The second exception")).toBeLessThan(
-      claude.indexOf("### The third exception: the fluid hero"),
+      claude.indexOf("### The third exception: the hero's glass"),
+    );
+    expect(claude.indexOf("### The third exception: the hero's glass")).toBeLessThan(
+      claude.indexOf("#### Before it: the fluid hero, dormant"),
     );
     expect(section.length).toBeGreaterThan(500);
+  });
+
+  test("says it would take the exception back, not add a fourth", () => {
+    expect(section).toMatch(/takes the exception back from the glass rather than adding a fourth/);
   });
 
   test("names the files that make up the exception", () => {

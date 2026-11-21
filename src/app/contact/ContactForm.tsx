@@ -6,8 +6,8 @@ import Link from "next/link";
 
 import { Button } from "../../components/Button";
 import { HONEYPOT_FIELD, INTERESTS, MAX_LENGTH } from "../../lib/contact-fields";
-import { CONSENT_FORM_COPY } from "../../content/consent";
 import { whatsappLink } from "../../lib/contact";
+import type { ConsentCopy, ContactFormCopy } from "../../sanity/types";
 import { submitEnquiry, submitShortEnquiry } from "./actions";
 import { INITIAL_STATE, type ContactState, type FieldErrors } from "./state";
 import styles from "./page.module.scss";
@@ -85,7 +85,20 @@ function ErrorSummary({ errors }: { errors: FieldErrors }) {
  * deliberately NOT a field in the payload: a variant read from FormData is
  * attacker-controlled, and the full form's consent tick is what it would skip.
  */
-export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }) {
+export function ContactForm({
+  variant = "full",
+  copy,
+  consent,
+  whatsapp,
+}: {
+  variant?: "full" | "short";
+  /** Labels and placeholders, from the contact page in Sanity. */
+  copy: ContactFormCopy;
+  /** The consent wording, from the consent document in Sanity. */
+  consent: ConsentCopy["form"];
+  /** The WhatsApp number, digits only, from the site settings. */
+  whatsapp: string;
+}) {
   const short = variant === "short";
   const [state, formAction, isPending] = useActionState(
     short ? submitShortEnquiry : submitEnquiry,
@@ -104,7 +117,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
   }, [state]);
 
   if (state.status === "ok") {
-    return <Confirmation state={state} />;
+    return <Confirmation state={state} whatsapp={whatsappLink(whatsapp, copy.sentMessage)} />;
   }
 
   const errors = state.status === "invalid" ? state.fieldErrors : {};
@@ -126,6 +139,9 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
       action={formAction}
       className={styles.form}
       noValidate
+      // A second layer over Clarity's own masking: what a visitor types is
+      // never recorded (consent-content-deck.md §9).
+      data-clarity-mask="true"
       // The submit button stays focusable while sending (see Submit), so it can
       // be pressed again; this is what stops a second send.
       onSubmit={(event) => {
@@ -142,7 +158,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             : "That didn’t send. "}
           <a
             className={styles.inlineLink}
-            href={whatsappLink("Hi, I tried the enquiry form on your site and it did not send.")}
+            href={whatsappLink(whatsapp, copy.failedMessage)}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -153,7 +169,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
       )}
 
       <div className={styles.fields}>
-        <Field id="name" label="Name" error={errors.name}>
+        <Field id="name" label={copy.name.label} error={errors.name}>
           <input
             id="name"
             name="name"
@@ -161,14 +177,14 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             autoComplete="name"
             maxLength={MAX_LENGTH.name}
             defaultValue={values.name}
-            placeholder="enter full name"
+            placeholder={copy.name.placeholder}
             className={styles.input}
             aria-invalid={errors.name ? true : undefined}
             aria-describedby={describedBy("name", errors.name)}
           />
         </Field>
 
-        <Field id="email" label="Email" error={errors.email}>
+        <Field id="email" label={copy.email.label} error={errors.email}>
           <input
             id="email"
             name="email"
@@ -176,14 +192,14 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             autoComplete="email"
             maxLength={MAX_LENGTH.email}
             defaultValue={values.email}
-            placeholder="enter email"
+            placeholder={copy.email.placeholder}
             className={styles.input}
             aria-invalid={errors.email ? true : undefined}
             aria-describedby={describedBy("email", errors.email)}
           />
         </Field>
 
-        <Field id="phone" label="Phone (UAE mobile)" error={errors.phone}>
+        <Field id="phone" label={copy.phone.label} error={errors.phone}>
           {/* The prefix is adjacent text, not the input's value: someone typing
               a local 05… number would otherwise produce "+97105…". */}
           <span className={styles.prefix} aria-hidden="true">
@@ -197,7 +213,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             autoComplete="tel"
             maxLength={MAX_LENGTH.phone}
             defaultValue={values.phone}
-            placeholder="enter phone number"
+            placeholder={copy.phone.placeholder}
             className={styles.input}
             aria-invalid={errors.phone ? true : undefined}
             aria-describedby={describedBy("phone", errors.phone)}
@@ -205,7 +221,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
         </Field>
 
         {!short && (
-          <Field id="community" label="Community" error={errors.community}>
+          <Field id="community" label={copy.community.label} error={errors.community}>
             <input
               id="community"
               name="community"
@@ -213,7 +229,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
               autoComplete="address-level2"
               maxLength={MAX_LENGTH.community}
               defaultValue={values.community}
-              placeholder="eg. Dubai Hills"
+              placeholder={copy.community.placeholder}
               className={styles.input}
               aria-invalid={errors.community ? true : undefined}
               aria-describedby={describedBy("community", errors.community)}
@@ -222,7 +238,7 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
         )}
 
         {!short && (
-          <Field id="interest" label="What are you looking?" error={errors.interest}>
+          <Field id="interest" label={copy.interest.label} error={errors.interest}>
             <select
               id="interest"
               name="interest"
@@ -240,14 +256,14 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
           </Field>
         )}
 
-        <Field id="message" label="Message" error={errors.message}>
+        <Field id="message" label={copy.message.label} error={errors.message}>
           <input
             id="message"
             name="message"
             type="text"
             maxLength={MAX_LENGTH.message}
             defaultValue={values.message}
-            placeholder="enter message"
+            placeholder={copy.message.placeholder}
             className={styles.input}
             aria-invalid={errors.message ? true : undefined}
             aria-describedby={describedBy("message", errors.message)}
@@ -294,11 +310,8 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
           the two surfaces cannot state different purposes for the same data.
         */
         <p className={styles.shortNotice}>
-          {CONSENT_FORM_COPY.required.helperLead}{" "}
-          <Link href={CONSENT_FORM_COPY.required.helperHref}>
-            {CONSENT_FORM_COPY.required.helperLinkText}
-          </Link>
-          .
+          {consent.required.helperLead}{" "}
+          <Link href={consent.required.helperHref}>{consent.required.helperLinkText}</Link>.
         </p>
       ) : (
         <div className={styles.consents}>
@@ -307,28 +320,25 @@ export function ContactForm({ variant = "full" }: { variant?: "full" | "short" }
             error={errors.contactConsent}
             label={
               <>
-                {CONSENT_FORM_COPY.required.label}{" "}
+                {consent.required.label}{" "}
                 {/* Visible text, not colour alone — a required marker a
                     colourblind visitor cannot see is not a marker. */}
-                <span className={styles.requiredMarker}>{CONSENT_FORM_COPY.required.marker}</span>
+                <span className={styles.requiredMarker}>{consent.required.marker}</span>
               </>
             }
             helper={
               <>
-                {CONSENT_FORM_COPY.required.helperLead}{" "}
-                <Link href={CONSENT_FORM_COPY.required.helperHref}>
-                  {CONSENT_FORM_COPY.required.helperLinkText}
-                </Link>
-                .
+                {consent.required.helperLead}{" "}
+                <Link href={consent.required.helperHref}>{consent.required.helperLinkText}</Link>.
               </>
             }
           />
 
-          <Checkbox id="marketingConsent" label={CONSENT_FORM_COPY.marketing.label} />
+          <Checkbox id="marketingConsent" label={consent.marketing.label} />
         </div>
       )}
 
-      <Submit />
+      <Submit label={copy.submit} sending={copy.sending} />
     </form>
   );
 }
@@ -393,14 +403,14 @@ function Checkbox({
 }
 
 /** Split out so useFormStatus reads this form's pending state, not a parent's. */
-function Submit() {
+function Submit({ label, sending }: { label: string; sending: string }) {
   const { pending } = useFormStatus();
   return (
     // The row owns the spacing and the left alignment; the button owns the
     // band. See Button.tsx for why it carries no margin of its own.
     <div className={styles.submitRow}>
       <Button type="submit" loading={pending}>
-        {pending ? "Sending" : "Book a site visit"}
+        {pending ? sending : label}
       </Button>
     </div>
   );
@@ -436,7 +446,14 @@ function Field({
   );
 }
 
-function Confirmation({ state }: { state: Extract<ContactState, { status: "ok" }> }) {
+function Confirmation({
+  state,
+  whatsapp,
+}: {
+  state: Extract<ContactState, { status: "ok" }>;
+  /** The pre-filled WhatsApp link. */
+  whatsapp: string;
+}) {
   return (
     <div className={styles.confirmation} role="status">
       <p className={styles.confirmationLead}>
@@ -448,11 +465,7 @@ function Confirmation({ state }: { state: Extract<ContactState, { status: "ok" }
         install.
       </p>
       <div className={styles.confirmationActions}>
-        <Button
-          href={whatsappLink("Hi, I just booked a site visit through your website.")}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <Button href={whatsapp} target="_blank" rel="noopener noreferrer">
           Message us on WhatsApp
         </Button>
         <Link className={styles.secondaryCta} href="/solutions">

@@ -14,7 +14,7 @@ Never for copy edits, a reworded sentence, a new link or a design change. Re-ask
 
 ## Steps
 
-1. Make the material change and update the notice text in `src/content/consent.ts` and the privacy policy in the same pull request.
+1. Make the material change, and update the notice text (the "Cookie and consent wording" document in the Studio, and its seed in `sanity/seed/consent-copy.ts`) and the privacy policy in the same sitting as the pull request.
 2. Bump `CONSENT_VERSION`. Semantic versioning: a new tool or category is a minor bump (`1.0.0` to `1.1.0`); a change that invalidates what earlier choices meant is a major bump.
 3. Update the version in the deck's §10 record example, so the document and the code state the same value.
 4. Run `pnpm test`. `src/lib/__tests__/consent.test.ts` covers the re-ask for an older version; `e2e/consent.spec.ts` covers the banner.

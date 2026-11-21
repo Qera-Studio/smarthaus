@@ -1,0 +1,103 @@
+// One getter per document. cache() makes every component that asks for the
+// same document within one render share one fetch.
+import { cache } from "react";
+import { getDoc, getDocs } from "./fetch";
+import type {
+  AboutPage,
+  BlogPage,
+  ComingSoonPage,
+  ConsentCopy,
+  LegalDocument,
+  ContactPage,
+  FaqPage,
+  HomePage,
+  Post,
+  PricingPage,
+  SiteSettings,
+  SolutionPage,
+} from "./types";
+import { FIXED_DOCUMENTS } from "./schema";
+
+export const getSettings = cache(() => getDoc<SiteSettings>("siteSettings"));
+export const getContactPage = cache(() => getDoc<ContactPage>("contactPage"));
+export const getHomePage = cache(() => getDoc<HomePage>("homePage"));
+export const getAboutPage = cache(() => getDoc<AboutPage>("aboutPage"));
+export const getPricingPage = cache(() => getDoc<PricingPage>("pricingPage"));
+export const getFaqPage = cache(() => getDoc<FaqPage>("faqPage"));
+export const getComingSoonPage = cache((route: "solutions" | "designers" | "developers") =>
+  getDoc<ComingSoonPage>(`comingSoon-${route}`),
+);
+
+export type LegalName = "privacy" | "terms" | "accessibility";
+export const getLegalDocument = cache((name: LegalName) => getDoc<LegalDocument>(`legal-${name}`));
+export const getConsentCopy = cache(() => getDoc<ConsentCopy>("consentCopy"));
+
+export const getBlogPage = cache(() => getDoc<BlogPage>("blogPage"));
+/** Every article, newest first. One query, shared by the index and each article. */
+export const getPosts = cache(() => getDocs<Post>("post"));
+export async function getPost(slug: string): Promise<Post | undefined> {
+  return (await getPosts()).find((post) => post.slug === slug);
+}
+export const postPath = (slug: string) => `/blog/${slug}`;
+
+/** The solutions with a page, by their id in the Solutions menu. */
+export const SOLUTION_SLUGS: readonly string[] = Object.keys(FIXED_DOCUMENTS.solutionPage).map(
+  (id) => id.slice("solution-".length),
+);
+export const getSolutionPage = cache((slug: string) => getDoc<SolutionPage>(`solution-${slug}`));
+export const solutionPath = (slug: string) => `/solutions/${slug}`;
+
+/**
+ * /faq is publishable once no answer is pending and an editor has turned it on:
+ * an unconfirmed figure an answer engine repeats back is worse than none.
+ */
+export function isFaqPublishable(page: Pick<FaqPage, "seo" | "categories">): boolean {
+  const pending = page.categories.some((c) => c.entries.some((e) => e.pending));
+  return Boolean(page.seo.index) && !pending;
+}
+
+type Routed = { seo: { index?: boolean }; updatedAt?: string };
+
+/**
+ * Every content route, with the document that decides whether it is in search
+ * and when it last changed. The sitemap is built from this, so it lists the
+ * indexable pages exactly; src/app/__tests__/sitemap.test.ts holds it to each
+ * page's own metadata.
+ */
+export const ROUTES: readonly { path: string; load: () => Promise<Routed> }[] = [
+  { path: "/", load: getHomePage },
+  { path: "/about", load: getAboutPage },
+  { path: "/contact", load: getContactPage },
+  { path: "/pricing", load: getPricingPage },
+  {
+    path: "/faq",
+    load: async () => {
+      const page = await getFaqPage();
+      return { ...page, seo: { ...page.seo, index: isFaqPublishable(page) } };
+    },
+  },
+  { path: "/solutions", load: () => getComingSoonPage("solutions") },
+  ...SOLUTION_SLUGS.map((slug) => ({
+    path: solutionPath(slug),
+    load: () => getSolutionPage(slug),
+  })),
+  { path: "/designers", load: () => getComingSoonPage("designers") },
+  { path: "/developers", load: () => getComingSoonPage("developers") },
+  { path: "/privacy", load: () => getLegalDocument("privacy") },
+  { path: "/terms", load: () => getLegalDocument("terms") },
+  { path: "/accessibility", load: () => getLegalDocument("accessibility") },
+  { path: "/cookie-preferences", load: getConsentCopy },
+  { path: "/blog", load: getBlogPage },
+];
+
+/**
+ * ROUTES and one route per article. The articles are content, so their routes
+ * are too: the sitemap and llms.txt read this, not ROUTES alone.
+ */
+export async function routes(): Promise<typeof ROUTES> {
+  const posts = await getPosts();
+  return [
+    ...ROUTES,
+    ...posts.map((post) => ({ path: postPath(post.slug), load: async () => post })),
+  ];
+}

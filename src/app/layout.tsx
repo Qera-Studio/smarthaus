@@ -8,6 +8,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 // order statement via _variables.scss, because on a notFound() route the
 // browser sees the page's chunk before this one.
 import "../styles/globals.scss";
+import { AnnouncementBar } from "../components/AnnouncementBar";
 import { Nav } from "../components/Nav";
 import { Footer } from "../components/Footer";
 import { Splash } from "../components/Loader/Splash";
@@ -15,6 +16,9 @@ import { SPLASH_BOOT_SCRIPT } from "../lib/splash-boot";
 import { Consent } from "../components/Consent";
 import { ScrollToTop } from "../components/ScrollToTop";
 import { JsonLd, siteGraph } from "../components/Schema";
+import { VisualEditing } from "next-sanity/visual-editing";
+import { getSettings } from "../sanity/content";
+import { inDraftMode } from "../sanity/draft";
 import { CONSENT_BOOT_SCRIPT } from "../lib/consent-boot";
 
 const manrope = Manrope({
@@ -61,37 +65,37 @@ function metadataOrigin(): URL {
 // only what a route without one (the 404, the error pages) is left with. It
 // sets no og:url and no canonical, because a fallback that names "/" is
 // exactly how every page came to claim it was the homepage.
-export const metadata: Metadata = {
-  title: {
-    template: `%s | ${SITE_NAME}`,
-    default: `${SITE_NAME} | Home Automation and Security in Dubai`,
-  },
-  description:
-    "Cameras, entry, audio and home automation for Dubai villas, installed, connected and looked after by one licensed team. Book a site visit.",
-  metadataBase: metadataOrigin(),
-  openGraph: {
-    type: "website",
-    locale: "en_AE",
-    siteName: SITE_NAME,
-    images: OG_IMAGES,
-  },
-  twitter: {
-    // No `site` or `creator`: both take a real @handle, and the brand's X
-    // account is still a placeholder link in the footer.
-    card: "summary_large_image",
-    images: [OG_IMAGES[0]!],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { seo } = await getSettings();
+  return {
+    title: { template: `%s | ${SITE_NAME}`, default: seo.defaultTitle },
+    description: seo.defaultDescription,
+    metadataBase: metadataOrigin(),
+    openGraph: {
+      type: "website",
+      locale: "en_AE",
+      siteName: SITE_NAME,
+      images: OG_IMAGES,
+    },
+    twitter: {
+      // No `site` or `creator`: both take a real @handle, and the brand's X
+      // account is still a placeholder link in the footer.
+      card: "summary_large_image",
+      images: [OG_IMAGES[0]!],
+    },
+  };
+}
 
 // themeColor paints the browser chrome (mobile Safari/Chrome address bar) to
 // match --color-bg-canvas, so the viewport reads as one surface. No
 // maximumScale or userScalable limits — pinch-zoom is a WCAG 1.4.4 requirement.
 export const viewport: Viewport = {
-  themeColor: "#f0e9dd",
+  themeColor: "#f8f5f0",
   colorScheme: "light",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const [settings, preview] = await Promise.all([getSettings(), inDraftMode()]);
   return (
     // suppressHydrationWarning: the consent boot script sets data-consent on
     // <html> before React hydrates, which is its whole job. It covers this
@@ -124,6 +128,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
+        <AnnouncementBar />
         <Nav />
         <main id="main-content">{children}</main>
         {/* Sibling of main, not inside it: contentinfo is only a landmark as a
@@ -215,7 +220,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         ) : null}
         {/* The business and the site, once per page (SEO System §9). Last, so the
             skip link stays the first child of <body>. */}
-        <JsonLd data={siteGraph()} />
+        <JsonLd data={siteGraph(settings)} />
+        {/* The Studio's click-to-edit overlay, in draft mode only: a visitor
+            never has the draft cookie, so never loads this. */}
+        {preview ? <VisualEditing /> : null}
       </body>
     </html>
   );

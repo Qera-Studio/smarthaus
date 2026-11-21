@@ -7,8 +7,13 @@ import { headers } from "next/headers";
 import { Resend } from "resend";
 import type { z } from "zod";
 
-import { contactSchema, shortContactSchema, HONEYPOT_FIELD } from "../../lib/contact-schema";
-import { PRIVACY_POLICY_VERSION } from "../../content/legal/versions";
+import {
+  contactSchema,
+  heroLeadSchema,
+  shortContactSchema,
+  HONEYPOT_FIELD,
+} from "../../lib/contact-schema";
+import { getLegalDocument } from "../../sanity/content";
 import { enquiryDedupe, enquiryKey } from "../../lib/dedupe";
 import { clientKey, enquiryLimiter } from "../../lib/rate-limit";
 import { submittedValues } from "./state";
@@ -69,10 +74,26 @@ export async function submitShortEnquiry(
   );
 }
 
-/** What both schemas produce. The short form simply omits the optional half. */
+/**
+ * The homepage hero's email field: an address and nothing else, sent as a lead
+ * at once (Shivanshu, 2026-11-14). Its own action for the same reason the
+ * short form has one: which schema runs is decided by which action the
+ * component imported, never by anything in the payload.
+ */
+export async function submitHeroLead(
+  _prev: ContactState,
+  formData: FormData,
+): Promise<ContactState> {
+  return handle(formData, (data) => heroLeadSchema.safeParse({ email: data.get("email") }));
+}
+
+/**
+ * What the schemas produce. The short form omits the optional half; the hero's
+ * field gives an email alone, so there the name and the phone are absent.
+ */
 type Enquiry = {
-  name: string;
-  phone: string;
+  name?: string | undefined;
+  phone?: string | undefined;
   email?: string | undefined;
   community?: string | undefined;
   message?: string | undefined;
@@ -151,7 +172,7 @@ async function handle(
     return { status: "failed", values };
   }
 
-  return { status: "ok", name: parsed.data.name, phone: parsed.data.phone };
+  return { status: "ok", name: parsed.data.name ?? "", phone: parsed.data.phone ?? "" };
 }
 
 /**
@@ -165,14 +186,30 @@ async function handle(
  * Every failure path throws, so the caller's catch shows the WhatsApp fallback
  * rather than telling the lead their enquiry arrived when it did not.
  */
+/**
+ * The privacy policy version the visitor was shown, for the consent record.
+ * Read through the same cache as the page itself, so it costs no request on a
+ * normal send. If Sanity cannot be reached, the lead still goes: losing an
+ * enquiry over a footnote would be the worse failure, and the line says why
+ * it is missing.
+ */
+async function policyVersion(): Promise<string> {
+  try {
+    return (await getLegalDocument("privacy")).version ?? "unversioned";
+  } catch {
+    return "unknown (content unavailable when sent)";
+  }
+}
+
 async function deliver(data: Enquiry): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.LEAD_EMAIL;
   const from = process.env.LEAD_FROM_EMAIL;
 
+  const policy = await policyVersion();
   const lines = [
-    `Name:      ${data.name}`,
-    `Phone:     ${data.phone}`,
+    `Name:      ${data.name ?? "not given"}`,
+    `Phone:     ${data.phone ?? "not given"}`,
     `Email:     ${data.email ?? "not given"}`,
     `Community: ${data.community ?? "not given"}`,
     `Interest:  ${data.interest ?? "not given"}`,
@@ -186,14 +223,15 @@ async function deliver(data: Enquiry): Promise<void> {
     "Consent, as recorded when this was sent:",
     `Contact about this enquiry: ${consentLine(data.contactConsent)}`,
     `Marketing:                  ${consentLine(data.marketingConsent)}`,
-    `Privacy policy shown:       ${PRIVACY_POLICY_VERSION}`,
+    `Privacy policy shown:       ${policy}`,
     `Sent at:                    ${new Date().toISOString()}`,
   ];
 
   const email = {
     from: `Smarthaus enquiries <${from}>`,
     to,
-    subject: `New enquiry — ${data.name}`,
+    // The hero's field gives no name, so its lead is known by its address.
+    subject: `New enquiry — ${data.name ?? data.email}`,
     text: lines.join("\n"),
     // So a reply from the inbox goes to the lead, not to the send-only address.
     // Only set when they gave one; the schema makes email optional.

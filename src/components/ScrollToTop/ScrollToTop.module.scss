@@ -23,12 +23,13 @@
     );
     z-index: var(--z-sticky);
 
-    display: flex;
-    align-items: center;
-    // Fixed, so the footer can reserve exactly this much (see Footer.module.scss).
-    min-block-size: var(--scroll-top-block-size);
-    padding-block: $space-3;
-    padding-inline: $space-4;
+    // A square around the arrow. Fixed, so the footer can reserve exactly
+    // this much (see Footer.module.scss).
+    display: grid;
+    place-items: center;
+    inline-size: var(--scroll-top-block-size);
+    block-size: var(--scroll-top-block-size);
+    padding: 0;
 
     // Square, no shadow, no border — the brand's architectural edges. Matches
     // every other control on the site; see the commit that took the radius off
@@ -107,11 +108,5 @@
           var(--consent-block-size, 22rem) + var(--nav-float-inset)
       );
     }
-  }
-
-  .label {
-    font-size: var(--font-size-sm);
-    font-weight: $font-weight-semibold;
-    line-height: 1;
   }
 }

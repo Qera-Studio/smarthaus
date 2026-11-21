@@ -3,6 +3,16 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { ContactForm } from "../ContactForm";
 import { MAX_LENGTH } from "../../../lib/contact-schema";
+import { CONSENT_COPY } from "../../../../sanity/seed/consent-copy";
+import { CONTACT_PAGE } from "../../../../sanity/seed/contact-page";
+import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
+
+/** The form's labels, consent wording and number, as the pages pass them. */
+const FORM = {
+  copy: CONTACT_PAGE.form,
+  consent: CONSENT_COPY.form,
+  whatsapp: SITE_SETTINGS.contact.whatsapp,
+};
 
 const submitEnquiry = jest.fn();
 jest.mock("../actions", () => ({
@@ -12,7 +22,7 @@ jest.mock("../actions", () => ({
 
 async function submitWith(state: unknown) {
   submitEnquiry.mockResolvedValue(state);
-  render(<ContactForm />);
+  render(<ContactForm {...FORM} />);
   await act(async () => {
     fireEvent.submit(document.querySelector("form")!);
   });
@@ -26,15 +36,25 @@ describe("field caps", () => {
     ["Community", MAX_LENGTH.community],
     ["Message", MAX_LENGTH.message],
   ])("caps %s at %i characters in the browser", (label, max) => {
-    render(<ContactForm />);
+    render(<ContactForm {...FORM} />);
     expect(screen.getByLabelText(label)).toHaveAttribute("maxLength", String(max));
   });
 
   it("caps the short form's fields the same way", () => {
-    render(<ContactForm variant="short" />);
+    render(<ContactForm {...FORM} variant="short" />);
     expect(screen.getByLabelText("Name")).toHaveAttribute("maxLength", "120");
     expect(screen.getByLabelText("Message")).toHaveAttribute("maxLength", "2000");
   });
+});
+
+describe("session recording", () => {
+  it.each([["full"], ["short"]] as const)(
+    "tells Clarity to mask the whole %s form, a second layer over its own setting",
+    (variant) => {
+      render(<ContactForm {...FORM} variant={variant} />);
+      expect(document.querySelector("form")).toHaveAttribute("data-clarity-mask", "true");
+    },
+  );
 });
 
 describe("errors on the optional fields", () => {
@@ -96,17 +116,17 @@ describe("instructions without standing hint lines (WCAG 3.3.2)", () => {
   // its value is wrong. The phone format moved into the label, where 3.3.2
   // still has it before anything is typed.
   it("states the phone format in the label, before anything is typed", () => {
-    render(<ContactForm />);
+    render(<ContactForm {...FORM} />);
     expect(screen.getByRole("textbox", { name: "Phone (UAE mobile)" })).toBeInTheDocument();
   });
 
   it("does the same on the short form", () => {
-    render(<ContactForm variant="short" />);
+    render(<ContactForm {...FORM} variant="short" />);
     expect(screen.getByRole("textbox", { name: "Phone (UAE mobile)" })).toBeInTheDocument();
   });
 
   it("describes no field before the visitor has submitted anything", () => {
-    render(<ContactForm />);
+    render(<ContactForm {...FORM} />);
     // The consent tick keeps its helper: that is what the data is used for,
     // not a format hint.
     for (const field of document.querySelectorAll("input:not([type=checkbox]), select")) {
@@ -128,7 +148,7 @@ describe("instructions without standing hint lines (WCAG 3.3.2)", () => {
   });
 
   it("still stops the message at its limit in the browser, so the limit needs no notice", () => {
-    render(<ContactForm />);
+    render(<ContactForm {...FORM} />);
     expect(screen.getByLabelText("Message")).toHaveAttribute("maxLength", "2000");
   });
 });
@@ -191,7 +211,7 @@ describe("the error summary (Accessibility System §12)", () => {
   });
 
   it("is absent before a submit and after a failed send, which has its own banner", async () => {
-    render(<ContactForm />);
+    render(<ContactForm {...FORM} />);
     expect(screen.queryByText(/before sending/)).toBeNull();
   });
 

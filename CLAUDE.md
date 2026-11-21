@@ -116,18 +116,20 @@ The scene manifest contract, schema, and interaction rules live in `AGENTS.md`.
 
 Build order. Higher priority ships first.
 
-| Priority | Page                  | Purpose                                                                  | Notes                                                                                                         |
-| -------- | --------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| **P0**   | Homepage              | Hero moment + value prop + lead capture                                  | The Blender hero lives here. First impression. Ravi and James & Emma land here                                |
-| **P0**   | Contact / Get Started | Lead capture form                                                        | Server Actions + Zod + honeypot + Resend                                                                      |
-| **P1**   | Solutions (umbrella)  | What Smarthaus does — lighting, climate, security, entertainment, energy | One page or towns, not five thin pages. Ravi wants spec depth, James & Emma want clarity                      |
-| **P1**   | About                 | Who Smarthaus/MapleTech is                                               | Claims constraint applies hardest here. No invented heritage. Show the parent company's track record honestly |
-| **P2**   | Projects / Portfolio  | Visual proof                                                             | Renders until real photography exists. Gallery or case-study format. James & Emma's confidence builder        |
-| **P2**   | For Designers         | Nadia's page. Professional B2B landing                                   | Documentation she can hand to her client. Integration details, process, partnership path                      |
-| **P3**   | For Developers        | Aditya's page. Property developer landing                                | ROI framing, project scale, volume enquiry path                                                               |
-| **P3**   | Blog / Journal        | SEO + AEO content engine                                                 | Sanity CMS. Launches with 3–5 seed articles                                                                   |
+| Priority | Page                  | Purpose                                                                  | Notes                                                                                                                                                                    |
+| -------- | --------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **P0**   | Homepage              | Hero moment + value prop + lead capture                                  | The Blender hero lives here. First impression. Ravi and James & Emma land here                                                                                           |
+| **P0**   | Contact / Get Started | Lead capture form                                                        | Server Actions + Zod + honeypot + Resend                                                                                                                                 |
+| **P1**   | Solutions (umbrella)  | What Smarthaus does — lighting, climate, security, entertainment, energy | One page per solution in the nav's menu, at `/solutions/<id>` (2026-11-15). **All eight built**, reviewed, in search since 2026-11-20. See "Solution pages" in AGENTS.md |
+| **P1**   | About                 | Who Smarthaus/MapleTech is                                               | Claims constraint applies hardest here. No invented heritage. Show the parent company's track record honestly                                                            |
+| **P2**   | Projects / Portfolio  | Visual proof                                                             | Renders until real photography exists. Gallery or case-study format. James & Emma's confidence builder                                                                   |
+| **P2**   | For Designers         | Nadia's page. Professional B2B landing                                   | Documentation she can hand to her client. Integration details, process, partnership path                                                                                 |
+| **P3**   | For Developers        | Aditya's page. Property developer landing                                | ROI framing, project scale, volume enquiry path                                                                                                                          |
+| **P3**   | Blog                  | SEO + AEO content engine                                                 | **Built 2026-11-14** at `/blog`: the articles page (search, tag filter) and one page per article. Four seed articles; see "The blog" in AGENTS.md                        |
 
 **Sanity Studio** lives at `/studio` — authenticated, not public. Structured fields, not freeform rich text. English at launch; Arabic (V2) via field-level translation, not page duplication.
+
+**Every page's content is in Sanity** (2026-11-11): copy, pictures, search metadata, contact details, the footer, the legal pages and the consent wording. Editors change the site in the Studio and publishing updates it within seconds; a draft can be previewed in place first. Layout, behaviour, the primary nav and what must work without Sanity stay in code. How it fits together, and the rules the schema enforces (the claims audit among them), are in AGENTS.md under "CMS — Sanity".
 
 ---
 
@@ -160,13 +162,13 @@ Values owned by the system (via Owned Facts Register) — do not restate, point 
 
 - **CLS < 0.05** — tighter than the system's CLS threshold (Performance System §1, on the register) because the scroll-driven hero and motion-heavy design create more CLS risk. Project decision, not a system change
 - **TBT < 200ms** — lab metric (Lighthouse CI), complementary to the system's INP (field metric). Different measurements, not conflicting
-- **First-load JS: ≤ 640KB uncompressed** on marketing pages — set in `lighthouserc.json` as `resource-summary:script:size`. The system says JS budgets are per-project; this is ours. Does not apply to the `/studio` route (Sanity Studio is its own bundle). Zod never reaches the browser: validation is server-only, and the form's constants live in the Zod-free `src/lib/contact-fields.ts` (`e2e/contact.spec.ts` checks every script `/` and `/contact` load). Turnstile, when it lands, loads only on the pages with a form.
+- **First-load JS: ≤ 640KB uncompressed** on marketing pages — set in `lighthouserc.json` as `resource-summary:script:size`. The system says JS budgets are per-project; this is ours. Does not apply to the `/studio` route (Sanity Studio is its own bundle). Zod never reaches the browser: validation is server-only, and the form's constants live in the Zod-free `src/lib/contact-fields.ts` (`e2e/contact.spec.ts` checks every script `/` and `/contact` load). Turnstile, when it lands, loads only on the pages with a form. Clarity and GA4 sit outside this budget, by accepted risk (`docs/launch-gate/accepted-risks.md`).
 
   This was originally 100KB, described as gzipped. That was wrong twice over: Lighthouse's `resource-summary:script:size` counts **uncompressed** bytes, and the React 19 + Next 16 baseline alone is ~575KB uncompressed before a single line of our own code — so the gate failed from the day it was written and never once passed. A permanently-red gate is worse than none, because a real regression looks identical to the standing failure. 640KB is the measured baseline plus roughly 10% headroom, so it now catches what it was meant to catch: our code growing, not the framework existing. Re-baseline it on any major Next or React upgrade.
 
 - **Lighthouse mobile: ≥ 0.95** — project floor for Premium tier. The system does not set a Lighthouse threshold; it says "lab scores are a proxy, field data is the truth." We use this as a CI gate to catch regressions. A mostly-static Server Components site with optimised media has no excuse for scoring below 95
 
-  **Measured, not simulated** (decided 2026-09-27). `lighthouserc.json` runs mobile with `throttlingMethod: "devtools"`: a genuinely slowed network and 4x CPU, timed as it happens. Lighthouse's default simulation reported LCP 4.7s on `/` while the trace showed the poster painted at 82ms, because it charges the page for JavaScript chunks that did not hold the paint. The measured run found the one real problem the simulation hid among false ones: the consent banner painted only after hydration and was `/contact`'s LCP at 4.1s on a first visit. It now paints from the server HTML (`src/lib/consent-boot.ts`), and `/contact` measures 1.7s. `/pricing` is noindex, so it is held to every SEO audit except `is-crawlable`; `src/app/__tests__/sitemap.test.ts` ties that exemption to the page's own metadata
+  **Measured, not simulated** (decided 2026-09-27). `lighthouserc.json` runs mobile with `throttlingMethod: "devtools"`: a genuinely slowed network and 4x CPU, timed as it happens. Lighthouse's default simulation reported LCP 4.7s on `/` while the trace showed the poster painted at 82ms, because it charges the page for JavaScript chunks that did not hold the paint. The measured run found the one real problem the simulation hid among false ones: the consent banner painted only after hydration and was `/contact`'s LCP at 4.1s on a first visit. It now paints from the server HTML (`src/lib/consent-boot.ts`), and `/contact` measures 1.7s. `/pricing` went into search on 2026-11-19, once the package deck confirmed its figures, and is held to the whole SEO category as `/` and `/contact` are; `src/app/__tests__/sitemap.test.ts` ties any exemption to a page's own metadata, so a noindex page gets one only while it is noindex
 
   **Calibrated, and two assertions temporarily warnings** (decided 2026-09-28). `scripts/lighthouse-calibrated.mjs` sets the CPU slowdown from each machine's benchmark so every run emulates one target phone, the slower GitHub runner at 4x; a fixed 4x passed or failed by which runner CI drew. On that phone blocking time measured `/` 269ms, `/pricing` 315ms, `/contact` 132ms against 200ms, so the performance score and TBT are warnings until Phase 5b, recorded in `docs/launch-gate/accepted-risks.md`. Every other assertion is an error, and a test fails if anything else is downgraded
 
@@ -180,11 +182,11 @@ Build target is **WCAG 2.2 Level AA** (Accessibility System default). The follow
 
 Three rows here were Level AA, not AAA, so they are required by the build target rather than adopted as extras. Corrected 2026-09-27:
 
-| Criterion                     | How it is met                                                                                                                                                         |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1.4.12 Text Spacing**       | No fixed heights on text containers; fluid type and logical properties                                                                                                |
-| **2.4.5 Multiple Ways**       | The primary nav, and the footer, which links every page and serves as the site map. There are no breadcrumbs and no search; `sitemap.xml` is for crawlers, not people |
-| **2.4.6 Headings and Labels** | Content discipline, and every form field has a visible label                                                                                                          |
+| Criterion                     | How it is met                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1.4.12 Text Spacing**       | No fixed heights on text containers; fluid type and logical properties                                                                                                                                                                                                                                                                                                                       |
+| **2.4.5 Multiple Ways**       | The primary nav, and the footer, which links every page and serves as the site map. There are no breadcrumbs and no search; `sitemap.xml` is for crawlers, not people                                                                                                                                                                                                                        |
+| **2.4.6 Headings and Labels** | Content discipline, and every form field has a visible label, but one: the hero's email field shows the design's placeholder and is named by a label for screen readers only (Shivanshu, 2026-11-14). 2.4.6 asks that labels describe, not that they show; 3.3.2 is met by the placeholder and the button beside it. Its focus shows as its frame going to full strength, in place of a ring |
 
 ### AAA criteria we adopt (zero or trivial extra cost)
 
@@ -239,16 +241,25 @@ WCAG 1.2.5 applies to "prerecorded video content in synchronized media" — vide
 
 Server Components first. `'use client'` limited to:
 
-- Fluid hero canvas (`FluidHero/FluidCanvas.tsx` — raw WebGL2, dynamically imported; keeps the CSS ground and loads nothing under reduced motion, Save-Data, slow connections, or any WebGL failure. Touch is in. The canvas bleeds past the section on all four sides at a negative z level, so the liquid runs under the nav and the next section; the pointer feeds it only from inside the section. See the third motion-stack exception below)
-- Hero villa canvas (`Hero/VillaCanvas.tsx` — three.js, dynamically imported; falls back to the server-rendered poster and loads no three.js on touch, reduced motion, Save-Data, slow connections or any WebGL failure). **Unmounted, not deleted:** the homepage renders `FluidHero` in its place while the hero's content is written. `src/components/Hero/` stays intact so the villa can come back
+- Hero glass (`HomeHero/GlassCanvas.tsx` — raw WebGL2, dynamically imported; the reeded glass over the ring picture, and the glow behind it under a mouse. One frame, then frames only while a mouse moves or the glow fades. See the third motion-stack exception below)
+- Hero email field (`HomeHero/HeroLead.tsx` — `useActionState` over `submitHeroLead`, which sends the address as a lead at once; works without JavaScript)
+- Hero strip controls (`HomeHero/StripControls.tsx` — the pause button above the strip, and the hand on the strip; the pause button also stops the makers' marks, and a pointer over them slows them to a crawl through their own animation's rate). The homepage hero (`HomeHero/`) is a Server Component: its image strip drifts on a CSS animation over two copies of the list, stops on hover and on focus inside the track, and never moves under reduced motion, where it scrolls sideways instead. Pause sets `data-paused`, the WCAG 2.2.2 stop that hover is not. A mouse or finger drag, or a sideways trackpad swipe, moves the same CSS animation through the Web Animations API (its `currentTime`), so the strip still has one source of motion; a press is followed on `window` until release, and a drag that ends on a card's link does not open it. The arrows were removed on 2026-10-28. While any of the strip is on screen, the page's scroll glides it: each pixel adds to the speed of that same CSS animation (`updatePlaybackRate`, negative going up) and a timer eases it away, `SCROLL_SPEED` pixels of strip per pixel of page in all, with no limit; going up, the drift stands aside and returns from nothing afterwards, so the strip never bounces. Hover and the pause button hold only the drift, not this, though a press of pause ends a glide in progress. A passive listener, attached by an IntersectionObserver, skipped under keyboard focus in the track, under a drag and under reduced motion (2026-11-04). It also takes `data-intro` off `<html>` once the opening's last step has played: see "The homepage opening" in AGENTS.md
+- Contact bar arrows (`AnnouncementBar/AnnouncementScroller.tsx` — steps the bar's one-item-wide scroll-snap row and wraps at both ends). The bar sits above the nav on every page; swiping is native scroll snap, and from md up all three items share one row with no arrows
+- Fluid hero canvas (`FluidHero/FluidCanvas.tsx` — raw WebGL2, dynamically imported; keeps the CSS ground and loads nothing under reduced motion, Save-Data, slow connections, or any WebGL failure. Touch is in. The canvas bleeds past the section on all four sides at a negative z level, so the liquid runs under the nav and the next section; the pointer feeds it only from inside the section. See the third motion-stack exception below). **Unmounted, not deleted** (2026-10-28, at Shivanshu's call): `HomeHero` replaced it, dot grid included. `src/components/FluidHero/` stays intact, and its canvas exception is the hero glass's now
+- The figures' roll (`Stats/RollingFigures.tsx` — one IntersectionObserver and a timer, no requestAnimationFrame; each figure rolls up once in 1.6s as the list comes on screen, blurred while it runs, as an attribute the stylesheet draws over the real text, which never changes; never under reduced motion)
+- The homepage's scroll reveal (`ScrollReveal/ScrollReveal.tsx` — one IntersectionObserver that moves one attribute, and renders nothing; the animation is CSS in `globals.scss`. See "The scroll reveal" in AGENTS.md)
+- Hero villa canvas (`Hero/VillaCanvas.tsx` — three.js, dynamically imported; falls back to the server-rendered poster and loads no three.js on touch, reduced motion, Save-Data, slow connections or any WebGL failure). **Unmounted, not deleted:** the homepage renders `HomeHero` in its place. `src/components/Hero/` stays intact so the villa can come back
 - Hero service tabs (`Hero/ServiceTabs.tsx` — ARIA tablist, selection state). Unmounted with the villa
 - About page values (`About/ValuesHover.tsx` — delegated pointer listeners that open a value while a mouse rests on it and close it when the mouse leaves, unless it was clicked; the rows are native `<details name="values">`, so one-at-a-time, click, keyboard and no-JS are the browser's)
 - Hardware carousel (`Hardware/HardwareStage.tsx` — ARIA tablist, active slide, one IntersectionObserver; the timer is a CSS animation whose `animationend` advances the slide, and it never starts under reduced motion)
-- Partner cards (`Partners/PartnerCarousel.tsx` — ARIA tablist over the TIS and Fibaro cards, one IntersectionObserver; the hardware carousel's pattern sideways: a CSS-animation timer whose `animationend` advances the card, a pause button, held under keyboard focus, never started under reduced motion)
+- Partner cards (`Partners/PartnerCarousel.tsx` — ARIA tablist over the partner cards from Sanity, one IntersectionObserver; the hardware carousel's pattern sideways: a CSS-animation timer whose `animationend` advances the card, a pause button, held under keyboard focus, never started under reduced motion). **Unmounted, not deleted** (2026-11-14): TIS and Fibaro are in the hero's rail of makers' marks. `src/components/Partners/` and its content stay intact
+- The Process stack's snap (`Process/SheetSnap.tsx` — renders nothing; one ResizeObserver tells the stylesheet the held section's height, and one IntersectionObserver marks the first sheet as it covers four fifths of the screen, where the stylesheet grows it from 80% to full. Off under reduced motion and on a short screen, as the stack is)
 - Wireframe/scene reveal (Web Animations API)
 - Contact form (form state, Turnstile widget)
-- Mobile navigation (toggle state), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
+- Mobile navigation (toggle state, and the Solutions menu: open state from lg, the solutions in place of the links below it; a new page closes it), `Nav/SolutionsMenu.tsx` (the solution in hand, the swipe on its picture, and the opening: a solution with a page grows its picture into that page in a view transition, see "Solution pages" in AGENTS.md), and `Nav/NavLink.tsx` (`aria-current` on the current page, which only the client router knows after a soft navigation)
+- The solution pages' "Works with" diagram (`WorksWith/Wiring.tsx` — which button is picked, the panel's 4.5s cycle as a CSS animation's end, the glowing progress bar along the picked wire, a pause button for both (WCAG 2.2.2), one IntersectionObserver that draws the diagram in and holds the cycle off screen, and the arrow keys; the geometry is CSS. Nothing moves under reduced motion. See "Solution pages" in AGENTS.md)
 - Legal page table of contents (active-section tracking via IntersectionObserver)
+- The articles page's search and tag filter (`Blog/ArticleBrowser.tsx` — two controlled fields that choose among the articles the server already sent; nothing is fetched as you type, the search button only puts the field down, and without JavaScript every article is listed)
 - 404 particle text (canvas + requestAnimationFrame — see the motion-stack exception below)
 
 Everything else is a Server Component. If you're reaching for `'use client'`, a Server Component with a small client island probably works instead.
@@ -258,6 +269,8 @@ Everything else is a Server Component. If you're reaching for `'use client'`, a 
 ## Motion stack
 
 CSS transitions + IntersectionObserver + Web Animations API. Nothing else.
+
+The View Transitions API counts as CSS here (2026-11-15): the browser snapshots the page and the stylesheet animates the snapshots, with no library and no loop. One use, the solution opening (`Nav/SolutionsMenu.tsx`, its CSS in `globals.scss`), never under reduced motion.
 
 No GSAP. No Framer Motion. No Lenis. No smooth-scroll libraries. The JS budget can't afford them, and the `prefers-reduced-motion` path is simpler when animations are CSS-driven.
 
@@ -285,9 +298,32 @@ The Process rail's requestAnimationFrame fallback (`ProcessFallback.tsx`) was th
 
 **This still does not license a fourth.** The third is below, and it is the last.
 
-### The third exception: the fluid hero
+### The third exception: the hero's glass
 
-`src/components/FluidHero/FluidCanvas.tsx` runs a `requestAnimationFrame` loop that drives a GPU fluid simulation (`fluid.ts`, `shaders.ts`) on a `<canvas>` under the hero's copy. It replaced the villa hero on the homepage on 2026-09-28, as a temporary hero while the content is written, and it is the third and last place in the codebase animating outside the stack above.
+`src/components/HomeHero/GlassCanvas.tsx` draws the homepage hero's ground on a `<canvas>` with raw WebGL2 (`glass.ts`, `glass-shader.ts`): a blurred ring picture seen through reeded glass, and a small glow that follows a mouse behind the glass (Figma 4886:1856, built 2026-11-14). It took this exception over from the fluid hero (below), which never mounts beside it. It is the third and last place in the codebase drawing outside the stack above, and the number is not reused.
+
+**Why it was allowed:**
+
+- **The documented stack cannot express this.** Each reed shows a magnified, bent slice of what is behind it, and the glow behind the glass is bent with it. That is a lookup per pixel at an offset that depends on the pixel, a refraction, not a transition. CSS stripes over the picture were the fallback considered, and they draw lines on a picture rather than glass; an SVG displacement filter repaints the whole screen on the CPU in Safari on every pointer move.
+- **Zero dependencies.** Raw WebGL2, under 200 lines of TypeScript and GLSL. three.js was not used: it is still the villa's.
+- **Off the initial load.** The shader is a dynamic import after the page is interactive. The picture is a 3KB WebP (`public/hero/glass/ground.webp`, baked by `scripts/bake-glass-ground.mjs`) that the stylesheet paints first under drawn reed lines, so the canvas only sharpens what is already there. That picture, painted as the section's background and preloaded at high priority, is usually the largest paint; it lands with the first one.
+- **No loop.** One frame when the picture and the shader have loaded, one on a resize, and one a frame only while a mouse moves over the glass or the glow is fading (200ms). A still pointer and a touch screen cost nothing after the first frame.
+
+**What it must always do** (and what to check if it is ever touched):
+
+- **Gate `prefers-reduced-motion` in JS.** The glass is drawn, still, and the glow never is. `_reset.scss` cannot stop a requestAnimationFrame.
+- **Glow only for a fine pointer.** `(hover: hover) and (pointer: fine)`; a finger has nothing for it to follow. The pointer is heard on the window, so the glow reaches the screen's edges past the page's column.
+- **Gate Save-Data before the import**, and keep the CSS ground on any WebGL failure, a picture that will not decode, or a lost context. The canvas shows only once its first frame is drawn (`data-ready`).
+- **Cap the light.** The shader caps the glass's luminance at `LUMINANCE_CAP` (0.14), because `--color-text-inverse` (brown-100) sits on it: 4.5:1 or better at the cap, measured exactly in the test. Contrast is a floor; the effect is not.
+- **One consumer.** A second glass surface is a new decision.
+
+`src/components/HomeHero/__tests__/GlassCanvas.test.tsx` asserts the gates and the frames; `glass-shader.test.ts` the cap against the tokens; `glass.test.ts` the WebGL calls.
+
+#### Before it: the fluid hero, dormant
+
+`src/components/FluidHero/FluidCanvas.tsx` runs a `requestAnimationFrame` loop that drives a GPU fluid simulation (`fluid.ts`, `shaders.ts`) on a `<canvas>` under the hero's copy. It replaced the villa hero on the homepage on 2026-09-28, as a temporary hero while the content is written, and held the third exception until the glass took it on 2026-11-14.
+
+**Dormant since 2026-10-28.** `HomeHero` replaced it on the homepage, and the component is unmounted rather than deleted. Nothing ships it today. If it ever comes back, it takes the exception back from the glass rather than adding a fourth; its conditions below stand for that day.
 
 **Why it was allowed:**
 
@@ -316,5 +352,5 @@ The Process rail's requestAnimationFrame fallback (`ProcessFallback.tsx`) was th
 - **qera-system is read-only from this repo.** If a system document needs updating, say so — don't edit it here.
 - **No co-author attribution on commits or PRs.**
 - **Commit messages:** imperative mood, lowercase, concise. The diff tells what changed; the message tells why.
-- **Branch strategy:** `feature/*` branches off `latest`, the staging branch; `main` is production and is updated from `latest`. One concern per branch.
+- **Branch strategy:** two branches only (2026-11-21). `main` is production and `latest` is staging; changes reach `latest`, then `main`, by pull request. 2.0.0 was built on `version/2.0.0`, deleted once it was live; where 2.1.0's work is committed is decided when it starts. No feature branches.
 - **Push back.** If something is wrong, smells wrong, or could be better — say it immediately with the fix. Don't wait to be asked. Don't soften it.

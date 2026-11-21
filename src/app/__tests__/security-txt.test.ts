@@ -6,7 +6,9 @@
 // who finds a bug needs a way to report it that is not posting it publicly.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { EMAIL } from "../../lib/contact";
+import { SITE_SETTINGS } from "../../../sanity/seed/site-settings";
+
+const { email: EMAIL } = SITE_SETTINGS.contact;
 
 const file = readFileSync(join(process.cwd(), "public/.well-known/security.txt"), "utf8");
 const fields = Object.fromEntries(

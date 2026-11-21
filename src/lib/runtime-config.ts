@@ -15,9 +15,19 @@ const CHECKS: Record<string, { schema: z.ZodType; problem: string }> = {
     schema: z.email(),
     problem: "must be an address on the domain verified in Resend",
   },
-  NEXT_PUBLIC_WHATSAPP_NUMBER: {
-    schema: z.string().regex(/^[1-9]\d{8,14}$/),
-    problem: "must be the WhatsApp number as digits only, country code first, no +",
+  NEXT_PUBLIC_SANITY_PROJECT_ID: {
+    schema: z.string().regex(/^[a-z0-9]{8}$/),
+    problem: "must be the Sanity project id",
+  },
+  NEXT_PUBLIC_SANITY_DATASET: {
+    schema: z.enum(["production"]),
+    problem: "must be production: the ci dataset is test content",
+  },
+  // Without it the publish webhook answers 503 and an edit in the Studio never
+  // reaches the site, silently.
+  SANITY_REVALIDATE_SECRET: {
+    schema: z.string().min(32),
+    problem: "must be the webhook's secret, at least 32 characters",
   },
 };
 

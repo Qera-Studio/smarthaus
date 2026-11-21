@@ -7,10 +7,12 @@ The enquiry actions rate-limit sends in code (`src/lib/rate-limit.ts`: five per 
 In Vercel, open the project, then **Firewall**, then **Configure**, then **Add New Rule**.
 
 - **Name:** `Throttle form posts`
-- **If:** `Method` `equals` `POST`
+- **If:** `Method` `equals` `POST`, and `Request Path` `does not start with` `/api/`
 - **Then:** `Rate Limit`, fixed window, `60` seconds, `20` requests, keyed on `IP Address`, action `Deny`.
 
-Every POST on this site is an enquiry send (server actions post to the page they are on, `/` and `/contact`) or a CSP report to `/api/csp-report`. None of those legitimately exceeds twenty a minute from one address. GET requests, meaning every page view, are untouched.
+Every POST outside `/api/` is an enquiry send: server actions post to the page they are on, `/` and `/contact`. None legitimately exceeds twenty a minute from one address. GET requests, meaning every page view, are untouched.
+
+**Why `/api/` is left out** (2026-11-21). Safari sends a CSP report as one POST per violation (`report-uri`), and the strict Report-Only twin reports every inline style and script: 34 POSTs on one homepage load. Under the rule as first published, which caught every POST, a Safari visitor passed twenty on their first page and their enquiry was refused for the rest of that minute (measured on smarthaus.ae: 20 reports answered `204`, 14 refused). `/api/csp-report` keeps its own limits in code: a per-address limiter, a 16KB cap and a schema check. Sanity's publish webhook (`/api/revalidate`) is also outside the rule, and refuses any call without its signature, so a bulk publish is no longer throttled.
 
 Publish the rule, then note the date in `docs/launch-gate/blocked-on-input.md` against the firewall row and delete that row.
 
@@ -29,7 +31,9 @@ The e2e suite exploits the opposite. Its server is `next start` on loopback, whi
 After publishing, from one machine:
 
 ```sh
-for i in $(seq 1 25); do curl -s -o /dev/null -w "%{http_code}\n" -X POST https://smarthaus.ae/api/csp-report -H 'content-type: application/csp-report' -d '{"csp-report":{}}'; done
+for i in $(seq 1 25); do curl -s -o /dev/null -w "%{http_code}\n" -X POST https://smarthaus.ae/contact -H 'content-type: text/plain' -d 'x'; done | sort | uniq -c
 ```
 
-The first twenty answer `204` or `429` (the in-code limiter), and the rest are refused by the firewall. The Firewall tab's traffic view shows the denied requests.
+With no action header no server action runs and nothing is sent: the first twenty answer `405`, and the rest are refused by the firewall with `403`. The Firewall tab's traffic view shows the denied requests. Then load the homepage in Safari (or Playwright's WebKit) and check that every POST to `/api/csp-report` answers `204`, none `403`.
+
+Published and checked on 2026-11-20: twenty `204`s from `/api/csp-report`, then `403` from the firewall. Narrowed to leave out `/api/` and checked on 2026-11-21: twenty `405`s from `/contact`, then five `403`s; two WebKit homepage loads in a row, 68 reports, every one `204`.

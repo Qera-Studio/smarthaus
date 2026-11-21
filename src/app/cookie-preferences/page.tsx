@@ -1,32 +1,32 @@
 import type { Metadata } from "next";
 import { Consent } from "../../components/Consent";
 import styles from "./page.module.scss";
-import { pageMetadata } from "../../lib/metadata";
+import { pageMetadata, seoInput } from "../../lib/metadata";
+import { getConsentCopy } from "../../sanity/content";
 
-export const metadata: Metadata = pageMetadata({
-  title: "Cookie Preferences",
-  description:
-    "Turn analytics cookies on or off, and see exactly what each category does. Analytics is off until you turn it on.",
-  path: "/cookie-preferences",
-  // STILL noindex, and for a different reason than the placeholder was.
-  //
-  // The placeholder's own comment said to flip this to indexable in the change
-  // that replaced <ComingSoon />, on the grounds that an empty route is a
-  // thin-content signal. That reasoning is spent — this is a real page now —
-  // but a second one has taken over: the consent copy is counsel-pending, and
-  // consent-content-deck.md is explicit that it is reviewed alongside the
-  // privacy policy as ONE review rather than two.
-  //
-  // /privacy and /terms both ship `noindex` for exactly that reason, and
-  // sitemap.ts records why they are absent from it. Indexing this page while
-  // the two documents it depends on are unreviewed drafts would be
-  // inconsistent with them and would index copy a lawyer has not seen.
-  //
-  // TO PUBLISH: drop this and add /cookie-preferences to src/app/sitemap.ts, in
-  // the same change that clears the noindex from /privacy and /terms. All three
-  // move together.
-  index: false,
-});
+const PATH = "/cookie-preferences";
+
+// STILL noindex, and for a different reason than the placeholder was.
+//
+// The placeholder's own comment said to flip this to indexable in the change
+// that replaced <ComingSoon />, on the grounds that an empty route is a
+// thin-content signal. That reasoning is spent — this is a real page now —
+// but a second one has taken over: the consent copy is counsel-pending, and
+// consent-content-deck.md is explicit that it is reviewed alongside the
+// privacy policy as ONE review rather than two.
+//
+// /privacy and /terms both ship `noindex` for exactly that reason, and
+// the sitemap leaves them out. Indexing this page while
+// the two documents it depends on are unreviewed drafts would be
+// inconsistent with them and would index copy a lawyer has not seen.
+//
+// TO PUBLISH: turn on "Show in search" for this page (the consent document in
+// the Studio) in the same sitting as for /privacy and /terms, once counsel has
+// reviewed them. All three move together; the sitemap follows on its own.
+export async function generateMetadata(): Promise<Metadata> {
+  const { seo } = await getConsentCopy();
+  return pageMetadata(seoInput(PATH, seo));
+}
 
 /**
  * The permanent home of the cookie controls.
@@ -42,11 +42,12 @@ export const metadata: Metadata = pageMetadata({
  * banner's panel drift into two versions of one set of controls, and the copy
  * that is counsel-pending would have to be reviewed twice.
  */
-export default function CookiePreferencesPage() {
+export default async function CookiePreferencesPage() {
+  const { pageTitle } = await getConsentCopy();
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Cookie preferences</h1>
+        <h1 className={styles.title}>{pageTitle}</h1>
       </header>
 
       {/*

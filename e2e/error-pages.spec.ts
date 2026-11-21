@@ -40,7 +40,7 @@ test("offers the phone, WhatsApp and email", async ({ page }) => {
     "href",
     /^https:\/\/wa\.me\//,
   );
-  await expect(screen.getByRole("link", { name: "contact@mapletech.ae" })).toBeVisible();
+  await expect(screen.getByRole("link", { name: "hello@smarthaus.ae" })).toBeVisible();
 });
 
 test("Try again re-renders, and lands on the error again while the page still throws", async ({

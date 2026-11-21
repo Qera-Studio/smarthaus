@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { installEnv } from "./helpers/env";
 
-import type { Partner } from "../../../content/partners";
+import type { Partner } from "../../../sanity/types";
 import { PartnerCarousel } from "../PartnerCarousel";
 
 beforeEach(installEnv);
@@ -19,7 +19,7 @@ const partner = (id: string, name: string): Partner => ({
   title: `A ${name} partner`,
   body: `As a ${name} partner, Smarthaus installs and sets up ${name} systems.`,
   href: `https://${id}.example/`,
-  logo: { src: `/hero/${id}.png`, width: 1152, height: 400 },
+  logo: { src: `/hero/${id}.png`, width: 1152, height: 400, alt: name },
 });
 
 const THREE = [partner("one", "One"), partner("two", "Two"), partner("three", "Three")];
@@ -38,7 +38,7 @@ function press(key: string) {
 
 describe("PartnerCarousel with three partners", () => {
   beforeEach(() => {
-    render(<PartnerCarousel partners={THREE} />);
+    render(<PartnerCarousel visit="Visit" partners={THREE} />);
     tabs()[0]!.focus();
   });
 
@@ -138,7 +138,7 @@ describe("PartnerCarousel with three partners", () => {
 
 describe("PartnerCarousel with one partner", () => {
   it("shows that card, and the arrows stay on it", () => {
-    render(<PartnerCarousel partners={[partner("solo", "Solo")]} />);
+    render(<PartnerCarousel visit="Visit" partners={[partner("solo", "Solo")]} />);
     tabs()[0]!.focus();
     press("ArrowRight");
     press("ArrowLeft");

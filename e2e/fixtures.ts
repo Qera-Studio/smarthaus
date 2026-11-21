@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { test as base } from "@playwright/test";
+import { test as base, type Page } from "@playwright/test";
 
 import { SPLASH_SEEN_KEY } from "../src/lib/splash-boot";
 
@@ -35,8 +35,117 @@ export { expect, devices, type Locator, type Page } from "@playwright/test";
  * which honours the same Save-Data gate, so this fixture keeps it off in the
  * same way and `villa: true` opts back in to whichever hero canvas is mounted.
  * The option keeps its name: renaming it touches every spec for no behaviour.
+ *
+ * 2026-10-28: HomeHero replaced the fluid hero and has no canvas, so the
+ * option currently changes nothing on the homepage. infra.spec.ts pins that.
  */
-type Options = { villa: boolean; splash: boolean; clientAddress: string | undefined };
+type Options = {
+  villa: boolean;
+  cardBlur: boolean;
+  intro: boolean;
+  reveal: boolean;
+  splash: boolean;
+  clientAddress: string | undefined;
+};
+
+/*
+ * ## In WebKit the hero cards are not blurred unless a spec asks for it
+ *
+ * Each card in the homepage strip blurs what is behind its foot with
+ * backdrop-filter, and on a touch screen every card shows it at all times.
+ * WebKit on the Linux runner, which paints without a GPU, cannot: with those
+ * blurs on the page it never draws a frame at all, so requestAnimationFrame
+ * never fires and Playwright's wait for a stable box, before every click and
+ * scroll, never ends. On PR #65 (2026-11-01) that timed out 29 iPhone 17
+ * tests on `/`. Measured on the runner (draft PR #66): 0 frames as shipped,
+ * 63 a second with the cards' blur removed or with their ::before removed;
+ * removing their mask, their isolation, their images, the drift, or the
+ * pixel density changed nothing. macOS WebKit and Chromium draw it, and a
+ * phone has a GPU.
+ *
+ * Decided 2026-11-01: take the cards' blur off in WebKit only, before first
+ * paint, by an unlayered stylesheet that outranks the component layer.
+ * Chromium keeps it, so the mouse spec still asserts it. A spec that needs it
+ * in WebKit opts back in with
+ *   test.use({ cardBlur: true });
+ * which will stall on the Linux runner.
+ *
+ * The recorded cost: no e2e run checks the card blur in WebKit.
+ */
+/**
+ * The card-blur hold, for a page or for a context a test creates itself,
+ * which the fixture never sees (rate-limit.spec.ts's second visitor stalled
+ * on `/` without it). Before first paint: the stall begins with the first
+ * frame, so a stylesheet added at DOMContentLoaded comes too late (measured).
+ */
+export async function takeCardBlurOff(target: Pick<Page, "addInitScript">) {
+  await target.addInitScript((css) => {
+    const add = () => {
+      const style = document.createElement("style");
+      style.dataset.e2eCardBlurOff = "";
+      style.textContent = css;
+      (document.head ?? document.documentElement).append(style);
+    };
+    if (document.documentElement) add();
+    else
+      new MutationObserver((_, observer) => {
+        if (!document.documentElement) return;
+        observer.disconnect();
+        add();
+      }).observe(document, { childList: true });
+  }, CARD_BLUR_OFF_CSS);
+}
+
+export const CARD_BLUR_OFF_CSS =
+  "[data-hero-strip] *::before { -webkit-backdrop-filter: none; backdrop-filter: none; }";
+
+/*
+ * ## The homepage opening is off unless a spec asks for it
+ *
+ * On every full load the splash boot script sets data-intro on <html>, and
+ * while it is there the homepage's copy, strip, nav and contact bar fade and
+ * slide in over about 1.75s (HomeHero.module.scss, "The opening"). Axe reads
+ * half-faded text as a contrast failure, and every click and screenshot would
+ * wait out the slide. So the attribute is taken off as soon as it is set, in
+ * the microtask after the boot script, before anything paints: the page is
+ * the one a soft navigation back to the homepage shows. e2e/intro.spec.ts
+ * opts back in with
+ *   test.use({ intro: true });
+ *
+ * The recorded cost: no other spec sees the page while it arrives.
+ */
+export async function takeIntroOff(target: Pick<Page, "addInitScript">) {
+  await target.addInitScript(() => {
+    new MutationObserver(() => {
+      document.documentElement?.removeAttribute("data-intro");
+    }).observe(document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["data-intro"],
+    });
+  });
+}
+
+/**
+ * ## The scroll reveal is off unless a spec asks for it
+ *
+ * For the opening's reason: axe reads half-faded text as low contrast, and any
+ * spec reading a section would be racing its arrival. The attribute is put back
+ * to rest whenever ScrollReveal moves it. e2e/scroll-reveal.spec.ts opts back in
+ * with test.use({ reveal: true }).
+ */
+export async function takeRevealOff(target: Pick<Page, "addInitScript">) {
+  await target.addInitScript(() => {
+    new MutationObserver((records) => {
+      for (const { target: el } of records) {
+        if ((el as Element).getAttribute("data-reveal")) {
+          (el as Element).setAttribute("data-reveal", "");
+        }
+      }
+    }).observe(document, { subtree: true, attributes: true, attributeFilter: ["data-reveal"] });
+  });
+}
 
 /*
  * ## The splash is seen unless a spec asks for it
@@ -71,7 +180,40 @@ export function addressFor(seed: string): string {
   return `10.${a}.${b}.${(c! % 254) + 1}`;
 }
 
-export const test = base.extend<Options & { villaGate: void; clientGate: void; splashGate: void }>({
+export const test = base.extend<
+  Options & {
+    villaGate: void;
+    cardBlurGate: void;
+    introGate: void;
+    revealGate: void;
+    clientGate: void;
+    splashGate: void;
+  }
+>({
+  cardBlur: [false, { option: true }],
+  cardBlurGate: [
+    async ({ page, browserName, cardBlur }, use) => {
+      if (browserName === "webkit" && !cardBlur) await takeCardBlurOff(page);
+      await use();
+    },
+    { auto: true },
+  ],
+  intro: [false, { option: true }],
+  introGate: [
+    async ({ page, intro }, use) => {
+      if (!intro) await takeIntroOff(page);
+      await use();
+    },
+    { auto: true },
+  ],
+  reveal: [false, { option: true }],
+  revealGate: [
+    async ({ page, reveal }, use) => {
+      if (!reveal) await takeRevealOff(page);
+      await use();
+    },
+    { auto: true },
+  ],
   splash: [false, { option: true }],
   splashGate: [
     async ({ page, splash }, use) => {

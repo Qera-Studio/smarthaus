@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 
-import CookiePreferencesPage, { metadata } from "../page";
+import CookiePreferencesPage, { generateMetadata } from "../page";
+import { renderServer } from "../../../__tests__/helpers/server";
 
 /**
  * The permanent route back into the cookie controls (Legal System §6:
@@ -19,33 +20,37 @@ jest.mock("../../../components/Consent", () => ({
 }));
 
 describe("/cookie-preferences", () => {
+  let metadata: Awaited<ReturnType<typeof generateMetadata>>;
+  beforeAll(async () => {
+    metadata = await generateMetadata();
+  });
   beforeEach(() => mockConsent.mockClear());
 
-  it("names the page with its one h1", () => {
-    render(<CookiePreferencesPage />);
+  it("names the page with its one h1", async () => {
+    await renderServer(<CookiePreferencesPage />);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Cookie preferences");
   });
 
-  it("renders the banner's own controls in place, with nothing to dismiss", () => {
+  it("renders the banner's own controls in place, with nothing to dismiss", async () => {
     // One implementation, two placements: the page and the banner must not
     // drift into two versions of the counsel-pending copy.
-    render(<CookiePreferencesPage />);
+    await renderServer(<CookiePreferencesPage />);
     expect(screen.getByTestId("consent")).toBeInTheDocument();
     expect(mockConsent).toHaveBeenCalledTimes(1);
     expect(mockConsent.mock.calls[0]![0]).toEqual({ standalone: true });
   });
 
-  it("stays out of search until the privacy policy and terms are reviewed", () => {
+  it("stays out of search until the privacy policy and terms are reviewed", async () => {
     // All three move together: see the TO PUBLISH note in the page.
     expect(metadata.robots).toMatchObject({ index: false });
   });
 
-  it("canonicalises to its own path", () => {
+  it("canonicalises to its own path", async () => {
     expect(metadata.alternates?.canonical).toMatch(/\/cookie-preferences$/);
   });
 
-  it("says what the page does, and that analytics starts off", () => {
+  it("says what the page does, and that analytics starts off", async () => {
     expect(metadata.description).toMatch(/off until you turn it on/);
   });
 });

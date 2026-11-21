@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "../components/Button";
-import { EMAIL, PHONE_DISPLAY, PHONE_E164, whatsappLink } from "../lib/contact";
+import { FALLBACK_CONTACT as C, whatsappLink } from "../lib/contact";
 import styles from "./error.module.scss";
 
 /**
@@ -35,11 +35,11 @@ export default function Error({
 
       <ul className={styles.channels}>
         <li>
-          <a href={`tel:${PHONE_E164}`}>{PHONE_DISPLAY}</a>
+          <a href={`tel:${C.phoneE164}`}>{C.phoneDisplay}</a>
         </li>
         <li>
           <a
-            href={whatsappLink("Hi, a page on your site showed an error.")}
+            href={whatsappLink(C.whatsapp, "Hi, a page on your site showed an error.")}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -47,7 +47,7 @@ export default function Error({
           </a>
         </li>
         <li>
-          <a href={`mailto:${EMAIL}`}>{EMAIL}</a>
+          <a href={`mailto:${C.email}`}>{C.email}</a>
         </li>
       </ul>
 

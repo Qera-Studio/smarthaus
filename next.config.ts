@@ -21,6 +21,17 @@ const nextConfig: NextConfig = {
     // too. e2e/infra.spec.ts asserts it, so bringing AVIF back is deliberate.
     formats: ["image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    // Pictures from Sanity, fetched by the optimiser on the server and served
+    // from our own domain. The visitor's browser never asks Sanity for them,
+    // so the marketing CSP stays closed and the privacy policy's "Sanity sees
+    // nothing about you" stays true. Only this project's images.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn.sanity.io",
+        pathname: `/images/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID ?? "nqc5m5ls"}/**`,
+      },
+    ],
   },
 
   async headers() {
@@ -32,7 +43,7 @@ const nextConfig: NextConfig = {
 
     // Content-Security-Policy: defence-in-depth against XSS, data injection, and framing.
     // 'unsafe-inline' is needed for Next.js style injection in dev/prod.
-    // No wildcards. 'unsafe-eval' is dev-server only (see script-src below).
+    // Wildcards only for Clarity and Google Analytics, below. 'unsafe-eval' is dev-server only (see script-src below).
     //
     // script-src 'unsafe-inline': Next.js emits inline <script> tags for the
     // bootstrap payload and streaming chunks. A nonce-based CSP would require
@@ -50,7 +61,44 @@ const nextConfig: NextConfig = {
     // The hash is in the STRICT policy only, and must stay out of the enforced
     // one: a policy that lists a hash makes browsers ignore its
     // 'unsafe-inline', which would block every inline script Next emits.
-    const csp = (strict: boolean) =>
+    // Microsoft Clarity (consent-content-deck.md §8): open only once its id is
+    // set, so the policy stays closed until it can run. Its ingest hosts vary,
+    // so connect-src needs the wildcard; c.bing.com is its cookie sync.
+    const clarity = process.env.NEXT_PUBLIC_CLARITY_ID
+      ? {
+          script: " https://www.clarity.ms https://scripts.clarity.ms",
+          img: " https://c.clarity.ms https://c.bing.com",
+          connect: " https://*.clarity.ms https://c.bing.com",
+        }
+      : { script: "", img: "", connect: "" };
+    // Google Analytics, the same way (Google's own CSP guidance for GA4).
+    const ga4 = process.env.NEXT_PUBLIC_GA_ID
+      ? {
+          script: " https://www.googletagmanager.com",
+          img: " https://*.google-analytics.com https://*.googletagmanager.com",
+          connect:
+            " https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+        }
+      : { script: "", img: "", connect: "" };
+
+    // The Studio at /studio talks to Sanity's API over https and wss (project
+    // hosts and api.sanity.io itself), shows images from its CDN, avatars from
+    // the sign-in providers, and blob: previews of uploads. That route only:
+    // the marketing pages stay closed. Clarity and GA4 are left out there, so
+    // no session recording ever sees an editor's work. sanity-cdn.com is the
+    // Studio asking, on load and every 15 minutes, which version of Sanity is
+    // current (JSON only, so connect-src and not script-src); blocked, it
+    // logged "Failed to fetch version for package" on every visit.
+    const sanity = {
+      img: " blob: https://cdn.sanity.io https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
+      connect: " https://*.sanity.io wss://*.sanity.io https://sanity-cdn.com",
+      font: " https://design-system-static.sanity.io",
+    };
+
+    // `studio` is the Studio's own policy (Sanity's origins in, analytics out).
+    // `preview` is a page the Studio frames for an editor's draft preview: the
+    // same, and framable by our own origin only.
+    const csp = (strict: boolean, studio = false, preview = false) =>
       [
         "default-src 'self'",
         // React's dev-only debugging (callstack reconstruction) requires
@@ -75,7 +123,7 @@ const nextConfig: NextConfig = {
         //
         // React's dev-only debugging (callstack reconstruction) needs
         // full 'unsafe-eval'. Dev server only — never in production.
-        `script-src 'self'${strict ? ` ${CONSENT_BOOT_HASH} ${SPLASH_BOOT_HASH}` : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+        `script-src 'self'${studio ? "" : clarity.script + ga4.script}${strict ? ` ${CONSENT_BOOT_HASH} ${SPLASH_BOOT_HASH}` : " 'unsafe-inline'"} 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
         // DRACOLoader builds its decoder worker from a Blob, so the
         // worker's URL is blob: rather than a file on our origin.
         // Without this directive workers fall back to script-src, which
@@ -87,12 +135,12 @@ const nextConfig: NextConfig = {
         // can influence.
         "worker-src 'self' blob:",
         `style-src 'self'${strict ? "" : " 'unsafe-inline'"}`,
-        "img-src 'self' data:",
-        "font-src 'self'",
-        "connect-src 'self'",
+        `img-src 'self' data:${studio ? sanity.img : clarity.img + ga4.img}`,
+        `font-src 'self'${studio ? sanity.font : ""}`,
+        `connect-src 'self'${studio ? sanity.connect : clarity.connect + ga4.connect}`,
         "media-src 'self'",
         "object-src 'none'",
-        "frame-ancestors 'none'",
+        preview ? "frame-ancestors 'self'" : "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
         // Omitted when PLAYWRIGHT is set, and only then. That server is plain
@@ -234,6 +282,30 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy-Report-Only",
             value: csp(true),
           },
+        ],
+      },
+      // After the site-wide rule, so these two keys replace its (the last
+      // match wins). `:path*` matches /studio itself too.
+      {
+        source: "/studio/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: csp(false, true) },
+          { key: "Content-Security-Policy-Report-Only", value: csp(true, true) },
+        ],
+      },
+      // Draft preview, and only that: the Studio's Presentation tool frames the
+      // page beside the form, so it may be framed by our own origin, and runs
+      // under the Studio's policy, so no analytics records an editor's drafts.
+      // Draft mode is a cookie only the enable route sets, after Sanity has
+      // checked the editor's secret; a visitor never carries it. Setting it by
+      // hand gains nothing but this policy on your own browser.
+      {
+        source: "/:path*",
+        has: [{ type: "cookie", key: "__prerender_bypass" }],
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: csp(false, true, true) },
+          { key: "Content-Security-Policy-Report-Only", value: csp(true, true, true) },
         ],
       },
       { source: "/hero/:path*", headers: [publicAssetCache] },

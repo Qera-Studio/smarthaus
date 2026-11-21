@@ -48,6 +48,15 @@ function renderButton() {
 }
 
 describe("ScrollToTop", () => {
+  it("is an arrow, not words, and still called Back to top", () => {
+    const { button } = renderButton();
+    expect(button.textContent).toBe("");
+    expect(button).toHaveAttribute("aria-label", "Back to top");
+    const svg = button.querySelector("svg");
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+    expect(svg?.querySelector("path")).not.toBeNull();
+  });
+
   it("stays hidden and out of the tab order until the page top has scrolled away", () => {
     const { button, sentinelIO } = renderButton();
     expect(button).not.toHaveAttribute("data-visible");
@@ -89,6 +98,13 @@ describe("ScrollToTop", () => {
 describe("ScrollToTop.module.scss", () => {
   // jsdom applies no CSS; e2e/scroll-to-top.spec.ts reads the computed colour.
   const scss = readFileSync(join(__dirname, "..", "ScrollToTop.module.scss"), "utf8");
+
+  it("is a square around the arrow, the size the footer reserves", () => {
+    expect(scss).toMatch(/inline-size:\s*var\(--scroll-top-block-size\)/);
+    expect(scss).toMatch(/block-size:\s*var\(--scroll-top-block-size\)/);
+    expect(scss).toMatch(/place-items:\s*center/);
+    expect(scss).not.toMatch(/\.label/);
+  });
 
   it("paints brown-600 with bone ink, and nothing that swaps them", () => {
     expect(scss).toMatch(/background-color:\s*#\{\$brown-600\};/);

@@ -24,7 +24,11 @@ const WHATSAPP_MESSAGE = "Hi, I'm interested in home automation for my villa.";
  * only one and its LCP element, and process.spec.ts and forced-colors.spec.ts
  * find the primary CTA by its text.
  */
-export function FluidHero() {
+/**
+ * Unmounted since 2026-10-28. `whatsapp` is the number from the site settings
+ * in Sanity, digits only: whoever mounts it again passes getSettings()'s.
+ */
+export function FluidHero({ whatsapp }: { whatsapp: string }) {
   return (
     // data-hero is where FluidCanvas hangs its listeners and its ready flag.
     // The canvas is a client component and this section is not, so the state
@@ -51,7 +55,7 @@ export function FluidHero() {
           <Link href="/contact" className={styles.primary}>
             Book a site visit
           </Link>
-          <a href={whatsappLink(WHATSAPP_MESSAGE)} className={styles.secondary}>
+          <a href={whatsappLink(whatsapp, WHATSAPP_MESSAGE)} className={styles.secondary}>
             Message on WhatsApp
           </a>
         </div>

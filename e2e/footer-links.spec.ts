@@ -37,7 +37,7 @@ test("the phone link dials the E.164 number and shows the grouped one", async ({
 test("the email link opens a message to the published address", async ({ page }) => {
   const mail = footer(page).locator('a[href^="mailto:"]');
   await expect(mail).toHaveCount(1);
-  await expect(mail).toHaveAttribute("href", "mailto:contact@mapletech.ae");
+  await expect(mail).toHaveAttribute("href", "mailto:hello@smarthaus.ae");
 });
 
 test.describe("social links", () => {
@@ -63,7 +63,26 @@ test.describe("social links", () => {
       .toBeGreaterThan(0);
   });
 
-  for (const platform of ["Instagram", "Facebook", "X", "LinkedIn"]) {
+  // Live since 2026-11-20 (Shivanshu).
+  for (const [platform, href] of [
+    ["Instagram", "https://www.instagram.com/smarthaus.dxb/"],
+    ["Facebook", "https://www.facebook.com/profile.php?id=61596663210810"],
+    ["LinkedIn", "https://www.linkedin.com/company/smarthaus-smart-home-automation"],
+  ]) {
+    test(`${platform} goes to the Smarthaus profile, named as the profile`, async ({ page }) => {
+      const link = footer(page).getByRole("link", {
+        name: `Smarthaus on ${platform}`,
+        exact: true,
+      });
+      await expect(link).toHaveAttribute("href", href!);
+    });
+  }
+
+  test("shows the opening hours with the contact details", async ({ page }) => {
+    await expect(footer(page).getByText("Monday to Saturday, 9am to 6pm")).toBeVisible();
+  });
+
+  for (const platform of ["X"]) {
     test(`${platform} tells a screen reader the profile is coming soon`, async ({ page }) => {
       // Until the real profile exists the link lands on the platform's home
       // page, so its accessible name must not promise the Smarthaus profile.

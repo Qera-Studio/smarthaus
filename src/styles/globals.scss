@@ -209,6 +209,92 @@
   }
 }
 
+// How long a heading waits, once on screen, before its words start.
+$reveal-word-wait: 400ms;
+
+// The Studio (/studio) fills the screen on its own: the nav, the bars, the
+// footer, the splash and the banner are not drawn and not in the a11y tree.
+@layer utilities {
+  body:has([data-studio]) > :not(main) {
+    display: none;
+  }
+
+  main:has([data-studio]) {
+    padding-block-end: 0;
+  }
+}
+
+// The homepage's scroll reveal (ScrollReveal.tsx). Each runs once and lets go:
+// fill backwards, never forwards, and an animation rather than a transition, so
+// a card's own hover keeps its timing and no stagger is left on it. Screen only,
+// so a print of the page never comes out with blanks. No motion, and nothing
+// hidden, under reduced motion.
+@layer utilities {
+  @media screen and (prefers-reduced-motion: no-preference) {
+    [data-reveal="waiting"] {
+      opacity: 0;
+    }
+
+    [data-reveal="in"]:not([data-reveal-words]) {
+      animation-name: reveal-rise;
+      animation-duration: 800ms;
+      animation-timing-function: var(--ease-out);
+      animation-fill-mode: backwards;
+    }
+
+    // By its place among its siblings, in the sheet: an inline style would trip
+    // the strict CSP twin. The sixth and on share a delay, so none waits long.
+    @for $i from 2 through 6 {
+      [data-reveal="in"]:not([data-reveal-words]):nth-child(#{$i}) {
+        animation-delay: #{($i - 1) * 90ms};
+      }
+    }
+
+    // The paragraph under a heading follows it, never comes ahead of it.
+    [data-reveal-words] + [data-reveal="in"]:not([data-reveal-words]) {
+      animation-delay: #{$reveal-word-wait + 300ms};
+    }
+
+    // Word by word: these are inline, so they fade and sharpen but do not rise.
+    // Held back and slow (Shivanshu, 2026-11-04): started on arrival, it was
+    // over by the time the visitor stopped scrolling.
+    [data-reveal="in"][data-reveal-words] > span {
+      --reveal-blur: 6px;
+
+      animation-name: reveal-word;
+      animation-duration: 1200ms;
+      animation-delay: $reveal-word-wait;
+      animation-timing-function: var(--ease-out);
+      animation-fill-mode: backwards;
+
+      // Blur is hard work for a low-end phone.
+      @media (max-width: 40rem) {
+        --reveal-blur: 0px;
+      }
+    }
+
+    @for $i from 2 through 8 {
+      [data-reveal="in"][data-reveal-words] > span:nth-of-type(#{$i}) {
+        animation-delay: #{$reveal-word-wait + ($i - 1) * 60ms};
+      }
+    }
+  }
+
+  @keyframes reveal-rise {
+    from {
+      opacity: 0;
+      translate: 0 28px;
+    }
+  }
+
+  @keyframes reveal-word {
+    from {
+      opacity: 0;
+      filter: blur(var(--reveal-blur));
+    }
+  }
+}
+
 @layer utilities {
   .visually-hidden {
     @include visually-hidden;
@@ -230,6 +316,131 @@
       color: var(--color-text-inverse);
       border-radius: var(--radius-md);
       font-weight: $font-weight-semibold;
+    }
+  }
+}
+
+// --- The solution opening ---------------------------------------------------
+//
+// SolutionsMenu.tsx: a solution's picture in the nav's menu grows into its
+// page's, half the screen, in one native view transition (Shivanshu,
+// 2026-11-15), over the page it was opened from, which gives way only near
+// the end; the title and its line rise in once the picture has landed. Here
+// and not in a module, which refuses a selector without a class of its own.
+// Never under reduced motion: the menu does not start one.
+@layer base {
+  :root {
+    --solution-open: calc(var(--duration-slower) * 1.5);
+  }
+
+  ::view-transition-group(solution-picture) {
+    animation-duration: var(--solution-open);
+    // Slow away, long and soft into place.
+    animation-timing-function: cubic-bezier(0.7, 0, 0.2, 1);
+  }
+
+  // Both pictures fill the moving box as they fill their own frames, cropped
+  // rather than stretched while its shape changes. A snapshot shows what
+  // overflows it unless told to clip: without it both crops showed at once,
+  // one wider and one taller than the box.
+  ::view-transition-old(solution-picture),
+  ::view-transition-new(solution-picture) {
+    block-size: 100%;
+    object-fit: cover;
+    overflow: clip;
+    animation-timing-function: cubic-bezier(0.7, 0, 0.2, 1);
+  }
+
+  // From lg the bar stays drawn above the picture as it grows, as it is on
+  // the page it opens: its own layer, held still. Named on the old screen
+  // too, so the bar as it was, open panel and all, leaves at once: held under
+  // the picture, the panel was an empty frame where the picture had been, and
+  // a scrolled capsule showed beside the new bar. Named here and not in
+  // Nav.module.scss, which renamed it as it does a class, so until
+  // 2026-11-15 none of the rules below reached the bar.
+  @include bp-lg {
+    :root[data-solution-leaving] [data-site-nav],
+    :root[data-solution-opening] [data-site-nav] {
+      view-transition-name: solution-nav;
+    }
+  }
+
+  ::view-transition-group(solution-copy),
+  ::view-transition-group(solution-nav),
+  ::view-transition-new(solution-nav) {
+    animation-name: none;
+  }
+
+  // The bar as it was, from lg (Nav.module.scss), goes from the first frame.
+  ::view-transition-old(solution-nav) {
+    animation-name: none;
+    opacity: 0;
+  }
+
+  // And the bar stays above the picture. The layers stack in the order the
+  // old screen paints them, and there the picture is inside the bar.
+  ::view-transition-group(solution-nav) {
+    z-index: var(--z-sticky);
+  }
+
+  // The page it was opened from stays whole under the growing picture
+  // (Shivanshu, 2026-11-15), rather than emptying from the first frame, and
+  // gives way to the page it opens once the picture has come nine tenths of
+  // its way: at 66% of the time, on the curve above, over the next tenth.
+  // The two opacities always sum to one, since the browser adds the pair's
+  // light. Keyed on the opening's attribute, so no other root transition
+  // changes.
+  :root[data-solution-opening]::view-transition-old(root),
+  :root[data-solution-opening]::view-transition-new(root) {
+    animation-duration: var(--solution-open);
+    animation-timing-function: linear;
+  }
+
+  :root[data-solution-opening]::view-transition-old(root) {
+    animation-name: solution-page-out;
+  }
+
+  :root[data-solution-opening]::view-transition-new(root) {
+    animation-name: solution-page-in;
+  }
+
+  @keyframes solution-page-out {
+    0%,
+    66% {
+      opacity: 1;
+    }
+
+    76%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes solution-page-in {
+    0%,
+    66% {
+      opacity: 0;
+    }
+
+    76%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  // Then the title, once the picture has landed.
+  ::view-transition-new(solution-copy) {
+    animation-name: solution-copy-in;
+    animation-duration: var(--duration-slower);
+    animation-timing-function: var(--ease-out);
+    animation-delay: var(--solution-open);
+    animation-fill-mode: both;
+  }
+
+  @keyframes solution-copy-in {
+    from {
+      opacity: 0;
+      translate: 0 var(--space-4);
     }
   }
 }

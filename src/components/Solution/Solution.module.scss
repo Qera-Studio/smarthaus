@@ -1,0 +1,373 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+// A solution's page (Figma 4903:4464). The hero runs from the screen's left
+// edge; everything under it sits in the page's column, 48px in on a desktop
+// as the design's grid is.
+
+@layer blocks {
+  .page {
+    // L2 component tokens.
+    //
+    // The design's hairlines are ink at a quarter pixel; one pixel at half
+    // strength reads the same and does not vanish on a 1x screen.
+    --solution-rule: color-mix(in srgb, var(--brown-950) 50%, transparent);
+    // The nav at rest on a desktop, which the picture runs up under.
+    --solution-nav-over: calc(var(--nav-rest-inset) + var(--nav-top-block-size));
+
+    color: var(--color-text-primary);
+  }
+
+  // --- The hero ---------------------------------------------------------------
+  //
+  // Below lg the picture spans the screen and the copy follows it. From lg the
+  // picture is the screen's left half, from under the nav to the foot of the
+  // screen, and the copy is centred down beside it, 64px off.
+
+  .hero {
+    display: grid;
+    gap: $space-6;
+
+    @include bp-lg {
+      grid-template-columns: 50vw minmax(0, 1fr);
+      column-gap: $space-16;
+      align-items: center;
+      // svh, never vh or dvh: Footer.module.scss has the long version.
+      min-block-size: calc(100svh - var(--announce-block-size));
+      margin-block-start: calc(-1 * var(--solution-nav-over));
+      margin-inline-start: calc(50% - 50vw);
+    }
+  }
+
+  .picture {
+    position: relative;
+    // To the screen's edges, past the page's gutter.
+    margin-inline: calc(50% - 50vw);
+    // A 4:5 frame on a phone, never taller than most of its screen.
+    block-size: min(125vw, 75svh);
+    overflow: clip;
+    // What shows while the file arrives, when it has not been warmed.
+    background-color: var(--color-bg-muted);
+
+    @include bp-lg {
+      align-self: stretch;
+      block-size: auto;
+      margin-inline: 0;
+    }
+  }
+
+  .pictureImage {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .copy {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    min-inline-size: 0;
+
+    @include bp-lg {
+      // The nav covers the picture's top, not the copy's: centre it on the
+      // screen, not on the box that runs up under the nav.
+      padding-block-start: var(--solution-nav-over);
+    }
+  }
+
+  // The design's 48px semibold and 24px regular, on its 1.4 line.
+  .title {
+    font-size: var(--type-h1);
+    font-weight: $font-weight-semibold;
+    line-height: 1.4;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  // 24px from xl, as the design's; a size down below it.
+  .lede {
+    font-size: var(--font-size-lg);
+    line-height: 1.4;
+    letter-spacing: -0.02em;
+    text-wrap: pretty;
+
+    @include bp-xl {
+      font-size: var(--font-size-xl);
+    }
+  }
+
+  // --- Under the hero ---------------------------------------------------------
+
+  .body {
+    @include bp-lg {
+      padding-inline: $space-6;
+    }
+  }
+
+  .features {
+    padding-block-start: $space-24;
+  }
+
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+    max-inline-size: 46rem;
+    margin-block-end: $space-8;
+  }
+
+  // The features section runs 4px under the design's sizes (Shivanshu,
+  // 2026-11-15): the h2 4px under the page's, never under 24px.
+  .heading {
+    font-size: max(var(--font-size-xl), calc(var(--type-h2) - 0.25rem));
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  // 16px, not 4px under its 18: smaller would sit under the features' lines.
+  .standfirst {
+    max-inline-size: 46ch;
+    font-size: var(--font-size-base);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  // Five columns by three rows from lg (Shivanshu, 2026-11-15): the picture
+  // takes the bottom-left two by two, the dark box the bottom row's last two,
+  // and the nine features flow round them in order. Two columns from md, with
+  // the box beside the ninth feature and the picture across the foot; one on
+  // a phone. The hairlines are the grid's own gaps over its ground.
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--solution-rule);
+    background-color: var(--solution-rule);
+
+    @include bp-md {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-flow: row dense;
+    }
+
+    @include bp-lg {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      // The design's boxes, about as tall as they are wide at 1440.
+      grid-auto-rows: minmax(16.25rem, auto);
+    }
+  }
+
+  // The icon at the top, the title and its line pinned to the foot.
+  .feature {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: $space-8;
+    padding: $space-4;
+    background-color: var(--color-bg-canvas);
+  }
+
+  .icon {
+    flex: none;
+  }
+
+  // A 20px title over a 16px line at every width: the design's 24 over 20,
+  // 4px under (Shivanshu, 2026-11-15).
+  .featureTitle {
+    font-size: var(--font-size-lg);
+    font-weight: $font-weight-medium;
+    line-height: 1.4;
+    letter-spacing: -0.02em;
+  }
+
+  .featureText {
+    margin-block-start: $space-1;
+    font-size: var(--font-size-base);
+    line-height: $line-height-snug;
+    letter-spacing: -0.02em;
+    text-wrap: pretty;
+  }
+
+  .featureImage {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: clip;
+    background-color: var(--color-bg-muted);
+
+    img {
+      object-fit: cover;
+    }
+
+    @include bp-md {
+      grid-column: 1 / -1;
+      aspect-ratio: 2;
+    }
+
+    @include bp-lg {
+      grid-column: 1 / span 2;
+      grid-row: 2 / span 2;
+      aspect-ratio: auto;
+    }
+  }
+
+  // The dark box: a line and the button to the contact page, in brown-100,
+  // the line at its top left and the button at its bottom right (Shivanshu,
+  // 2026-11-15). The button takes no class, so the box aligns to the end and
+  // the line alone goes back to the start.
+  .slab {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: $space-6;
+    padding: $space-6;
+    background-color: var(--brown-950);
+    color: var(--brown-100);
+
+    @include bp-lg {
+      grid-column: 4 / span 2;
+      grid-row: 3;
+    }
+  }
+
+  .slabText {
+    align-self: flex-start;
+    max-inline-size: 28ch;
+    font-size: var(--font-size-lg);
+    line-height: $line-height-snug;
+    letter-spacing: -0.02em;
+    text-wrap: pretty;
+  }
+
+  // --- The process ------------------------------------------------------------
+  //
+  // Visit, install, maintain (Shivanshu, 2026-11-16): the heading and its line
+  // centred, then three framed cards, one column on a phone and a row from md.
+  // In each, its drawing large and centred at the top, the title and its line
+  // left aligned at the foot. A row stretches its cards to one height, so the
+  // feet line up.
+
+  .process {
+    padding-block-start: $space-24;
+  }
+
+  // After .intro, so it wins: the heading and the line centred on the page.
+  .centred {
+    align-items: center;
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  // The reset strips markers only from ol[role="list"], and the role is
+  // redundant on an <ol> (jsx-a11y/no-redundant-roles): stripped here, as the
+  // footer and the nav do.
+  .steps {
+    display: grid;
+    gap: $space-4;
+    list-style: none;
+
+    @include bp-md {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: $space-8;
+    // 16px at every width (Shivanshu, 2026-11-16), as a feature's box above.
+    padding: $space-4;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--solution-rule);
+    background-color: var(--color-bg-canvas);
+
+    // In a row, the cards share two rows, the drawings' and the words', so
+    // every title starts level however long the line under it; the longest
+    // reaches the foot. The gap above is the rows' gap here.
+    @include bp-md {
+      display: grid;
+      grid-row: span 2;
+      grid-template-rows: subgrid;
+    }
+  }
+
+  // The drawings are 480 by 440; 20rem is about three quarters of a card at
+  // 1440, and a phone's card is narrower than that. Auto margins centre it in
+  // the flex column and the grid alike.
+  .drawing {
+    inline-size: min(100%, 20rem);
+    block-size: auto;
+    margin-inline: auto;
+  }
+
+  // 24px over 16px, the features' sizes a step up: these cards are three
+  // across where those are five.
+  .stepTitle {
+    font-size: var(--font-size-xl);
+    font-weight: $font-weight-medium;
+    line-height: 1.4;
+    letter-spacing: -0.02em;
+  }
+
+  .stepText {
+    margin-block-start: $space-2;
+    font-size: var(--font-size-base);
+    line-height: $line-height-normal;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
+  // --- The questions ----------------------------------------------------------
+  //
+  // The About page's pattern: a rule across the top, the title on the left
+  // half and the answers on the right. The enquiry form under it brings its
+  // own 96px and rule.
+
+  .ruled {
+    margin-block-start: $space-24;
+    padding-block-start: $space-3;
+    border-block-start-style: solid;
+    border-block-start-width: 1px;
+    border-block-start-color: var(--color-border);
+
+    @include bp-lg {
+      padding-block-start: $space-4;
+    }
+  }
+
+  .pattern {
+    display: grid;
+    gap: $space-6;
+
+    @include bp-lg {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: $space-12;
+    }
+  }
+
+  .patternTitle {
+    font-size: var(--type-h3);
+    font-weight: $font-weight-regular;
+    line-height: $line-height-snug;
+    letter-spacing: -0.01em;
+  }
+
+  .rows {
+    --legal-body-size: var(--type-body);
+
+    min-inline-size: 0;
+
+    // The section's rule already sits just above the first row.
+    > :first-child {
+      border-block-start-width: 0;
+    }
+  }
+}

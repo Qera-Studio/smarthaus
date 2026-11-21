@@ -40,14 +40,11 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-rows: 1fr;
+    // 16px between cards at every width (2026-10-28; it was 32 from lg).
     gap: $space-4;
     margin: 0;
     padding: 0;
     list-style: none;
-
-    @include bp-lg {
-      gap: $space-8;
-    }
   }
 
   // One shade darker than the canvas (brown-100), at half strength. Text
@@ -72,6 +69,43 @@
     line-height: $line-height-tight;
     font-variant-numeric: tabular-nums;
     color: var(--color-text-primary);
+  }
+
+  // The rolling figure (RollingFigures), drawn over the real one, which stays
+  // in the page: a screen reader, a crawler, a search in the page and a print
+  // all only ever get the true number. Empty alt text, for browsers that take
+  // it, keeps the passing digits out of the accessibility tree. Not where a
+  // colour cannot be made transparent, which would draw the two on each other.
+  @media screen and (forced-colors: none) {
+    .value[data-roll] {
+      position: relative;
+      color: transparent;
+
+      &::after {
+        content: attr(data-roll);
+        content: attr(data-roll) / "";
+        position: absolute;
+        inset-block-start: 0;
+        inset-inline-start: 0;
+        color: var(--color-text-primary);
+      }
+
+      // Motion blur (Shivanshu, 2026-11-04): hazy and soft while the digits run
+      // fast, in focus as they settle. As long as ROLL_MS, on the same fast
+      // start, so the blur falls with their speed.
+      &[data-rolling]::after {
+        animation-name: stats-roll-blur;
+        animation-duration: 1600ms;
+        animation-timing-function: var(--ease-out);
+      }
+    }
+  }
+
+  @keyframes stats-roll-blur {
+    from {
+      opacity: 0.5;
+      filter: blur(#{$space-2});
+    }
   }
 
   .label {

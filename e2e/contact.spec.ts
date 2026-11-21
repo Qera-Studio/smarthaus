@@ -171,38 +171,36 @@ test("every FAQ opens by keyboard", async ({ page }) => {
   }
 });
 
-test("no FAQ structured data while the assessment fee is unconfirmed", async ({ page }) => {
-  // The AED 1,500 figure is `pending` in src/content/faq.ts. Structured data is
-  // what an answer engine quotes verbatim, so it must not carry a price nobody
-  // has signed off. /faq withholds its schema for the same reason.
-  //
-  // When the fee is confirmed, this assertion inverts rather than gets deleted.
-  // The site and page schema are here (business, website, page); what must
-  // not be is a FAQPage, or any node carrying the fee.
+test("carries its questions as FAQPage structured data, now the free visit is confirmed", async ({
+  page,
+}) => {
+  // Withheld while the visit fee was unconfirmed; the visit is free
+  // (Shivanshu, 2026-11-19), so the assertion inverted rather than went.
   const blocks = await page
     .locator('script[type="application/ld+json"]')
     .evaluateAll((els) => els.map((el) => el.textContent ?? ""));
-  expect(blocks.join("")).not.toContain('"FAQPage"');
-  expect(blocks.join("")).not.toMatch(/1,?500/);
+  const faq = blocks.map((b) => JSON.parse(b)).find((b) => b["@type"] === "FAQPage");
+  const questions = await page.locator("details summary").allTextContents();
+  expect(faq.mainEntity.map((q: { name: string }) => q.name)).toEqual(
+    questions.map((q) => q.trim()),
+  );
+  expect(blocks.join("")).not.toMatch(/paid visit|credited in full/);
 });
 
-test("the fee is stated once, and only where a reader can question it", async ({ page }) => {
+test("the page quotes no price", async ({ page }) => {
+  // The prices are on /pricing, the one place they change.
+  await expect(page.locator("main")).not.toContainText(/AED|\d,\d{3}/);
   const answers = (await page.locator("details p").allTextContents()).join(" ");
-  expect(answers).toContain("AED 1,500");
+  expect(answers).not.toMatch(/AED|\d,\d{3}/);
 });
 
-test("the FAQ does not claim a founding year", async ({ page }) => {
-  // AGENTS.md: the founding year is a placeholder and must never be invented.
-  // This is the answer most likely to acquire one by a well-meaning edit.
-  //
-  // Read from the DOM, not innerText: a closed <details> correctly excludes its
-  // answer from the rendered text, and opening each one first would test the
-  // disclosure rather than the copy.
-  const answers = await page.locator("details p").allTextContents();
-  const copy = answers.join(" ");
-
-  expect(copy).toContain("SIRA-licensed Dubai company");
-  expect(copy).not.toMatch(/operating since/i);
+test("the FAQ states the confirmed founding year and the free visit", async ({ page }) => {
+  // 2019, Maple Technologies' year: the same team, ownership and operations
+  // as Smarthaus (Shivanshu, 2026-11-19). Read from the DOM, not innerText: a
+  // closed <details> correctly excludes its answer from the rendered text.
+  const copy = (await page.locator("details p").allTextContents()).join(" ");
+  expect(copy).toContain("SIRA-licensed Dubai company operating since 2019");
+  expect(copy).toContain("The site visit is free.");
   expect(copy).not.toContain("[YEAR]");
 });
 

@@ -15,7 +15,10 @@ import { ScrollToTop } from "@/components/ScrollToTop/ScrollToTop";
 import { HardwareStage } from "@/components/Hardware/HardwareStage";
 import { VillaCanvas } from "@/components/Hero/VillaCanvas";
 import { ConsentShell } from "@/components/Consent/ConsentShell";
-import { HARDWARE_ITEMS } from "@/content/hardware";
+import { HOME_PAGE } from "../../../sanity/seed/home-page";
+import { CONSENT_COPY } from "../../../sanity/seed/consent-copy";
+
+const HARDWARE_ITEMS = HOME_PAGE.hardware.items;
 
 jest.mock("next/navigation", () => ({ usePathname: () => "/" }));
 
@@ -196,6 +199,7 @@ describe("NavShell", () => {
       <NavShell
         brandMark={<span>mark</span>}
         brandFull={<span>full</span>}
+        solutions={<span>solutions</span>}
         links={<ul />}
         cta={<a href="/contact">Book</a>}
         footer={<span>foot</span>}
@@ -276,7 +280,7 @@ describe("ScrollToTop", () => {
 
 describe("HardwareStage", () => {
   function renderStage() {
-    const { container } = render(<HardwareStage items={HARDWARE_ITEMS} />);
+    const { container } = render(<HardwareStage href="/solutions" items={HARDWARE_ITEMS} />);
     const root = container.firstElementChild!;
     const bar = () => container.querySelector("[data-running]")!;
     return { root, bar };
@@ -348,6 +352,7 @@ describe("ConsentShell Escape", () => {
   function renderBanner() {
     render(
       <ConsentShell
+        copy={CONSENT_COPY}
         intro={<p>intro</p>}
         panelIntro={<p>panel</p>}
         essential={<p>essential</p>}

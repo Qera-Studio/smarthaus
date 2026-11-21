@@ -146,7 +146,7 @@ test.describe("files crawlers and researchers read", () => {
     const res = await request.get("/.well-known/security.txt");
     expect(res.status()).toBe(200);
     expect(res.headers()["content-type"]).toMatch(/^text\/plain/);
-    expect(await res.text()).toContain("Contact: mailto:contact@mapletech.ae");
+    expect(await res.text()).toContain("Contact: mailto:hello@smarthaus.ae");
   });
 
   test("serves robots.txt with the production rules outside a preview", async ({ request }) => {

@@ -66,66 +66,13 @@
           }
         },
         {
-          "matchingUrlPattern": "^http://localhost:3210/(contact)?$",
+          "matchingUrlPattern": "^http://localhost:3210/(contact|pricing)?$",
           "assertions": {
             "categories:seo": [
               "error",
               {
                 "minScore": 1.0,
                 "aggregationMethod": "median-run"
-              }
-            ]
-          }
-        },
-        {
-          "matchingUrlPattern": "^http://localhost:3210/pricing$",
-          "assertions": {
-            "document-title": [
-              "error",
-              {
-                "minScore": 1
-              }
-            ],
-            "meta-description": [
-              "error",
-              {
-                "minScore": 1
-              }
-            ],
-            "http-status-code": [
-              "error",
-              {
-                "minScore": 1
-              }
-            ],
-            "link-text": [
-              "error",
-              {
-                "minScore": 1
-              }
-            ],
-            "crawlable-anchors": [
-              "error",
-              {
-                "minScore": 1
-              }
-            ],
-            "robots-txt": [
-              "error",
-              {
-                "minScore": 1
-              }
-            ],
-            "hreflang": [
-              "error",
-              {
-                "minScore": 1
-              }
-            ],
-            "canonical": [
-              "error",
-              {
-                "minScore": 1
               }
             ]
           }

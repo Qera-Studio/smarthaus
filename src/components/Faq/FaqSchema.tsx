@@ -1,4 +1,4 @@
-import { FAQ_CATEGORIES } from "../../content/faq";
+import type { FaqCategory } from "../../sanity/types";
 import { plainAnswer } from "./FaqAccordion";
 import { JsonLd } from "../Schema";
 
@@ -7,7 +7,10 @@ import { JsonLd } from "../Schema";
  * question cannot exist in the schema but not on the page, which is the
  * mismatch Google treats as a spam signal.
  *
- * WHY IT IS GATED (see FAQ_IS_PUBLISHABLE in src/app/faq/page.tsx):
+ * Rendered by /contact, from its questions. /faq has none yet: its forty
+ * questions are about 11.5 KB against SEO System §9's 4 KB (docs/updates/2.1.0.md).
+ *
+ * WHY IT IS GATED (a page renders it only while it is in search):
  *
  * Google restricted FAQ rich results to government and health sites in 2023,
  * so this markup is not chasing a search snippet. It is here for AEO/GEO — SEO
@@ -19,11 +22,11 @@ import { JsonLd } from "../Schema";
  * unconfirmed figures are exactly the facts that must not be handed to an
  * answer engine to repeat.
  */
-export function FaqSchema() {
+export function FaqSchema({ categories }: { categories: readonly FaqCategory[] }) {
   const schema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: FAQ_CATEGORIES.flatMap((category) =>
+    mainEntity: categories.flatMap((category) =>
       category.entries.map((entry) => ({
         "@type": "Question",
         name: entry.question,

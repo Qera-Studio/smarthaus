@@ -1,7 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 
-import { HARDWARE_ITEMS } from "../../../content/hardware";
+import { HOME_PAGE } from "../../../../sanity/seed/home-page";
 import { Hardware } from "../Hardware";
+import { renderServer } from "../../../__tests__/helpers/server";
+
+const HARDWARE_ITEMS = HOME_PAGE.hardware.items;
 
 /**
  * The section around the carousel: its heading and lead. The carousel itself
@@ -21,16 +24,16 @@ jest.mock("../HardwareStage", () => ({
 describe("Hardware section", () => {
   beforeEach(() => mockStage.mockClear());
 
-  it("names the section by its h2", () => {
-    render(<Hardware />);
+  it("names the section by its h2", async () => {
+    await renderServer(<Hardware />);
     const heading = screen.getByRole("heading", { level: 2, name: "One stop, full house" });
     expect(screen.getByRole("region", { name: "One stop, full house" })).toContainElement(heading);
   });
 
-  it("says what is installed and who looks after it, in plain words", () => {
+  it("says what is installed and who looks after it, in plain words", async () => {
     // Rewritten 2026-10-02 to read more naturally. The old lead opened on
     // "five apps, four installers", a figure nobody had sourced.
-    render(<Hardware />);
+    await renderServer(<Hardware />);
     expect(
       screen.getByText(
         "Cameras, locks, lighting, climate and sound on one system. The team that installs it is the team you call when something needs attention.",
@@ -39,8 +42,8 @@ describe("Hardware section", () => {
     expect(document.body.textContent).not.toMatch(/five apps|four installers/);
   });
 
-  it("hands the carousel every hardware item, in content order", () => {
-    render(<Hardware />);
+  it("hands the carousel every hardware item, in content order", async () => {
+    await renderServer(<Hardware />);
     expect(mockStage).toHaveBeenCalledTimes(1);
     expect(mockStage.mock.calls[0]![0].items).toBe(HARDWARE_ITEMS);
   });

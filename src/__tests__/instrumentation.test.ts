@@ -12,7 +12,9 @@ beforeEach(() => {
     "RESEND_API_KEY",
     "LEAD_EMAIL",
     "LEAD_FROM_EMAIL",
-    "NEXT_PUBLIC_WHATSAPP_NUMBER",
+    "NEXT_PUBLIC_SANITY_PROJECT_ID",
+    "NEXT_PUBLIC_SANITY_DATASET",
+    "SANITY_REVALIDATE_SECRET",
   ]) {
     delete process.env[name];
   }
@@ -34,7 +36,9 @@ describe("register", () => {
       "RESEND_API_KEY",
       "LEAD_EMAIL",
       "LEAD_FROM_EMAIL",
-      "NEXT_PUBLIC_WHATSAPP_NUMBER",
+      "NEXT_PUBLIC_SANITY_PROJECT_ID",
+      "NEXT_PUBLIC_SANITY_DATASET",
+      "SANITY_REVALIDATE_SECRET",
     ]);
   });
 
@@ -44,7 +48,9 @@ describe("register", () => {
       RESEND_API_KEY: "re_AbC123_xyz7890",
       LEAD_EMAIL: "contact@mapletech.ae",
       LEAD_FROM_EMAIL: "leads@smarthaus.ae",
-      NEXT_PUBLIC_WHATSAPP_NUMBER: "971543755150",
+      NEXT_PUBLIC_SANITY_PROJECT_ID: "nqc5m5ls",
+      NEXT_PUBLIC_SANITY_DATASET: "production",
+      SANITY_REVALIDATE_SECRET: "x".repeat(32),
     });
     const logged = jest.spyOn(console, "error").mockImplementation(() => {});
     register();

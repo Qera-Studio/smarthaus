@@ -48,8 +48,12 @@ export function ScrollToTop() {
         // path where there is no transition to wait for.
         inert={!visible || undefined}
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        // An arrow, not the words (2026-10-28); the name stays for AT.
+        aria-label="Back to top"
       >
-        <span className={styles.label}>Back to top</span>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
+          <path d="M11 20V7.8l-5.6 5.6L4 12l8-8 8 8-1.4 1.4L13 7.8V20z" />
+        </svg>
       </button>
     </>
   );

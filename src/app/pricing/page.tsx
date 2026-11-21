@@ -1,34 +1,28 @@
 import type { Metadata } from "next";
 
 import { ClosingCta } from "../../components/ClosingCta";
+import { JsonLd, pageGraph } from "../../components/Schema";
 import { PricingComparison } from "../../components/PricingComparison";
 import { PricingTiers } from "../../components/PricingTiers";
-import { PRICING_FAQS } from "../../content/pricing";
 import styles from "./page.module.scss";
-import { pageMetadata } from "../../lib/metadata";
+import { pageMetadata, seoInput } from "../../lib/metadata";
+import { getPricingPage } from "../../sanity/content";
+
+const PATH = "/pricing";
 
 /**
- * LAUNCH GATE. Same mechanism as /faq.
- *
- * Every price and feature on this page is placeholder (see the claims note in
- * src/content/pricing.ts), so the page ships noindex, stays out of the sitemap
- * and emits no structured data. Visitors reach it from the nav; only crawlers
- * are told to wait. To publish: confirm the numbers with Sunil, flip this to
- * true, add /pricing to src/app/sitemap.ts, and reconsider Offer markup, all
- * in one change.
+ * "Show in search" on the pricing document decides the robots line and the
+ * sitemap entry. On since 2026-11-19, when the package deck confirmed every
+ * package, device count and price on the page.
  */
-const PRICING_IS_PUBLISHABLE = false;
-
-export const metadata: Metadata = pageMetadata({
-  title: "Pricing",
-  description:
-    "Four levels of Smarthaus automation, from a single room to a fully engineered residence, with every feature compared side by side.",
-  path: "/pricing",
-  index: PRICING_IS_PUBLISHABLE,
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const { seo } = await getPricingPage();
+  return pageMetadata(seoInput(PATH, seo));
+}
 
 /**
- * The pricing page: the four tier cards, then the full comparison.
+ * The pricing page: the four package cards, the device table, the deck's
+ * package notes, then the questions a price raises.
  *
  * Not LegalPage. That shell brings a table-of-contents rail and a prose column
  * built for legal text, neither of which a row of cards wants. The header is
@@ -39,21 +33,39 @@ export const metadata: Metadata = pageMetadata({
  * are h3 under the section's h2. PricingTiers takes the level as a prop for
  * exactly that.
  */
-export default function PricingPage() {
+export default async function PricingPage() {
+  const page = await getPricingPage();
   return (
     <div className={styles.page}>
+      {/* The page and its breadcrumb, as every page in search has. No Offer:
+          a starting price is not the price (PricingTiers). */}
+      {page.seo.index ? (
+        <JsonLd data={pageGraph(seoInput(PATH, page.seo), page.updatedAt)} />
+      ) : null}
+
       <header className={styles.header}>
-        <h1 className={styles.title}>Pricing</h1>
-        <p className={styles.standfirst}>
-          Four levels, from a single room to a fully engineered residence. Every one is quoted
-          against your own drawings after a site visit, so the figure is where the conversation
-          starts rather than where it lands.
-        </p>
+        <h1 className={styles.title}>{page.title}</h1>
+        <p className={styles.standfirst}>{page.standfirst}</p>
       </header>
 
       <PricingTiers headingLevel="h2" />
 
       <PricingComparison />
+
+      {/* The deck's terms under its prices: what the survey can change and
+          what is quoted separately. An ordered list, as the deck numbers them. */}
+      <section className={styles.section} aria-labelledby="pricing-notes">
+        <h2 className={styles.sectionTitle} id="pricing-notes">
+          {page.notesHeading}
+        </h2>
+        <ol className={styles.notes}>
+          {page.notes.map((note) => (
+            <li key={note} className={styles.note}>
+              {note}
+            </li>
+          ))}
+        </ol>
+      </section>
 
       {/* The questions a number raises. Six, not the full FAQ: that page is
           linked from the closing prompt for everything else. The block is the
@@ -61,10 +73,10 @@ export default function PricingPage() {
           content swapped. */}
       <section className={styles.section} aria-labelledby="pricing-faqs">
         <h2 className={styles.sectionTitle} id="pricing-faqs">
-          Frequently Asked Questions
+          {page.faqHeading}
         </h2>
         <div className={styles.faqs}>
-          {PRICING_FAQS.map(({ id, question, answer }) => (
+          {page.faqs.map(({ id, question, answer }) => (
             // Native details/summary: keyboard operable and open without JS for
             // free, and it costs no client component. `name` makes them an
             // exclusive accordion, which browsers implement natively.
@@ -84,11 +96,11 @@ export default function PricingPage() {
       </section>
 
       <ClosingCta
-        heading="Not sure which level?"
-        body="Most people are between two. Tell us about the property and we will say which one fits, and why."
+        heading={page.closing.heading}
+        body={page.closing.body}
         href="/contact"
-        label="Book a site visit"
-        secondary={{ href: "/faq", label: "Read the full FAQ" }}
+        label={page.closing.cta}
+        secondary={{ href: "/faq", label: page.closing.secondary ?? "" }}
       />
     </div>
   );

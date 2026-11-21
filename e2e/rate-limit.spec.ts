@@ -1,4 +1,4 @@
-import { test, expect, addressFor, type Page } from "./fixtures";
+import { test, expect, addressFor, takeCardBlurOff, type Page } from "./fixtures";
 import { expectHydrated } from "./checks";
 import { mailFor, uniqueName } from "./mail";
 
@@ -78,7 +78,11 @@ test("a refused visitor keeps what they typed", async ({ page }) => {
   await expect(form.getByLabel("Phone")).toHaveValue("0543755150");
 });
 
-test("another visitor is unaffected while one is refused", async ({ page, browser }) => {
+test("another visitor is unaffected while one is refused", async ({
+  page,
+  browser,
+  browserName,
+}) => {
   await pin(page, "rate-limit-first");
   const marker = uniqueName("Busy");
   // Each send confirmed before the next, or a navigation can abandon one
@@ -97,6 +101,8 @@ test("another visitor is unaffected while one is refused", async ({ page, browse
       ),
     },
   });
+  // A context made here gets no fixtures: hold the card blur as they do.
+  if (browserName === "webkit") await takeCardBlurOff(other);
   const otherPage = await other.newPage();
   await sendShort(otherPage, uniqueName("Other visitor"));
   await expect(otherPage.getByRole("status")).toBeVisible();

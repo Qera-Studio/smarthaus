@@ -300,6 +300,11 @@ describe("dependency monitoring", () => {
   it("opens its PRs against latest, so they pass the gate before main", () => {
     expect(dependabot.match(/target-branch: latest/g)).toHaveLength(2);
   });
+
+  it("opens no branches, for either ecosystem, so the repo keeps its three", () => {
+    expect(dependabot.match(/open-pull-requests-limit: 0/g)).toHaveLength(2);
+    expect(dependabot).not.toMatch(/open-pull-requests-limit: [1-9]/);
+  });
 });
 
 describe("the delivery job", () => {
