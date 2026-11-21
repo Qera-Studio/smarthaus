@@ -21,6 +21,9 @@ import path from "node:path";
 export const PROCESSORS = [
   { name: "Vercel Inc.", evidence: () => true },
   { name: "Resend", evidence: ({ dep }) => dep("resend") },
+  // Hosts the smarthaus.ae mailboxes, where every enquiry lands (the MX record
+  // is smtp.google.com). Nothing in the code installs it, so it is always on.
+  { name: "Google Workspace", evidence: () => true },
   {
     name: "Vercel Web Analytics and Speed Insights",
     evidence: ({ dep }) => dep("@vercel/analytics") || dep("@vercel/speed-insights"),
