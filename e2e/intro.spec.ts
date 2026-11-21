@@ -318,9 +318,9 @@ test.describe("the page's scroll", () => {
     const before = await drift(page);
     await scrollAndSettle(page, sliver - 150);
     const after = await drift(page);
-    // The readings ride in the message: a trace does not record what an
-    // evaluate returned, and this has failed on CI each way, -296 and +20633,
-    // without reproducing locally (2026-11-20, 2026-11-21).
+    // The readings ride in the message: the trace of the +20633 failure listed
+    // these reads but kept none of their values. It has failed on CI each way,
+    // -296 and +20633, without reproducing locally (2026-11-20, 2026-11-21).
     expect(added(before, after), JSON.stringify({ sliver, before, after })).toBeLessThan(-500);
   });
 
