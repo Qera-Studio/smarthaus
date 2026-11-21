@@ -55,7 +55,9 @@ export default defineConfig({
   expect: { timeout: 7_000 },
   use: {
     baseURL: BASE_URL,
-    trace: "on-first-retry",
+    // The first failed attempt, not the retry: a flake passes on retry, so a
+    // retry's trace never shows what went wrong (2026-11-21, four CI flakes).
+    trace: "retain-on-first-failure",
     screenshot: "only-on-failure",
   },
   projects: [

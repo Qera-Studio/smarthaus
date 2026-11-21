@@ -7,11 +7,6 @@ import {
   withConsentDecided,
 } from "./checks";
 
-// This file has flaked on CI and never locally, so keep the first failed
-// attempt's trace (docs/launch-gate/pre-launch-fixes.md, "CI flakes").
-// A worker option, so it can only be set here, at the top of the file.
-test.use({ trace: "retain-on-first-failure" });
-
 /**
  * The /pricing page: four cards, then the comparison.
  *
