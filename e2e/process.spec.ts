@@ -9,6 +9,11 @@ import {
   withConsentDecided,
 } from "./checks";
 
+// This file has flaked on CI and never locally, so keep the first failed
+// attempt's trace (docs/launch-gate/pre-launch-fixes.md, "CI flakes").
+// A worker option, so it can only be set here, at the top of the file.
+test.use({ trace: "retain-on-first-failure" });
+
 /**
  * The "Our Process" stack: six full-screen sheets, each pinned at the top of
  * the screen while the next rises from the bottom edge and covers it.
