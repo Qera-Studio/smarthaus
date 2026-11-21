@@ -22,7 +22,11 @@ const tracked = (...globs: string[]) =>
     .split("\n")
     .filter((file) => file && !file.startsWith("qera-system/") && existsSync(join(ROOT, file)));
 
-const DOCS = tracked("README.md", "AGENTS.md", "CLAUDE.md", "docs/*.md", "docs/**/*.md");
+// docs/legal/ holds the legal drafting records as counsel left them: their
+// links point at site routes (/privacy), not at files, and they are not edited.
+const DOCS = tracked("README.md", "AGENTS.md", "CLAUDE.md", "docs/*.md", "docs/**/*.md").filter(
+  (doc) => !doc.startsWith("docs/legal/"),
+);
 
 const SYSTEMS: Record<string, string> = {
   Legal: "qera-system/systems/1-legal-system.md",
@@ -170,8 +174,14 @@ describe("numbers the project docs state", () => {
 });
 
 describe("the branch flow the docs describe", () => {
-  it.each(["CLAUDE.md", "AGENTS.md"])("%s cuts feature branches from latest, not main", (doc) => {
-    expect(read(doc)).not.toMatch(/`feature\/\*`[^.\n]*off `main`/);
-    expect(read(doc)).toMatch(/`feature\/\*`[^.\n]*off `latest`/);
-  });
+  it.each(["CLAUDE.md", "AGENTS.md", "README.md"])(
+    "%s names the two branches and no feature branches",
+    (doc) => {
+      const text = read(doc);
+      for (const branch of ["`main`", "`latest`"]) {
+        expect(text).toContain(branch);
+      }
+      expect(text).not.toContain("feature/*");
+    },
+  );
 });

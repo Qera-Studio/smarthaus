@@ -1,6 +1,9 @@
 import { test, expect, type Page } from "./fixtures";
 import { expectHydrated } from "./checks";
-import { SOLUTIONS_MENU_ITEMS } from "../src/content/solutions-menu";
+import { SITE_SETTINGS } from "../sanity/seed/site-settings";
+
+// The ci dataset the e2e build reads is the seed.
+const SOLUTIONS_MENU_ITEMS = SITE_SETTINGS.solutionsMenu.items;
 import { NAV_LINKS } from "../src/lib/nav-links";
 
 /**

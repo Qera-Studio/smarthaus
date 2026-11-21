@@ -260,28 +260,34 @@ test.describe("404 particle physics on touch", () => {
   };
 
   /**
-   * Drag a synthetic finger across the given box.
+   * Drag a synthetic finger across the given box, and return the field's
+   * centroid the frame after the finger stops.
    *
    * PointerEvents are dispatched directly rather than driven through
    * `page.touchscreen`, because the component listens on `window` for a
    * *stream* of pointermove with `pointerType: "touch"`, and the touchscreen
    * API emits a tap rather than a sustained drag with intermediate moves.
    */
-  // One drag, run inside the page on its own frame clock: a move every 28ms,
-  // as a finger reports. It used to be fifteen page.evaluate round trips with
-  // a 28ms wait between them, which only approximates 28ms where a round trip
-  // is free. On the CI runner each trip cost far more, the finger moved at a
-  // fraction of the intended speed, and a speed-driven field barely moved
-  // (11 and 21px against ~66px locally). The assertions did not change.
-  const drag = async (
+  // One drag, run inside the page: a move at most every 28ms, as a finger
+  // reports, with the finger's place set by the wall clock, so it crosses the
+  // stage in 392ms however slowly the page draws. Two earlier versions tied the
+  // finger to something slower than a finger. Fifteen page.evaluate round trips
+  // first (11 and 21px on CI against ~66px locally), then one move per 28ms of
+  // frames: on the CI iPhone, from 2026-11-09, frames came slowly enough that
+  // the finger crawled and the field moved 9 to 15px. Measured locally with
+  // 40ms and 80ms of work added to every frame: 5 to 33px and 11 to 18px that
+  // way, 60 to 67px and 34px this way. The field is read in the same evaluate,
+  // because on a slow runner the trip back to read it gave the field time to
+  // relax. The assertions did not change.
+  const drag = (
     page: import("@playwright/test").Page,
     box: { x: number; y: number; width: number; height: number },
     opts: { down: boolean },
-  ) => {
-    await page.evaluate(
+  ) =>
+    page.evaluate(
       ([bx, by, bw, bh, down]) =>
-        new Promise<void>((resolve) => {
-          const STEPS = 14;
+        new Promise<{ x: number; y: number }>((resolve) => {
+          const DURATION = 14 * 28;
           const INTERVAL = 28;
           const y = by + bh / 2;
           const mk = (type: string, x: number) =>
@@ -293,24 +299,43 @@ test.describe("404 particle physics on touch", () => {
               bubbles: true,
               pointerId: 1,
             });
-          let i = 0;
+          // The centroid helper below, repeated: a function passed to evaluate
+          // cannot call another, and the page's CSP rightly refuses eval.
+          const centroidNow = () => {
+            const c = document.querySelector("canvas") as HTMLCanvasElement;
+            const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+            let n = 0;
+            let sx = 0;
+            let sy = 0;
+            for (let i = 3; i < d.length; i += 4) {
+              if (d[i]! > 10) {
+                const px = (i - 3) / 4;
+                n++;
+                sx += px % c.width;
+                sy += Math.floor(px / c.width);
+              }
+            }
+            return { x: n ? sx / n : 0, y: n ? sy / n : 0 };
+          };
+          let start = -1;
           let last = -Infinity;
           const tick = (now: number) => {
-            if (now - last >= INTERVAL) {
-              const x = bx + 8 + ((bw - 16) * i) / STEPS;
-              if (i === 0 && down) window.dispatchEvent(mk("pointerdown", x));
-              window.dispatchEvent(mk("pointermove", x));
-              last = now;
-              i += 1;
+            if (start < 0) {
+              start = now;
+              if (down) window.dispatchEvent(mk("pointerdown", bx + 8));
             }
-            if (i <= STEPS) requestAnimationFrame(tick);
-            else resolve();
+            const k = Math.min((now - start) / DURATION, 1);
+            if (now - last >= INTERVAL || k === 1) {
+              window.dispatchEvent(mk("pointermove", bx + 8 + (bw - 16) * k));
+              last = now;
+            }
+            if (k < 1) requestAnimationFrame(tick);
+            else requestAnimationFrame(() => resolve(centroidNow()));
           };
           requestAnimationFrame(tick);
         }),
       [box.x, box.y, box.width, box.height, opts.down] as const,
     );
-  };
 
   test("a finger drag deforms the field, and lifting it lets the field recover", async ({
     page,
@@ -324,8 +349,7 @@ test.describe("404 particle physics on touch", () => {
     const box = await stageBox(page);
     const atRest = await centroid(page);
 
-    await drag(page, box, { down: true });
-    const dragged = await centroid(page);
+    const dragged = await drag(page, box, { down: true });
 
     // The swipe is the energy source, exactly as a mouse sweep is: the field
     // must actually move, not merely idle-drift. Measured ~66px.
@@ -418,8 +442,7 @@ test.describe("404 particle physics on touch", () => {
     // The same move stream, without the pointerdown. On touch this is what a
     // browser emits around scrolls and cancelled gestures, and it must be
     // ignored — otherwise the glyphs dent as the user scrolls past them.
-    await drag(page, box, { down: false });
-    const after = await centroid(page);
+    const after = await drag(page, box, { down: false });
 
     expect(shift(before, after)).toBeLessThan(15);
   });

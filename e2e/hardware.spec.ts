@@ -368,13 +368,11 @@ test("keyboard focus on a slide's CTA holds the slide still", async ({ page }) =
   const s = section(page);
   const cta = s.getByRole("link", { name: "View smart locks" });
   await s.getByRole("tab", { name: "Smart lock" }).focus();
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  // Wherever Tab landed, put it on the CTA the keyboard's way.
+  // Keyboard focus on the CTA without a Tab walk, which WebKit would take past
+  // links: a key press, then focus, is :focus-visible in every engine.
+  await page.keyboard.press("Shift");
   await cta.focus();
-  await page.keyboard.press("Shift+Tab");
-  await page.keyboard.press("Tab");
+  expect(await cta.evaluate((el) => el.matches(":focus-visible"))).toBe(true);
   await expect(cta).toBeFocused();
   await page.waitForTimeout(4_000);
   await expect(cta).toBeFocused();

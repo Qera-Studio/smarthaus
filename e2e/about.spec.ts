@@ -100,10 +100,9 @@ test("keeps each photograph's edge out of sight while it travels", async ({ page
 });
 
 {
-  // Skipped, not deleted: the title is shipped below 3:1 on purpose, as an
-  // accepted risk (docs/launch-gate/accepted-risks.md, 2026-10-07). Unskip it
-  // when that row is resolved; it should then pass.
-  test.skip(`keeps the title at 3:1 or better over the photo`, async ({ page }) => {
+  // Skipped from 2026-10-07 while the title shipped below 3:1 as an accepted
+  // risk; unskipped 2026-11-19 with the shade on the hero's layer.
+  test(`keeps the title at 3:1 or better over the photo`, async ({ page }) => {
     // Sampled under the words alone, with their ink made transparent.
     const title = page.locator("h1");
     const box = await title.evaluate((el) => {

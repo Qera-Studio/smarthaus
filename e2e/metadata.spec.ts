@@ -8,10 +8,26 @@ import { test, expect } from "./fixtures";
  * Desktop Chrome only: the head is the same markup on every device.
  */
 const SITE = "https://smarthaus.ae";
-const INDEXABLE = ["/", "/contact", "/about", "/accessibility"];
-const NOINDEX = [
+// An article's own head (one og:image, its picture) is in e2e/blog.spec.ts.
+const INDEXABLE = [
+  "/",
+  "/contact",
+  "/about",
+  "/accessibility",
+  "/blog",
   "/pricing",
   "/faq",
+  // Reviewed and approved as written; in search since 2026-11-20.
+  "/solutions/cameras",
+  "/solutions/lighting",
+  "/solutions/audio",
+  "/solutions/ac",
+  "/solutions/garage",
+  "/solutions/smart-lock",
+  "/solutions/wall-controller",
+  "/solutions/curtains",
+];
+const NOINDEX = [
   "/privacy",
   "/terms",
   "/cookie-preferences",

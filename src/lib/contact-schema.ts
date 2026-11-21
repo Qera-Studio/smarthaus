@@ -171,5 +171,19 @@ export const shortContactSchema = baseSchema.omit({
   marketingConsent: true,
 });
 
+/**
+ * The hero's one field (HomeHero/HeroLead.tsx): an email and nothing else, so
+ * here it is required, where every other form makes it optional.
+ */
+export const heroLeadSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, { message: "Add your email so we can reply." })
+    .refine((value) => value.length <= MAX_LENGTH.email && z.email().safeParse(value).success, {
+      message: "Check the email address.",
+    }),
+});
+
 export type ContactInput = z.input<typeof contactSchema>;
 export type ContactData = z.infer<typeof contactSchema>;

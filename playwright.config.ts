@@ -55,7 +55,12 @@ export default defineConfig({
   expect: { timeout: 7_000 },
   use: {
     baseURL: BASE_URL,
-    trace: "on-first-retry",
+    // The first failed attempt, not the retry: a flake passes on retry, so a
+    // retry's trace never shows what went wrong (2026-11-21, four CI flakes).
+    // Without the screencast, which loads CI's WebKit runner (no GPU): the 404's
+    // touch test failed there once traces were on, at 9 frames a second
+    // (2026-11-21). Actions, page snapshots, console and network still record.
+    trace: { mode: "retain-on-first-failure", screenshots: false },
     screenshot: "only-on-failure",
   },
   projects: [
@@ -117,7 +122,9 @@ export default defineConfig({
     // — see next.config.ts. Both are correct in production and unchanged there;
     // on plain-HTTP loopback they make WebKit abort every asset, leaving a page
     // that renders but never hydrates.
-    command: `rm -rf ${MAIL_SINK} && PLAYWRIGHT=1 pnpm build && PLAYWRIGHT=1 ${SINK_ENV}pnpm start --port ${PORT}`,
+    // NEXT_PUBLIC_SANITY_DATASET=ci: the suite pins wording, so it reads the
+    // seeded ci dataset, never production, which editors change.
+    command: `rm -rf ${MAIL_SINK} && export NEXT_PUBLIC_SANITY_DATASET=ci && PLAYWRIGHT=1 pnpm build && PLAYWRIGHT=1 ${SINK_ENV}pnpm start --port ${PORT}`,
     port: PORT,
     reuseExistingServer: false,
     // A cold `next build` takes well over Playwright's 60s default.

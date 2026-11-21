@@ -20,8 +20,8 @@ Security System §12 asks for this decision to be made before it is needed: this
    - If the bad version ran in CI, rotate the repository secrets and review the Actions logs for the affected runs.
 4. **Tell the client** if any credential that touches their data or their inbox was exposed. Legal System's breach clocks apply if personal data was reachable.
 
-## Known advisories in the dev-only tree (2026-09-26)
+## Known advisories in the dev-only tree (2026-11-21)
 
-`pnpm audit` reports seven advisories, all through `@lhci/cli` (Lighthouse CI), which runs only in CI and never ships to a visitor: `tmp` (high, low), `extract-zip` (two high, no patched version), `qs` (two moderate), `uuid` (moderate). `pnpm audit --prod` is clean. The Lighthouse job holds no secrets, which bounds what a compromised tool there could reach.
+`pnpm audit` reports 20. Eighteen come through `@lhci/cli` 0.15.1 (Lighthouse CI), which runs only in CI's `lighthouse` job and never ships to a visitor: one critical (`proxy-addr`, inside the Express server it starts only for a static directory, which this project does not use: `startServerCommand` in `lighthouserc.json`), seven high (`tmp`, `extract-zip` twice, `basic-ftp`, `compression`, `zod`, `body-parser`), nine moderate and one low. The other two are moderate: `glob` under Jest, and `minimatch` under Sanity, the one `pnpm audit --prod` reports, below CI's `--audit-level high`. The Lighthouse job holds no secrets, which bounds what a compromised tool there could reach.
 
-Open question for the owner: override the three that have patched versions (`tmp`, `qs`, `uuid`) now, or wait for Lighthouse CI to update them. `extract-zip` cannot be fixed until its maintainers publish a patch.
+Decided 2026-11-21 (Shivanshu): wait for Lighthouse CI rather than override them. Its 0.16.1 (published 2026-11-11) drops `tmp` and lifts Express, `compression`, `uuid` and `proxy-agent`, but brings Lighthouse 13 in place of 12.6, which moves what the gate measures, so it is a 2.1.0 upgrade with a re-baseline (`docs/updates/2.1.0.md`).

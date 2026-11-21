@@ -50,9 +50,9 @@ describe("error.tsx", () => {
     const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
     expect(whatsapp.getAttribute("href")).toMatch(/^https:\/\/wa\.me\/\d+\?text=/);
     expect(whatsapp).toHaveAttribute("rel", "noopener noreferrer");
-    expect(screen.getByRole("link", { name: "contact@mapletech.ae" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "hello@smarthaus.ae" })).toHaveAttribute(
       "href",
-      "mailto:contact@mapletech.ae",
+      "mailto:hello@smarthaus.ae",
     );
   });
 
@@ -78,7 +78,7 @@ describe("global-error.tsx", () => {
   it("gives the phone and email, and a way to retry", () => {
     const html = markup(error("boom"));
     expect(html).toContain('href="tel:+971543755150"');
-    expect(html).toContain('href="mailto:contact@mapletech.ae"');
+    expect(html).toContain('href="mailto:hello@smarthaus.ae"');
     expect(html).toContain(">Try again</button>");
   });
 

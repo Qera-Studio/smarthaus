@@ -1,57 +1,72 @@
 // The footer as rendered: the newsletter that must not accept an address, the
 // published contact channels, and the social links' honest names.
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { Footer } from "../Footer";
-import { SOCIALS } from "../socials";
+import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
+import { SOCIAL_ICONS } from "../socials";
+import { renderServer } from "../../../__tests__/helpers/server";
+
+// The profiles are content (siteSettings.socials); the glyphs are code. Joined
+// here, as the footer joins them. The seed is what the ci dataset holds.
+const SOCIALS = SITE_SETTINGS.socials.map((social) => ({
+  ...social,
+  ...(SOCIAL_ICONS[social.id] as { path?: string; src?: string }),
+}));
 
 jest.mock("next/navigation", () => ({ usePathname: () => "/" }));
 
-beforeEach(() => {
-  render(<Footer />);
+beforeEach(async () => {
+  await renderServer(<Footer />);
 });
 
 describe("Footer", () => {
-  it("is the contentinfo landmark", () => {
+  it("is the contentinfo landmark", async () => {
     expect(screen.getByRole("contentinfo")).toBeInTheDocument();
   });
 
-  it("disables the newsletter field and its button, because nothing would store the address", () => {
+  it("disables the newsletter field and its button, because nothing would store the address", async () => {
     const input = screen.getByLabelText("Email address");
     expect(input).toBeDisabled();
     expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
   });
 
-  it("ties the newsletter's reason to the field for assistive technology", () => {
+  it("ties the newsletter's reason to the field for assistive technology", async () => {
     const input = screen.getByLabelText("Email address");
     expect(input).toHaveAccessibleDescription("Newsletter opens soon.");
   });
 
-  it("dials the E.164 number and writes to the published address", () => {
+  it("dials the E.164 number and writes to the published address", async () => {
     const footer = screen.getByRole("contentinfo");
     expect(footer.querySelector('a[href="tel:+971543755150"]')).not.toBeNull();
-    expect(footer.querySelector('a[href="mailto:contact@mapletech.ae"]')).not.toBeNull();
+    expect(footer.querySelector('a[href="mailto:hello@smarthaus.ae"]')).not.toBeNull();
   });
 
-  it("renders every social link with its honest accessible name", () => {
+  it("renders every social link with its honest accessible name", async () => {
     for (const social of SOCIALS) {
       const link = screen.getByRole("link", { name: social.label });
-      expect(link).toHaveAttribute("href", social.href);
+      // WhatsApp always goes to the number in the settings, whatever its href.
+      const href =
+        social.id === "whatsapp" ? `https://wa.me/${SITE_SETTINGS.contact.whatsapp}` : social.href;
+      expect(link).toHaveAttribute("href", href);
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");
     }
   });
 
-  it("names the four placeholder profiles as coming soon", () => {
+  it("names the one placeholder profile, X, as coming soon", async () => {
     const soon = screen.getAllByRole("link", { name: /\(profile coming soon\)$/ });
     expect(soon.map((link) => link.getAttribute("aria-label"))).toEqual([
-      "Smarthaus on Instagram (profile coming soon)",
-      "Smarthaus on Facebook (profile coming soon)",
       "Smarthaus on X (profile coming soon)",
-      "Smarthaus on LinkedIn (profile coming soon)",
     ]);
   });
 
-  it("draws WhatsApp as its full-colour logo and the rest in the chip's ink", () => {
+  it("shows the opening hours under the city, from the contact details", async () => {
+    // Shivanshu, 2026-11-20. The business's structured data reads the same
+    // field, so what search engines are told is what the footer shows.
+    expect(screen.getByText("Monday to Saturday, 9am to 6pm")).toBeInTheDocument();
+  });
+
+  it("draws WhatsApp as its full-colour logo and the rest in the chip's ink", async () => {
     // The official logo file (2026-10-03): its colours are the mark. The
     // placeholders stay currentColor paths until their real marks land.
     const icon = (label: string) =>
@@ -63,7 +78,7 @@ describe("Footer", () => {
     }
   });
 
-  it("hides each social icon from assistive technology", () => {
+  it("hides each social icon from assistive technology", async () => {
     // An empty alt for the logo file, aria-hidden for the paths: the link's
     // own label names the platform either way.
     for (const social of SOCIALS) {
@@ -94,7 +109,7 @@ describe("the footer's hover roll", () => {
       },
     );
 
-  it("rolls every link label one letter at a time", () => {
+  it("rolls every link label one letter at a time", async () => {
     const animated = rolls();
     expect(animated.length).toBeGreaterThan(10);
     for (const el of animated) {
@@ -102,9 +117,9 @@ describe("the footer's hover roll", () => {
     }
   });
 
-  it("rolls the phone number and the address by letter too", () => {
+  it("rolls the phone number and the address by letter too", async () => {
     const labels = rolls().map(text);
-    expect(labels).toEqual(expect.arrayContaining(["+971 54 375 5150", "contact@mapletech.ae"]));
+    expect(labels).toEqual(expect.arrayContaining(["+971 54 375 5150", "hello@smarthaus.ae"]));
     const phone = rolls().find((el) => text(el) === "+971 54 375 5150")!;
     expect(phone.children.length).toBeGreaterThan(1);
   });

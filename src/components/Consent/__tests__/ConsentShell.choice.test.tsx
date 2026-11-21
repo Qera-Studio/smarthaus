@@ -5,6 +5,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { ConsentShell } from "../ConsentShell";
 import { buildConsentRecord, serialiseConsentCookie } from "../../../lib/consent";
+import { CONSENT_COPY } from "../../../../sanity/seed/consent-copy";
 
 jest.mock("next/navigation", () => ({ usePathname: () => "/cookie-preferences" }));
 
@@ -33,6 +34,7 @@ function store(analytics: boolean) {
 function renderPanel() {
   render(
     <ConsentShell
+      copy={CONSENT_COPY}
       intro={<p>intro</p>}
       panelIntro={<p>panel</p>}
       essential={<p>essential</p>}

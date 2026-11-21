@@ -1,8 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import { PARTNERS } from "../../../content/partners";
+import { HOME_PAGE } from "../../../../sanity/seed/home-page";
 import { PartnerCarousel } from "../PartnerCarousel";
 import { env, installEnv } from "./helpers/env";
+
+const PARTNERS = HOME_PAGE.partners.items;
 
 /**
  * The timer and the slide. jsdom runs no CSS animation, so the timer's
@@ -21,7 +23,7 @@ const timer = () => document.querySelector<HTMLElement>("span[data-running]");
 const pause = () => screen.queryByRole("button", { name: "Pause the partner cards" });
 
 function mount() {
-  const utils = render(<PartnerCarousel partners={PARTNERS} />);
+  const utils = render(<PartnerCarousel visit="Visit" partners={PARTNERS} />);
   env.inView(true);
   return utils;
 }
@@ -39,7 +41,7 @@ describe("the timer", () => {
   });
 
   it("is not running before the observer has reported anything", () => {
-    render(<PartnerCarousel partners={PARTNERS} />);
+    render(<PartnerCarousel visit="Visit" partners={PARTNERS} />);
     expect(timer()).toHaveAttribute("data-running", "false");
   });
 
@@ -78,7 +80,7 @@ describe("the timer", () => {
     // after first paint. Reduced motion never sets autoplay, so this is the
     // render the server sends.
     env.reduced = true;
-    render(<PartnerCarousel partners={PARTNERS} />);
+    render(<PartnerCarousel visit="Visit" partners={PARTNERS} />);
     expect(timer()).not.toBeNull();
   });
 

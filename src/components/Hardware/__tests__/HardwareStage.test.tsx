@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 
-import type { HardwareItem } from "../../../content/hardware";
+import type { HardwareItem } from "../../../sanity/types";
 import {
   HardwareStage,
   SWIPE_MIN_PX,
@@ -118,7 +118,7 @@ function swipe(dx: number, dy = 0, opts: { pointerType?: string; upId?: number }
 describe("HardwareStage", () => {
   describe("initial state", () => {
     it("selects the first tab and shows its panel only", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       expect(tab("Cameras")).toHaveAttribute("aria-selected", "true");
       expect(tab("Cameras")).toHaveAttribute("tabindex", "0");
       expect(tab("Smart lock")).toHaveAttribute("tabindex", "-1");
@@ -127,14 +127,14 @@ describe("HardwareStage", () => {
     });
 
     it("renders every slide's copy in the HTML, visible or not", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       for (const item of ITEMS) {
         expect(screen.getByRole("heading", { level: 3, name: item.title })).toBeInTheDocument();
       }
     });
 
     it("labels the tablist and ties every tab to its panel", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       expect(screen.getByRole("tablist", { name: "Components" })).toBeInTheDocument();
       ITEMS.forEach((item, i) => {
         expect(tab(item.title)).toHaveAttribute("aria-controls", `hardware-panel-item-${i}`);
@@ -145,7 +145,7 @@ describe("HardwareStage", () => {
 
   describe("each slide's CTA", () => {
     it("links its own component to the solutions page", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       ITEMS.forEach((item, i) => {
         const link = within(panel(i)).getByRole("link", { name: item.cta, hidden: true });
         expect(link).toHaveAttribute("href", "/solutions");
@@ -153,7 +153,7 @@ describe("HardwareStage", () => {
     });
 
     it("sits under the description, last in the copy column", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       ITEMS.forEach((item, i) => {
         const body = within(panel(i)).getByText(item.description);
         const link = within(panel(i)).getByRole("link", { name: item.cta, hidden: true });
@@ -164,7 +164,7 @@ describe("HardwareStage", () => {
     });
 
     it("is not inside the picture, so the image stays a picture", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       const img = within(panel(0)).getByRole("img", { name: `${ITEMS[0]!.title} render` });
       expect(img.closest("div")).not.toContainElement(
         within(panel(0)).getByRole("link", { name: ITEMS[0]!.cta }),
@@ -174,7 +174,7 @@ describe("HardwareStage", () => {
 
   describe("the arrow buttons", () => {
     it("puts previous first in the bar and next last, around the tabs and pause", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       const bar = screen.getByRole("tablist").parentElement!.parentElement!;
       const buttons = Array.from(bar.children).filter((el) => el.tagName === "BUTTON");
       expect(buttons[0]).toHaveAccessibleName("Previous component");
@@ -183,14 +183,14 @@ describe("HardwareStage", () => {
     });
 
     it("next steps forward and travels up from below", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(screen.getByRole("button", { name: "Next component" }));
       expect(selected()).toBe(1);
       expect(root()).toHaveAttribute("data-direction", "next");
     });
 
     it("previous steps back and travels down from above", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(tab("Curtains"));
       fireEvent.click(screen.getByRole("button", { name: "Previous component" }));
       expect(selected()).toBe(1);
@@ -200,7 +200,7 @@ describe("HardwareStage", () => {
     it("next wraps from the last slide to the first, still travelling as next", () => {
       // Picking the direction from the index would call 2 -> 0 a "prev" and
       // run the wrap backwards.
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(tab("Curtains"));
       fireEvent.click(screen.getByRole("button", { name: "Next component" }));
       expect(selected()).toBe(0);
@@ -208,14 +208,14 @@ describe("HardwareStage", () => {
     });
 
     it("previous wraps from the first slide to the last, still travelling as prev", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(screen.getByRole("button", { name: "Previous component" }));
       expect(selected()).toBe(2);
       expect(root()).toHaveAttribute("data-direction", "prev");
     });
 
     it("are plain buttons outside the tablist's roving tab order", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       for (const name of ["Previous component", "Next component"]) {
         const button = screen.getByRole("button", { name });
         expect(button).toHaveAttribute("type", "button");
@@ -226,7 +226,7 @@ describe("HardwareStage", () => {
 
     it("stay available under reduced motion, where there is no pause", () => {
       reduced = true;
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       expect(screen.queryByRole("button", { name: "Pause automatic advance" })).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "Next component" }));
       expect(selected()).toBe(1);
@@ -235,69 +235,69 @@ describe("HardwareStage", () => {
 
   describe("swipe", () => {
     it("a leftward swipe goes to the next slide", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       swipe(-(SWIPE_MIN_PX + 20));
       expect(selected()).toBe(1);
       expect(root()).toHaveAttribute("data-direction", "next");
     });
 
     it("a rightward swipe goes to the previous slide", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       swipe(SWIPE_MIN_PX + 20);
       expect(selected()).toBe(2);
       expect(root()).toHaveAttribute("data-direction", "prev");
     });
 
     it("counts a swipe of exactly the threshold", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       swipe(-SWIPE_MIN_PX);
       expect(selected()).toBe(1);
     });
 
     it("ignores a movement shorter than the threshold, which is a tap", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       swipe(-(SWIPE_MIN_PX - 1));
       expect(selected()).toBe(0);
     });
 
     it("ignores a gesture more vertical than horizontal, which is a scroll", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       swipe(-(SWIPE_MIN_PX + 20), SWIPE_MIN_PX + 40);
       expect(selected()).toBe(0);
     });
 
     it("ignores an exactly diagonal gesture", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       swipe(-(SWIPE_MIN_PX + 20), SWIPE_MIN_PX + 20);
       expect(selected()).toBe(0);
     });
 
     it("works for a pen as well as a finger", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       swipe(-(SWIPE_MIN_PX + 20), 0, { pointerType: "pen" });
       expect(selected()).toBe(1);
     });
 
     it("ignores a mouse drag, which the image's own drag would take", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       swipe(-(SWIPE_MIN_PX + 20), 0, { pointerType: "mouse" });
       expect(selected()).toBe(0);
     });
 
     it("ignores a lift from a different pointer than the one that went down", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       swipe(-(SWIPE_MIN_PX + 20), 0, { upId: 2 });
       expect(selected()).toBe(0);
     });
 
     it("ignores a lift with no press before it", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.pointerUp(stage(), { pointerId: 1, pointerType: "touch", clientX: 0 });
       expect(selected()).toBe(0);
     });
 
     it("drops the gesture when the browser cancels it for a scroll", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.pointerDown(stage(), {
         pointerId: 1,
         pointerType: "touch",
@@ -315,7 +315,7 @@ describe("HardwareStage", () => {
     });
 
     it("forgets the press once lifted, so a later lift alone does nothing", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       swipe(-(SWIPE_MIN_PX + 20));
       fireEvent.pointerUp(stage(), {
         pointerId: 1,
@@ -342,20 +342,20 @@ describe("HardwareStage", () => {
     afterEach(() => jest.useRealTimers());
 
     it("a sideways gesture steps once and is kept from the browser", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       const event = wheel(WHEEL_STEP_PX);
       expect(event.defaultPrevented).toBe(true);
       expect(selected()).toBe(1);
     });
 
     it("a gesture the other way goes back, wrapping", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       wheel(-WHEEL_STEP_PX);
       expect(selected()).toBe(ITEMS.length - 1);
     });
 
     it("sums small deltas, as a trackpad reports them", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       const quarter = WHEEL_STEP_PX / 4;
       for (let i = 0; i < 3; i++) wheel(quarter);
       expect(selected()).toBe(0);
@@ -364,7 +364,7 @@ describe("HardwareStage", () => {
     });
 
     it("moves one slide per gesture, however long the momentum runs", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       for (let i = 0; i < 20; i++) {
         const event = wheel(WHEEL_STEP_PX);
         // Still cancelled after the step, or the coast would navigate away.
@@ -377,7 +377,7 @@ describe("HardwareStage", () => {
     });
 
     it("steps again once the wheel has gone quiet", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       wheel(WHEEL_STEP_PX);
       act(() => {
         jest.advanceTimersByTime(WHEEL_QUIET_MS);
@@ -395,7 +395,7 @@ describe("HardwareStage", () => {
     const play = (deltas: number[], sign = 1) => deltas.forEach((d) => wheel(sign * d));
 
     it("steps again for a second swipe made during the first one's coast", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       play(SWIPE);
       play(COAST);
       expect(selected()).toBe(1);
@@ -404,7 +404,7 @@ describe("HardwareStage", () => {
     });
 
     it("goes back for a swipe the other way made during the coast", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       play(SWIPE);
       play(COAST);
       play(SWIPE, -1);
@@ -412,7 +412,7 @@ describe("HardwareStage", () => {
     });
 
     it("keeps a swipe that is still speeding up after its step to one slide", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       play([...SWIPE, 48, 60, 72]);
       play(COAST);
       expect(selected()).toBe(1);
@@ -420,42 +420,42 @@ describe("HardwareStage", () => {
 
     it("does not read a coast that has not yet halved as a new swipe", () => {
       // A wobble near the peak is the same fingers, not fresh ones.
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       play(SWIPE);
       play([30, 20, 20 + WHEEL_RISE_PX, 26, 18]);
       expect(selected()).toBe(1);
     });
 
     it("needs a real climb over the coast's low, not jitter", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       play(SWIPE);
       play([18, 10, 4, 4 + WHEEL_RISE_PX - 1, 4]);
       expect(selected()).toBe(1);
     });
 
     it("cancels every event of the second swipe too", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       play(SWIPE);
       play(COAST);
       for (const d of SWIPE) expect(wheel(d).defaultPrevented).toBe(true);
     });
 
     it("leaves a vertical scroll to the page", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       const event = wheel(10, WHEEL_STEP_PX * 2);
       expect(event.defaultPrevented).toBe(false);
       expect(selected()).toBe(0);
     });
 
     it("takes the gesture over the icon bar too", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       const event = wheel(WHEEL_STEP_PX, 0, screen.getByRole("tablist"));
       expect(event.defaultPrevented).toBe(true);
       expect(selected()).toBe(1);
     });
 
     it("lets the tab strip scroll itself when it overflows", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       const strip = screen.getByRole("tablist");
       Object.defineProperty(strip, "scrollWidth", { configurable: true, value: 600 });
       Object.defineProperty(strip, "clientWidth", { configurable: true, value: 300 });
@@ -465,7 +465,7 @@ describe("HardwareStage", () => {
     });
 
     it("stops listening when unmounted", () => {
-      const { unmount } = render(<HardwareStage items={ITEMS} />);
+      const { unmount } = render(<HardwareStage items={ITEMS} href="/solutions" />);
       const el = root();
       unmount();
       const event = new WheelEvent("wheel", { deltaX: WHEEL_STEP_PX, cancelable: true });
@@ -476,7 +476,7 @@ describe("HardwareStage", () => {
 
   describe("tabs and keyboard", () => {
     it("a click on a later tab travels as next, an earlier one as prev", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(tab("Curtains"));
       expect(root()).toHaveAttribute("data-direction", "next");
       fireEvent.click(tab("Cameras"));
@@ -485,7 +485,7 @@ describe("HardwareStage", () => {
     });
 
     it("a click on the tab already shown changes nothing", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(tab("Cameras"));
       expect(panel(0)).toHaveAttribute("data-state", "active");
       expect(document.querySelector("[data-state='leaving']")).toBeNull();
@@ -498,21 +498,21 @@ describe("HardwareStage", () => {
       ["ArrowUp", 2],
       ["End", 2],
     ])("%s from the first tab selects and focuses tab %i", (key, expected) => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.keyDown(tab("Cameras"), { key });
       expect(selected()).toBe(expected);
       expect(screen.getAllByRole("tab")[expected]).toHaveFocus();
     });
 
     it("Home from a later tab goes back to the first", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(tab("Curtains"));
       fireEvent.keyDown(tab("Curtains"), { key: "Home" });
       expect(selected()).toBe(0);
     });
 
     it("leaves every other key to the browser", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
       tab("Cameras").dispatchEvent(event);
       expect(event.defaultPrevented).toBe(false);
@@ -522,7 +522,7 @@ describe("HardwareStage", () => {
 
   describe("the push", () => {
     it("keeps the outgoing slide painted, and hidden from readers, until the incoming one lands", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(screen.getByRole("button", { name: "Next component" }));
       expect(panel(0)).toHaveAttribute("data-state", "leaving");
       expect(panel(0)).toHaveAttribute("aria-hidden", "true");
@@ -536,14 +536,14 @@ describe("HardwareStage", () => {
     it("the outgoing slide's own animation end does not release it", () => {
       // Both slides animate now and end together; only the incoming one's end
       // may clear the outgoing slide, or a slower outgoing frame would vanish.
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(screen.getByRole("button", { name: "Next component" }));
       fireEvent.animationEnd(panel(0));
       expect(panel(0)).toHaveAttribute("data-state", "leaving");
     });
 
     it("an animation ending inside a slide does not release it", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(screen.getByRole("button", { name: "Next component" }));
       fireEvent.animationEnd(panel(1).querySelector("h3")!);
       expect(panel(0)).toHaveAttribute("data-state", "leaving");
@@ -552,7 +552,7 @@ describe("HardwareStage", () => {
 
   describe("keeping the selected tab in view", () => {
     it("scrolls only the strip, smoothly, when the slide changes", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       scrollTo.mockClear();
       fireEvent.click(screen.getByRole("button", { name: "Next component" }));
       expect(scrollTo).toHaveBeenCalledTimes(1);
@@ -562,7 +562,7 @@ describe("HardwareStage", () => {
 
     it("jumps instead of gliding under reduced motion", () => {
       reduced = true;
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       scrollTo.mockClear();
       fireEvent.click(screen.getByRole("button", { name: "Next component" }));
       expect(scrollTo.mock.calls[0][0]).toMatchObject({ behavior: "auto" });
@@ -571,7 +571,7 @@ describe("HardwareStage", () => {
 
   describe("the timer", () => {
     it("runs only while the section is on screen", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       expect(progress()).toHaveAttribute("data-running", "false");
       act(() => ioCallback?.([{ isIntersecting: true }]));
       expect(progress()).toHaveAttribute("data-running", "true");
@@ -580,13 +580,13 @@ describe("HardwareStage", () => {
     });
 
     it("treats an empty entry list as off screen", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       act(() => ioCallback?.([]));
       expect(progress()).toHaveAttribute("data-running", "false");
     });
 
     it("advances to the next slide when its line finishes, wrapping as next", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       fireEvent.click(tab("Curtains"));
       fireEvent.animationEnd(progress()!);
       expect(selected()).toBe(0);
@@ -594,7 +594,7 @@ describe("HardwareStage", () => {
     });
 
     it("the pause button stops it, and a second press restarts it", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       act(() => ioCallback?.([{ isIntersecting: true }]));
       const pause = screen.getByRole("button", { name: "Pause automatic advance" });
       fireEvent.click(pause);
@@ -607,12 +607,12 @@ describe("HardwareStage", () => {
 
     it("never exists under reduced motion", () => {
       reduced = true;
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       expect(progress()).toBeNull();
     });
 
     it("follows a change to the reduced-motion setting after mount", () => {
-      render(<HardwareStage items={ITEMS} />);
+      render(<HardwareStage items={ITEMS} href="/solutions" />);
       expect(progress()).not.toBeNull();
       reduced = true;
       act(() => mediaListener?.());
@@ -622,7 +622,7 @@ describe("HardwareStage", () => {
   });
 
   it("stops observing and listening on unmount", () => {
-    const { unmount } = render(<HardwareStage items={ITEMS} />);
+    const { unmount } = render(<HardwareStage items={ITEMS} href="/solutions" />);
     unmount();
     expect(disconnected).toBe(1);
     expect(mediaRemoved).toBe(1);

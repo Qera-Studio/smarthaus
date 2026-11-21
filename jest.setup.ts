@@ -48,3 +48,19 @@ afterEach(() => {
     );
   }
 });
+
+// Content. Pages and components read Sanity through getDoc, which Jest cannot
+// reach (next-sanity is ESM, and a unit test must not depend on the network).
+// Every suite gets the seed instead: the same content the ci dataset holds,
+// in the shape getDoc returns. src/sanity/__tests__/fetch.test.ts unmocks it.
+jest.mock("./src/sanity/fetch", () => {
+  const { seedDoc, seedDocs } = jest.requireActual("./sanity/seed");
+  return {
+    getDoc: jest.fn(async (id: string) => seedDoc(id)),
+    getDocs: jest.fn(async (type: string) => seedDocs(type)),
+  };
+});
+
+// The Studio's click-to-edit overlay, mounted by the root layout in draft
+// mode only. ESM that Jest cannot load; e2e/preview.spec.ts covers the real one.
+jest.mock("next-sanity/visual-editing", () => ({ VisualEditing: () => null }));

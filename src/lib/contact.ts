@@ -1,48 +1,18 @@
 /**
- * The public contact details, in one place: the contact page, the footer and
- * both legal identity tables read them from here, so a published fact cannot
- * say one thing on /contact and another on /privacy.
+ * The contact details live in Sanity (siteSettings.contact), and every page
+ * reads them from there, so a published fact cannot say one thing on /contact
+ * and another on /privacy.
+ *
+ * What stays here is what must work without Sanity: the link builder, and the
+ * details the two error pages show. Those pages render when something has
+ * failed, possibly the content itself, so they carry their own copy.
+ * src/lib/__tests__/contact.test.ts holds it equal to the seed, and a change
+ * of number in the Studio needs the same change here.
  *
  * The same number appears in three formats and they are not interchangeable:
  * `tel:` wants E.164 with no spaces, wa.me wants digits with no `+`, and the
- * visible copy wants it grouped. Deriving all three from one raw value would
- * need a formatter per format, which is more code than three constants.
- *
- * e2e/legal.spec.ts still asserts the identity tables against literals, not
- * against these constants, so changing a value here is a deliberate act that a
- * test notices rather than a silent change to a published legal fact.
+ * visible copy wants it grouped.
  */
-
-/** `tel:` href. E.164, no spaces — dialers reject the grouped form. */
-export const PHONE_E164 = "+971543755150";
-
-/** Visible copy. Never put this in an href. */
-export const PHONE_DISPLAY = "+971 54 375 5150";
-
-export const EMAIL = "contact@mapletech.ae";
-
-/**
- * Registered address, in the wording the legal pages published (confirmed
- * 2026-09-26 as the trade licence's). Split into lines because the location
- * card renders each on its own row; ADDRESS is the same text on one line, for
- * the identity tables. The trailing commas are what makes the join read right.
- */
-export const ADDRESS_LINES = [
-  "The Iridium, 2nd Floor, Office 225,",
-  "Umm Suqeim St, Al Barsha First,",
-  "Dubai",
-] as const;
-
-export const ADDRESS = ADDRESS_LINES.join(" ");
-
-export const MAPS_URL = "https://maps.app.goo.gl/6TaV1nqiKs5StD566";
-
-/**
- * Built from the env number rather than hardcoded, per AGENTS.md. Falls back to
- * the documented number from .env.example when unset so local dev and preview
- * builds do not render a broken link.
- */
-const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "971543755150";
 
 /**
  * A wa.me deep link, optionally pre-filled.
@@ -50,7 +20,15 @@ const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "971543755150
  * encodeURIComponent, not URLSearchParams: the latter encodes spaces as `+`,
  * and WhatsApp renders those literally in the message box.
  */
-export function whatsappLink(message?: string): string {
-  const base = `https://wa.me/${WHATSAPP_NUMBER}`;
+export function whatsappLink(number: string, message?: string): string {
+  const base = `https://wa.me/${number}`;
   return message ? `${base}?text=${encodeURIComponent(message)}` : base;
 }
+
+/** What the error pages show. Never read where Sanity can be. */
+export const FALLBACK_CONTACT = {
+  phoneE164: "+971543755150",
+  phoneDisplay: "+971 54 375 5150",
+  whatsapp: "971543755150",
+  email: "hello@smarthaus.ae",
+} as const;

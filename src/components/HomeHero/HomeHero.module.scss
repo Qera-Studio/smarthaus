@@ -1,5 +1,13 @@
 @use "../../styles/variables" as *;
 @use "../../styles/mixins" as *;
+@use "sass:math";
+
+// How much taller each photograph is than its card, for the parallax.
+$hero-parallax-spare: 25%;
+
+// How many words of the title and the subtitle have a place in the opening.
+$hero-title-words: 6;
+$hero-lede-words: 24;
 
 @layer blocks {
   .hero {
@@ -9,132 +17,373 @@
     // faster than the 10s it was). Slow on purpose: the strip is texture
     // while the copy is read, not something to watch.
     --hero-strip-duration: 64s;
-    // The strip's height: a share of the screen, so it stays the same
-    // proportion on any laptop, and gives way when the copy needs the room.
+    // The strip's height: a share of the screen, the same proportion on any
+    // laptop.
     --hero-strip-block: 42svh;
+    // How much of the strip shows above the fold: its top edge sits at 95% of
+    // the screen, so the page asks to be scrolled (Shivanshu, 2026-11-14).
+    --hero-peek: 5svh;
+    // The title and the line under it, by the design's frame: the title about
+    // two thirds of a 1440 screen wide, the line a quarter of its size.
+    // Then 4px and 2px under that (Shivanshu, 2026-11-14).
+    --hero-title-size: clamp(#{$font-size-3xl}, calc(6.6vw - 4px), 6.25rem);
+    --hero-lede-size: clamp(#{$font-size-md}, calc(1.7vw - 2px), 1.375rem);
+    // The makers' marks: one pass of the rail, and how faint they sit.
+    --hero-brands-duration: 48s;
+    --hero-brands-ink: 0.6;
     // The hover shade, pure black at the foot of the card (Shivanshu's spec),
     // and the blur behind it, both rising linearly from nothing at the top.
     --hero-card-shade: rgb(0 0 0 / 30%);
     --hero-card-blur: 12px;
-    // What sits above the hero, so it ends exactly at the bottom of the
-    // screen. Below lg the nav floats at the bottom instead, and the strip
-    // ends just above it.
+    // What sits above the hero and, below lg, the nav floating over its foot:
+    // the screen's height less these is what the hero has to itself.
     --hero-above: var(--announce-block-size);
     --hero-below: calc(
       var(--nav-bar-block-size) + var(--nav-float-inset) + env(safe-area-inset-bottom)
     );
-    // The floor, for a screen too short to share: the strip keeps a usable
-    // height and the page scrolls instead.
-    --hero-min-block: 36rem;
+    // The strip comes in like a metro (Shivanshu, 2026-11-04): very fast, on
+    // past the cards ahead of the first, then braking hard to where it rests.
+    --hero-arrive-duration: 1600ms;
+    --hero-arrive-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    // The photographs inside their cards: each is taller than its card by
+    // $hero-parallax-spare and slides down through it as the page scrolls,
+    // moving more slowly than the page, as the About page's pictures do.
+    --hero-parallax-range: 100svh;
+    // One reed of the glass: the design's 1440 / 59.25 across, held between
+    // 40 and 80px. reedWidth() in glass.ts is the same sum.
+    --hero-reed: clamp(40px, calc(100vw / 24.3), 80px);
+    // How far the ground runs up past the section, under the nav at rest.
+    --hero-nav-over: 0px;
+    // Under every in-flow box of the page, the nav at rest included. A
+    // negative level is the one thing the z scale has no token for.
+    --hero-behind: -1;
 
+    // Positioned for the ground and the canvas, but not an isolated stacking
+    // context: they sit at a negative level in the page's own.
+    position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: $space-4;
-    // A definite height, not a minimum: the strip's cards size from it.
+    // The glass fills the screen down to the strip's top edge, and the strip
+    // runs on below the fold. A minimum, so copy that needs more room pushes
+    // the strip down rather than running under it.
     // svh, never vh or dvh: Footer.module.scss has the long version.
-    block-size: max(var(--hero-min-block), calc(100svh - var(--hero-above) - var(--hero-below)));
+    min-block-size: calc(
+      100svh - var(--hero-above) - var(--hero-below) - var(--hero-peek) + var(--hero-strip-block)
+    );
     padding-block-start: clamp(#{$space-6}, 4vh, #{$space-12});
-    text-align: center;
 
     @include bp-lg {
+      // 20% under the 28.125vw it was (Shivanshu, 2026-11-04), a card 30vw wide
+      // at 4:3. The svh cap is that same 20% on a laptop, where the strip was
+      // already giving way to the copy and 22.5vw alone would barely show. It
+      // still gives way on a shorter screen.
+      --hero-strip-block: min(22.5vw, 36svh);
       --hero-above: calc(
         var(--announce-block-size) + var(--nav-rest-inset) + var(--nav-top-block-size)
       );
       --hero-below: 0px;
+      --hero-nav-over: calc(var(--nav-rest-inset) + var(--nav-top-block-size));
     }
 
-    // A short phone: Safari on an iPhone 17 leaves about 680px. There the
-    // copy took 383px of the 570 between the contact bar and the nav, the
-    // strip got about 100, and the 36rem floor ran the hero 6px under the
-    // nav. Here the copy sits tighter and the floor gives the 6px back, so the
-    // strip keeps about 130px and ends at the nav (Shivanshu, 2026-11-02).
-    // Taller phones and everything from lg are unchanged.
+    // The ground, from the stylesheet: the ring picture, blurred, under a
+    // drawn line at each reed's edge (an edge on the centre line, as the
+    // canvas has). The first paint, and all there is under Save-Data or
+    // without WebGL.
+    &::before {
+      content: "";
+      position: absolute;
+      inset-block: calc(-1 * var(--hero-nav-over)) var(--hero-strip-block);
+      inset-inline: calc(50% - 50vw);
+      z-index: var(--hero-behind);
+      background-color: var(--brown-950);
+      background-image:
+        linear-gradient(to right, transparent calc(100% - 1px), rgb(var(--glass-tint) / 0.12) 0),
+        url("/hero/glass/ground.webp");
+      background-size:
+        var(--hero-reed) 100%,
+        cover;
+      background-position:
+        calc(50% + var(--hero-reed) / 2) 0,
+        center;
+      background-repeat: repeat-x, no-repeat;
+      pointer-events: none;
+
+      // On a tall screen, covering would show only the ring's dark middle:
+      // the picture stops at 1.9 screens wide and sits at the top, as
+      // cover() in glass.ts does (MAX_ZOOM).
+      @media (orientation: portrait) {
+        background-size:
+          var(--hero-reed) 100%,
+          190vw auto;
+        background-position:
+          calc(50% + var(--hero-reed) / 2) 0,
+          top;
+      }
+    }
+
+    // A short phone (Safari on an iPhone 17 leaves about 680px): the copy
+    // sits tighter, so the strip's top still shows above the nav.
     @include bp-max($bp-lg) {
       @media (max-height: 45rem) {
-        --hero-min-block: 34rem;
         gap: $space-2;
         padding-block-start: $space-2;
       }
     }
   }
 
-  // Auto margins centre the copy in whatever the strip leaves, which keeps
-  // the pause button and the strip pinned to the bottom of the screen.
+  // The glass, over the ground and on its box. Unseen until its first frame
+  // is drawn (GlassCanvas sets data-ready), then faded in.
+  .glass {
+    position: absolute;
+    inset-block-start: calc(-1 * var(--hero-nav-over));
+    inset-inline-start: calc(50% - 50vw);
+    z-index: var(--hero-behind);
+    inline-size: 100vw;
+    max-inline-size: none;
+    block-size: calc(100% + var(--hero-nav-over) - var(--hero-strip-block));
+    opacity: 0;
+    pointer-events: none;
+    transition-property: opacity;
+    transition-duration: var(--duration-slow);
+  }
+
+  .hero[data-ready] .glass {
+    opacity: 1;
+  }
+
+  // Centred on the glass (the design's), in whatever the rail and the strip
+  // leave: auto margins, which also keep the rail at the glass's foot.
   .copy {
     margin-block: auto;
     display: flex;
     flex: none;
     flex-direction: column;
     align-items: center;
-    padding-inline: $space-4;
+    text-align: center;
   }
 
-  // Two statements either side of a drawn rule (HomeHero.tsx Pair): the
-  // rating line and the SIRA line, styled alike. From sm the two share one
-  // centred line; on a phone they stack and the rule goes. (The rule sat on
-  // the page's centre line for a day, 2026-10-28, and was reverted.)
-  .pair {
+  // The four proofs. One line wherever they fit it, with a drawn rule between
+  // them, drawn so a screen reader never says "vertical bar". On a phone they
+  // cannot, so they wrap, and a rule would be left hanging at a line's end.
+  .proof {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $space-1;
+    flex: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $space-1 $space-3;
+    margin-block-start: $space-6;
+    list-style: none;
     font-size: var(--font-size-sm);
     line-height: $line-height-normal;
-    // At 70% (2026-10-28), as the contact bar is. The colour, not opacity,
-    // so the drawn rule (currentcolor) goes with it: 6.4:1 on brown-100.
-    color: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
+    // Full strength: the glass under it can be as bright as its cap
+    // (glass-shader.ts), where anything fainter would fall under 4.5:1.
+    color: var(--color-text-inverse);
 
-    @include bp-sm {
-      flex-direction: row;
-      gap: $space-3;
+    li {
+      display: flex;
+      align-items: center;
+      gap: $space-2;
+    }
+
+    @include bp-md {
+      flex-wrap: nowrap;
+
+      li {
+        gap: $space-3;
+        white-space: nowrap;
+      }
+
+      li + li::before {
+        content: "";
+        inline-size: 1px;
+        block-size: 1em;
+        background-color: currentcolor;
+      }
     }
   }
 
-  .divider {
-    display: none;
+  // The file is a mask and the box's ground is what shows, so the star takes
+  // the text's colour.
+  .star {
+    flex: none;
+    inline-size: 1em;
+    block-size: 1em;
+    background-color: currentcolor;
+    mask-image: url("/hero/starIcon.svg");
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
 
-    @include bp-sm {
-      display: block;
-      inline-size: 1px;
-      block-size: 1em;
-      background-color: currentcolor;
+    // Forced colours would paint this ground away with the page's.
+    @media (forced-colors: active) {
+      forced-color-adjust: none;
+      background-color: CanvasText;
     }
-  }
-
-  // The rating line opens the copy; the SIRA line closes it.
-  .copy > .pair:first-child {
-    margin-block-end: $space-4;
-  }
-
-  .copy > .pair:last-child {
-    margin-block-start: $space-4;
   }
 
   .title {
-    font-size: var(--type-display);
+    font-size: var(--hero-title-size);
     font-weight: $font-weight-medium;
     line-height: $line-height-tight;
     letter-spacing: -0.02em;
-    color: var(--color-text-primary);
+    color: var(--color-text-inverse);
     text-wrap: balance;
   }
 
   .lede {
-    margin-block-start: $space-3;
-    max-inline-size: 54rem;
-    font-size: var(--type-body-lg);
+    margin-block-start: $space-6;
+    // Two lines under the title on a desktop, as the design sets it.
+    max-inline-size: 56rem;
+    font-size: var(--hero-lede-size);
     line-height: $line-height-normal;
-    color: var(--color-text-primary);
+    color: var(--color-text-inverse);
     text-wrap: pretty;
   }
 
-  .ctas {
+  // --- The email field -------------------------------------------------------
+
+  .leadForm {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: $space-4;
-    margin-block-start: clamp(#{$space-6}, 3vh, #{$space-8});
+    flex-direction: column;
+    align-items: center;
+    gap: $space-3;
+    inline-size: 100%;
+    // Room between the subtitle and the field (Shivanshu, 2026-11-04, for the
+    // buttons it replaced): 40px on a phone, up to 64px on a tall screen. A
+    // short phone keeps 24px.
+    margin-block-start: clamp(#{$space-10}, 6.5vh, #{$space-16});
+
+    @include bp-max($bp-lg) {
+      @media (max-height: 45rem) {
+        margin-block-start: $space-6;
+      }
+    }
+  }
+
+  // One frame around the input and its button, on a light wash of the dark
+  // ground (40%, down from 80: Shivanshu, 2026-11-14), so the glass shows
+  // through it and the placeholder still has something to sit on.
+  .field {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    // 44px tall and 376 wide (Shivanshu, 2026-11-14): the button fills what
+    // the frame's 4px leaves, 34px, where on its own it stands 39.
+    inline-size: min(100%, 23.5rem);
+    block-size: var(--size-touch-target);
+    padding: $space-1;
+    border-style: solid;
+    border-width: 1px;
+    border-color: color-mix(in srgb, var(--color-text-inverse) 60%, transparent);
+    background-color: color-mix(in srgb, var(--brown-950) 40%, transparent);
+
+    // The frame is the field's focus indicator: it goes from 60% to full
+    // strength. There is no ring inside it (Shivanshu, 2026-11-14).
+    &:focus-within {
+      border-color: var(--color-text-inverse);
+    }
+
+    button {
+      block-size: 100%;
+      min-block-size: 0;
+    }
+  }
+
+  .input {
+    flex: 1;
+    min-inline-size: 0;
+    block-size: 100%;
+    padding-inline: $space-2;
+    border-style: none;
+    background-color: transparent;
+    font-family: inherit;
+    // 16px, never smaller: Safari on a phone zooms the page into any field
+    // below it.
+    font-size: var(--font-size-base);
+    color: var(--color-text-inverse);
+    outline-style: none;
+
+    // An address the browser filled in: it paints its own pale blue ground
+    // and dark text, and neither can be overridden outright. The ground's
+    // change is put off for longer than any visit lasts, so it never shows,
+    // and the text is filled in the field's own colour.
+    &:autofill,
+    &:-webkit-autofill {
+      -webkit-text-fill-color: var(--color-text-inverse);
+      caret-color: var(--color-text-inverse);
+      transition-property: background-color;
+      transition-duration: 0s;
+      transition-delay: 99999s;
+    }
+
+    &::placeholder {
+      color: color-mix(in srgb, var(--color-text-inverse) 70%, transparent);
+      opacity: 1;
+    }
+  }
+
+  .leadProblem,
+  .leadDone {
+    max-inline-size: 30rem;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-normal;
+    color: var(--color-text-inverse);
+  }
+
+  .leadDone {
+    margin-block-start: clamp(#{$space-10}, 6.5vh, #{$space-16});
+    font-size: var(--font-size-base);
+  }
+
+  .leadDone a {
+    color: inherit;
+    text-decoration-line: underline;
+    text-underline-offset: 0.2em;
+    @include focus-ring($color: var(--color-text-inverse));
+  }
+
+  // --- The makers' marks -----------------------------------------------------
+
+  // Edge to edge at the glass's foot, as the strip is. The list is laid end to
+  // end three times; moving the track left by a third of its width puts the
+  // second where the first began, so the loop has no seam (hero-marks).
+  .brands {
+    flex: none;
+    inline-size: 100vw;
+    margin-inline: calc(50% - 50vw);
+    padding-block: $space-4;
+    overflow: hidden;
+  }
+
+  .brandTrack {
+    display: flex;
+    inline-size: max-content;
+  }
+
+  .brandList {
+    display: flex;
+    align-items: center;
+    gap: $space-20;
+    padding-inline-end: $space-20;
+    list-style: none;
+  }
+
+  // One tone for every mark, whatever colours its file carries: black, then
+  // inverted to white, then let down to sit behind the copy.
+  .brand {
+    display: block;
+    max-inline-size: none;
+    filter: brightness(0) invert(1);
+    opacity: var(--hero-brands-ink);
+
+    // Forced colours leave images alone, and a white mark on a light system
+    // ground would vanish: there the file's own colours show.
+    @media (forced-colors: active) {
+      filter: none;
+      opacity: 1;
+    }
   }
 
   // --- The pause button ----------------------------------------------------
@@ -197,19 +446,24 @@
   // movement to StripControls, which drags the strip with it.
   .strip {
     position: relative;
-    flex: 0 1 var(--hero-strip-block);
-    min-block-size: 0;
+    flex: none;
+    block-size: var(--hero-strip-block);
+    // The dark of the glass's foot, between the cards.
+    background-color: var(--brown-950);
     touch-action: pan-y pinch-zoom;
     user-select: none;
     inline-size: 100vw;
     margin-inline: calc(50% - 50vw);
     overflow: hidden;
+    // So a card can size from the height this comes to (.card).
+    container-type: size;
   }
 
   // Two copies of the list side by side. Moving the pair left by half its
   // width puts the second copy exactly where the first started, so the loop
   // has no seam. Each list ends in the gap, which keeps that half exact.
   .track {
+    position: relative;
     display: flex;
     inline-size: max-content;
     block-size: 100%;
@@ -223,6 +477,14 @@
     padding-inline-end: $space-2;
   }
 
+  // Off the track's start, out of its width, so the half above stays exact.
+  // At rest it lies past the strip's clipped edge; only the opening shows it.
+  .lead {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 100%;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .track {
       animation-name: hero-strip;
@@ -231,18 +493,177 @@
       animation-iteration-count: infinite;
     }
 
+    // The marks run as the strip does, and stop with the strip's pause
+    // button, the stop WCAG 2.2.2 asks for. Under a pointer they slow to a
+    // crawl instead (StripControls, BRANDS_HOVER_RATE).
+    .brandTrack {
+      animation-name: hero-marks;
+      animation-duration: var(--hero-brands-duration);
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
+
+    // In :where(), so it adds nothing to .brandTrack's own 0,1,0.
+    :where(.hero:has(.strip[data-paused])) .brandTrack {
+      animation-play-state: paused;
+    }
+
     // Hover stops it (Shivanshu's spec), and so does focus on a card, so one
     // a keyboard user has reached does not slide away under them. On the
-    // track, not the strip, so focus on a control never holds it.
+    // track, not the strip, so focus on a control never holds it. Two values:
+    // the second is the opening's, which nothing here may stop halfway.
     .track:hover,
     .track:focus-within,
     .strip[data-paused] .track {
-      animation-play-state: paused;
+      animation-play-state: paused, running;
+    }
+
+    // A scroll runs it even while hover, focus or the pause button holds the
+    // drift: the scroll is the visitor's own hand (StripControls). Before
+    // the rule below, so a drag still wins.
+    .strip[data-gliding] .track {
+      animation-play-state: running;
     }
 
     // Held still under a dragging hand, mouse or finger (StripControls).
     .strip[data-dragging] .track {
-      animation-play-state: paused;
+      animation-play-state: paused, running;
+    }
+
+    // --- The opening ---------------------------------------------------------
+    //
+    // Only while <html> carries data-intro: set by the splash boot script on
+    // every full load, and taken off by StripControls when the last of this
+    // has played, so a soft navigation back here finds the hero at rest.
+    // Without JavaScript nothing is set and nothing waits on an animation.
+    //
+    // The timings live on <html> for that time, so the nav and the contact
+    // bar (Nav.module.scss, AnnouncementBar.module.scss) arrive with the CTAs
+    // from the same numbers (Shivanshu, 2026-11-04: 1.5x the speed of the cut
+    // before, the title and subtitle word by word): the title, the subtitle
+    // from 533ms, the CTAs with the strip, the nav and the bar at 800ms, then
+    // the proofs and the pause button. The last of it lands at about 3.3s;
+    // five seconds is the ceiling, since motion that starts by itself and runs
+    // past that would need a pause control (WCAG 2.2.2).
+    //
+    // Fill backwards, never forwards: the start state holds through each
+    // delay, and once an animation ends it lets go of opacity and translate.
+    // Paused while the splash covers the page, so it begins as the splash
+    // fades rather than finishing unseen beneath it.
+    :where(:root[data-intro]) {
+      --intro-duration: 2133ms;
+      --intro-shift: #{$space-6};
+      --intro-word-duration: 1067ms;
+      --intro-title-stagger: 200ms;
+      --intro-lede-start: 533ms;
+      --intro-lede-stagger: 60ms;
+      --intro-together: 800ms;
+      --intro-rest: 1133ms;
+
+      // Word by word. Opacity alone, on inline spans: anything that moved a
+      // word would need inline-block, and a screen reader can stop at each
+      // of those instead of reading one sentence.
+      .word {
+        animation-name: hero-word;
+        animation-duration: var(--intro-word-duration);
+        animation-timing-function: var(--ease-in-out);
+        animation-fill-mode: backwards;
+      }
+
+      // The delay by position: no inline style, which the strict CSP twin
+      // would report. HomeHero.test.tsx holds the copy under these counts.
+      @for $i from 1 through $hero-title-words {
+        .title .word:nth-of-type(#{$i}) {
+          animation-delay: calc(#{$i - 1} * var(--intro-title-stagger));
+        }
+      }
+
+      @for $i from 1 through $hero-lede-words {
+        .lede .word:nth-of-type(#{$i}) {
+          animation-delay: calc(var(--intro-lede-start) + #{$i - 1} * var(--intro-lede-stagger));
+        }
+      }
+
+      .leadForm,
+      .leadDone,
+      .proof,
+      .brands,
+      .controls {
+        animation-name: hero-in;
+        animation-duration: var(--intro-duration);
+        animation-timing-function: var(--ease-out);
+        animation-fill-mode: backwards;
+      }
+
+      .leadForm,
+      .leadDone {
+        animation-delay: var(--intro-together);
+      }
+
+      .proof,
+      .brands,
+      .controls {
+        animation-delay: var(--intro-rest);
+      }
+
+      // Added to the drift, not in place of it, so the drift keeps its clock
+      // and takes over as this slows to nothing. On the track, so the cards
+      // run off the strip's edge rather than being clipped to a moving box.
+      .track {
+        animation-name: hero-strip, hero-arrive;
+        animation-duration: var(--hero-strip-duration), var(--hero-arrive-duration);
+        animation-timing-function: linear, var(--hero-arrive-ease);
+        animation-iteration-count: infinite, 1;
+        animation-delay: 0s, var(--intro-together);
+        animation-fill-mode: none, backwards;
+        animation-composition: replace, add;
+      }
+    }
+
+    :where(:root[data-intro][data-splash="show"]) {
+      .word,
+      .leadForm,
+      .leadDone,
+      .proof,
+      .brands,
+      .controls,
+      .track {
+        animation-play-state: paused;
+      }
+    }
+  }
+
+  @keyframes hero-word {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes hero-in {
+    from {
+      opacity: 0;
+      translate: 0 var(--intro-shift);
+    }
+  }
+
+  // From the photograph's foot showing to its head: as a share of its own
+  // height, the spare over the whole.
+  @keyframes hero-parallax {
+    from {
+      translate: 0 math.div($hero-parallax-spare, 100% + $hero-parallax-spare) * -100%;
+    }
+
+    to {
+      translate: 0 0;
+    }
+  }
+
+  // The lead cards start at the screen's right edge, so they go by and off the
+  // left one before the first card brakes into its place. 12.5% of the track
+  // is those two cards: each card is one sixteenth of it (LEAD_CARDS).
+  @keyframes hero-arrive {
+    from {
+      translate: calc(100vw + 12.5%) 0;
     }
   }
 
@@ -252,13 +673,23 @@
     }
   }
 
+  // One run of the makers' marks: a third of their track (brands.ts, BRAND_RUNS).
+  @keyframes hero-marks {
+    to {
+      translate: calc(-100% / 3) 0;
+    }
+  }
+
   // As tall as the strip, 4:3: the height is the space left, the width
-  // follows it.
+  // follows it. A width in the strip's own height, not aspect-ratio: where the
+  // strip shrank from its basis, WebKit sized each list for the height before
+  // the shrink and left a blank gap of hundreds of pixels at the loop's seam
+  // (744px on an iPhone 17's height, found 2026-11-04).
   .card {
     position: relative;
     flex: none;
     block-size: 100%;
-    aspect-ratio: 4 / 3;
+    inline-size: calc(100cqb * 4 / 3);
     overflow: hidden;
     isolation: isolate;
 
@@ -284,6 +715,25 @@
     inline-size: 100%;
     block-size: 100%;
     object-fit: cover;
+  }
+
+  // --- The page's scroll ----------------------------------------------------
+  //
+  // After .image, so the photograph's parallax height wins over its own.
+  @media (prefers-reduced-motion: no-preference) {
+    // The photographs slide through their cards on the page's scroll, with
+    // no script. Where the timeline is not supported (Firefox), they sit
+    // still. The strip's own run on the scroll is StripControls'.
+    @supports (animation-timeline: scroll()) {
+      .image {
+        block-size: calc(100% + #{$hero-parallax-spare});
+        animation-name: hero-parallax;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: scroll(root);
+        animation-range: 0 var(--hero-parallax-range);
+      }
+    }
   }
 
   // Shown on hover and on focus; always shown where there is no hover, since
@@ -370,8 +820,22 @@
     }
 
     .list[data-copy],
+    .brandList[data-copy],
     .control[data-pause] {
       display: none;
+    }
+
+    // The marks stand still, wrapped and centred.
+    .brandTrack {
+      inline-size: auto;
+      justify-content: center;
+    }
+
+    .brandList {
+      flex-wrap: wrap;
+      justify-content: center;
+      row-gap: $space-4;
+      padding-inline: $space-4;
     }
   }
 }

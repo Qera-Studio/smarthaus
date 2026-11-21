@@ -69,7 +69,7 @@ test.describe("the consent banner", () => {
 
     const banner = region(page);
     await expect(banner.getByRole("heading", { name: "Cookies" })).toBeVisible();
-    await expect(banner.getByText("Analytics stays off unless you turn it on.")).toBeVisible();
+    await expect(banner.getByText("decline to turn Clarity off")).toBeVisible();
     await expect(bannerButton(page, "Accept analytics")).toBeVisible();
     await expect(bannerButton(page, "Decline")).toBeVisible();
     await expect(bannerButton(page, "Choose what to share")).toBeVisible();
@@ -707,12 +707,12 @@ test.describe("/cookie-preferences", () => {
 });
 
 test.describe("what the banner must not do", () => {
-  test("loads no analytics script, accepted or not", async ({ page }) => {
-    // The whole point of the current scope: the gate exists, the tags do not.
-    // consent-content-deck.md §13 lists six items as blocking before they may
-    // fire, five of them outside engineering. If a script appears here, it has
-    // been shipped ahead of a DPIA screen, a cross-border transfer basis and
-    // counsel review.
+  test("loads no analytics script while the ids are unset, accepted or not", async ({ page }) => {
+    // The ids are the switches, and this build has none: consent-content-deck.md
+    // §13 lists the items that must clear before they are set. If a script appears
+    // here, something other than an id can start one, ahead of a DPIA screen,
+    // a cross-border transfer basis and counsel review. What each choice does
+    // once they are set is in src/lib/__tests__/clarity.test.ts and ga4.test.ts.
     const thirdParty: string[] = [];
     page.on("request", (request) => {
       const url = request.url();

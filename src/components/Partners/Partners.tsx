@@ -1,4 +1,4 @@
-import { PARTNERS } from "../../content/partners";
+import { getHomePage } from "../../sanity/content";
 import { PartnerCarousel } from "./PartnerCarousel";
 import styles from "./Partners.module.scss";
 
@@ -12,13 +12,14 @@ import styles from "./Partners.module.scss";
  * card carries its own visible title, and a second visible heading above the
  * card would read as a label on a label.
  */
-export function Partners() {
+export async function Partners() {
+  const { partners } = await getHomePage();
   return (
     <section className={styles.partners} aria-labelledby="partners" data-partners="">
       <h2 id="partners" className="visually-hidden">
-        Our partners
+        {partners.heading}
       </h2>
-      <PartnerCarousel partners={PARTNERS} />
+      <PartnerCarousel partners={partners.items} visit={partners.visit} />
     </section>
   );
 }

@@ -1,6 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 
-import { DRAG_MIN_PX, REVEAL_GUTTER_PX, StripControls } from "../StripControls";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+
+import {
+  DRAG_MIN_PX,
+  DRIFT_RETURN,
+  GLIDE_DECAY,
+  GLIDE_STEP_MS,
+  REVEAL_GUTTER_PX,
+  SCROLL_SPEED,
+  StripControls,
+} from "../StripControls";
 
 /**
  * The strip's pause button, and the hand on the strip: a mouse or finger
@@ -26,8 +36,26 @@ class FakePointerEvent extends MouseEvent {
   }
 }
 
+// Nor IntersectionObserver: the stand-in hands the test its callback, so a
+// test says when the strip is on screen.
+let onScreen: (visible: boolean) => void = () => {};
+let observersDisconnected = 0;
+class FakeIntersectionObserver {
+  constructor(callback: (entries: { isIntersecting: boolean }[]) => void) {
+    onScreen = (visible) => act(() => callback([{ isIntersecting: visible }]));
+  }
+  observe() {}
+  disconnect() {
+    observersDisconnected += 1;
+  }
+}
+
 beforeAll(() => {
   Object.defineProperty(window, "PointerEvent", { configurable: true, value: FakePointerEvent });
+  Object.defineProperty(window, "IntersectionObserver", {
+    configurable: true,
+    value: FakeIntersectionObserver,
+  });
 });
 
 // jsdom has no hit test either: by default nothing is under the pointer.
@@ -43,7 +71,7 @@ function setup({ animated = true, at = 0 }: { animated?: boolean; at?: number } 
         <div data-testid="track">
           <ul>
             <li>
-              <a href="/solutions">View cameras</a>
+              <a href="#cameras">View cameras</a>
             </li>
           </ul>
         </div>
@@ -54,6 +82,8 @@ function setup({ animated = true, at = 0 }: { animated?: boolean; at?: number } 
   const track = screen.getByTestId("track");
   const animation = {
     currentTime: at,
+    playState: "running",
+    updatePlaybackRate: jest.fn(),
     effect: { getComputedTiming: () => ({ duration: DURATION }) },
   };
   track.getAnimations = () => (animated ? [animation as unknown as Animation] : []);
@@ -333,6 +363,32 @@ describe("StripControls", () => {
       expect(animation.currentTime).toBe(DURATION - 1);
     });
 
+    // An animation's currentTime runs on past one pass after a minute on the
+    // page, and a glide back sets it four passes on. Clamped to the first
+    // pass, a reveal threw the strip to that pass's end and the focused card
+    // a whole copy's width off screen (CI, 2026-11-21, focus-visible.spec.ts).
+    it("stays in the pass the strip is in, a minute on the page", () => {
+      const { strip, animation, link } = setup({ at: DURATION + 10_000 });
+      place(strip, -120);
+      focusCard(link);
+      const moved = REVEAL_GUTTER_PX - -120;
+      expect(animation.currentTime).toBeCloseTo(DURATION + 10_000 - moved * MS_PER_PX);
+    });
+
+    it("stops at the start of that pass, four passes on after a glide back", () => {
+      const { strip, animation, link } = setup({ at: 4 * DURATION + 5 * MS_PER_PX });
+      place(strip, -10);
+      focusCard(link);
+      expect(animation.currentTime).toBe(4 * DURATION);
+    });
+
+    it("and short of its end", () => {
+      const { strip, animation, link } = setup({ at: 2 * DURATION - 5 * MS_PER_PX });
+      place(strip, 300);
+      focusCard(link);
+      expect(animation.currentTime).toBe(2 * DURATION - 1);
+    });
+
     it("a drag still wraps, since there the picture is all that matters", () => {
       const { strip, animation } = setup({ at: 5 * MS_PER_PX });
       drag(strip, [400, 420]);
@@ -467,5 +523,329 @@ describe("StripControls", () => {
   it("does not throw with no strip on the page", () => {
     render(<StripControls />);
     expect(() => fireEvent.click(screen.getByRole("button"))).not.toThrow();
+  });
+
+  describe("the page's scroll", () => {
+    /** Scrolls the page to y and tells the listeners. */
+    const scrollTo = (y: number) => {
+      Object.defineProperty(window, "scrollY", { configurable: true, value: y });
+      fireEvent.scroll(window);
+    };
+    /** The speed a scroll of dy adds at once, on top of the drift's 1. */
+    const extra = (dy: number) =>
+      (dy * MS_PER_PX * SCROLL_SPEED * (1 - GLIDE_DECAY)) / GLIDE_STEP_MS;
+    const lastRate = (animation: { updatePlaybackRate: jest.Mock }) =>
+      animation.updatePlaybackRate.mock.calls.at(-1)?.[0] as number;
+    /** Every speed set from here until the glide ends. */
+    const runOut = (animation: { updatePlaybackRate: jest.Mock }) => {
+      animation.updatePlaybackRate.mockClear();
+      act(() => {
+        jest.advanceTimersByTime(GLIDE_STEP_MS * 400);
+      });
+      return animation.updatePlaybackRate.mock.calls.map((call) => call[0] as number);
+    };
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      scrollTo(0);
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    test("never jumps: it changes the drift's speed, and not where it is", () => {
+      const { animation } = setup({ at: 10_000 });
+      onScreen(true);
+      scrollTo(100);
+      expect(animation.currentTime).toBe(10_000);
+      expect(lastRate(animation)).toBeCloseTo(1 + extra(100));
+    });
+
+    test("a scroll up runs it backwards, at the scroll's speed alone", () => {
+      const { animation } = setup({ at: 200_000 });
+      scrollTo(5000);
+      onScreen(true);
+      scrollTo(4000);
+      expect(lastRate(animation)).toBeCloseTo(extra(-1000));
+      expect(lastRate(animation)).toBeLessThan(0);
+    });
+
+    test("no bounce: after a scroll up it comes to rest, then the drift eases back", () => {
+      const { strip, animation } = setup({ at: 200_000 });
+      scrollTo(1000);
+      onScreen(true);
+      scrollTo(800);
+      const rates = runOut(animation);
+      // Only ever rising, with no step up larger than the gentle return once
+      // the scroll's part has run out: it never snaps back to full drift.
+      for (let i = 1; i < rates.length; i += 1) {
+        expect(rates[i]!).toBeGreaterThanOrEqual(rates[i - 1]!);
+        if (rates[i - 1]! >= 0)
+          expect(rates[i]! - rates[i - 1]!).toBeLessThanOrEqual(DRIFT_RETURN + 1e-9);
+      }
+      expect(rates.at(-1)).toBe(1);
+      expect(strip).not.toHaveAttribute("data-gliding");
+    });
+
+    test("the speed eases away, step by step, and hands back to the drift", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      onScreen(true);
+      scrollTo(100);
+      const rates = runOut(animation);
+      for (let i = 1; i < rates.length; i += 1) {
+        expect(rates[i]!).toBeLessThanOrEqual(rates[i - 1]!);
+      }
+      expect(rates.at(-1)).toBe(1);
+      expect(strip).not.toHaveAttribute("data-gliding");
+    });
+
+    test("has a short tail, so nothing glides on long after the scroll stops", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      onScreen(true);
+      scrollTo(400);
+      act(() => {
+        jest.advanceTimersByTime(1_000);
+      });
+      expect(strip).not.toHaveAttribute("data-gliding");
+      expect(lastRate(animation)).toBe(1);
+    });
+
+    test("over the whole glide it runs SCROLL_SPEED pixels for every pixel scrolled", () => {
+      const { animation } = setup({ at: 10_000 });
+      onScreen(true);
+      scrollTo(300);
+      const first = lastRate(animation);
+      const rates = [first, ...runOut(animation)];
+      const ms = rates.slice(0, -1).reduce((sum, rate) => sum + (rate - 1) * GLIDE_STEP_MS, 0);
+      // Within what GLIDE_END cuts off the tail.
+      expect(Math.abs(ms / MS_PER_PX - 300 * SCROLL_SPEED)).toBeLessThan(5);
+    });
+
+    test("is 15% under the 2.5 of the cut before", () => {
+      expect(SCROLL_SPEED).toBeCloseTo(2.5 * 0.85);
+    });
+
+    test("stops with the page: nine tenths of a scroll is spent within a quarter second", () => {
+      const steps = Math.floor(250 / GLIDE_STEP_MS);
+      expect(GLIDE_DECAY ** steps).toBeLessThan(0.1);
+    });
+
+    test("after a hard scroll up it is going forward again within a second", () => {
+      const { animation } = setup({ at: 200_000 });
+      scrollTo(3000);
+      onScreen(true);
+      scrollTo(0);
+      animation.updatePlaybackRate.mockClear();
+      act(() => {
+        jest.advanceTimersByTime(1_000);
+      });
+      expect(lastRate(animation)).toBeGreaterThan(0);
+    });
+
+    test("another scroll while it glides adds to the speed already there", () => {
+      const { animation } = setup({ at: 10_000 });
+      onScreen(true);
+      scrollTo(100);
+      const once = lastRate(animation);
+      scrollTo(200);
+      expect(lastRate(animation)).toBeGreaterThan(once);
+    });
+
+    test("going backwards never reaches zero, where an animation would end", () => {
+      const { animation } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(5000);
+      runOut(animation);
+      Object.defineProperty(window, "scrollY", { configurable: true, value: 5000 });
+      animation.currentTime = 1000;
+      scrollTo(0);
+      // Whole passes on: the same picture.
+      expect(animation.currentTime).toBe(1000 + DURATION * 4);
+    });
+
+    test("forwards, it leaves the clock alone however near the start", () => {
+      const { animation } = setup({ at: 5 });
+      onScreen(true);
+      scrollTo(100);
+      expect(animation.currentTime).toBe(5);
+    });
+
+    test("does nothing until any of the strip is on screen, and nothing once it has left", () => {
+      const { animation } = setup({ at: 1000 });
+      scrollTo(100);
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
+      onScreen(true);
+      onScreen(false);
+      scrollTo(300);
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
+    });
+
+    test("counts from where the page was when the strip came on screen", () => {
+      const { animation } = setup({ at: 1000 });
+      scrollTo(900);
+      onScreen(true);
+      scrollTo(910);
+      expect(lastRate(animation)).toBeCloseTo(1 + extra(10));
+    });
+
+    test("runs a strip that hover or the pause button holds, with no drift to add to", () => {
+      const { strip, animation } = setup({ at: 1000 });
+      animation.playState = "paused";
+      onScreen(true);
+      scrollTo(50);
+      expect(strip).toHaveAttribute("data-gliding");
+      expect(lastRate(animation)).toBeCloseTo(extra(50));
+    });
+
+    test("the pause button pressed mid-glide stops it", () => {
+      const { strip, animation, pause } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(100);
+      fireEvent.click(pause);
+      act(() => {
+        jest.advanceTimersByTime(GLIDE_STEP_MS);
+      });
+      expect(strip).not.toHaveAttribute("data-gliding");
+      expect(lastRate(animation)).toBe(1);
+    });
+
+    test("leaves the strip alone while keyboard focus is in it", () => {
+      const { animation, link } = setup({ at: 1000 });
+      link.focus();
+      animation.updatePlaybackRate.mockClear();
+      onScreen(true);
+      scrollTo(100);
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
+    });
+
+    test("a card taking focus ends a glide at once", () => {
+      const { strip, animation, link } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(100);
+      act(() => link.focus());
+      expect(strip).not.toHaveAttribute("data-gliding");
+      expect(lastRate(animation)).toBe(1);
+    });
+
+    test("a press ends a glide at once, and a drag is not disturbed by the scroll", () => {
+      const { strip, animation } = setup({ at: 10_000 });
+      onScreen(true);
+      scrollTo(100);
+      fireEvent.pointerDown(strip, { button: 0, clientX: 500, pointerId: 1 });
+      expect(strip).not.toHaveAttribute("data-gliding");
+      expect(lastRate(animation)).toBe(1);
+      fireEvent.pointerMove(window, { clientX: 400, pointerId: 1 });
+      animation.updatePlaybackRate.mockClear();
+      scrollTo(300);
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
+      fireEvent.pointerUp(window, { pointerId: 1 });
+    });
+
+    test("leaves the strip alone under reduced motion, where it does not drift", () => {
+      const { strip } = setup({ animated: false });
+      strip.scrollLeft = 50;
+      onScreen(true);
+      scrollTo(100);
+      expect(strip.scrollLeft).toBe(50);
+      expect(strip).not.toHaveAttribute("data-gliding");
+    });
+
+    test("does nothing on a strip that has no track yet", () => {
+      render(
+        <section data-hero>
+          <StripControls />
+          <div data-hero-strip />
+        </section>,
+      );
+      onScreen(true);
+      expect(() => scrollTo(100)).not.toThrow();
+    });
+
+    test("ends if the animation goes away mid-glide", () => {
+      const { strip, animation } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(100);
+      screen.getByTestId("track").getAnimations = () => [];
+      animation.updatePlaybackRate.mockClear();
+      act(() => {
+        jest.advanceTimersByTime(GLIDE_STEP_MS);
+      });
+      expect(strip).not.toHaveAttribute("data-gliding");
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
+    });
+
+    test("stops listening, observing and gliding on unmount", () => {
+      const { animation, unmount } = setup({ at: 1000 });
+      onScreen(true);
+      scrollTo(100);
+      const before = observersDisconnected;
+      unmount();
+      expect(observersDisconnected).toBe(before + 1);
+      animation.updatePlaybackRate.mockClear();
+      scrollTo(300);
+      act(() => {
+        jest.advanceTimersByTime(GLIDE_STEP_MS * 5);
+      });
+      expect(animation.updatePlaybackRate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("the opening", () => {
+    afterEach(() => document.documentElement.removeAttribute("data-intro"));
+
+    /** An animationend on `target`, named as CSS Modules hashes it. */
+    const ended = (target: Element, name: string) => {
+      const event = new Event("animationend", { bubbles: true });
+      Object.defineProperty(event, "animationName", { value: `HomeHero-module__x__${name}` });
+      fireEvent(target, event);
+    };
+
+    test("leaves data-intro on <html> while the opening plays", () => {
+      document.documentElement.setAttribute("data-intro", "");
+      setup();
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
+    });
+
+    const row = () => screen.getByRole("button", { name: "Pause the images" }).parentElement!;
+
+    test("takes it off once the pause row has faded in, the opening's last step", () => {
+      document.documentElement.setAttribute("data-intro", "");
+      setup();
+      ended(row(), "hero-in");
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(false);
+    });
+
+    test("not when the strip lands, which is sooner, or when anything else ends", () => {
+      document.documentElement.setAttribute("data-intro", "");
+      const { strip, link } = setup();
+      ended(strip, "hero-arrive");
+      ended(strip, "hero-in");
+      ended(link, "hero-in");
+      ended(row(), "hero-arrive");
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
+    });
+
+    test("survives development's mount, unmount and mount again", () => {
+      document.documentElement.setAttribute("data-intro", "");
+      render(
+        <StrictMode>
+          <section data-hero>
+            <StripControls />
+            <div data-hero-strip />
+          </section>
+        </StrictMode>,
+      );
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
+    });
+
+    test("stops listening on unmount", () => {
+      document.documentElement.setAttribute("data-intro", "");
+      const { unmount } = setup();
+      const button = row();
+      unmount();
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
+      ended(button, "hero-in");
+      expect(document.documentElement.hasAttribute("data-intro")).toBe(true);
+    });
   });
 });

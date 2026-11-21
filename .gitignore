@@ -66,3 +66,6 @@ next-env.d.ts
 
 # e2e mail sink: emails the test server wrote instead of sending
 .e2e-mail/
+
+# The seed export (sanity/seed/export.run.ts). Generated, and it names local paths.
+/sanity/seed/out/

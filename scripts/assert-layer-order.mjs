@@ -39,9 +39,14 @@ export function firstAppearance(css) {
 
 // A chunk passes when it declares no layers at all (plain CSS, e.g. a font
 // face), or when its first-appearance order begins with the full expected list.
+// A chunk that names none of our layers cannot reorder them, so it passes, as
+// a chunk with no layers at all does. The one in the build is the Studio's
+// Sanity UI stylesheet (`@layer sui`), loaded only on /studio (2026-11-19). A
+// chunk that names any of ours is held to the full order, foreign layers
+// before ours included.
 export function checkChunk(css, expected) {
   const seen = firstAppearance(css);
-  if (seen.length === 0) return null;
+  if (!seen.some((name) => expected.includes(name))) return null;
   const head = seen.slice(0, expected.length);
   if (head.join(",") === expected.join(",")) return null;
   return `expected ${expected.join(" < ")}, found ${seen.join(" < ")}`;

@@ -20,6 +20,11 @@ permissions:
 
 env:
   NEXT_TELEMETRY_DISABLED: "1"
+  # Every build in CI reads the ci dataset: a copy of sanity/seed/, public and
+  # read without a token. Production content changes in the Studio every day;
+  # the tests pin wording, so they read content an editor cannot change.
+  NEXT_PUBLIC_SANITY_PROJECT_ID: nqc5m5ls
+  NEXT_PUBLIC_SANITY_DATASET: ci
 
 jobs:
   static:

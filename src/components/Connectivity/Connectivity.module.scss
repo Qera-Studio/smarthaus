@@ -1,0 +1,108 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+// The frame in Figma (4914:839): 1200 by 594, its content 88px in.
+$frame-inline: 75rem;
+$frame-block: 37.125rem;
+$frame-padding: $space-20 + $space-2;
+// The line under the heading stops at 900px, as drawn.
+$lead-max: 56.25rem;
+
+@layer components {
+  // A 1200px block, centred in the page's column (Shivanshu, 2026-11-16), and
+  // edge to edge on a phone, where the column's gutters would leave a strip.
+  .section {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: $space-16;
+    max-inline-size: $frame-inline;
+    margin-inline: calc(-1 * var(--page-gutter));
+    // 64px above and below (Shivanshu, 2026-11-16: 32px, then doubled).
+    margin-block: $space-16;
+    padding-block: $space-16;
+    padding-inline: var(--page-gutter);
+    // Figma's ground (bg.svg) drawn once as a picture, by
+    // scripts/bake-connectivity-ground.mjs: as an SVG its blurs cost WebKit
+    // whole frames on a phone. It covers the block with its top kept and its
+    // middle centred. At the frame's shape (from lg) nothing is cropped;
+    // a phone's tall box crops the sides, and centred keeps the bright corner
+    // out from under the line. Under it, and in its place if it never loads,
+    // the frame's own ground, darker than the picture anywhere, so the copy
+    // holds its contrast either way.
+    background-color: var(--brown-900);
+    background-image: url("/landing/connectivity/ground.webp");
+    background-position: center top;
+    background-size: cover;
+    color: var(--color-text-inverse);
+
+    @include bp-md {
+      margin-inline: auto;
+      padding: $space-12;
+    }
+
+    @include bp-lg {
+      min-block-size: $frame-block;
+      padding: $frame-padding;
+    }
+
+    // Forced colours would paint the copy in system colours over a picture
+    // they leave alone: the section keeps its own.
+    @media (forced-colors: active) {
+      forced-color-adjust: none;
+    }
+  }
+
+  .copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-3;
+  }
+
+  // The solution features' heading size: the page's h2 less 4px, 36px at 1440.
+  .heading {
+    font-size: max(var(--font-size-xl), calc(var(--type-h2) - 0.25rem));
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    color: var(--color-text-inverse);
+    text-wrap: balance;
+  }
+
+  // 36px from the line to the button, as drawn: the 12px gap and this.
+  .lead {
+    max-inline-size: $lead-max;
+    margin-block-end: $space-6;
+    font-size: var(--font-size-lg);
+    font-weight: $font-weight-medium;
+    line-height: $line-height-snug;
+    color: var(--brown-50);
+  }
+
+  // Two to a row on a phone, three from md, one row spread across from lg.
+  .marks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: $space-8 $space-6;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    @include bp-md {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    @include bp-lg {
+      display: flex;
+      justify-content: space-between;
+    }
+  }
+
+  // Each file's own size, shrunk only where its column is narrower.
+  .mark {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+}

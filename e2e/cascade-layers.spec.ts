@@ -53,10 +53,14 @@ for (const path of ["/", "/this-page-does-not-exist", "/loader-preview"]) {
     await expect.poll(layerOrder).toEqual(ORDER);
 
     // The user-visible symptom of an inverted order: the reset's
-    // `a { color: inherit }` beating the CTA's own brown-100 ink.
+    // `a { color: inherit }` beating the CTA's own ink. Its own ink is
+    // brown-100 on the dark button, except from lg over the homepage's dark
+    // hero, where the button is light and its ink brown-900 (2026-11-14):
+    // there an inverted order would show the bar's light ink instead.
+    const overDarkHero = path === "/" && (page.viewportSize()?.width ?? 0) >= 1024;
     await expect(page.locator('header a[href="/contact"]')).toHaveCSS(
       "color",
-      "rgb(240, 233, 221)",
+      overDarkHero ? "rgb(20, 17, 14)" : "rgb(240, 233, 221)",
     );
   });
 }

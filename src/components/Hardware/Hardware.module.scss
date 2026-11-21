@@ -223,6 +223,15 @@ $slide-ease: cubic-bezier(0.76, 0, 0.24, 1);
     animation-play-state: paused;
   }
 
+  // And once the Process stack's first sheet has snapped over the section
+  // (2026-11-19). Held there, the section is still inside the viewport, so
+  // its own observer never pauses it, and the slides kept advancing under the
+  // sheets. SheetSnap sets data-snap; without it (reduced motion, a short
+  // screen, no JavaScript) nothing covers the section and nothing pauses.
+  [data-process-stack]:has([data-snap="in"]) .progress {
+    animation-play-state: paused;
+  }
+
   // --- Slides ---------------------------------------------------------------
 
   // Every slide in one cell: the stage is as tall as the tallest slide, and

@@ -79,6 +79,24 @@
     flex-direction: column;
   }
 
+  // The package notes: numbered as the deck numbers them, each on the FAQ
+  // rows' rule so the two sections read as one register.
+  .notes {
+    display: flex;
+    flex-direction: column;
+    list-style: decimal-leading-zero inside;
+  }
+
+  .note {
+    max-inline-size: 62ch;
+    padding-block: $space-4;
+    border-block-end: var(--contact-rule);
+    font-size: var(--font-size-sm);
+    line-height: $line-height-relaxed;
+    color: var(--color-text-secondary);
+    text-wrap: pretty;
+  }
+
   // Bottom rule only. A top rule on the first item would sit a few pixels under
   // the section's own divider and read as a double line.
   .faq {

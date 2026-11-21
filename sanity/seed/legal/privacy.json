@@ -1,0 +1,1815 @@
+{
+  "seo": {
+    "title": "Privacy Policy",
+    "description": "How Smarthaus collects, uses, and protects your personal information, how long we keep it, and your rights over it.",
+    "index": false
+  },
+  "title": "Privacy Policy",
+  "standfirst": "What we collect when you use this site or enquire about our services, why we collect it, how long we keep it, who else sees it, and what you can ask us to do with it.",
+  "status": "draft",
+  "version": "0.6.0-draft",
+  "updatedLabel": "Draft, not yet effective",
+  "intro": [
+    {
+      "_type": "block",
+      "_key": "k1",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "k0",
+          "text": "Smarthaus is a smart home automation brand operating in Dubai, United Arab Emirates. This policy explains what personal information we collect when you use this website or enquire about our services.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "_type": "block",
+      "_key": "k3",
+      "style": "normal",
+      "markDefs": [],
+      "children": [
+        {
+          "_type": "span",
+          "_key": "k2",
+          "text": "We have written this to be read, not to be impenetrable. If anything here is unclear, ask us and we will explain it.",
+          "marks": []
+        }
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "id": "responsible",
+      "title": "Who is responsible for your information",
+      "short": "Who is responsible",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k5",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k4",
+              "text": "Maple Technologies Security Systems LLC is the data controller for the information described in this policy. This means we decide what personal information is collected and why.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "defTable",
+          "_key": "k6",
+          "caption": "Smarthaus entity and contact details",
+          "rows": [
+            {
+              "_type": "defRow",
+              "_key": "k7",
+              "label": "Legal entity",
+              "value": "Maple Technologies Security Systems LLC"
+            },
+            {
+              "_type": "defRow",
+              "_key": "k8",
+              "label": "Trading as",
+              "value": "Smarthaus"
+            },
+            {
+              "_type": "defRow",
+              "_key": "k9",
+              "label": "Trade licence number",
+              "value": "897839"
+            },
+            {
+              "_type": "defRow",
+              "_key": "ka",
+              "label": "SIRA licence number",
+              "value": "SSP202210037219"
+            },
+            {
+              "_type": "defRow",
+              "_key": "kb",
+              "label": "Licensing authority",
+              "value": "Dubai, UAE"
+            },
+            {
+              "_type": "defRow",
+              "_key": "kc",
+              "label": "Registered address",
+              "contact": "address"
+            },
+            {
+              "_type": "defRow",
+              "_key": "kd",
+              "label": "Privacy contact",
+              "contact": "email"
+            },
+            {
+              "_type": "defRow",
+              "_key": "ke",
+              "label": "General contact",
+              "contact": "email"
+            },
+            {
+              "_type": "defRow",
+              "_key": "kf",
+              "label": "Phone",
+              "contact": "phone"
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kj",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kg",
+              "text": "Smarthaus is a sub-brand of ",
+              "marks": []
+            },
+            {
+              "_type": "span",
+              "_key": "kh",
+              "text": "parent company name",
+              "marks": ["placeholder"]
+            },
+            {
+              "_type": "span",
+              "_key": "ki",
+              "text": ". Where information is shared within the group, it is covered by section 4.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "coverage",
+      "title": "What this policy covers",
+      "short": "What this covers",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "kl",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kk",
+              "text": "This policy covers the Smarthaus website at smarthaus.ae and enquiries made through it.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kn",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "km",
+              "text": "It does not cover:",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kp",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "ko",
+              "text": "Installed smart home systems in your property after handover. Devices and control apps supplied as part of an installation are operated by their manufacturers under their own terms and privacy policies. We will identify these in your project documentation.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kr",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kq",
+              "text": "Third-party websites we link to.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kv",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "ks",
+              "text": "Your dealings with ",
+              "marks": []
+            },
+            {
+              "_type": "span",
+              "_key": "kt",
+              "text": "parent company name",
+              "marks": ["placeholder"]
+            },
+            {
+              "_type": "span",
+              "_key": "ku",
+              "text": " under any separate agreement.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "what-we-collect",
+      "title": "What we collect, why, and on what basis",
+      "short": "What we collect",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "kx",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "kw",
+              "text": "We collect two kinds of information: what you give us deliberately, and what is recorded automatically when any website is served to you.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "kz",
+          "style": "h3",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "ky",
+              "text": "Information you give us",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k11",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k10",
+              "text": "When you submit an enquiry form on this site, we collect:",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "legalTable",
+          "_key": "k12",
+          "caption": "Information collected through enquiry forms, why it is needed, and the lawful basis",
+          "columns": ["What", "Why we need it", "Lawful basis"],
+          "rows": [
+            {
+              "_type": "row",
+              "_key": "k13",
+              "cells": [
+                "Your name",
+                "To address you properly and identify your enquiry",
+                "Consent, and steps toward a contract"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k14",
+              "cells": [
+                "Email address",
+                "To reply to your enquiry",
+                "Consent, and steps toward a contract"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k15",
+              "cells": [
+                "Phone number",
+                "To call or message you about your enquiry. Every enquiry form requires it",
+                "Consent, and steps toward a contract"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k16",
+              "cells": [
+                "Property location or area",
+                "To tell you whether we serve your area and to scope a site visit",
+                "Consent, and steps toward a contract"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k17",
+              "cells": [
+                "Project details you describe",
+                "To understand what you are asking for and prepare a useful response",
+                "Consent, and steps toward a contract"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k18",
+              "cells": [
+                "Whether you are an owner, designer, or developer",
+                "To route your enquiry to the right person and respond in the right detail",
+                "Consent"
+              ]
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1a",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k19",
+              "text": "We ask for the minimum needed to respond usefully. The fields we need are marked required; leaving any other field blank does not stop us replying.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1d",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k1b",
+              "text": "We do not ask for and do not want:",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k1c",
+              "text": " your identity documents, passport or Emirates ID numbers, bank or card details, salary or financial information, or health information. Do not send these through the website. If a project later requires any such document, we will tell you how to provide it securely and why it is needed.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1g",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k1e",
+              "text": "If you contact us on WhatsApp,",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k1f",
+              "text": " using a link on this site opens a conversation in your own WhatsApp application with a message pre-filled for convenience. You choose whether to send it. That conversation is carried by WhatsApp under WhatsApp’s own privacy policy. We receive the message content and your WhatsApp display name and number, as in any WhatsApp chat.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1i",
+          "style": "h3",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k1h",
+              "text": "Information recorded automatically",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1k",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k1j",
+              "text": "Serving a web page necessarily involves your device telling our hosting provider where to send it. Our hosting provider records, in its server logs:",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1m",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k1l",
+              "text": "your IP address",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1o",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k1n",
+              "text": "the pages you requested and when",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1q",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k1p",
+              "text": "your browser and operating system type (the user-agent string)",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1s",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k1r",
+              "text": "the page that referred you, if any",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1u",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k1t",
+              "text": "We use this for security, fraud and abuse prevention, and to diagnose faults. The basis is our legitimate interest in keeping the site available and secure. These logs are held by our hosting provider under its own retention schedule (section 6).",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1w",
+          "style": "h3",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "anchor",
+              "_key": "kcookies",
+              "id": "cookies"
+            },
+            {
+              "_type": "span",
+              "_key": "k1v",
+              "text": "Cookies and analytics",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k1z",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k1x",
+              "text": "Essential cookies",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k1y",
+              "text": " keep the site working. There is one: it remembers your cookie choice. It is always active.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k22",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k20",
+              "text": "Analytics cookies are off until you turn them on.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k21",
+              "text": " Google Analytics runs only if you accept analytics. It counts visits and shows which pages are read, and it is not used to advertise to you.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k25",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k23",
+              "text": "We do measure how the site performs, without cookies.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k24",
+              "text": " Vercel Web Analytics and Speed Insights count page views and record how quickly pages load. They set no cookies, store nothing in your browser, and create no identifier that survives your visit, so there is nothing here for you to switch off. You are counted; you are not followed.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k2a",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k26",
+              "text": "Microsoft Clarity runs without cookies until you choose.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k27",
+              "text": " It records how pages are used, including scrolling, clicks and pointer movement, and can replay a session, so we can see where people get stuck. Without cookies it gives each page view its own identifier and does not connect one to the next. If you accept analytics, it uses cookies to follow a visit across pages. If you decline, or your browser sends a Do Not Track or Global Privacy Control signal, it does not run. ",
+              "marks": []
+            },
+            {
+              "_type": "span",
+              "_key": "k29",
+              "text": "Anything you type into a form is masked and never recorded.",
+              "marks": ["strong"]
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k2c",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k2b",
+              "text": "We do not use advertising or remarketing cookies. There is no Meta Pixel, no ad-network tag, and no third-party chat widget on this site.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k2g",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k2d",
+              "text": "You can change your choice at any time from ",
+              "marks": []
+            },
+            {
+              "_type": "span",
+              "_key": "k2e",
+              "text": "Cookie preferences",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k2f",
+              "text": " in the footer of any page. Turning analytics off stops it immediately.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k2i",
+          "style": "h3",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k2h",
+              "text": "Children",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k2k",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k2j",
+              "text": "This website and our services are directed at adults arranging work on property. We do not knowingly collect information from anyone under 18. If you believe a child has sent us personal information, contact us at the privacy address above and we will delete it.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "who-sees-it",
+      "title": "Who else sees your information",
+      "short": "Who else sees it",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k2m",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k2l",
+              "text": "We do not sell your personal information. We do not share it for anyone else’s marketing.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k2o",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k2n",
+              "text": "We use a small number of service providers who process information on our instructions. Each one is listed below. We would rather name them than describe them vaguely.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k2q",
+          "style": "h3",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k2p",
+              "text": "Currently in use",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "legalTable",
+          "_key": "k2r",
+          "caption": "Service providers currently processing information for Smarthaus",
+          "role": "processorsActive",
+          "columns": ["Provider", "What it does", "What it sees"],
+          "rows": [
+            {
+              "_type": "row",
+              "_key": "k2s",
+              "cells": [
+                "Vercel Inc.",
+                "Hosts and serves this website",
+                "Server log data described in section 3"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k2t",
+              "cells": [
+                "Resend",
+                "Delivers each enquiry you send to our mailbox",
+                "Everything you submit in an enquiry form"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "gws1",
+              "cells": [
+                "Google Workspace",
+                "Hosts our email, where each enquiry you send is kept",
+                "Everything you submit in an enquiry form, and any email you send us"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k2u",
+              "cells": [
+                "Vercel Web Analytics and Speed Insights",
+                "Aggregate page performance and visit counts",
+                "Aggregated, non-identifying usage data. No cookies, and no identifier that survives your visit"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k2v",
+              "cells": [
+                "Google (Analytics 4)",
+                "Aggregate usage analytics",
+                "Pages viewed, approximate location from IP, device type and referrer"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k2w",
+              "cells": [
+                "Microsoft (Clarity)",
+                "Heatmaps and session replay",
+                "Scrolling, clicks, pointer movement and the pages viewed. Form input masked"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k2x",
+              "cells": [
+                "Sanity",
+                "Stores and manages the website’s content",
+                "Nothing about you. The site’s content, and the sign-in details of our own staff who edit it"
+              ]
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k2z",
+          "style": "h3",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k2y",
+              "text": "Not yet active",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k31",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k30",
+              "text": "The following are planned but not currently operating on this site. We list them for transparency about our direction. Each will move into the table above, and this policy will be updated and re-dated, before it begins processing anything.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "legalTable",
+          "_key": "k32",
+          "caption": "Service providers planned but not yet processing any information",
+          "role": "processorsPlanned",
+          "columns": ["Provider", "Planned purpose", "What it would see"],
+          "rows": [
+            {
+              "_type": "row",
+              "_key": "k33",
+              "cells": [
+                "Cloudflare Turnstile",
+                "Spam protection on the enquiry form, if spam volume requires it",
+                "Technical signals about your browser session"
+              ]
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k35",
+          "style": "h3",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k34",
+              "text": "Others who may receive information",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k3b",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k36",
+              "text": "Within our group.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k37",
+              "text": " Your enquiry may be seen by colleagues at ",
+              "marks": []
+            },
+            {
+              "_type": "span",
+              "_key": "k39",
+              "text": "parent company name",
+              "marks": ["placeholder"]
+            },
+            {
+              "_type": "span",
+              "_key": "k3a",
+              "text": " where they are handling it, for example an engineer scoping a site visit.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k3e",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k3c",
+              "text": "Installation and trade partners.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k3d",
+              "text": " Where a project requires a specialist subcontractor, we share what that partner needs to do the work, and no more. We tell you who they are.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k3h",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k3f",
+              "text": "Professional advisers.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k3g",
+              "text": " Our accountants, auditors and lawyers, where they need it to advise us.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k3k",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k3i",
+              "text": "Where the law requires it.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k3j",
+              "text": " A court order, a regulator, or a lawful request from a UAE authority. We respond to lawful requests and no more than the request requires.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k3n",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k3l",
+              "text": "If the business is sold or restructured",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k3m",
+              "text": ", information may transfer to the acquiring entity. It would remain subject to a policy no less protective than this one.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "where-it-goes",
+      "title": "Where your information goes",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k3p",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k3o",
+              "text": "Smarthaus operates in the UAE. Some of our service providers are established outside the UAE, which means your information may be processed outside the country, for example by our hosting provider, by Resend, which delivers enquiries from Tokyo, Japan, by Google, which hosts our email and runs one of our analytics tools, and by Microsoft, which runs the other.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k3r",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k3q",
+              "text": "Where information leaves the UAE, we rely on the transfer routes the law permits: transfer to a jurisdiction offering an adequate level of protection, or contractual safeguards binding the recipient to protect the information.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "How long we keep it",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k3t",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k3s",
+              "text": "We do not keep personal information indefinitely.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "legalTable",
+          "_key": "k3u",
+          "caption": "How long each kind of information is kept, and why",
+          "columns": ["Information", "Retention", "Why"],
+          "rows": [
+            {
+              "_type": "row",
+              "_key": "k3v",
+              "cells": [
+                "Enquiries that do not become projects",
+                "{24 months} from last contact",
+                "Enquiries in this sector mature slowly: a villa renovation decision can take a year or more, and we would rather know we have spoken before than start cold"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k3w",
+              "cells": [
+                "Enquiries that become projects",
+                "For the life of the project and {7 years} after completion",
+                "Warranty, as-built records, and statutory record-keeping"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k3x",
+              "cells": [
+                "Marketing list subscriptions",
+                "Until you unsubscribe, then a minimal suppression record",
+                "The suppression record is how we ensure we do not email you again after you ask us to stop"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k3y",
+              "cells": [
+                "Server logs",
+                "Per our hosting provider’s schedule: {confirm period}",
+                "Security and fault diagnosis"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k3z",
+              "cells": [
+                "Your cookie choice",
+                "12 months from the choice",
+                "Proving what was consented to and when, and not asking you again inside that period"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k40",
+              "cells": [
+                "Analytics data",
+                "Up to 14 months",
+                "Year-on-year comparison, then deletion"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k41",
+              "cells": [
+                "Session recordings",
+                "Microsoft’s own retention period: {confirm period}",
+                "Diagnosing where pages fail"
+              ]
+            },
+            {
+              "_type": "row",
+              "_key": "k42",
+              "cells": [
+                "Records we must keep by law",
+                "For the period the relevant UAE law requires",
+                "Where tax, accounting or other law requires retention, that obligation governs that specific record"
+              ]
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k44",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k43",
+              "text": "When a retention period ends, we delete the information or anonymise it so it can no longer identify you.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k47",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k45",
+              "text": "On the conflict between deletion and retention:",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k46",
+              "text": " if you ask us to delete your information but we are legally required to keep part of it, an invoice, for instance, we will delete what we can, keep only what the law requires, tell you which is which, and delete the remainder when that obligation ends.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "your-rights",
+      "title": "Your rights",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k49",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k48",
+              "text": "You have the following rights over your personal information. Exercising them is free, and we will not treat you differently for asking.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k4c",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k4a",
+              "text": "Ask what we hold.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k4b",
+              "text": " Request a copy of the personal information we hold about you, and information about how we use it.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k4f",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k4d",
+              "text": "Correct it.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k4e",
+              "text": " Have inaccurate or out-of-date information fixed.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k4i",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k4g",
+              "text": "Have it deleted.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k4h",
+              "text": " Ask us to delete your information where we have no continuing lawful reason to keep it (see the note in section 6).",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k4l",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k4j",
+              "text": "Withdraw consent.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k4k",
+              "text": " Where we rely on your consent, withdraw it at any time. Withdrawing is as easy as giving it. We then stop that processing, though it does not undo processing already carried out lawfully.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k4o",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k4m",
+              "text": "Restrict or object.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k4n",
+              "text": " Ask us to stop or limit a particular use of your information.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k4r",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k4p",
+              "text": "Ask for it in a portable form.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k4q",
+              "text": " Receive the information you gave us in a structured, commonly used, machine-readable format.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k4u",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k4s",
+              "text": "Stop marketing.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k4t",
+              "text": " Opt out at any time, by the unsubscribe link in any marketing email or by contacting us. We act on this promptly and permanently.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k51",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k4v",
+              "text": "How to exercise a right:",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k4w",
+              "text": " email ",
+              "marks": []
+            },
+            {
+              "_type": "contactValue",
+              "_key": "k4x",
+              "field": "email"
+            },
+            {
+              "_type": "span",
+              "_key": "k4y",
+              "text": " and tell us what you want. We will acknowledge your request and respond within ",
+              "marks": []
+            },
+            {
+              "_type": "span",
+              "_key": "k4z",
+              "text": "30 days",
+              "marks": ["placeholder"]
+            },
+            {
+              "_type": "span",
+              "_key": "k50",
+              "text": " of receiving it. If a request is complex and needs longer, we will tell you why and when to expect our response.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k54",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k52",
+              "text": "We will verify who you are first.",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k53",
+              "text": " Before we hand over or delete personal information, we need to be reasonably satisfied you are the person the information is about. Otherwise a request channel becomes a way to obtain someone else’s data. We will ask you to confirm details we already hold, and we will not ask for more identification than the request requires.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k59",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k55",
+              "text": "If you are unhappy with how we have handled your information,",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k56",
+              "text": " tell us first: most problems are faster to fix directly. Contact ",
+              "marks": []
+            },
+            {
+              "_type": "contactValue",
+              "_key": "k57",
+              "field": "email"
+            },
+            {
+              "_type": "span",
+              "_key": "k58",
+              "text": ", and we will investigate and respond. If you remain dissatisfied, you may complain to the relevant UAE data protection authority.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "protection",
+      "title": "How we protect your information",
+      "short": "How we protect it",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k5b",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5a",
+              "text": "We take practical measures to protect the information we hold:",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k5d",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5c",
+              "text": "The website is served over HTTPS, so information you submit is encrypted in transit.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k5f",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5e",
+              "text": "Access to enquiry information is limited to the people who need it to do their work, and is removed when someone leaves or changes role.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k5h",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5g",
+              "text": "Accounts on the systems we use are protected by strong, unique credentials and multi-factor authentication where the system supports it.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k5j",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5i",
+              "text": "We keep the number of systems holding your information deliberately small, and we ask what a new tool would see before we adopt it.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k5l",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5k",
+              "text": "We collect less than we could. The information we never collect is the information that cannot be exposed.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k5o",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5m",
+              "text": "What we will not claim:",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k5n",
+              "text": " no organisation can promise that information transmitted over the internet is completely secure, and we do not make that promise. What we commit to is taking reasonable measures, keeping them under review, and telling you honestly if something goes wrong.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k5r",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5p",
+              "text": "If a breach occurs",
+              "marks": ["strong"]
+            },
+            {
+              "_type": "span",
+              "_key": "k5q",
+              "text": " that is likely to harm you, we will notify the relevant authority and affected individuals as the law requires, tell you what happened and what information was involved, and tell you what we are doing about it.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "marketing",
+      "title": "Marketing",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k5t",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5s",
+              "text": "We will only send you marketing about Smarthaus if you ask us to, or if you have enquired about our services and we think a small amount of relevant follow-up is useful to you. Either way:",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k5v",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5u",
+              "text": "Every marketing email has a working unsubscribe link.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k5x",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5w",
+              "text": "Unsubscribing takes effect promptly and permanently.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k5z",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k5y",
+              "text": "We do not buy, rent, or scrape marketing lists. If you are hearing from us, it is because you contacted us or subscribed.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k61",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k60",
+              "text": "Replying to an enquiry is not marketing, and you cannot unsubscribe from us answering your question.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "automated-decisions",
+      "title": "Automated decision-making",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k63",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k62",
+              "text": "We do not make decisions about you by automated means. Every enquiry is read and answered by a person. Nothing on this site scores, ranks, or profiles you.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "changes",
+      "title": "Changes to this policy",
+      "body": [
+        {
+          "_type": "block",
+          "_key": "k65",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k64",
+              "text": "We will update this policy when our practices change or the law requires it. The version and date are at the top of this page.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k67",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k66",
+              "text": "Where a change materially affects how we handle information we already hold about you, we will tell you directly rather than relying on you noticing an updated page.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "contact",
+      "title": "Contact",
+      "body": [
+        {
+          "_type": "defTable",
+          "_key": "k68",
+          "caption": "How to contact Smarthaus about privacy",
+          "rows": [
+            {
+              "_type": "defRow",
+              "_key": "k69",
+              "label": "Privacy and data protection",
+              "contact": "email"
+            },
+            {
+              "_type": "defRow",
+              "_key": "k6a",
+              "label": "General enquiries",
+              "contact": "email"
+            },
+            {
+              "_type": "defRow",
+              "_key": "k6b",
+              "label": "Phone",
+              "contact": "phone"
+            },
+            {
+              "_type": "defRow",
+              "_key": "k6c",
+              "label": "Post",
+              "contact": "address"
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "k6h",
+          "style": "normal",
+          "markDefs": [
+            {
+              "_type": "link",
+              "_key": "k6e",
+              "href": "/terms"
+            }
+          ],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "k6d",
+              "text": "Our ",
+              "marks": []
+            },
+            {
+              "_type": "span",
+              "_key": "k6f",
+              "text": "Terms and Conditions",
+              "marks": ["k6e"]
+            },
+            {
+              "_type": "span",
+              "_key": "k6g",
+              "text": " govern your use of this website.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "changelog": [
+    {
+      "version": "0.6.0-draft",
+      "date": "2026-11-21",
+      "note": "Google Workspace added to section 4.1: it hosts our email, where every enquiry is kept. Section 5 names it."
+    },
+    {
+      "version": "0.5.0-draft",
+      "date": "2026-11-11",
+      "note": "Sanity moved to section 4.1: the content studio runs at /studio for our own editors and receives nothing about visitors. Moved into Sanity from the repository. Wording unchanged."
+    },
+    {
+      "version": "0.4.1-draft",
+      "date": "2026-11-04",
+      "note": "Brought the Resend region and the analytics tools together. Nothing else changed."
+    },
+    {
+      "version": "0.4.0-draft",
+      "date": "2026-11-04",
+      "note": "Google Analytics 4 moved to section 4.1: it runs only after an accept."
+    },
+    {
+      "version": "0.3.0-draft",
+      "date": "2026-11-04",
+      "note": "Microsoft Clarity moved to section 4.1: cookieless until a visitor chooses, off on a decline."
+    },
+    {
+      "version": "0.2.1-draft",
+      "date": "2026-11-04",
+      "note": "Resend's region corrected to Tokyo, Japan, and named in section 5."
+    },
+    {
+      "version": "0.2.0-draft",
+      "date": "2026-09-26",
+      "note": "Corrected three statements the build contradicted: Resend in use, the only cookie is the consent record, and which form fields are required."
+    }
+  ]
+}

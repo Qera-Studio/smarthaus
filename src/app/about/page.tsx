@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import type { ReactNode } from "react";
 
@@ -7,18 +8,16 @@ import { FaqAccordion } from "../../components/Faq";
 import faq from "../../components/Faq/Faq.module.scss";
 import { HomeEnquiry } from "../../components/HomeEnquiry";
 import { JsonLd, pageGraph } from "../../components/Schema";
-import { ABOUT_FAQS, APPROACH, MISSION, VALUES, VISION, type Statement } from "../../content/about";
-import { pageMetadata } from "../../lib/metadata";
+import { pageMetadata, seoInput } from "../../lib/metadata";
+import { getAboutPage, getHomePage } from "../../sanity/content";
+import type { Statement } from "../../sanity/types";
 
-const PAGE = {
-  path: "/about",
-  title: "About Smarthaus, Home Automation in Dubai",
-  description:
-    "Who Smarthaus is: one team that designs, installs and maintains home automation and security for Dubai villas, and the values behind every job.",
-  index: true,
-} as const;
+const PATH = "/about";
 
-export const metadata = pageMetadata(PAGE);
+export async function generateMetadata(): Promise<Metadata> {
+  const { seo } = await getAboutPage();
+  return pageMetadata(seoInput(PATH, seo));
+}
 
 /**
  * The About page: a hero, the approach, then mission, vision and values,
@@ -29,16 +28,19 @@ export const metadata = pageMetadata(PAGE);
  * Both photographs are decorative (empty alt): the words carry the meaning,
  * and the h1 says what the hero is.
  */
-export default function AboutPage() {
+export default async function AboutPage() {
+  const [page, { enquiry }] = await Promise.all([getAboutPage(), getHomePage()]);
   return (
     <div className={styles.page}>
-      <JsonLd data={pageGraph(PAGE)} />
+      {page.seo.index ? (
+        <JsonLd data={pageGraph(seoInput(PATH, page.seo), page.updatedAt)} />
+      ) : null}
 
       <section className={styles.hero} aria-labelledby="about-title" data-about-hero="">
         <div className={styles.heroLayer} data-parallax="hero">
           <Image
-            src="/about/aboutUs_hero.png"
-            alt=""
+            src={page.heroImage.src}
+            alt={page.heroImage.alt}
             fill
             // The page's LCP. `priority` is deprecated in Next 16; the docs
             // recommend these two over `preload`.
@@ -49,16 +51,16 @@ export default function AboutPage() {
           />
         </div>
         <h1 className={styles.heroTitle} id="about-title">
-          About Us
+          {page.title}
         </h1>
       </section>
 
       <section className={styles.approach} aria-labelledby="approach" data-about-approach="">
         <h2 className={styles.approachTitle} id="approach">
-          Our Approach
+          {page.approachHeading}
         </h2>
         <ul className={styles.approachGrid}>
-          {APPROACH.map((step) => (
+          {page.approach.map((step) => (
             <li key={step.title} className={styles.approachCard}>
               {/* Decorative: the title beside it says what the step is. */}
               {/* eslint-disable-next-line @next/next/no-img-element -- a 32px SVG, as the hardware icons are */}
@@ -84,8 +86,8 @@ export default function AboutPage() {
         <div className={styles.missionMedia} data-about-mission-media="">
           <div className={styles.mediaLayer} data-parallax="mission">
             <Image
-              src="/about/mission_Img.png"
-              alt=""
+              src={page.missionImage.src}
+              alt={page.missionImage.alt}
               fill
               sizes="100vw"
               className={styles.cover}
@@ -93,8 +95,8 @@ export default function AboutPage() {
           </div>
         </div>
         <section className={styles.darkSection} aria-labelledby="mission" data-about-mission="">
-          <Pattern id="mission" title="Mission">
-            <StatementCopy statement={MISSION} />
+          <Pattern id="mission" title={page.missionHeading}>
+            <StatementCopy statement={page.mission} />
           </Pattern>
         </section>
         <section
@@ -102,16 +104,16 @@ export default function AboutPage() {
           aria-labelledby="vision"
           data-about-vision=""
         >
-          <Pattern id="vision" title="Vision">
-            <StatementCopy statement={VISION} />
+          <Pattern id="vision" title={page.visionHeading}>
+            <StatementCopy statement={page.vision} />
           </Pattern>
         </section>
       </div>
 
       <section className={styles.ruled} aria-labelledby="values" data-about-values="">
-        <Pattern id="values" title="Values">
+        <Pattern id="values" title={page.valuesHeading}>
           <ValuesHover className={styles.rows}>
-            {VALUES.map((value, index) => (
+            {page.values.map((value, index) => (
               <details key={value.title} className={faq.entry} name="values">
                 <summary className={faq.question}>
                   <span className={faq.questionText}>{value.title}</span>
@@ -130,12 +132,12 @@ export default function AboutPage() {
 
       {/* The homepage's own enquiry, then a short FAQ in the contact page's
           pattern below it (Shivanshu, 2026-10-07). */}
-      <HomeEnquiry />
+      <HomeEnquiry title={enquiry.title} standfirst={enquiry.standfirst} />
 
       <section className={styles.ruled} aria-labelledby="about-faqs" data-about-faqs="">
-        <Pattern id="about-faqs" title="Frequently Asked Questions" small>
+        <Pattern id="about-faqs" title={page.faqHeading} small>
           <div className={styles.rows}>
-            {ABOUT_FAQS.map((entry) => (
+            {page.faqs.map((entry) => (
               <FaqAccordion key={entry.id} entry={entry} group="about-faq" />
             ))}
           </div>

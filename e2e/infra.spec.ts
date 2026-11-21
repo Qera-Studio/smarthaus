@@ -217,11 +217,14 @@ test.describe("200% zoom @zoom", () => {
 
 // The hero-canvas default lives in e2e/fixtures.ts. Both halves are pinned
 // here: off unless asked, and on when asked, so the switch cannot rot into
-// "always off". The homepage hero has had no canvas since 2026-10-28; the
-// fluid chunk and the villa's model and decoder are watched because both are
-// unmounted, not deleted, and a stray import would fetch them again.
+// "always off". Since 2026-11-14 the homepage hero's canvas is the glass,
+// which Save-Data keeps from drawing; the fluid chunk and the villa's model
+// and decoder are watched because both are unmounted, not deleted, and a
+// stray import would fetch them again.
 test.describe("the hero's canvas in e2e", () => {
-  test("is off by default: the page reports Save-Data and no canvas mounts", async ({ page }) => {
+  test("is off by default: the page reports Save-Data and the glass draws nothing", async ({
+    page,
+  }) => {
     const heavyRequests: string[] = [];
     page.on("request", (request) => {
       if (/\/hero\/villa\.glb|\/draco\/|FluidHero_fluid/.test(request.url())) {
@@ -247,10 +250,9 @@ test.describe("the hero's canvas in e2e", () => {
   test.describe("when a spec opts in", () => {
     test.use({ villa: true });
 
-    // 2026-10-28: HomeHero has no canvas, and both canvas heroes are
-    // unmounted. Opting in must therefore still fetch neither; when one comes
-    // back, this is the assertion that flips to "mounts".
-    test("mounts no canvas, because the homepage hero has none", async ({ page }) => {
+    // 2026-11-14: HomeHero's canvas is the glass. Opting in draws it where
+    // the browser has WebGL2, and still fetches neither unmounted hero.
+    test("draws the glass, and fetches none of the unmounted heroes' files", async ({ page }) => {
       const heavyRequests: string[] = [];
       page.on("request", (request) => {
         if (/\/hero\/villa\.glb|\/draco\/|FluidHero_fluid/.test(request.url())) {
@@ -261,7 +263,11 @@ test.describe("the hero's canvas in e2e", () => {
       await expect(page.locator("html[data-consent-ready]")).toBeAttached();
       await page.waitForTimeout(2_000);
       expect(heavyRequests).toEqual([]);
-      await expect(page.locator("[data-hero] canvas")).toHaveCount(0);
+      await expect(page.locator("[data-hero] canvas")).toHaveCount(1);
+      const webgl = await page.evaluate(
+        () => document.createElement("canvas").getContext("webgl2") !== null,
+      );
+      await expect(page.locator("[data-hero][data-ready]")).toHaveCount(webgl ? 1 : 0);
     });
   });
 });
@@ -291,6 +297,31 @@ test.describe("the hero cards' blur in e2e", () => {
       await page.route("**/*", (route) => route.fulfill({ body: "<html><body></body></html>" }));
       await page.goto("/");
       await expect(holds(page)).toHaveCount(0);
+    });
+  });
+});
+
+// The opening's default lives in e2e/fixtures.ts, pinned both ways.
+test.describe("the homepage opening in e2e", () => {
+  test("is off: data-intro never survives to the page", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("[data-hero]")).toBeVisible();
+    await expect(page.locator("html")).not.toHaveAttribute("data-intro");
+    const playing = await page.evaluate(() =>
+      document
+        .getAnimations()
+        .map((a) => (a as CSSAnimation).animationName)
+        .filter((name) => /hero-in|hero-word|hero-arrive|nav-in|bar-in/.test(name ?? "")),
+    );
+    expect(playing).toEqual([]);
+  });
+
+  test.describe("when a spec opts in", () => {
+    test.use({ intro: true });
+
+    test("the boot script's attribute stays", async ({ page }) => {
+      await page.goto("/");
+      await expect(page.locator("html")).toHaveAttribute("data-intro", "");
     });
   });
 });

@@ -1,7 +1,10 @@
-import { render, within } from "@testing-library/react";
-import { SOLUTIONS_MENU_ITEMS } from "../../../content/solutions-menu";
+import { within } from "@testing-library/react";
+import { SITE_SETTINGS } from "../../../../sanity/seed/site-settings";
 import { NAV_LINKS } from "../../../lib/nav-links";
-import { Nav } from "../Nav";
+import { Nav, solutionLinks } from "../Nav";
+import { renderServer } from "../../../__tests__/helpers/server";
+
+const SOLUTIONS_MENU_ITEMS = SITE_SETTINGS.solutionsMenu.items;
 
 // NavShell owns the open and stuck state and has its own tests. Here it only
 // lays its slots out, so what is asserted is what Nav itself puts in them.
@@ -18,7 +21,10 @@ jest.mock("../NavShell", () => ({
 }));
 
 let pathname: string | null = "/";
-jest.mock("next/navigation", () => ({ usePathname: () => pathname }));
+jest.mock("next/navigation", () => ({
+  usePathname: () => pathname,
+  useRouter: () => ({ push: jest.fn() }),
+}));
 
 function slot(name: string) {
   return document.querySelector<HTMLElement>(`[data-slot="${name}"]`)!;
@@ -30,8 +36,8 @@ const barLinks = () =>
   Array.from(slot("links").querySelectorAll<HTMLElement>(":scope > ul > li > a"));
 
 describe("Nav", () => {
-  it("lists every primary link, in the registry's order, at its href", () => {
-    render(<Nav />);
+  it("lists every primary link, in the registry's order, at its href", async () => {
+    await renderServer(<Nav />);
     const links = barLinks();
     expect(links.map((link) => link.getAttribute("href"))).toEqual(NAV_LINKS.map((l) => l.href));
     // RollingText splits the label into characters; the accessible name is
@@ -39,8 +45,8 @@ describe("Nav", () => {
     links.forEach((link, index) => expect(link).toHaveAccessibleName(NAV_LINKS[index]!.label));
   });
 
-  it("gives each item its index for the open stagger", () => {
-    render(<Nav />);
+  it("gives each item its index for the open stagger", async () => {
+    await renderServer(<Nav />);
     const items = barItems();
     expect(items).toHaveLength(NAV_LINKS.length);
     items.forEach((item, index) =>
@@ -48,19 +54,19 @@ describe("Nav", () => {
     );
   });
 
-  it("marks the current page's link, and only that one", () => {
+  it("marks the current page's link, and only that one", async () => {
     const current = NAV_LINKS[1]!;
     pathname = current.href;
-    render(<Nav />);
+    await renderServer(<Nav />);
     const links = within(slot("links")).getAllByRole("link");
     const marked = links.filter((link) => link.getAttribute("aria-current") === "page");
     expect(marked).toHaveLength(1);
     expect(marked[0]).toHaveAttribute("href", current.href);
   });
 
-  it("marks nothing on a page the nav does not list", () => {
+  it("marks nothing on a page the nav does not list", async () => {
     pathname = "/privacy";
-    render(<Nav />);
+    await renderServer(<Nav />);
     expect(barLinks()).toHaveLength(NAV_LINKS.length);
     expect(slot("links").querySelector("[aria-current]")).toBeNull();
   });
@@ -68,8 +74,8 @@ describe("Nav", () => {
   describe("the Solutions menu", () => {
     const zone = () => slot("links").querySelector<HTMLElement>("[data-menu-zone]")!;
 
-    it("hangs from the Solutions item, and only that one", () => {
-      render(<Nav />);
+    it("hangs from the Solutions item, and only that one", async () => {
+      await renderServer(<Nav />);
       const zones = slot("links").querySelectorAll("[data-menu-zone]");
       expect(zones).toHaveLength(1);
       expect(zone().querySelector(":scope > a")).toHaveAttribute("href", "/solutions");
@@ -79,8 +85,8 @@ describe("Nav", () => {
       }
     });
 
-    it("lists the eight solutions in the panel, after the link, so Tab reaches them next", () => {
-      render(<Nav />);
+    it("lists the eight solutions in the panel, after the link, so Tab reaches them next", async () => {
+      await renderServer(<Nav />);
       const panel = zone().querySelector<HTMLElement>("[data-menu-panel]")!;
       expect(panel.previousElementSibling).toBe(zone().querySelector(":scope > a"));
       const labels = within(panel)
@@ -89,8 +95,8 @@ describe("Nav", () => {
       expect(labels).toEqual(SOLUTIONS_MENU_ITEMS.map((item) => item.label));
     });
 
-    it("hands the phone menu its own copy, with the swipe", () => {
-      render(<Nav />);
+    it("hands the phone menu its own copy, with the swipe", async () => {
+      await renderServer(<Nav />);
       const phone = slot("solutions");
       expect(within(phone).getAllByRole("link")).toHaveLength(8);
       // The picture is out of the tab order, so only the eight are reachable.
@@ -98,8 +104,8 @@ describe("Nav", () => {
       expect(media).toHaveAttribute("tabindex", "-1");
     });
 
-    it("sizes each copy's pictures for its own box", () => {
-      render(<Nav />);
+    it("sizes each copy's pictures for its own box", async () => {
+      await renderServer(<Nav />);
       const desktop = zone().querySelector("[data-menu-panel] img")!;
       const phone = slot("solutions").querySelector("img")!;
       expect(desktop).toHaveAttribute("sizes", "21rem");
@@ -107,8 +113,8 @@ describe("Nav", () => {
     });
   });
 
-  it("names both brand links as the way home", () => {
-    render(<Nav />);
+  it("names both brand links as the way home", async () => {
+    await renderServer(<Nav />);
     for (const name of ["brandMark", "brandFull"]) {
       const link = within(slot(name)).getByRole("link");
       expect(link).toHaveAttribute("href", "/");
@@ -116,8 +122,8 @@ describe("Nav", () => {
     }
   });
 
-  it("puts the site-visit CTA in its slot, pointing at the contact page", () => {
-    render(<Nav />);
+  it("puts the site-visit CTA in its slot, pointing at the contact page", async () => {
+    await renderServer(<Nav />);
     const cta = within(slot("cta")).getByRole("link", { name: "Book a site visit" });
     expect(cta).toHaveAttribute("href", "/contact");
     // It used to carry data-cursor="none", which hid the pointer over it.
@@ -125,8 +131,63 @@ describe("Nav", () => {
     expect(cta).not.toHaveAttribute("data-cursor");
   });
 
-  it("signs the open panel as by MapleTech", () => {
-    render(<Nav />);
+  it("signs the open panel as by MapleTech", async () => {
+    await renderServer(<Nav />);
     expect(within(slot("footer")).getByText("by MapleTech")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Where each solution in the menu goes (2026-11-15): its own page once it has
+ * one, /solutions until then. All eight have one since that afternoon. The pages are fixed documents, so the list is
+ * code's (SOLUTION_SLUGS); the menu's ids are the editors'.
+ */
+describe("solutionLinks", () => {
+  const menu = SITE_SETTINGS.solutionsMenu;
+  const linked = solutionLinks(menu).items;
+
+  it("keeps every solution, in the menu's order, with its label and picture", () => {
+    expect(linked.map(({ id, label, image }) => ({ id, label, image }))).toEqual(menu.items);
+  });
+
+  // Shivanshu, 2026-11-15: every solution in the menu has a page.
+  it("sends every solution to its own page", () => {
+    for (const item of linked) {
+      expect(item).toMatchObject({ href: `/solutions/${item.id}`, page: true });
+    }
+  });
+
+  it("keeps the menu's own address for a solution without a page", () => {
+    const moved = solutionLinks({
+      ...menu,
+      href: "/what-we-do",
+      items: [...menu.items, { ...menu.items[0]!, id: "sauna", label: "Sauna" }],
+    }).items;
+    expect(moved.find((item) => item.id === "sauna")).toMatchObject({
+      href: "/what-we-do",
+      page: false,
+    });
+    expect(moved.find((item) => item.id === "cameras")!.href).toBe("/solutions/cameras");
+  });
+
+  it("gives no page to an id the code has no document for", () => {
+    const [item] = solutionLinks({ ...menu, items: [{ ...menu.items[0]!, id: "sauna" }] }).items;
+    expect(item).toMatchObject({ href: menu.href, page: false });
+  });
+
+  it("hands both copies of the menu the same links", async () => {
+    await renderServer(<Nav />);
+    const desktop = within(document.querySelector<HTMLElement>("[data-menu-panel]")!);
+    const phone = within(document.querySelector<HTMLElement>('[data-slot="solutions"]')!);
+    for (const copy of [desktop, phone]) {
+      expect(copy.getByRole("link", { name: "Cameras" })).toHaveAttribute(
+        "href",
+        "/solutions/cameras",
+      );
+      expect(copy.getByRole("link", { name: "Lighting" })).toHaveAttribute(
+        "href",
+        "/solutions/lighting",
+      );
+    }
   });
 });

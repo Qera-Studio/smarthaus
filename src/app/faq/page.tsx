@@ -1,71 +1,71 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FaqAccordion, FaqSchema } from "../../components/Faq";
+import { FaqAccordion } from "../../components/Faq";
+import { JsonLd, pageGraph } from "../../components/Schema";
 import { LegalPage, LegalSectionBlock, type LegalSection } from "../../components/LegalPage";
 import { ClosingCta } from "../../components/ClosingCta";
-import { FAQ_CATEGORIES } from "../../content/faq";
 import styles from "../../components/Faq/Faq.module.scss";
-import { pageMetadata } from "../../lib/metadata";
+import { pageMetadata, seoInput } from "../../lib/metadata";
+import { getFaqPage, isFaqPublishable } from "../../sanity/content";
+
+const PATH = "/faq";
 
 // ---------------------------------------------------------------------------
 // LAUNCH GATE ITEM
 //
-// Six answers in src/content/faq.ts carry unconfirmed facts — the founding
-// year, the assessment fee, the price range, the payment split, the Premium
-// Care response window, and the three designer commitments. Each renders
-// through the <Placeholder> marker and each has a `pending` note saying who
-// confirms it.
+// Answers holding an unconfirmed fact carry a pending note in the Studio (the
+// founding year, the assessment fee, what the price includes, the payment
+// split, the three designer commitments), and a {braced} value renders
+// through the <Placeholder> marker. The schema refuses a brace without a note.
 //
-// While any remain, the page ships noindex and emits no FAQPage schema. An
-// unconfirmed figure that an answer engine repeats back is worse than no
-// answer at all, and AGENTS.md's claims audit rules out guessing any of them.
+// While any note remains the page ships noindex and emits no schema, whatever
+// "Show in search" says: an unconfirmed figure that an answer engine repeats
+// back is worse than no answer at all (AGENTS.md, claims audit). The last
+// note was cleared on 2026-11-19, so the page is in search with its page and
+// breadcrumb schema, and the sitemap follows the page's own metadata.
 //
-// TO PUBLISH: clear every `pending` entry and every {brace} in faq.ts, flip
-// this to true, and add /faq to src/app/sitemap.ts in the same change. The
-// three moves go together — a noindex page in the sitemap is a contradictory
-// signal, and so is structured data on one.
+// No FAQPage here yet: all forty questions come to about 11.5 KB, and SEO
+// System §9 keeps a page's JSON-LD under 4 KB. /contact carries the core
+// questions as FAQPage; choosing the ones /faq carries is in
+// docs/updates/2.1.0.md.
 // ---------------------------------------------------------------------------
-const FAQ_IS_PUBLISHABLE = false;
 
-/**
- * The ToC rail entries, derived from the content rather than restated — the
- * rail and the headings both read this array, so a category cannot appear in
- * one and not the other.
- */
-const SECTIONS: readonly LegalSection[] = FAQ_CATEGORIES.map(({ id, title, short }) => ({
-  id,
-  title,
-  short,
-}));
+export async function generateMetadata(): Promise<Metadata> {
+  const page = await getFaqPage();
+  return pageMetadata(seoInput(PATH, { ...page.seo, index: isFaqPublishable(page) }));
+}
 
-export const metadata: Metadata = pageMetadata({
-  title: "Frequently Asked Questions",
-  description:
-    "What a Smarthaus system costs, how the site assessment works, what happens at handover, and who we are, answered plainly.",
-  path: "/faq",
-  index: FAQ_IS_PUBLISHABLE,
-});
-
-export default function FaqPage() {
+export default async function FaqPage() {
+  const page = await getFaqPage();
+  // The ToC rail entries, derived from the content rather than restated: the
+  // rail and the headings both read the categories, so a category cannot
+  // appear in one and not the other.
+  const sections: readonly LegalSection[] = page.categories.map(({ id, title, short }) => ({
+    id,
+    title,
+    short,
+  }));
   return (
     <div className={styles.shell}>
-      {FAQ_IS_PUBLISHABLE ? <FaqSchema /> : null}
+      {isFaqPublishable(page) ? (
+        <JsonLd data={pageGraph(seoInput(PATH, page.seo), page.updatedAt)} />
+      ) : null}
 
       <LegalPage
-        title="Frequently Asked Questions"
+        title={page.title}
         // The standfirst is a plain string prop, so the "ask it directly" link
         // cannot live in it. It is carried by the intro paragraph below
         // instead, which keeps the contact route one click from the top of the
         // page without turning the shell's prop into a ReactNode for one page.
-        standfirst="Everything below is what people actually ask us before they commit."
-        sections={SECTIONS}
+        standfirst={page.standfirst}
+        sections={sections}
       >
         <p className={styles.intro}>
-          If your question isn&rsquo;t here, <Link href="/contact">ask it directly</Link>.
-          We&rsquo;d rather answer it than have you guess.
+          {page.intro.before} <Link href="/contact">{page.intro.link}</Link>
+          {page.intro.after}
         </p>
 
-        {FAQ_CATEGORIES.map((category) => (
+        {page.categories.map((category) => (
           <LegalSectionBlock key={category.id} section={category}>
             <div className={styles.list}>
               {category.entries.map((entry) => (
@@ -83,12 +83,12 @@ export default function FaqPage() {
         centring on desktop.
 
         The copy carries no figures or commitments on purpose. /faq is still
-        gated (FAQ_IS_PUBLISHABLE above) precisely because several answers hold
+        gated (isFaqPublishable) precisely because several answers hold
         unconfirmed numbers, so a closing prompt that invited a claim would be
         the wrong thing to add to this page of all pages.
       */}
       <ClosingCta
-        heading="Still have doubts?"
+        heading={page.closing.heading}
         // No em dash: the house rule the legal, placeholder and contact pages
         // all assert, and e2e/faq.spec.ts checks the collapsed answers too.
         //
@@ -96,9 +96,9 @@ export default function FaqPage() {
         // guess" either. The intro paragraph at the top of the page already
         // says that, and repeating a line verbatim at the foot reads as
         // filler rather than as a close.
-        body="Every home is different, and the questions above will not cover yours. Tell us what you are planning and we will answer it properly."
+        body={page.closing.body}
         href="/contact"
-        label="Contact Us"
+        label={page.closing.cta}
       />
     </div>
   );

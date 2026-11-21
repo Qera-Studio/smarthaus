@@ -31,8 +31,10 @@ async function resolveBase(env: Record<string, string>): Promise<string> {
   ]) {
     if (!(key in env)) delete process.env[key];
   }
-  const { metadata } = (await import("../layout")) as { metadata: { metadataBase: URL } };
-  return metadata.metadataBase.origin;
+  const { generateMetadata } = (await import("../layout")) as {
+    generateMetadata: () => Promise<{ metadataBase: URL }>;
+  };
+  return (await generateMetadata()).metadataBase.origin;
 }
 
 afterEach(() => {

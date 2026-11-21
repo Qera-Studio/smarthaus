@@ -70,6 +70,15 @@ describe("passing builds", () => {
     expect(run().status).toBe(0);
   });
 
+  it("passes a vendor chunk whose layers are all its own, such as the Studio's Sanity UI", () => {
+    // Found 2026-11-19: Sanity UI ships `@layer sui` in a chunk only /studio loads.
+    chunk("studio.css", "@layer sui;@layer sui.global{*{box-sizing:border-box}}");
+    chunk("a.css", `${ORDER}`);
+    const { status, stdout } = run();
+    expect(status).toBe(0);
+    expect(stdout).toContain("2 chunks");
+  });
+
   it("finds CSS in nested folders", () => {
     put(".next/static/css/deep/nested/a.css", `${ORDER}`);
     expect(run().stdout).toContain("1 chunks");
@@ -86,6 +95,18 @@ describe("passing builds", () => {
 });
 
 describe("failing builds", () => {
+  it("still fails a chunk that puts a foreign layer before ours", () => {
+    chunk("mixed.css", `@layer sui;${ORDER}`);
+    const { status, stdout } = run();
+    expect(status).toBe(1);
+    expect(stdout).toContain("found sui < reset < base < components < blocks < utilities");
+  });
+
+  it("still fails a vendor layer mixed with one of ours out of order", () => {
+    chunk("mixed.css", "@layer sui;@layer components{.a{}}");
+    expect(run().status).toBe(1);
+  });
+
   it("fails the chunk that shipped: a component block before the statement", () => {
     chunk("page.css", `@layer components{.a{}}@layer blocks{.b{}}`);
     chunk("globals.css", `${ORDER}`);

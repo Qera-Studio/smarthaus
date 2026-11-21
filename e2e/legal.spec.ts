@@ -257,7 +257,7 @@ for (const { path, heading, sections } of PAGES) {
 // both pages, and a change there must be a deliberate one that this notices.
 const IDENTITY = {
   address: "The Iridium, 2nd Floor, Office 225, Umm Suqeim St, Al Barsha First, Dubai",
-  email: "contact@mapletech.ae",
+  email: "hello@smarthaus.ae",
   phone: "+971 54 375 5150",
 };
 
@@ -298,8 +298,8 @@ test.describe("/privacy says what the build does", () => {
     await page.goto("/privacy");
   });
 
-  test("prints version 0.2.0-draft", async ({ page }) => {
-    await expect(page.locator("main")).toContainText("0.2.0-draft");
+  test("prints version 0.6.0-draft", async ({ page }) => {
+    await expect(page.locator("main")).toContainText("0.6.0-draft");
   });
 
   test("lists Resend among the providers in use, and not among the planned ones", async ({

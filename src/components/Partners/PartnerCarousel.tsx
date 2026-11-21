@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
-import type { Partner } from "../../content/partners";
+import type { Partner } from "../../sanity/types";
 import { latestEntry } from "../../lib/observer";
 import { Button } from "../Button";
 import styles from "./Partners.module.scss";
@@ -25,7 +25,14 @@ import styles from "./Partners.module.scss";
  * neither showing nor leaving is `visibility: hidden`, which keeps its copy
  * crawlable while taking it out of the tab order and the accessibility tree.
  */
-export function PartnerCarousel({ partners }: { partners: readonly Partner[] }) {
+export function PartnerCarousel({
+  partners,
+  visit,
+}: {
+  partners: readonly Partner[];
+  /** The link text before the name: "Visit". */
+  visit: string;
+}) {
   const [active, setActive] = useState(0);
   const [leaving, setLeaving] = useState<number | null>(null);
   // Empty until the first switch, so the first card does not slide in on
@@ -188,7 +195,7 @@ export function PartnerCarousel({ partners }: { partners: readonly Partner[] }) 
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Visit {partner.name}
+                  {visit} {partner.name}
                   <span className="visually-hidden"> (opens in a new tab)</span>
                 </Button>
               </div>

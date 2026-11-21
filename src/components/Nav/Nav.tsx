@@ -1,21 +1,37 @@
 import Link from "next/link";
 import { NAV_LINKS } from "../../lib/nav-links";
+import { getSettings, SOLUTION_SLUGS, solutionPath } from "../../sanity/content";
+import type { SolutionsMenu as SolutionsMenuData } from "../../sanity/types";
 import { Logo } from "../Logo";
 import { RollingText } from "../RollingText";
 import { NavLink } from "./NavLink";
 import { NavShell } from "./NavShell";
-import { SolutionsMenu } from "./SolutionsMenu";
+import { SolutionsMenu, type SolutionLink } from "./SolutionsMenu";
 import styles from "./Nav.module.scss";
 
 /** The Solutions link opens the menu of the eight solutions. */
 const MENU_HREF = "/solutions";
 
 /**
+ * Where each solution goes: its own page once it has one (a solutionPage
+ * document, SOLUTION_SLUGS), the menu's address until then.
+ */
+export function solutionLinks({ href, items }: SolutionsMenuData): { items: SolutionLink[] } {
+  return {
+    items: items.map((item) => {
+      const page = SOLUTION_SLUGS.includes(item.id);
+      return { ...item, href: page ? solutionPath(item.id) : href, page };
+    }),
+  };
+}
+
+/**
  * Server Component. Renders every visible piece and hands them to NavShell,
  * which adds only the open/stuck state — so Link, Logo and RollingText stay
  * out of the client bundle.
  */
-export function Nav() {
+export async function Nav() {
+  const menu = solutionLinks((await getSettings()).solutionsMenu);
   return (
     <NavShell
       brandMark={
@@ -48,6 +64,7 @@ export function Nav() {
                 <div className={styles.menu} data-menu-panel>
                   <div className={styles.menuInner}>
                     <SolutionsMenu
+                      menu={menu}
                       classes={{
                         root: styles.menuBody,
                         list: styles.menuList,
@@ -72,6 +89,7 @@ export function Nav() {
       }
       solutions={
         <SolutionsMenu
+          menu={menu}
           classes={{
             root: styles.subBody,
             list: styles.subList,

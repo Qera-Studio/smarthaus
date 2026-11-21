@@ -5,20 +5,44 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { Metadata } from "next";
 import sitemap from "../sitemap";
-import { LAST_MODIFIED } from "../../content/last-modified";
+import { getDoc, getDocs } from "../../sanity/fetch";
+import { ROUTES, routes } from "../../sanity/content";
+import { POSTS } from "../../../sanity/seed/blog";
+import { SOLUTION_PAGES } from "../../../sanity/seed/solutions";
 
-/** Every browsable page under src/app, as [route, file]. */
-function pages(): [string, string][] {
+type Params = { slug: string };
+
+/** The seeded slugs a [slug] route is built for: articles, or solutions. */
+const slugsFor = (route: string) =>
+  route.startsWith("/solutions/") ? Object.keys(SOLUTION_PAGES) : POSTS.map(({ slug }) => slug);
+
+/**
+ * Every browsable page under src/app, as [route, file, params]. An article's
+ * page is one file for as many routes as there are articles (2026-11-14, the
+ * first route built from content): it is listed once per seeded article, with
+ * the slug its metadata is asked for. A solution's page likewise, once per
+ * seeded solution page (2026-11-15).
+ */
+function pages(): [string, string, Params?][] {
   const app = join(__dirname, "..");
-  const out: [string, string][] = [];
+  const out: [string, string, Params?][] = [];
   const walk = (dir: string) => {
     for (const name of readdirSync(dir)) {
       const full = join(dir, name);
       if (statSync(full).isDirectory()) {
-        if (!["__tests__", "api", "e2e-error", "loader-preview"].includes(name)) walk(full);
+        // studio: next-sanity is ESM that Jest cannot load. Its noindex and its
+        // absence from the sitemap are asserted in e2e/studio.spec.ts instead.
+        if (!["__tests__", "api", "e2e-error", "loader-preview", "studio"].includes(name)) {
+          walk(full);
+        }
       } else if (name === "page.tsx") {
         const rel = relative(app, dir).split(sep).join("/");
-        out.push([rel ? `/${rel}` : "/", full]);
+        const route = rel ? `/${rel}` : "/";
+        if (route.includes("[slug]")) {
+          for (const slug of slugsFor(route)) {
+            out.push([route.replace("[slug]", slug), full, { slug }]);
+          }
+        } else out.push([route, full]);
       }
     }
   };
@@ -27,44 +51,101 @@ function pages(): [string, string][] {
 }
 
 async function indexableRoutes(): Promise<string[]> {
-  const routes: string[] = [];
-  for (const [route, file] of pages()) {
-    const { metadata } = (await import(file)) as { metadata: Metadata };
+  const found: string[] = [];
+  for (const [route, file, params] of pages()) {
+    const page = (await import(file)) as {
+      metadata?: Metadata;
+      generateMetadata?: (props: { params: Promise<Params | undefined> }) => Promise<Metadata>;
+    };
+    const metadata =
+      page.metadata ?? (await page.generateMetadata!({ params: Promise.resolve(params) }));
     const robots = metadata.robots as { index?: boolean } | undefined;
-    if (robots?.index === true) routes.push(route);
+    if (robots?.index === true) found.push(route);
   }
-  return routes.sort();
+  return found.sort();
 }
+
+const urls = async () => (await sitemap()).map((entry) => entry.url);
+const route = (url: string) => new URL(url).pathname.replace(/^$/, "/");
 
 describe("the sitemap", () => {
   it("lists exactly the pages whose metadata is indexable", async () => {
+    // Each page's "Show in search" in the Studio decides both: the page's
+    // robots line and its place here. The seed stands in for the dataset.
     const indexable = await indexableRoutes();
     expect(indexable.length).toBeGreaterThanOrEqual(3);
-    expect(Object.keys(LAST_MODIFIED).sort()).toEqual(indexable);
+    expect((await urls()).map(route).sort()).toEqual(indexable);
   });
 
-  it("uses absolute URLs on the canonical host, with no trailing slash on the root", () => {
-    expect(sitemap().map((entry) => entry.url)).toEqual(
-      expect.arrayContaining(["https://smarthaus.ae", "https://smarthaus.ae/contact"]),
-    );
-    for (const { url } of sitemap()) expect(url).toMatch(/^https:\/\/smarthaus\.ae(\/[a-z-]+)*$/);
+  it("knows every routed page, so a new route is not silently left out", async () => {
+    const routed = (await routes()).map((r) => r.path).sort();
+    expect(
+      pages()
+        .map(([path]) => path)
+        .sort(),
+    ).toEqual(routed);
   });
 
-  it("gives every entry a real calendar date, not the build time", () => {
-    for (const { lastModified } of sitemap()) {
-      expect(lastModified).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      const date = new Date(`${lastModified as string}T00:00:00Z`);
-      expect(date.toISOString().slice(0, 10)).toBe(lastModified);
+  it("adds one route per article to the routes that are code", async () => {
+    const all = (await routes()).map((r) => r.path);
+    expect(all.slice(0, ROUTES.length)).toEqual(ROUTES.map((r) => r.path));
+    expect(all.slice(ROUTES.length).sort()).toEqual(POSTS.map((p) => `/blog/${p.slug}`).sort());
+  });
+
+  it("lists an article only once it is in search, and the articles page itself", async () => {
+    // Every seeded article is in search since 2026-11-20, so one is switched
+    // off here: neither half of the rule may be vacuous.
+    const off = POSTS[1]!.slug;
+    const seed = jest.requireActual("../../../sanity/seed") as {
+      seedDocs: (type: string) => { slug: string; seo: object }[];
+    };
+    jest
+      .mocked(getDocs)
+      .mockImplementation(async (type: string) =>
+        seed
+          .seedDocs(type)
+          .map((doc) => (doc.slug === off ? { ...doc, seo: { ...doc.seo, index: false } } : doc)),
+      );
+    try {
+      const listed = (await urls()).map(route);
+      expect(listed).toContain("/blog");
+      for (const post of POSTS) {
+        expect(listed.includes(`/blog/${post.slug}`)).toBe(post.slug !== off);
+      }
+    } finally {
+      jest.mocked(getDocs).mockImplementation(async (type: string) => seed.seedDocs(type));
     }
   });
 
-  it("never dates a page in the future", () => {
-    const today = new Date().toISOString().slice(0, 10);
-    for (const { lastModified } of sitemap()) expect(lastModified! <= today).toBe(true);
+  it("uses absolute URLs on the canonical host, with no trailing slash on the root", async () => {
+    expect(await urls()).toEqual(
+      expect.arrayContaining(["https://smarthaus.ae", "https://smarthaus.ae/contact"]),
+    );
+    for (const url of await urls()) expect(url).toMatch(/^https:\/\/smarthaus\.ae(\/[a-z-]+)*$/);
   });
 
-  it("carries no changefreq or priority, which Google ignores", () => {
-    for (const entry of sitemap()) {
+  it("dates an entry by its document's last edit in Sanity", async () => {
+    const edited = "2026-11-11T08:00:00Z";
+    const seed = jest.requireActual("../../../sanity/seed") as { seedDoc: (id: string) => object };
+    jest
+      .mocked(getDoc)
+      .mockImplementation(async (id: string) =>
+        id === "contactPage" ? { ...seed.seedDoc(id), updatedAt: edited } : seed.seedDoc(id),
+      );
+    const entries = await sitemap();
+    expect(entries.find((e) => e.url === "https://smarthaus.ae/contact")?.lastModified).toBe(
+      edited,
+    );
+    jest.mocked(getDoc).mockImplementation(async (id: string) => seed.seedDoc(id));
+  });
+
+  it("invents no date for a document that has none", async () => {
+    // The seed carries no edit times; Sanity always does.
+    for (const entry of await sitemap()) expect(entry).not.toHaveProperty("lastModified");
+  });
+
+  it("carries no changefreq or priority, which Google ignores", async () => {
+    for (const entry of await sitemap()) {
       expect(entry).not.toHaveProperty("changeFrequency");
       expect(entry).not.toHaveProperty("priority");
     }

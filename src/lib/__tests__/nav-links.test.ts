@@ -3,7 +3,16 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { INSTALL_LINKS, LEGAL_LINKS, NAV_LINKS, PAGE_LINKS } from "../nav-links";
+import { SITE_SETTINGS } from "../../../sanity/seed/site-settings";
+import { NAV_LINKS } from "../nav-links";
+
+// The footer's lists are content now (siteSettings in Sanity). These hold the
+// seed, which is what the ci dataset and the first publication carry.
+const {
+  installLinks: INSTALL_LINKS,
+  legalLinks: LEGAL_LINKS,
+  pageLinks: PAGE_LINKS,
+} = SITE_SETTINGS;
 
 const solutionsPage = readFileSync(join(__dirname, "../../app/solutions/page.tsx"), "utf8");
 const solutionsIsPlaceholder = solutionsPage.includes("<ComingSoon");
@@ -38,13 +47,13 @@ describe("the footer's install links", () => {
   it("points at its section once /solutions is a real page", () => {
     // Fails the day <ComingSoon /> leaves src/app/solutions/page.tsx while the
     // links still land on the top of the page: restore the fragments, as
-    // `/solutions#${section}`, in the same change that ships the sections.
+    // `/solutions#${section}`, in the Studio and the seed, when the sections ship.
     if (solutionsIsPlaceholder) return;
     for (const link of INSTALL_LINKS) expect(link.href).toBe(`/solutions#${link.section}`);
   });
 
   it("knows which state /solutions is in, so one of the two above always runs", () => {
-    expect(solutionsPage).toMatch(/export default function SolutionsPage/);
+    expect(solutionsPage).toMatch(/export default async function SolutionsPage/);
     expect(typeof solutionsIsPlaceholder).toBe("boolean");
   });
 });

@@ -9,7 +9,8 @@ import { MENU_CLOSE_DELAY_MS, NavShell } from "../NavShell";
  * when each state is set, where focus goes, and what is inert.
  */
 
-jest.mock("next/navigation", () => ({ usePathname: () => "/" }));
+let mockPathname = "/";
+jest.mock("next/navigation", () => ({ usePathname: () => mockPathname }));
 
 // jsdom has no PointerEvent; without one fireEvent drops pointerType.
 class FakePointerEvent extends MouseEvent {
@@ -84,6 +85,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   jest.useFakeTimers();
+  mockPathname = "/";
   wide = true;
   noHover = false;
   breakpointListeners.length = 0;
@@ -120,12 +122,12 @@ function renderNav() {
         links={
           <ul>
             <li data-menu-zone>
-              <a href="/solutions">Solutions</a>
+              <a href="#solutions">Solutions</a>
               <div data-menu-panel>
                 <div>
                   <div data-testid="menu-body">
-                    <a href="/solutions">Cameras</a>
-                    <a href="/solutions">Lighting</a>
+                    <a href="#solutions">Cameras</a>
+                    <a href="#solutions">Lighting</a>
                   </div>
                 </div>
               </div>
@@ -135,7 +137,7 @@ function renderNav() {
             </li>
           </ul>
         }
-        solutions={<a href="/solutions">Garage</a>}
+        solutions={<a href="#solutions">Garage</a>}
         cta={<a href="/contact">Book</a>}
         footer={<span>foot</span>}
       />
@@ -160,6 +162,15 @@ function click(target: Element) {
   });
   return event.defaultPrevented;
 }
+
+describe("NavShell: the solution opening's hook", () => {
+  // globals.scss names the bar through it: a module's name would be renamed.
+  it("marks the header with an attribute no module renames", () => {
+    const { header } = renderNav();
+    expect(header).toHaveAttribute("data-site-nav");
+    expect(document.querySelectorAll("[data-site-nav]")).toHaveLength(1);
+  });
+});
 
 describe("NavShell: the Solutions menu, from lg", () => {
   describe("by mouse", () => {
@@ -484,10 +495,10 @@ describe("NavShell: the solutions in the phone menu", () => {
     expect(back()).toHaveFocus();
   });
 
-  it("the solutions are links to /solutions, reachable once shown", () => {
+  it("the solutions are the links it is handed, as handed, reachable once shown", () => {
     const { trigger } = openMenu();
     click(trigger);
-    expect(screen.getByRole("link", { name: "Garage" })).toHaveAttribute("href", "/solutions");
+    expect(screen.getByRole("link", { name: "Garage" })).toHaveAttribute("href", "#solutions");
   });
 
   it("Back brings the links back and focus to Solutions", () => {
@@ -551,5 +562,95 @@ describe("NavShell: the solutions in the phone menu", () => {
     fireEvent.click(toggle);
     fireEvent.transitionEnd(panelOf(header));
     expect(toggle).toHaveFocus();
+  });
+});
+
+/**
+ * A new page closes the phone menu (found 2026-11-15): following one of its
+ * links used to leave it open over the page it opened. The address is what
+ * says a page changed, so a link, a solution's opening and the browser's own
+ * back all close it alike.
+ */
+describe("NavShell: a new page", () => {
+  beforeEach(() => {
+    wide = false;
+  });
+
+  const toggle = () => screen.getByRole("button", { name: /menu$/ });
+
+  function openOn(path: string) {
+    mockPathname = path;
+    const nav = renderNav();
+    fireEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    return nav;
+  }
+
+  /** The router moves to `path`: NavShell renders again under it. */
+  function navigate(nav: ReturnType<typeof renderNav>, path: string, solutions = "Garage") {
+    mockPathname = path;
+    nav.rerender(
+      <>
+        <NavShell
+          brandMark={<span>mark</span>}
+          brandFull={<span>full</span>}
+          links={
+            <ul>
+              <li data-menu-zone>
+                <a href="#solutions">Solutions</a>
+              </li>
+            </ul>
+          }
+          solutions={<a href="#solutions">{solutions}</a>}
+          cta={<a href="/contact">Book</a>}
+          footer={<span>foot</span>}
+        />
+        <button type="button">elsewhere on the page</button>
+      </>,
+    );
+  }
+
+  it("closes the phone menu", () => {
+    const nav = openOn("/about");
+    expect(nav.header).toHaveAttribute("data-open");
+    navigate(nav, "/pricing");
+    expect(nav.header).not.toHaveAttribute("data-open");
+    expect(toggle()).toHaveAccessibleName("Open menu");
+  });
+
+  it("closes it from the solutions too", () => {
+    const nav = openOn("/about");
+    click(nav.trigger);
+    expect(onSub(nav.header)).toBe(true);
+    navigate(nav, "/solutions/cameras");
+    expect(nav.header).not.toHaveAttribute("data-open");
+  });
+
+  it("leaves an open menu open while the page stays the same", () => {
+    const nav = openOn("/about");
+    navigate(nav, "/about");
+    expect(nav.header).toHaveAttribute("data-open");
+  });
+
+  it("does not open a closed one", () => {
+    mockPathname = "/about";
+    const nav = renderNav();
+    navigate(nav, "/pricing");
+    expect(nav.header).not.toHaveAttribute("data-open");
+  });
+
+  it("closes it again on the page after", () => {
+    const nav = openOn("/about");
+    navigate(nav, "/pricing");
+    fireEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    expect(nav.header).toHaveAttribute("data-open");
+    navigate(nav, "/contact");
+    expect(nav.header).not.toHaveAttribute("data-open");
+  });
+
+  it("can be opened on the new page", () => {
+    const nav = openOn("/about");
+    navigate(nav, "/pricing");
+    fireEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    expect(nav.header).toHaveAttribute("data-open");
   });
 });

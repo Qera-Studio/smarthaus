@@ -6,6 +6,7 @@ import {
   expectNoHorizontalOverflow,
   withConsentDecided,
 } from "./checks";
+import { line, mailFor, sentMail } from "./mail";
 
 /**
  * The homepage hero in a browser, on all three devices: the strip drifts,
@@ -22,16 +23,56 @@ const overlayOf = (page: Page, index: number) => cards(page).nth(index).locator(
 const pause = (page: Page) => page.getByRole("button", { name: "Pause the images" });
 
 /**
+ * Bring the whole strip on screen. Since 2026-11-14 only its top shows above
+ * the fold, so a test that hovers or drags a card scrolls to it first. A
+ * scroll glides the strip (StripControls), so this waits for that to settle.
+ */
+async function showStrip(page: Page) {
+  const moved = await page.evaluate(() => {
+    const box = document.querySelector("[data-hero-strip]")!.getBoundingClientRect();
+    if (box.bottom <= innerHeight) return false;
+    scrollTo(0, scrollY + box.bottom - innerHeight);
+    return true;
+  });
+  if (!moved) return;
+  await page.waitForTimeout(700);
+  // The scroll carried the strip on by as much again (SCROLL_SPEED): put its
+  // drift back to the start, where the cards are as a test expects them.
+  await track(page).evaluate((el) => {
+    for (const animation of el.getAnimations()) animation.currentTime = 0;
+  });
+}
+
+/**
  * Hover a card by coordinates: hover() waits for a still element, and this
  * one moves. Near the card's top, clear of the consent banner in the bottom
  * corner, and kept on screen: the cards are wide enough that the third
  * one's centre can sit past the right edge.
  */
 async function hoverCard(page: Page, index: number) {
+  await showStrip(page);
   const box = (await cards(page).nth(index).boundingBox())!;
   const width = page.viewportSize()!.width;
   const x = Math.min(box.x + box.width / 2, width - 8);
   await page.mouse.move(Math.max(x, box.x + 8), box.y + box.height * 0.2);
+}
+
+/**
+ * Press the pause button as a person would: bring it on screen, let the page
+ * answer that scroll, then press. Any scroll shows Back to top, which on a
+ * phone with the cookie banner up floats mid-screen at the right, where the
+ * pause button lands. Pressed at once, Back to top faded in between the press
+ * and the release: the press went down on one button and up on the other, and
+ * the click reached neither (2 runs in 10 on iPhone 17, found 2026-11-20).
+ * Pressed after it, Playwright's own check sees anything over the button and
+ * scrolls again.
+ */
+async function pressPause(page: Page) {
+  await pause(page).scrollIntoViewIfNeeded();
+  if (await page.evaluate(() => scrollY > 0)) {
+    await expect(page.locator('button[aria-label="Back to top"]')).not.toHaveAttribute("inert");
+  }
+  await pause(page).click();
 }
 
 /** The track's offset now and a little later: equal means it is not moving. */
@@ -77,12 +118,18 @@ test("the strip drifts right to left on its own", async ({ page }) => {
 test("the pause button stops it, and a second press starts it again", async ({ page }) => {
   // Move the pointer off the strip first, so hover is not what stops it.
   await page.mouse.move(0, 0);
-  await pause(page).click();
+  await pressPause(page);
   await page.mouse.move(0, 0);
   await expect(pause(page)).toHaveAttribute("aria-pressed", "true");
+  // Reaching the button scrolls a phone's page, and a scroll runs the strip
+  // even under pause (StripControls). Pause holds the drift: that is what is
+  // asked here, once the scroll's own glide has run out.
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await expect(strip(page)).not.toHaveAttribute("data-gliding", "", { timeout: 8_000 });
   const [a, b] = await drift(page);
   expect(a).toBe(b);
-  await pause(page).click();
+  await pressPause(page);
   await page.mouse.move(0, 0);
   const [c, d] = await drift(page);
   expect(c).not.toBe(d);
@@ -107,14 +154,16 @@ test("each card's CTA leads to the solutions page", async ({ page }) => {
   await expect(page).toHaveURL(/\/solutions$/);
 });
 
-test("the proof line, title, CTAs and SIRA line read top to bottom above the strip", async ({
+test("the title, email field, proofs, marks, pause button and strip read top to bottom", async ({
   page,
 }) => {
+  // 2026-11-14: the email field took the two CTAs' place, and the makers'
+  // marks run between the proofs and the strip.
   const order = [
-    page.getByText("180+ projects completed across Dubai"),
     page.getByRole("heading", { level: 1 }),
-    page.getByRole("link", { name: "WhatsApp", exact: true }),
-    page.getByText(/^SIRA Licence/),
+    hero(page).getByRole("textbox", { name: "Email" }),
+    proofs(page).first(),
+    page.getByRole("list", { name: "Brands we work with" }),
     pause(page),
     strip(page),
   ];
@@ -123,17 +172,195 @@ test("the proof line, title, CTAs and SIRA line read top to bottom above the str
   expect(tops).toEqual([...tops].sort((a, b) => a - b));
 });
 
-test("the rating and the project count share one line on a wide screen", async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) < 640, "phones stack the two");
-  const rating = (await page.getByText(/4\.8 on Google reviews/).boundingBox())!;
-  const count = (await page.getByText("180+ projects completed across Dubai").boundingBox())!;
-  expect(Math.abs(rating.y - count.y)).toBeLessThan(2);
-  expect(count.x).toBeGreaterThan(rating.x + rating.width);
-  const fontSize = (text: RegExp | string) =>
-    page.getByText(text).evaluate((el) => getComputedStyle(el).fontSize);
-  expect(await fontSize("180+ projects completed across Dubai")).toBe(
-    await fontSize(/4\.8 on Google reviews/),
+test("the subtitle is 896px wide at most, two lines on a desktop", async ({ page }) => {
+  // 56rem since 2026-11-14 (the design), where it was 600px.
+  const lede = (await page.getByRole("heading", { level: 1 }).locator("+ p").boundingBox())!;
+  expect(lede.width).toBeLessThanOrEqual(896);
+});
+
+const proofs = (page: Page) => hero(page).locator("ul:not([aria-label]):not([data-copy]) > li");
+
+test("the title, subtitle, email field and proofs are centred on one axis", async ({ page }) => {
+  // Centred since 2026-11-14 (Figma 4886:1856), where all of it read from
+  // the start edge.
+  const centres = [];
+  for (const locator of [
+    page.getByRole("heading", { level: 1 }),
+    page.getByRole("heading", { level: 1 }).locator("+ p"),
+    hero(page).locator("form > div").first(),
+    proofs(page).first().locator("xpath=.."),
+  ]) {
+    const box = (await locator.boundingBox())!;
+    centres.push(box.x + box.width / 2);
+  }
+  const middle = page.viewportSize()!.width / 2;
+  for (const centre of centres) expect(Math.abs(centre - middle)).toBeLessThan(2);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCSS("text-align", "center");
+});
+
+test("only the rating carries a mark, and every other line is its words alone", async ({
+  page,
+}) => {
+  await expect(proofs(page)).toHaveCount(4);
+  await expect(proofs(page).first().locator("> span")).toHaveCount(1);
+  await expect(hero(page).locator("ul:not([aria-label]):not([data-copy]) li > span")).toHaveCount(
+    1,
   );
+  await expect(proofs(page)).toHaveText([
+    "4.8 on Google reviews",
+    "180+ Dubai projects",
+    "SIRA Licence",
+    "by Maple Technologies",
+  ]);
+});
+
+test("from md the four share one line, with a drawn rule between each", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 768, "a phone wraps them, with no rules");
+  const boxes = await proofs(page).evaluateAll((all) =>
+    all.map((li) => {
+      const r = li.getBoundingClientRect();
+      return { y: r.y, rule: getComputedStyle(li, "::before").width };
+    }),
+  );
+  expect(new Set(boxes.map((box) => Math.round(box.y))).size).toBe(1);
+  expect(boxes.map((box) => box.rule)).toEqual(["auto", "1px", "1px", "1px"]);
+});
+
+test("the proofs sit under the email field at every width, inside the screen", async ({ page }) => {
+  const width = page.viewportSize()?.width ?? 0;
+  const list = (await proofs(page).first().locator("xpath=..").boundingBox())!;
+  const field = (await hero(page).locator("form > div").first().boundingBox())!;
+  expect(list.y).toBeGreaterThanOrEqual(field.y + field.height);
+  expect(list.x).toBeGreaterThanOrEqual(0);
+  expect(list.x + list.width).toBeLessThanOrEqual(width);
+});
+
+test("the email field is 44px tall, and 376px wide where there is room", async ({ page }) => {
+  const field = (await hero(page).locator("form > div").first().boundingBox())!;
+  expect(Math.round(field.height)).toBe(44);
+  const width = page.viewportSize()!.width;
+  expect(Math.round(field.width)).toBe(Math.min(376, Math.round(width - 48)));
+});
+
+test.describe("the email field", () => {
+  test.beforeEach(async ({ page }) => {
+    await withConsentDecided(page);
+    await page.goto("/");
+    await expectHydrated(page);
+  });
+
+  test("sends an address as a lead, and thanks the visitor", async ({ page }) => {
+    const address = `hero-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}@example.com`;
+    await hero(page).getByRole("textbox", { name: "Email" }).fill(address);
+    await hero(page).getByRole("button", { name: "Book a site visit" }).click();
+    await expect(hero(page).getByRole("status")).toContainText(
+      "We will reply by email to arrange your site visit.",
+    );
+    const mail = await sentMail(address);
+    expect(mail.replyTo).toBe(address);
+    expect(line(mail, "Email")).toBe(address);
+    expect(line(mail, "Name")).toBe("not given");
+  });
+
+  test("says what is wrong with an address that is not one, and sends nothing", async ({
+    page,
+  }) => {
+    const marker = `nothere${Date.now().toString(36)}`;
+    await hero(page).getByRole("textbox", { name: "Email" }).fill(marker);
+    await hero(page).getByRole("button", { name: "Book a site visit" }).click();
+    await expect(hero(page).getByRole("alert")).toHaveText("Check the email address.");
+    await expect(hero(page).getByRole("textbox", { name: "Email" })).toBeFocused();
+    expect(await mailFor(marker)).toEqual([]);
+  });
+
+  // The light band swipes as the nav's light button beside it does
+  // (Shivanshu, 2026-11-15): empty to a brown-100 outline, the ground back in
+  // from the start edge in 300ms, ending brown-900 on brown-100 as it began.
+  test("its button swipes on hover, ending as it began", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "hover is a mouse concern");
+    const button = hero(page).getByRole("button", { name: "Book a site visit" });
+    const BROWN_100 = "rgb(240, 233, 221)";
+    const BROWN_900 = "rgb(20, 17, 14)";
+    const look = () =>
+      button.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { ground: s.backgroundColor, ink: s.color };
+      });
+    expect(await look()).toEqual({ ground: BROWN_100, ink: BROWN_900 });
+
+    await button.hover();
+    const swipe = await button.evaluate((el) => {
+      const animation = el
+        .getAnimations()
+        .find((a) => (a as CSSAnimation).animationName.endsWith("button-swipe"))!;
+      animation.pause();
+      const duration = animation.effect!.getComputedTiming().duration;
+      animation.currentTime = 0;
+      const s = getComputedStyle(el);
+      const start = {
+        size: s.backgroundSize,
+        ground: s.backgroundColor,
+        border: s.borderTopColor,
+        ink: s.color,
+        image: s.backgroundImage,
+      };
+      animation.finish();
+      return { duration, start };
+    });
+    expect(swipe.duration).toBe(300);
+    expect(swipe.start).toEqual({
+      size: "0% 100%",
+      ground: "rgba(0, 0, 0, 0)",
+      border: BROWN_100,
+      ink: BROWN_100,
+      image: `linear-gradient(${BROWN_100}, ${BROWN_100})`,
+    });
+    await expect.poll(() => button.evaluate((el) => getComputedStyle(el).color)).toBe(BROWN_900);
+    await expectAccessible(page);
+  });
+});
+
+test.describe("the makers' marks", () => {
+  const marks = (page: Page) => hero(page).locator("[data-hero-brands] > div");
+
+  test("stop with the strip's pause button", async ({ page }) => {
+    test.skip(
+      await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches),
+      "nothing moves under reduced motion",
+    );
+    await expectHydrated(page);
+    await pressPause(page);
+    await expect(marks(page)).toHaveCSS("animation-play-state", "paused");
+    await pressPause(page);
+    await expect(marks(page)).toHaveCSS("animation-play-state", "running");
+  });
+
+  test("slow to a crawl under a mouse, and pick up as it leaves", async ({ page, hasTouch }) => {
+    test.skip(hasTouch, "a pointer behaviour");
+    // The cookie banner would sit over the marks' left end.
+    await withConsentDecided(page);
+    await page.goto("/");
+    await expectHydrated(page);
+    const rate = () =>
+      marks(page).evaluate((el) => el.getAnimations()[0]?.playbackRate ?? Number.NaN);
+    const box = (await marks(page).boundingBox())!;
+    await page.mouse.move(box.x + 200, box.y + box.height / 2);
+    await expect.poll(rate).toBeLessThan(0.2);
+    await page.mouse.move(box.x + 200, 5);
+    await expect.poll(rate).toBe(1);
+  });
+
+  test("stand still and wrapped under reduced motion", async ({ browser }) => {
+    const context = await browser.newContext({ reducedMotion: "reduce" });
+    const page = await context.newPage();
+    await page.goto("/");
+    await expect(hero(page).locator("[data-hero-brands] > div")).toHaveCSS(
+      "animation-name",
+      "none",
+    );
+    await expect(hero(page).locator("[data-hero-brands] [data-copy]").first()).toBeHidden();
+    await context.close();
+  });
 });
 
 test("the rating line has no outline", async ({ page }) => {
@@ -148,19 +375,22 @@ test("the strip is a share of the screen: about 42% of its height, or less", asy
   expect(box.height).toBeGreaterThan(120);
 });
 
-test("the strip ends exactly at the bottom of the screen, or just above a phone's nav", async ({
+test("the strip's top edge sits at 95% of the screen, so the page asks to be scrolled", async ({
   page,
 }) => {
+  // 2026-11-14: only its top shows above the fold, where it used to end at
+  // the screen's foot. Below lg the nav floats over the foot, so the 5% is
+  // above it; a phone whose copy needs more room pushes it further down.
   await page.evaluate(() => scrollTo(0, 0));
-  const stripBox = (await strip(page).boundingBox())!;
-  const bottom = stripBox.y + stripBox.height;
+  const top = (await strip(page).boundingBox())!.y;
   const height = page.viewportSize()!.height;
   if ((page.viewportSize()?.width ?? 0) >= 1024) {
-    expect(Math.abs(bottom - height)).toBeLessThanOrEqual(1);
+    expect(Math.abs(top - height * 0.95)).toBeLessThanOrEqual(1);
   } else {
+    // At most 5% of the screen shows above the floating nav, give or take
+    // the few pixels between the nav's box and the room the hero keeps for it.
     const nav = (await page.locator("header").boundingBox())!;
-    expect(bottom).toBeLessThanOrEqual(nav.y);
-    expect(nav.y - bottom).toBeLessThan(24);
+    expect(nav.y - top).toBeLessThanOrEqual(height * 0.05 + 12);
   }
 });
 
@@ -183,7 +413,8 @@ test.describe("the hand on the strip", () => {
     await page.goto("/");
     await expectHydrated(page);
     // Paused, so only the hand moves it.
-    await pause(page).click();
+    await pressPause(page);
+    await showStrip(page);
   });
 
   test("a mouse dragged left carries the strip left with it", async ({ page, hasTouch }) => {
@@ -311,36 +542,121 @@ test("there are no arrows on the strip any more", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Previous image|Next image/ })).toHaveCount(0);
 });
 
-test("the two ruled lines are each centred as a whole, rule and both halves", async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) < 640, "phones stack the halves, no rule");
-  const centre = await page.evaluate(() => document.documentElement.clientWidth / 2);
-  const rules = hero(page).locator("p > span[aria-hidden='true']:not(:has(*))");
-  await expect(rules).toHaveCount(2);
-  for (const rule of await rules.all()) {
-    const [start, end] = await rule.evaluate((el) => {
-      const first = el.previousElementSibling!.getBoundingClientRect();
-      const last = el.nextElementSibling!.getBoundingClientRect();
-      return [first.left, last.right];
-    });
-    expect(Math.abs((start + end) / 2 - centre)).toBeLessThan(1);
-  }
-});
-
-test("the rating line is set exactly as the SIRA line", async ({ page }) => {
-  const style = (text: RegExp) =>
-    page
-      .getByText(text)
-      .first()
-      .evaluate((el) => {
-        const s = getComputedStyle(el.closest("p")!);
-        return [s.fontSize, s.fontWeight, s.lineHeight, s.color, s.letterSpacing].join(" ");
-      });
-  expect(await style(/on Google reviews/)).toBe(await style(/^SIRA Licence/));
-});
-
 test.describe("with a mouse", () => {
   test.beforeEach(({ hasTouch }) => {
     test.skip(hasTouch, "hover is a pointer behaviour");
+  });
+
+  // The second copy took no pointer while it was inert, which lost the hover
+  // on every card once the loop brought it round, Lighting first, and after any
+  // swipe that landed on it (reported three ways, found 2026-11-04).
+  test.describe("in the loop's second round", () => {
+    // The consent banner sits over the strip's left end, where these hover.
+    test.beforeEach(async ({ page }) => {
+      await withConsentDecided(page);
+      await page.reload();
+      await expectHydrated(page);
+    });
+
+    const seek = (page: Page, fraction: number) =>
+      track(page).evaluate((el, f) => {
+        const [animation] = el.getAnimations();
+        animation!.currentTime = Number(animation!.effect!.getComputedTiming().duration) * f;
+      }, fraction);
+
+    /** Rests the pointer on `x` and reads the card it reached, and what shows. */
+    const hoverAt = async (page: Page, x: number) => {
+      const box = (await strip(page).boundingBox())!;
+      await page.mouse.move(1, 1);
+      await page.mouse.move(x - 3, box.y + 20);
+      await page.mouse.move(x, box.y + 20, { steps: 3 });
+      await expect.poll(() => markedCards(page).count()).toBe(1);
+      const marked = markedCards(page).first();
+      await expect(marked.locator("> div")).toHaveCSS("opacity", "1");
+      return marked;
+    };
+    const markedCards = (page: Page) => strip(page).locator("li[data-hover]");
+    /** Where to rest on each card of the second copy now on screen, in order. */
+    const copyOnScreen = (page: Page) =>
+      strip(page)
+        .locator("ul[data-copy]:not([data-lead]) > li")
+        .evaluateAll((all) =>
+          all
+            .map((el) => el.getBoundingClientRect())
+            .filter((r) => r.right > 40 && r.left < window.innerWidth - 40)
+            .map((r) => {
+              const start = Math.max(r.left, 0);
+              const end = Math.min(r.right, window.innerWidth);
+              return (start + end) / 2;
+            }),
+        );
+    // A little short of the wrap: at the wrap itself the first copy takes over,
+    // the same picture.
+    const NEAR_THE_END = 0.9;
+
+    test("Lighting shows its overlay when it comes round again", async ({ page }) => {
+      await seek(page, NEAR_THE_END);
+      const [x] = await copyOnScreen(page);
+      const card = await hoverAt(page, x!);
+      await expect(card.locator("p").first()).toHaveText("Lighting");
+      await expect(card.locator("xpath=..")).toHaveAttribute("data-copy");
+    });
+
+    test("every card of the second copy on screen shows its overlay", async ({ page }) => {
+      await seek(page, NEAR_THE_END);
+      const count = (await copyOnScreen(page)).length;
+      expect(count).toBeGreaterThan(1);
+      for (let index = 0; index < count; index += 1) {
+        await page.mouse.move(1, 1);
+        await seek(page, NEAR_THE_END);
+        const card = await hoverAt(page, (await copyOnScreen(page))[index]!);
+        await expect(card.locator("p").first()).toHaveText(
+          (await cards(page).nth(index).locator("p").first().textContent())!,
+        );
+        await expect(card.locator("xpath=..")).toHaveAttribute("data-copy");
+      }
+    });
+
+    test("a hover holds the drift there, as it does on the first copy", async ({ page }) => {
+      await seek(page, NEAR_THE_END);
+      await hoverAt(page, (await copyOnScreen(page))[1]!);
+      const [a, b] = await drift(page);
+      expect(a).toBe(b);
+    });
+
+    test("after a drag that lands on it, the next hover still works", async ({ page }) => {
+      // Dragged right, back through the pass, so it stays in the second copy.
+      await seek(page, NEAR_THE_END);
+      const box = (await strip(page).boundingBox())!;
+      const y = box.y + 20;
+      const width = page.viewportSize()!.width;
+      await page.mouse.move(width * 0.3, y);
+      await page.mouse.down();
+      await page.mouse.move(width * 0.5, y, { steps: 10 });
+      await page.mouse.up();
+      const [x] = await copyOnScreen(page);
+      const card = await hoverAt(page, x!);
+      await expect(card.locator("xpath=..")).toHaveAttribute("data-copy");
+    });
+
+    test("after a sideways trackpad swipe, the card under the pointer shows", async ({ page }) => {
+      await seek(page, 0.7);
+      const width = page.viewportSize()!.width;
+      await hoverAt(page, width * 0.5);
+      await page.mouse.wheel(600, 0);
+      await expect.poll(() => markedCards(page).count()).toBe(1);
+      await expect(markedCards(page).first().locator("> div")).toHaveCSS("opacity", "1");
+    });
+
+    test("its link opens, and Tab still never lands on it", async ({ page }) => {
+      await seek(page, NEAR_THE_END);
+      const [x] = await copyOnScreen(page);
+      const card = await hoverAt(page, x!);
+      const link = card.getByRole("link", { includeHidden: true });
+      await expect(link).toHaveAttribute("tabindex", "-1");
+      await link.click({ force: true });
+      await expect(page).toHaveURL(/\/solutions$/);
+    });
   });
 
   test("hides each overlay until the card is hovered", async ({ page }) => {
@@ -403,6 +719,7 @@ test.describe("under reduced motion", () => {
     await withConsentDecided(page);
     await page.goto("/");
     await expectHydrated(page);
+    await showStrip(page);
     const box = (await strip(page).boundingBox())!;
     const y = box.y + box.height * 0.2;
     await page.mouse.move(box.x + 600, y);
@@ -413,7 +730,10 @@ test.describe("under reduced motion", () => {
   });
 
   test("drops the loop's second copy and the pause button", async ({ page }) => {
-    await expect(strip(page).locator("ul[data-copy]")).toBeHidden();
+    // The second copy and the lead cards both.
+    for (const list of await strip(page).locator("ul[data-copy]").all()) {
+      await expect(list).toBeHidden();
+    }
     await expect(pause(page)).toBeHidden();
   });
 
@@ -445,7 +765,8 @@ test.describe("under reduced motion", () => {
     page,
   }) => {
     const images = strip(page).locator("img");
-    await expect(images).toHaveCount(16);
+    // Both copies of the eight, and the two lead cards.
+    await expect(images).toHaveCount(18);
     await expect
       .poll(() =>
         images.evaluateAll(
@@ -461,8 +782,14 @@ test.describe("under reduced motion", () => {
 });
 
 test.describe("keyboard", () => {
-  test("Tab runs CTAs, the three controls, then each card's link once", async ({ page }) => {
-    await page.getByRole("link", { name: "WhatsApp", exact: true }).focus();
+  test("Tab runs from the email field's button to the pause button, then each card's link", async ({
+    page,
+  }) => {
+    // A Tab walk through links: WebKit, like Safari on a Mac, skips links on
+    // Tab unless the reader turns that on (keyboard.spec.ts). Nothing in the
+    // makers' marks takes focus, and the honeypot is out of the tab order.
+    test.skip(test.info().project.name === "iPhone 17", "Tab reaches links only in Chromium");
+    await hero(page).getByRole("button", { name: "Book a site visit" }).focus();
     const expected = [
       "Pause the images",
       "View lighting",
@@ -513,11 +840,40 @@ test.describe("keyboard", () => {
     await expect.poll(() => strip(page).evaluate((el) => el.scrollLeft)).toBe(0);
   });
 
+  test("brings the first card back on screen after the strip has run past a pass", async ({
+    page,
+  }) => {
+    // Found 2026-11-21 on CI (focus-visible.spec.ts): the reveal clamped to
+    // the first pass, so once currentTime had run past it, as a minute on the
+    // page or a glide back leaves it, the strip went to that pass's end and
+    // the focused card a whole copy's width off screen. A focus, not a Tab,
+    // so every engine runs it: the reveal is in the focus event.
+    await expectHydrated(page);
+    const first = cards(page).first();
+    await strip(page).evaluate((el) => {
+      const [drift] = el.firstElementChild!.getAnimations();
+      const duration = Number(drift!.effect!.getComputedTiming().duration);
+      drift!.currentTime = 4 * duration + duration / 3;
+    });
+    expect(await first.evaluate((el) => el.getBoundingClientRect().right)).toBeLessThan(0);
+    await first.getByRole("link").focus();
+    await expect
+      .poll(() =>
+        first.evaluate((el) => {
+          const b = el.getBoundingClientRect();
+          return b.left >= 0 && b.left < innerWidth ? "on screen" : `${b.left}..${b.right}`;
+        }),
+      )
+      .toBe("on screen");
+  });
+
   test("a focused card's link draws a visible ring", async ({ page }) => {
     const link = cards(page).first().getByRole("link");
+    // Keyboard focus without a Tab walk, which WebKit would take past links:
+    // a key press, then focus, is :focus-visible in every engine.
+    await page.keyboard.press("Shift");
     await link.focus();
-    await page.keyboard.press("Shift+Tab");
-    await page.keyboard.press("Tab");
+    expect(await link.evaluate((el) => el.matches(":focus-visible"))).toBe(true);
     const outline = await link.evaluate((el) => getComputedStyle(el).outlineStyle);
     expect(outline).not.toBe("none");
   });
@@ -559,7 +915,7 @@ test.describe("without JavaScript", () => {
   test("the hero, the strip and the proof are all in the server HTML", async ({ page }) => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Home at your fingertips");
     await expect(cards(page)).toHaveCount(8);
-    await expect(page.getByText("180+ projects completed across Dubai")).toBeVisible();
+    await expect(page.getByText("180+ Dubai projects")).toBeVisible();
   });
 
   test("the strip still drifts, since it is CSS", async ({ page, hasTouch }) => {
@@ -636,7 +992,7 @@ test.describe("the loop", () => {
   /** Where the first card of each copy sits, in viewport pixels. */
   const firsts = (page: Page) =>
     strip(page)
-      .locator("ul")
+      .locator("ul:not([data-lead])")
       .evaluateAll((lists) => lists.map((ul) => ul.firstElementChild!.getBoundingClientRect().x));
 
   test("has no seam: the copy lands exactly where the first copy started", async ({ page }) => {
@@ -645,6 +1001,21 @@ test.describe("the loop", () => {
     await seek(page, 1 - 1e-9);
     const [, copyAtEnd] = await firsts(page);
     expect(Math.abs(copyAtEnd! - start!)).toBeLessThan(1);
+  });
+
+  test("the first copy's last card meets the second's first, one gap apart", async ({ page }) => {
+    const lists = strip(page).locator("ul:not([data-lead])");
+    const gap = await lists.evaluateAll(
+      ([first, copy]) =>
+        copy!.firstElementChild!.getBoundingClientRect().left -
+        first!.lastElementChild!.getBoundingClientRect().right,
+    );
+    expect(Math.abs(gap - 8)).toBeLessThan(1);
+  });
+
+  test("a card is 4:3, as the strip's height comes to", async ({ page }) => {
+    const box = (await cards(page).first().boundingBox())!;
+    expect(Math.abs(box.width / box.height - 4 / 3)).toBeLessThan(0.01);
   });
 
   test("the two copies are exactly one copy's width apart", async ({ page }) => {
@@ -679,7 +1050,7 @@ test.describe("every card, with a mouse", () => {
     // The banner covers the first cards on a 1280x720 screen.
     await withConsentDecided(page);
     await page.goto("/");
-    await pause(page).click();
+    await pressPause(page);
     await page.mouse.move(0, 0);
   });
 
@@ -700,6 +1071,8 @@ test.describe("every card, with a mouse", () => {
   });
 
   test("the CTA is brown-900 on brown-100, at full opacity", async ({ page }) => {
+    // The inverse button fills with the surface, brown-100: the page's ground
+    // went to brown-50 on 2026-11-14 and the button stayed (Shivanshu).
     await hoverCard(page, 0);
     const link = overlayOf(page, 0).getByRole("link");
     await expect(link).toHaveCSS("background-color", "rgb(240, 233, 221)");
@@ -708,9 +1081,11 @@ test.describe("every card, with a mouse", () => {
   });
 });
 
-// On an iPhone 17 (measured 2026-11-02) the subtitle is bigger on screen than
-// any one card, and is the largest paint; text in the hero copy is painted
-// from the server HTML, so it is as good as the h1. Consent decided first: on
+// Since the glass (2026-11-14) the largest paint is usually the hero section
+// itself: its ground picture, painted as its background. It is 3KB and
+// preloaded at high priority, so it lands with the first paint. On an iPhone
+// 17 (measured 2026-11-02) the subtitle was the largest; text in the hero
+// copy is painted from the server HTML, so it is as good as the h1. Consent decided first: on
 // a first visit the cookie banner's paragraph is larger still, which says
 // nothing about the hero (consent-boot.spec.ts covers the banner's paint).
 test("the largest paint is the hero's copy or an eager strip image, never a lazy one", async ({
@@ -718,6 +1093,18 @@ test("the largest paint is the hero's copy or an eager strip image, never a lazy
 }) => {
   await withConsentDecided(page);
   await page.goto("/", { waitUntil: "load" });
+  // The largest paint is decided only once the strip's eager pictures have
+  // painted. Read before that and the answer is whatever was largest so far:
+  // since the pictures come through the optimiser (Sanity, 2026-11-11), the
+  // header sometimes, on a reload with warm assets.
+  await page.waitForFunction(() =>
+    [
+      ...document.querySelectorAll<HTMLImageElement>('[data-hero-strip] img:not([loading="lazy"])'),
+    ].every((img) => img.complete && img.naturalWidth > 0),
+  );
+  await page.evaluate(
+    () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
   const lcp = await page.evaluate(
     () =>
       new Promise<{
@@ -726,6 +1113,7 @@ test("the largest paint is the hero's copy or an eager strip image, never a lazy
         loading: string | null;
         src: string;
         inCopy: boolean;
+        inStrip: boolean;
       }>((resolve) => {
         new PerformanceObserver((list) => {
           const entries = list.getEntries() as (PerformanceEntry & { element: Element | null })[];
@@ -736,23 +1124,29 @@ test("the largest paint is the hero's copy or an eager strip image, never a lazy
             loading: el?.getAttribute("loading") ?? null,
             src: el?.getAttribute("src") ?? "",
             inCopy: Boolean(el?.closest("[data-hero]") && !el.closest("[data-hero-strip]")),
+            inStrip: Boolean(el?.closest("[data-hero-strip]")),
           });
         }).observe({ type: "largest-contentful-paint", buffered: true });
       }),
   );
-  if (lcp.tag === "H1") {
+  if (lcp.tag === "SECTION") {
+    expect(await hero(page).getAttribute("aria-labelledby")).toBe("hero-title");
+    expect(lcp.inStrip).toBe(false);
+  } else if (lcp.tag === "H1") {
     expect(lcp.id).toBe("hero-title");
   } else if (lcp.tag === "P") {
     expect(lcp.inCopy).toBe(true);
   } else {
     expect(lcp.tag).toBe("IMG");
-    expect(lcp.src).toContain("hero_carousel");
+    // A strip picture, through our own optimiser since the move to Sanity.
+    expect(lcp.inStrip).toBe(true);
+    expect(lcp.src).toMatch(/^\/_next\/image\?url=https%3A%2F%2Fcdn\.sanity\.io%2F/);
     expect(lcp.loading).not.toBe("lazy");
   }
 });
 
 test("every card's overlay content stays inside its card", async ({ page }) => {
-  await pause(page).click();
+  await pressPause(page);
   for (const index of [0, 2, 7]) {
     await cards(page).nth(index).getByRole("link").focus();
     const card = (await cards(page).nth(index).boundingBox())!;
@@ -778,4 +1172,16 @@ test.describe("under reduced motion, with a mouse", () => {
     await hoverCard(page, 1);
     await expect(overlayOf(page, 1)).toHaveCSS("opacity", "1");
   });
+});
+
+test("from lg the nav's button over the dark hero is the light one, brown-100", async ({
+  page,
+}) => {
+  // The same brown-100 as the strip's light button, not the page's brown-50
+  // ground (Shivanshu, 2026-11-14). Once the bar shrinks it is dark again.
+  test.skip((page.viewportSize()?.width ?? 0) < 1024, "below lg the bar is the floating capsule");
+  await page.evaluate(() => scrollTo(0, 0));
+  const cta = page.locator('header a[href="/contact"]');
+  await expect(cta).toHaveCSS("background-color", "rgb(240, 233, 221)");
+  await expect(cta).toHaveCSS("color", "rgb(20, 17, 14)");
 });

@@ -31,17 +31,22 @@ test("html carries the dark dot", async ({ page }) => {
 });
 
 test("the nav and hero CTAs show the dot, not a hand and not nothing", async ({ page }) => {
-  for (const link of [
+  for (const control of [
     page.locator("header").getByRole("link", { name: "Book a site visit" }),
-    // The hero's booking CTA.
-    page.locator("section[data-hero]").getByRole("link", { name: "Book a site visit" }),
+    // The hero's booking button, which sends its email field (2026-11-14).
+    page.locator("section[data-hero]").getByRole("button", { name: "Book a site visit" }),
   ]) {
-    expect(await cursorOf(link)).toContain(DARK_DOT);
+    expect(await cursorOf(control)).toContain(DARK_DOT);
   }
 });
 
+test("the hero's email field shows a dot, not the text cursor's bar alone", async ({ page }) => {
+  const field = page.locator("section[data-hero]").getByRole("textbox", { name: "Email" });
+  expect(await cursorOf(field)).toContain("data:image/svg+xml");
+});
+
 test("a Button link and everything inside it show the dot", async ({ page }) => {
-  const link = page.getByRole("link", { name: "View detailed pricing" });
+  const link = page.getByRole("link", { name: "Compare the packages" });
   expect(await cursorOf(link)).toContain(DARK_DOT);
   const inner = await link.evaluate((el) =>
     Array.from(el.querySelectorAll("*")).map((c) => getComputedStyle(c).cursor),

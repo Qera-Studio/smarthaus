@@ -12,6 +12,29 @@ export const DRAG_MIN_PX = 6;
 export const REVEAL_GUTTER_PX = 16;
 
 /**
+ * How far the strip runs, in all, for each pixel the page scrolls: on along
+ * its drift going down, back going up. Tuned by eye (Shivanshu, 2026-11-04).
+ */
+export const SCROLL_SPEED = 2.125;
+
+/**
+ * How often the glide's speed is eased, and by how much each time: a fast
+ * glide, nine tenths of what a scroll adds spent within a quarter second of
+ * it, so the strip stops with the page rather than running on after it.
+ */
+export const GLIDE_STEP_MS = 33;
+export const GLIDE_DECAY = 0.7;
+/** How much of the drift's speed comes back each step after a scroll up. */
+export const DRIFT_RETURN = 0.08;
+/**
+ * How fast the makers' marks run while a pointer is over them, as a share of
+ * their own speed: a crawl, not a stop (Shivanshu, 2026-11-14).
+ */
+export const BRANDS_HOVER_RATE = 0.08;
+/** Below this share of the drift's own speed, the scroll's part is over. */
+const GLIDE_END = 0.25;
+
+/**
  * The strip's pause button, above it, and the hand on the strip itself.
  *
  * Pause sets data-paused on the strip, which the stylesheet stops it on: the
@@ -26,6 +49,27 @@ export const REVEAL_GUTTER_PX = 16;
  * data-dragging holds it still under the hand. Under reduced motion there is
  * no animation and the strip is a plain scroller, so the drag scrolls it. A
  * vertical trackpad swipe is left to the page.
+ *
+ * Scroll (Shivanshu, 2026-11-04): while any of the strip is on screen, the
+ * page's scroll glides it, with no limit either way. It never jumps: each
+ * pixel scrolled adds to the speed of the drift's own CSS animation (its
+ * playbackRate, negative going up), and a timer eases that speed away. The
+ * browser still draws every frame of the movement; only the speed is stepped.
+ * The sum of those steps is SCROLL_SPEED pixels of strip per pixel of page,
+ * whatever the pace of the scroll. Going up, the drift stands aside and comes
+ * back from nothing once the scroll has run out: left at full speed under it,
+ * the strip ran back, stopped and at once set off forward again, a bounce. Hover and the pause button hold only the
+ * drift, not this (data-gliding, in the stylesheet), since the scroll is the
+ * visitor's own hand. Not under keyboard focus in the strip, where the
+ * browser's scroll to a focused card would carry it away, not under a drag,
+ * and not under reduced motion.
+ *
+ * The opening: the splash boot script sets data-intro on <html> on every full
+ * load, and the hero's opening plays only while it is there. It is taken off
+ * once this row's fade has ended, the opening's last step, so a soft navigation
+ * back finds the hero at rest. Not on unmount: in development React mounts,
+ * unmounts and mounts again at once, and that took it off before anything
+ * but the title had started (found 2026-11-02).
  *
  * Hover (2026-10-28): the browser works out :hover only when the pointer
  * moves, so a swipe or a drag that carried the cards under a still pointer
@@ -99,10 +143,14 @@ export function StripControls({
       const duration = Number(animation.effect?.getComputedTiming().duration);
       // One pass carries the strip one copy's width, half the track.
       const msPerPx = duration / (track.getBoundingClientRect().width / 2);
-      const next = Number(animation.currentTime ?? 0) - dx * msPerPx;
+      const at = Number(animation.currentTime ?? 0);
+      const next = at - dx * msPerPx;
+      // The clamp holds within the pass the strip is in: currentTime runs on
+      // past one pass, and a glide back sets it four passes on (applyGlide).
+      const pass = Math.floor(at / duration) * duration;
       animation.currentTime = wrap
         ? ((next % duration) + duration) % duration
-        : Math.min(Math.max(next, 0), duration - 1);
+        : pass + Math.min(Math.max(next - pass, 0), duration - 1);
       mark();
     };
 
@@ -115,6 +163,7 @@ export function StripControls({
     // banner, found 2026-10-28) lost every move to it and never dragged.
     const onDown = (event: PointerEvent) => {
       if (event.button !== 0) return;
+      endGlide();
       press = { id: event.pointerId, x: event.clientX, last: event.clientX };
       dragged = false;
       window.addEventListener("pointermove", onMove);
@@ -146,6 +195,115 @@ export function StripControls({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
+    };
+
+    // The page's scroll, listened to only while the strip is on screen, and
+    // passive, so it never holds the scroll up.
+    let lastY = window.scrollY;
+    let glide: {
+      base: number;
+      drift: number;
+      perPx: number;
+      extra: number;
+      timer: number;
+      paused: boolean;
+    } | null = null;
+
+    const endGlide = () => {
+      if (!glide) return;
+      window.clearInterval(glide.timer);
+      glide = null;
+      el.removeAttribute("data-gliding");
+      el.firstElementChild?.getAnimations()[0]?.updatePlaybackRate(1);
+    };
+
+    const applyGlide = (animation: Animation) => {
+      if (!glide) return;
+      if (glide.extra < 0) glide.base = 0;
+      const rate = glide.base + glide.extra;
+      // Running backwards an animation ends at zero, even a looping one. A
+      // whole number of passes on is the same picture, so it never gets there.
+      const duration = Number(animation.effect?.getComputedTiming().duration);
+      const at = Number(animation.currentTime ?? 0);
+      if (rate < 0 && at < duration) animation.currentTime = at + duration * 4;
+      animation.updatePlaybackRate(rate);
+    };
+
+    const stepGlide = () => {
+      if (!glide) return;
+      const [animation] = el.firstElementChild?.getAnimations() ?? [];
+      // The pause button pressed mid-glide stops it: a later scroll is a new one.
+      const pausedSince = !glide.paused && el.hasAttribute("data-paused");
+      if (!animation || pausedSince) {
+        endGlide();
+        return;
+      }
+      glide.extra *= GLIDE_DECAY;
+      if (Math.abs(glide.extra) < GLIDE_END) {
+        glide.extra = 0;
+        glide.base = Math.min(glide.drift, glide.base + DRIFT_RETURN);
+        if (glide.base === glide.drift) {
+          endGlide();
+          return;
+        }
+      }
+      applyGlide(animation);
+    };
+
+    const onScroll = () => {
+      const dy = window.scrollY - lastY;
+      lastY = window.scrollY;
+      const track = el.firstElementChild;
+      const [animation] = track?.getAnimations() ?? [];
+      if (!dy || !track || !animation) return;
+      if (track.matches(":focus-within") || el.hasAttribute("data-dragging")) return;
+      if (!glide) {
+        const duration = Number(animation.effect?.getComputedTiming().duration);
+        const msPerPx = duration / (track.getBoundingClientRect().width / 2);
+        // Held by hover or the pause button there is no drift to add to.
+        const drift = animation.playState === "paused" ? 0 : 1;
+        glide = {
+          base: drift,
+          drift,
+          // The speed one pixel adds. Eased by GLIDE_DECAY each GLIDE_STEP_MS,
+          // that speed runs the animation msPerPx * SCROLL_SPEED in all.
+          perPx: (msPerPx * SCROLL_SPEED * (1 - GLIDE_DECAY)) / GLIDE_STEP_MS,
+          extra: 0,
+          timer: window.setInterval(stepGlide, GLIDE_STEP_MS),
+          paused: el.hasAttribute("data-paused"),
+        };
+        el.setAttribute("data-gliding", "");
+      }
+      glide.extra += dy * glide.perPx;
+      applyGlide(animation);
+    };
+    const visible = new IntersectionObserver((entries) => {
+      lastY = window.scrollY;
+      if (entries.some((entry) => entry.isIntersecting))
+        window.addEventListener("scroll", onScroll, { passive: true });
+      else window.removeEventListener("scroll", onScroll);
+    });
+    visible.observe(el);
+
+    // The marks slow under a pointer and pick up as it leaves. The rate of
+    // the CSS animation itself, so nothing jumps; under reduced motion there
+    // is no animation and this does nothing.
+    const marks = el.closest("[data-hero]")?.querySelector<HTMLElement>("[data-hero-brands]");
+    const pace = (rate: number) => () => {
+      for (const animation of marks?.firstElementChild?.getAnimations() ?? [])
+        animation.updatePlaybackRate(rate);
+    };
+    const slowMarks = pace(BRANDS_HOVER_RATE);
+    const freeMarks = pace(1);
+    marks?.addEventListener("pointerenter", slowMarks);
+    marks?.addEventListener("pointerleave", freeMarks);
+
+    // The opening is over once this row, among the last to start and the
+    // longest, has faded in (the keyframes' names are hashed, so by the end).
+    const row = root.current;
+    const onOpened = (event: AnimationEvent) => {
+      if (event.target === row && event.animationName.endsWith("hero-in"))
+        document.documentElement.removeAttribute("data-intro");
     };
 
     // A drag ends on a card's link; the click it produces is not a click.
@@ -196,7 +354,10 @@ export function StripControls({
     // view only after the event's handlers have run, so a card already put on
     // screen here gives it nothing to scroll, and nothing is left to settle.
     // The scroll listener catches whatever it scrolls anyway.
-    const onFocusIn = settle;
+    const onFocusIn = () => {
+      endGlide();
+      settle();
+    };
 
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointermove", onHover);
@@ -206,7 +367,15 @@ export function StripControls({
     el.addEventListener("click", onClick, true);
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("dragstart", onDragStart);
+    row?.addEventListener("animationend", onOpened);
     return () => {
+      visible.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      endGlide();
+      row?.removeEventListener("animationend", onOpened);
+      // No rate to put back: the marks go with the hero.
+      marks?.removeEventListener("pointerenter", slowMarks);
+      marks?.removeEventListener("pointerleave", freeMarks);
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onHover);
       el.removeEventListener("pointerleave", onLeave);

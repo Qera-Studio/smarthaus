@@ -6,7 +6,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import manifest from "../manifest";
-import { metadata, viewport } from "../layout";
+import type { Metadata, MetadataRoute } from "next";
+import { generateMetadata, viewport } from "../layout";
 
 /**
  * The web app manifest: what a phone shows when the site is added to the home
@@ -15,7 +16,12 @@ import { metadata, viewport } from "../layout";
  * "premium... seamless" pitch the rest of the site had dropped.
  */
 
-const m = manifest();
+// Both read the site settings in Sanity; the seed stands in.
+let m: MetadataRoute.Manifest;
+let metadata: Metadata;
+beforeAll(async () => {
+  [m, metadata] = await Promise.all([manifest(), generateMetadata()]);
+});
 
 /** Width and height from a PNG's IHDR chunk. */
 function pngSize(file: string) {

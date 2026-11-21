@@ -1,0 +1,193 @@
+import { expectAccessible, expectHydrated } from "./checks";
+import { expect, test, type Page } from "./fixtures";
+
+/**
+ * The homepage's scroll reveal: what is below the screen waits, rises or fades
+ * in once as it arrives, and then stays. Every other spec runs with it off
+ * (e2e/fixtures.ts).
+ */
+test.use({ reveal: true });
+
+const marked = (page: Page) => page.locator("[data-reveal]");
+const waiting = (page: Page) => page.locator('[data-reveal="waiting"]');
+
+/**
+ * Scrolls the whole page down a part-screen at a time, as a visitor would.
+ *
+ * Each step waits for two frames as well as 40ms: an IntersectionObserver
+ * looks only when the browser draws, and on a step whose frame came late the
+ * page had already moved on, so what was on screen for that step was never
+ * seen and stayed hidden (5 runs in 20 on iPhone 17 against one build,
+ * 2026-11-20). A visitor's scroll is drawn; a script's need not be.
+ */
+async function walkDown(page: Page) {
+  await page.evaluate(async () => {
+    const step = window.innerHeight * 0.6;
+    const frame = () => new Promise((done) => requestAnimationFrame(done));
+    for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+      window.scrollTo({ top: y, behavior: "instant" });
+      await frame();
+      await frame();
+      await new Promise((done) => setTimeout(done, 40));
+    }
+  });
+}
+
+const settled = (page: Page) =>
+  page.evaluate(
+    () =>
+      document
+        .getAnimations()
+        .filter((a) => /reveal-/.test((a as CSSAnimation).animationName ?? ""))
+        .filter((a) => a.playState !== "finished").length,
+  );
+
+test.describe("on the homepage", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await expectHydrated(page);
+  });
+
+  test("what is below the screen waits, unseen", async ({ page }) => {
+    await expect.poll(() => waiting(page).count()).toBeGreaterThan(10);
+    await expect(waiting(page).first()).toHaveCSS("opacity", "0");
+  });
+
+  test("nothing in the hero, the sheets, the carousels or the form is ever marked", async ({
+    page,
+  }) => {
+    for (const area of ["[data-hero]", "[data-process]", "[data-partners]", "form"]) {
+      await expect(page.locator(`${area} [data-reveal]`)).toHaveCount(0);
+    }
+  });
+
+  test("everything has arrived by the foot of the page, and stays", async ({ page }) => {
+    await walkDown(page);
+    await expect.poll(() => waiting(page).count()).toBe(0);
+    await expect.poll(() => settled(page), { timeout: 5_000 }).toBe(0);
+    const stuck = await marked(page).evaluateAll((all) =>
+      all.filter((el) => getComputedStyle(el).opacity !== "1").map((el) => el.textContent),
+    );
+    expect(stuck).toEqual([]);
+  });
+
+  test("plays once: scrolling back up and down again starts nothing", async ({ page }) => {
+    await walkDown(page);
+    await expect.poll(() => settled(page), { timeout: 5_000 }).toBe(0);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await walkDown(page);
+    expect(await settled(page)).toBe(0);
+    await expect(waiting(page)).toHaveCount(0);
+  });
+
+  test("a heading's words start apart, in reading order", async ({ page }) => {
+    const heading = page.locator("#pricing");
+    await heading.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await expect(heading).toHaveAttribute("data-reveal", "in");
+    const delays = await heading
+      .locator("> span")
+      .evaluateAll((words) => words.map((w) => getComputedStyle(w).animationDelay));
+    // Four words since the heading became the package deck's (2026-11-19).
+    expect(delays).toEqual(["0.4s", "0.46s", "0.52s", "0.58s"]);
+    await expect(heading).toHaveText("Designed around your home");
+  });
+
+  test("words blur on a wide screen, and not on a phone", async ({ page }) => {
+    const heading = page.locator("#pricing");
+    await heading.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await expect(heading).toHaveAttribute("data-reveal", "in");
+    const blur = await heading
+      .locator("> span")
+      .first()
+      .evaluate((el) => getComputedStyle(el).getPropertyValue("--reveal-blur").trim());
+    const wide = (page.viewportSize()?.width ?? 0) > 640;
+    expect(blur).toBe(wide ? "6px" : "0px");
+  });
+
+  test("a group's members follow one another, with no layout shift", async ({ page }) => {
+    const tiers = page.locator("[data-pricing] ul > li[data-reveal]");
+    const before = await tiers.first().evaluate((el) => (el as HTMLElement).offsetTop);
+    await tiers.first().evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await expect(tiers.first()).toHaveAttribute("data-reveal", "in");
+    expect(await tiers.first().evaluate((el) => (el as HTMLElement).offsetTop)).toBe(before);
+    expect(await tiers.nth(1).evaluate((el) => getComputedStyle(el).animationDelay)).toBe("0.09s");
+  });
+
+  test("a print of the page leaves nothing blank", async ({ page }) => {
+    await expect.poll(() => waiting(page).count()).toBeGreaterThan(0);
+    await page.emulateMedia({ media: "print" });
+    await expect(waiting(page).first()).toHaveCSS("opacity", "1");
+  });
+
+  // Wherever the browser restores the scroll to, and however soon, what may never
+  // happen is anything staying hidden once it is on screen.
+  test("a reload part-way down leaves nothing hidden once it is on screen", async ({ page }) => {
+    const onScreen = (selector: string) =>
+      page
+        .locator(selector)
+        .first()
+        .evaluate((el) => {
+          el.scrollIntoView({ block: "center", behavior: "instant" });
+        });
+    await onScreen("[data-pricing] ul > li[data-reveal]");
+    await page.reload();
+    await expectHydrated(page);
+    // The figures' heading, not the hardware's (2026-11-14): the hardware is
+    // held under the Process stack, and on an iPhone WebKit scrolls its
+    // heading "into view" to where the held section has it above the screen.
+    // e2e/process.spec.ts tests the hold.
+    for (const selector of ["[data-pricing] ul > li[data-reveal]", "#stats"]) {
+      await onScreen(selector);
+      await expect(page.locator(selector).first()).toHaveCSS("opacity", "1");
+    }
+  });
+
+  test("passes axe once everything has arrived", async ({ page }) => {
+    await walkDown(page);
+    await expect.poll(() => waiting(page).count()).toBe(0);
+    await expect.poll(() => settled(page), { timeout: 5_000 }).toBe(0);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await expectAccessible(page);
+  });
+});
+
+test.describe("elsewhere", () => {
+  test("/pricing shares the tier cards, and nothing on it ever waits", async ({ page }) => {
+    await page.goto("/pricing");
+    await expectHydrated(page);
+    await expect(marked(page).first()).toHaveAttribute("data-reveal", "");
+    await expect(waiting(page)).toHaveCount(0);
+    await expect(marked(page).first()).toHaveCSS("opacity", "1");
+  });
+
+  test("a soft navigation away and back leaves nothing stuck", async ({ page }) => {
+    await page.goto("/");
+    await expectHydrated(page);
+    await page.locator("footer").getByRole("link", { name: "About", exact: true }).first().click();
+    await expect(page).toHaveURL(/\/about$/);
+    await expect(waiting(page)).toHaveCount(0);
+  });
+});
+
+test.describe("under reduced motion", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  test("nothing waits and nothing moves", async ({ page }) => {
+    await page.goto("/");
+    await expectHydrated(page);
+    await expect(waiting(page)).toHaveCount(0);
+    await marked(page).first().scrollIntoViewIfNeeded();
+    expect(await settled(page)).toBe(0);
+  });
+});
+
+test.describe("without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("every word and card is there, at full strength", async ({ page }) => {
+    await page.goto("/");
+    await expect(waiting(page)).toHaveCount(0);
+    await expect(page.locator("#pricing")).toHaveText("Designed around your home");
+    await expect(page.locator("#pricing")).toHaveCSS("opacity", "1");
+  });
+});

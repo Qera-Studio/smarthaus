@@ -15,10 +15,22 @@ import { test, expect } from "./fixtures";
  * Solutions panel, which put it at 1,080. The phone's copy of the menu
  * mounts on first use and is not counted here.
  *
+ * 2026-11-04: to 1,150 (Shivanshu) for the hero's word-by-word reveal, 22 spans,
+ * and the care packages coming back, which put it at 1,111.
+ *
+ * 2026-11-14: to 1,200 for the hero redesign (the email form, the glass, the
+ * makers' marks: three runs of ten, the copies bare images) and the footer's
+ * Articles link, which put it at 1,159 with the partner cards gone. Confirmed
+ * by Shivanshu the same day.
+ *
+ * 2026-11-16: to 1,500 (Shivanshu) for the standards section under the
+ * figures (the heading's word reveal, six marks), which put it at 1,218
+ * with the dither's filter, since dropped.
+ *
  * Desktop Chrome only: the markup is the same on every device.
  */
 const BUDGETS = [
-  { path: "/", page: 1100, footer: 540 },
+  { path: "/", page: 1500, footer: 540 },
   { path: "/contact", page: 830, footer: 540 },
   { path: "/pricing", page: 2000, footer: 540 },
 ];
