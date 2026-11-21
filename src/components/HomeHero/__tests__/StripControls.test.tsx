@@ -363,6 +363,32 @@ describe("StripControls", () => {
       expect(animation.currentTime).toBe(DURATION - 1);
     });
 
+    // An animation's currentTime runs on past one pass after a minute on the
+    // page, and a glide back sets it four passes on. Clamped to the first
+    // pass, a reveal threw the strip to that pass's end and the focused card
+    // a whole copy's width off screen (CI, 2026-11-21, focus-visible.spec.ts).
+    it("stays in the pass the strip is in, a minute on the page", () => {
+      const { strip, animation, link } = setup({ at: DURATION + 10_000 });
+      place(strip, -120);
+      focusCard(link);
+      const moved = REVEAL_GUTTER_PX - -120;
+      expect(animation.currentTime).toBeCloseTo(DURATION + 10_000 - moved * MS_PER_PX);
+    });
+
+    it("stops at the start of that pass, four passes on after a glide back", () => {
+      const { strip, animation, link } = setup({ at: 4 * DURATION + 5 * MS_PER_PX });
+      place(strip, -10);
+      focusCard(link);
+      expect(animation.currentTime).toBe(4 * DURATION);
+    });
+
+    it("and short of its end", () => {
+      const { strip, animation, link } = setup({ at: 2 * DURATION - 5 * MS_PER_PX });
+      place(strip, 300);
+      focusCard(link);
+      expect(animation.currentTime).toBe(2 * DURATION - 1);
+    });
+
     it("a drag still wraps, since there the picture is all that matters", () => {
       const { strip, animation } = setup({ at: 5 * MS_PER_PX });
       drag(strip, [400, 420]);

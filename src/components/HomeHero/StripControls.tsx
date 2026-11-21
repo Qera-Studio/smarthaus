@@ -143,10 +143,14 @@ export function StripControls({
       const duration = Number(animation.effect?.getComputedTiming().duration);
       // One pass carries the strip one copy's width, half the track.
       const msPerPx = duration / (track.getBoundingClientRect().width / 2);
-      const next = Number(animation.currentTime ?? 0) - dx * msPerPx;
+      const at = Number(animation.currentTime ?? 0);
+      const next = at - dx * msPerPx;
+      // The clamp holds within the pass the strip is in: currentTime runs on
+      // past one pass, and a glide back sets it four passes on (applyGlide).
+      const pass = Math.floor(at / duration) * duration;
       animation.currentTime = wrap
         ? ((next % duration) + duration) % duration
-        : Math.min(Math.max(next, 0), duration - 1);
+        : pass + Math.min(Math.max(next - pass, 0), duration - 1);
       mark();
     };
 

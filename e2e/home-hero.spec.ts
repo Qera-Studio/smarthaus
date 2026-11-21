@@ -840,6 +840,33 @@ test.describe("keyboard", () => {
     await expect.poll(() => strip(page).evaluate((el) => el.scrollLeft)).toBe(0);
   });
 
+  test("brings the first card back on screen after the strip has run past a pass", async ({
+    page,
+  }) => {
+    // Found 2026-11-21 on CI (focus-visible.spec.ts): the reveal clamped to
+    // the first pass, so once currentTime had run past it, as a minute on the
+    // page or a glide back leaves it, the strip went to that pass's end and
+    // the focused card a whole copy's width off screen. A focus, not a Tab,
+    // so every engine runs it: the reveal is in the focus event.
+    await expectHydrated(page);
+    const first = cards(page).first();
+    await strip(page).evaluate((el) => {
+      const [drift] = el.firstElementChild!.getAnimations();
+      const duration = Number(drift!.effect!.getComputedTiming().duration);
+      drift!.currentTime = 4 * duration + duration / 3;
+    });
+    expect(await first.evaluate((el) => el.getBoundingClientRect().right)).toBeLessThan(0);
+    await first.getByRole("link").focus();
+    await expect
+      .poll(() =>
+        first.evaluate((el) => {
+          const b = el.getBoundingClientRect();
+          return b.left >= 0 && b.left < innerWidth ? "on screen" : `${b.left}..${b.right}`;
+        }),
+      )
+      .toBe("on screen");
+  });
+
   test("a focused card's link draws a visible ring", async ({ page }) => {
     const link = cards(page).first().getByRole("link");
     // Keyboard focus without a Tab walk, which WebKit would take past links:

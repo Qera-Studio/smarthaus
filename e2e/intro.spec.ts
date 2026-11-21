@@ -317,7 +317,11 @@ test.describe("the page's scroll", () => {
     await scrollAndSettle(page, sliver);
     const before = await drift(page);
     await scrollAndSettle(page, sliver - 150);
-    expect(added(before, await drift(page))).toBeLessThan(-500);
+    const after = await drift(page);
+    // The readings ride in the message: a trace does not record what an
+    // evaluate returned, and this has failed on CI each way, -296 and +20633,
+    // without reproducing locally (2026-11-20, 2026-11-21).
+    expect(added(before, after), JSON.stringify({ sliver, before, after })).toBeLessThan(-500);
   });
 
   test("still runs while the pointer rests on the strip and its drift is held", async ({
